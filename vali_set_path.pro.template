@@ -1,0 +1,10 @@
+
+; define here your directories as system variable
+PRO vali_set_path
+	DEFSYSV,'!SAVE_DIR', '/cmsaf/cmsaf-cld1/sstapelb/bilder/'		; directory to store and find images
+	DEFSYSV,'!SAVS_DIR', '/cmsaf/cmsaf-cld1/sstapelb/savs/'			; directory to store and find IDL sav files
+	DEFSYSV,'!KML_DIR' , '/cmsaf/cmsaf-cld1/sstapelb/kmls/'			; directory to store and find kml files
+	DEFSYSV,'!STD_DIR' , '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'	; standard data directory used in ncdf_browser.pro
+	DEFSYSV,'!DEFAULT_FILE', '/cmsaf/cmsaf-cld6/esa_cci_cloud_data/data/l3c/1982/01/198201-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-7-fv1.4.nc'
+	DEFSYSV,'!BREWER_CT_FILE', '/cmsaf/nfshome/sstapelb/idl/coyote/coyote/fsc_brewer.tbl' ; brewer color table 
+END
