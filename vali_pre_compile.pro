@@ -63,8 +63,6 @@
 @/cmsaf/nfshome/sstapelb/idl/isccp/isccp_read_d2.pro
 @/cmsaf/nfshome/sstapelb/idl/rnd.pro
 @/cmsaf/nfshome/sstapelb/idl/skills_n_scores.pro
-; @/cmsaf/nfshome/sstapelb/idl/coyote/coyote/error_message.pro
-; @/cmsaf/nfshome/sstapelb/idl/coyote/coyote/cgsnapshot.pro
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_L1.pro
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_geo.pro
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
