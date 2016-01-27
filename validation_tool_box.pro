@@ -4702,7 +4702,7 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 		endif else if reg2 and ~reg1 then begin
 			if verb then print,'Grid down unregular grid array of '+alg1+' to regular grid size of '+strcompress(dum2[0],/rem)+' degree.'
 			make_geo,file=file1,lon,lat, verbose = verbose
-			dum = sat2global(lon,lat,bild1,grid_res = dum2[0],no_data_value=fillvalue1)
+			dum = sat2global(lon,lat,bild1,grid_res = dum2[0],no_data_value=fillvalue1,found=found)
 			if found then begin
 				bild1 = dum.mean
 				lon   = dum.lon
