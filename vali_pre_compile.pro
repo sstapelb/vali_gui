@@ -68,6 +68,6 @@
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_L1.pro
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_geo.pro
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
-@validation_tool_box.pro
 @/cmsaf/nfshome/sstapelb/idl/read_modis_l1b.pro
+@validation_tool_box.pro
 
