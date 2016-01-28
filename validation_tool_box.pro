@@ -162,6 +162,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	if alg eq 'esacci_old' or alg eq 'cci_old' then begin
 		case dat of
 			'cer'			: dat = 'ref'
+			'cer_liq'		: dat = 'ref_liq'
+			'cer_ice'		: dat = 'ref_ice'
 			'cfc'			: dat = 'cc_total'
 			'a_cod'			: dat = 'cot_log'
 			'cwp_ice'		: dat = 'iwp'
@@ -252,6 +254,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	if alg eq 'era-i' or alg eq 'era' then begin
 		case dat of
 			'ref'		: dat = 'cer'
+			'ref_liq'	: dat = 'cer_liq'
+			'ref_ice'	: dat = 'cer_ice'
 			'cwp_ice'	: dat = 'iwp'
 			'79'		: dat = 'iwp'
 			'var79'		: dat = 'iwp'
