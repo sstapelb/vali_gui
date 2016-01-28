@@ -5754,7 +5754,7 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		idx = where(bild eq -999.,idx_cnt)
 		bild   = bild/(total(bild)>1.)*100.
 		if idx_cnt gt 0 then bild[idx] = -999.
-		ytitle ='Relative Occurence [%]'
+		ytitle ='Relative Occurrence [%]'
 	endelse
 
 	return, bild

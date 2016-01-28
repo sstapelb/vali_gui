@@ -1214,7 +1214,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			endif else begin
 				histos = get_1d_hist_from_jch(bild,algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
 							lon=lon, lat=lat, dem=dem, land=land, sea=sea,found=found)
-				ytitle='Relative Occurence [%]'
+				ytitle='Relative Occurrence [%]'
 			endelse
 			if found then begin
 				start_save, save_dum, thick = thick
@@ -2943,7 +2943,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					ctp:cci_histos.ctp/total(cci_histos.ctp)*100.}
 			gac_histos = {	cot:gac_histos.cot/total(gac_histos.cot)*100.,$
 					ctp:gac_histos.ctp/total(gac_histos.ctp)*100.}
-			ytitle = 'Relative Occurence [%]'
+			ytitle = 'Relative Occurrence [%]'
 		endelse
 		if found1 and found2 then begin
 			apx = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
@@ -4326,7 +4326,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 		; ctp
 		start_save,save_as1,thick=thick
 			plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=keyword_set(found) ? xtickname.ctp:'', $
-			xtitle=apx+'Cloud Top Pressure [hPa]',ytitle='Relative Occurence [%]',xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
+			xtitle=apx+'Cloud Top Pressure [hPa]',ytitle='Relative Occurrence [%]',xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
 			charthick = (keyword_set(save_as) ? 2. : 1)
 			for i = 0, n_elements(name_arr)-1 do begin & $
 				oplot,ctp_array[*,i]/total(ctp_array[*,i])*100.,thick=thick,color=cgcolor(col_arr[i]),psym=-8,linestyle=lstyle[i] & $
@@ -4341,7 +4341,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 		; cot
 		start_save,save_as2,thick=thick
 			plot,[0,0],[1,1],xr=[0,5],yr=yrange,xticks=6,xtickname=keyword_set(found) ? xtickname.cot:'', $
-			xtitle=apx+'Cloud optical Thickness',ytitle='Relative Occurence [%]',xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
+			xtitle=apx+'Cloud optical Thickness',ytitle='Relative Occurrence [%]',xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
 			charthick = (keyword_set(save_as) ? 2. : 1)
 			for i = 0, n_elements(name_arr)-1 do begin & $
 				oplot,cot_array[*,i]/total(cot_array[*,i])*100.,thick=thick,color=cgcolor(col_arr[i]),psym=-8 & $
