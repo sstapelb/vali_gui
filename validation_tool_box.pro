@@ -161,7 +161,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	if alg eq 'esacci_old' or alg eq 'cci_old' then begin
 		case dat of
- 			'cfc'			: dat = 'cc_total'
+			'cer'			: dat = 'ref'
+			'cfc'			: dat = 'cc_total'
 			'a_cod'			: dat = 'cot_log'
 			'cwp_ice'		: dat = 'iwp'
 			'cwp_liq'		: dat = 'lwp'
@@ -250,16 +251,17 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	if alg eq 'era-i' or alg eq 'era' then begin
 		case dat of
+			'ref'		: dat = 'cer'
 			'cwp_ice'	: dat = 'iwp'
 			'79'		: dat = 'iwp'
 			'var79'		: dat = 'iwp'
 			'cwp_liq'	: dat = 'lwp'
 			'78'		: dat = 'lwp'
 			'var78'		: dat = 'lwp'
-			'cfc'		: dat = 'cc_total'
-			'tcc'		: dat = 'cc_total'
-			'164'		: dat = 'cc_total'
-			'var164'	: dat = 'cc_total'
+ 			'cc_total'	: dat = 'cfc'
+			'tcc'		: dat = 'cfc'
+			'164'		: dat = 'cfc'
+			'var164'	: dat = 'cfc'
 			else		: 
 		endcase
 	endif
@@ -1566,16 +1568,24 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sam
 end
 ;------------------------------------------------------------------------------------------
 ; stapel with main part taken from lonlat2reg.pro [P. Albert]
-function sat2global, lon, lat, in_data , no_data_value = no_data_value, grid_res = grid_res, verbose = verbose, found = found, nan_fillv = nan_fillv
+function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_res = grid_res, verbose = verbose, found = found, nan_fillv = nan_fillv
 
 	found = 1
-	grd_res       = keyword_set(grid_res)      ? float(grid_res)      : 0.25 ; GME 30 km 1/4 grad auflösung
+	lon = dlon
+	grd_res       = keyword_set(grid_res)          ? float(grid_res)      : 0.25 ; GME 30 km 1/4 grad auflösung
 	no_data_val   = adv_keyword_set(no_data_value) ? float(no_data_value) : -999.
 	if ~finite(no_data_val) then begin
 		no_data_val = -999.
 		nan_fillv   = 1
 	endif
 	data = in_data
+
+	idx = where(lon gt 180,idxcnt)
+	if idxcnt gt 0 then begin
+		print,'sat2global: Warning! Max Longitude is gt 180. Now assuming that lon input is from 0-360°W.'
+		lon[idx] -= 360
+	endif
+
 	fvidx = where(~finite(data),fvcnt)
 	if fvcnt gt 0 then data[fvidx] = no_data_val
 
@@ -1909,24 +1919,63 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 
 	if minvalue ge maxvalue then maxvalue = minvalue + 1.
 	;-----------------------------------------------------------------------------------------------------------------------
-	; poor man solution if one dimension is 361 then prob. era-interim -> rotate and congrid and shift--
-; 	source = get_ncdf_data_by_name(nc_file,'source',/global,found = found_source)
-; 	if found_source then begin
-; 		if strlowcase(source) eq 'era-interim' and size(bild,/n_dim) le 2 then begin
-; 			;only if second dimension is 361
-; 			if size(bild,/n_dim) eq 2 then begin
-; 				if (size(bild,/dim))[1] eq 361 then begin 
-; 					bild = rotate(bild,7)
-; 					bild = congrid(bild,(size(bild,/dim))[0],360)
-; 					bild = shift(bild,360,0)
-; 				endif
-; 			endif
-; 			if size(bild,/n_dim) eq 1 then begin
-; 				if strlowcase(data) eq 'lat' and size(bild,/dim) eq 361 then bild = vector(- 89.75, 89.75,360.)
-; 				if strlowcase(data) eq 'lon' and size(bild,/dim) eq 720 then bild = vector(-179.75,179.75,720.)
-; 			endif
-; 		endif
-; 	endif
+
+	source = get_ncdf_data_by_name(nc_file,'source',/global,found = found_source)
+
+	if found_source then begin
+		si   = size(bild,/dim)
+		ndim = size(bild,/n_dim)
+		if strlowcase(source[0]) eq 'era-interim' then begin
+			;only if second dimension has one more line than expected in a regular grid , e.q 361 instead of 360
+			if ndim eq 1 then begin
+				if total(strlowcase(data) eq ['latitude','lat']) then begin
+					half_grid_res = 1./((si[0]-1)/180.)/2.
+					if ( (si[0]-1)/180. eq fix((si[0]-1))/180 ) then begin
+						bild = vector(half_grid_res - 90., 90. - half_grid_res,si[0]-1)
+					endif
+				endif
+				if total(strlowcase(data) eq ['longitude','lon']) then begin
+					half_grid_res = 1./((si[0])/360.)/2.
+					bild = vector(half_grid_res-180.,180.-half_grid_res,si[0])
+				endif
+			endif else if si[1] eq ((si[0])/2.+1.) and ndim le 5 then begin
+				if ndim eq 2 then begin
+					bild = rotate(bild,7)
+					bild = congrid(bild,si[0],si[1]-1)
+					bild = shift(bild,(si[0]/2.-1),0)
+				endif
+				if ndim eq 3 then begin
+					bild_rot = bild[*,0:si[1]-2,*] * 0
+					for i = 0,si[2] -1 do begin
+						bild_rot[*,*,i] = congrid(shift(rotate(bild[*,*,i],7),(si[0]/2.-1),0),si[0],si[1]-1)
+					endfor
+					bild = temporary(bild_rot)
+				endif
+				if ndim eq 4 then begin
+					bild_rot = bild[*,0:si[1]-2,*,*] * 0
+					for i = 0,si[2] -1 do begin
+						for j = 0,si[3] -1 do begin
+							bild_rot[*,*,i,j] = congrid(shift(rotate(bild[*,*,i,j],7),(si[0]/2.-1),0),si[0],si[1]-1)
+						endfor
+					endfor
+					bild = temporary(bild_rot)
+				endif
+				if ndim eq 5 then begin
+					bild_rot = bild[*,0:si[1]-2,*,*,*] * 0
+					for i = 0,si[2] -1 do begin
+						for j = 0,si[3] -1 do begin
+							for k = 0,si[4] -1 do begin
+								bild_rot[*,*,i,j,k] = congrid(shift(rotate(bild[*,*,i,j,k],7),(si[0]/2.-1),0),si[0],si[1]-1)
+							endfor
+						endfor
+					endfor
+					bild = temporary(bild_rot)
+				endif
+			endif else if ndim gt 5 then begin
+				print,'Found ERA-Interim data with more than 5 dimensions, dont know if it needs to be rotated! Please check!'
+			endif
+		endif
+	endif
 	;-----------------------------------------------------------------------------------------------------------------------
 	if keyword_set(verbose) then begin
 		print,'NCDF File        : ',nc_file
@@ -2267,15 +2316,7 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 
 	HDF_SD_GETDATA,varid,bild_raw
 	raw = bild_raw
-; stop
-; ; 			var_dim_names = strarr(n_elements(dimi))
-; ; 			for j=0,n_elements(dimi) -1 do begin
-; ; 				ncdf_diminq, id, dimi[j], dimension_name, dimension_size
-; ; 				var_dim_names[j] = dimension_name
-; ; 			endfor
-;  HDF_SD_GETINFO,varid,dims=dimi,ndims=ndimi
-; Result = HDF_SD_DIMGETID(varid, 1)
-; HDF_SD_DIMGET,Result,/label
+
 	; attribute scale, offset, raw_fill_value, minvalue, maxvalue, unit, longname
 	scale          = 1
 	offset         = 0
@@ -2393,9 +2434,7 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 
 	; coll5/6 muss rotiert werden, auch YDim muss rotiert werden allerdings mit reverse
 	if (c5_l3 or c6_l3) then begin
-; 	if (modis) then begin
-; stop
-;auch level2 muss rotiert werden??
+		;muss auch level2 rotiert werden??
 		ndim = float(size(bild,/n_dim))
 		if ndim eq 1 and strlowcase(hdf_var[0]) eq 'ydim' then bild = reverse(bild)
 		if ndim eq 2 then bild = rotate(bild,7)
@@ -2407,7 +2446,7 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			endfor
 			bild = temporary(bild_rot)
 		endif
-		if ndim eq 4 then begin; and (is_jch(data) or is_h1d(data)) then begin ; bin nicht mehr sicher warum nur jch???
+		if ndim eq 4 then begin
 			bild_rot = bild * 0
 			si = size(bild,/dim)
 			for i = 0,si[2] -1 do begin
@@ -3732,7 +3771,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			silent=silent,raw=raw,make_compareable=make_compareable , $
 			join_nodes=join_nodes,finfo=finfo,nan_fillv=nan_fillv	, $
 			dirname = dirname,error=error,node=node,dim3=dim3	, $
-			print_filename=print_filename,var_dim_names=var_dim_names
+			print_filename=print_filename,keep_data_name=keep_data_name, $
+			var_dim_names=var_dim_names
 
 	if keyword_set(verbose) then x=systime(1)
 
@@ -3768,7 +3808,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	endif
 	if keyword_set(print_filename) then print, filename
 
-	dat = get_product_name(data,algo=alg,level=lev)
+	dat = keyword_set(keep_data_name) ? strlowcase(data) : get_product_name(data,algo=alg,level=lev)
 
 	found = file_test(filename[0])
 	if not found then return,-1
@@ -4638,7 +4678,7 @@ pro read_all_avail_struc, struc, tagname, lat = lat, lon = lon, limit = limit, l
 
 end
 ;------------------------------------------------------------------------------------------
-pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file2,$	; input
+pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file2		,$	; input
 			lon,lat,grid_res_out,verbose = verbose,algo1=algo1,algo2=algo2,level=level	; output
 
 	verb = keyword_set(verbose)
@@ -4646,7 +4686,7 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 	alg2 = keyword_set(algo2) ? strlowcase(algo2[0]) : 'Algorithm2'
 	si1  = size(bild1,/dim)
 	si2  = size(bild2,/dim)
-	lev = keyword_set(level) ? strlowcase(level) : ''
+	lev  = keyword_set(level) ? strlowcase(level) : ''
 
 	if si1[0] ne si2[0] or si1[1] ne si2[1] then begin
 		dum1 = [360,180]/float(si1)

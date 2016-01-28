@@ -3420,7 +3420,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;  	theData      = self -> ReadVariable((theList[index])[0], Success=success)
 ;	stapel (08/2014)  replaced with this. 
 ; 	read_data,self.directory+'/'+self.filename, (theList[index[0]])[0], thedata, found = success, fillvalue, minvalue, maxvalue
-	thedata = get_data(file=self.directory+'/'+self.filename,data=(theList[index[0]])[0], algo=self.algoname,level=self.level,$
+	thedata = get_data(file=self.directory+'/'+self.filename,data=(theList[index[0]])[0], algo=self.algoname,level=self.level,/keep_data_name,$
 		  sat=self.satname,minvalue=minvalue,maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success)
 
 	; avoid converting byte into strings (ascii code!)
@@ -3686,7 +3686,7 @@ PRO NCDF_DATA::ReadVariableFromGUI_Events, event
                Widget_Control, /HOURGLASS
 ;                theData = self -> ReadVariable(theVariable, Success=success)
                ; sometimes a bit slower but sets fillvalues , makes scaling etc,  
-               thedata = get_data(file=self.directory+'/'+self.filename,algo=self.algoname,data=varName,found = success)
+               thedata = get_data(file=self.directory+'/'+self.filename,algo=self.algoname,data=varName,found = success,/keep_data_name)
 ;                read_data,self.directory+'/'+self.filename,theVariable,thedata,found = success
                IF success EQ 0 THEN begin
 			Print, 'A variable named "' + varName + '" not found or not of type dataset.'
@@ -3719,7 +3719,7 @@ PRO NCDF_DATA::ReadVariableFromGUI_Events, event
                Widget_Control, /HOURGLASS
 ;               theData = self -> ReadVariable(varName, Success=success)
                ; sometimes a bit slower but sets fillvalues , makes scaling etc,  
-               thedata = get_data(file=self.directory+'/'+self.filename,algo=self.algoname,data=varName,found = success)
+               thedata = get_data(file=self.directory+'/'+self.filename,algo=self.algoname,data=varName,found = success,/keep_data_name)
 ;                read_data,self.directory+'/'+self.filename,varName,thedata,found = success
                IF success EQ 0 THEN begin
 			Widget_Control, event.top, /DESTROY
@@ -4761,7 +4761,7 @@ if sel then sat  = self.satname
 		keep_mima = ( Widget_Info(self.enablemima,/BUTTON_SET) )
 		if ~keep_mima then begin
 ; 			read_data,self.directory+'/'+self.filename, self.varname_plotID, theData, found = success, algo = self.algoname, fillvalue, minvalue, maxvalue
-			thedata = get_data(file=self.directory+'/'+self.filename,data=self.varname_plotID, algo=self.algoname,level=self.level,$
+			thedata = get_data(file=self.directory+'/'+self.filename,data=self.varname_plotID, algo=self.algoname,level=self.level,/keep_data_name,$
 				sat=self.satname,minvalue=minvalue,maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success)
 
 			; avoid converting byte into strings (ascii code!)

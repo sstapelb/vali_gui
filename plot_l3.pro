@@ -320,19 +320,16 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if not keyword_set(data) then begin
 		print,"Syntax: compare_cci_with_clara, year, month, day, /data, /sat, /mini, /maxi, /zoom, /stop, /limit, /win_nr, /save_as"
-		print,"Set data to one of these ['cfc','cot','cph','iwp','lwp','ctp','ctt','cth']"
+		print,"Tell me what data to compare, e.g. ['cfc','cot','cph','iwp','lwp','ctp','ctt','cth']"
 		return
 	endif
 
+	limit_test = keyword_set(limit)
+	if limit_test then limit_bck = limit
 	cov      = keyword_set(coverage)  ? strlowcase(coverage)  : 'full'
 	ref      = keyword_set(reference) ? strlowcase(reference) : ''
 	dat      = strlowcase(data[0])
-; 	if strmid(dat,0,8) eq 'cc_total' then dat = 'cfc'
-; 	histo1d  = total(strmid(strlowcase(dat),0,10) eq ['hist1d_ctp','hist1d_cot','hist1d_ctt','hist1d_cwp','hist1d_ref','hist1d_clo'])
-	limit_test = keyword_set(limit)
-	if limit_test then limit_bck = limit
-	hct = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
-
+	hct      = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
 	sat      = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
 	yyyy     = string(year,f='(i4.4)')
@@ -378,24 +375,16 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		sea  = 0
 	endif
 
-	; bei l3u können nicht alle verglichen werden
 	if ~keyword_set(level) then level = keyword_set(day) ? 'l3u' : 'l3c'
-	if keyword_set(day) and total(dat eq ['iwp','lwp']) and (algo1 eq 'esacci' or algo2 eq 'esacci') then begin
-		ok = dialog_message( 'compare_cci: Data '+dat+' undefined in CCI l2b files!')
-		return
-	endif
-	if keyword_set(day) and total(dat eq ['cfc','cph']) then begin
-		print,'compare_cci: Beware! Data '+dat+' in l2(b) files can have different definitions!'
-	endif
 
 	case strmid(dat,0,7) of
 		'cot'		: begin & histv = [0.1,0.,50.]   & vollername = 'Cloud Optical Thickness' & end
 		'cot_liq'	: begin & histv = [0.1,0.,50.]   & vollername = 'Cloud Optical Thickness Liquid' & end
 		'cot_ice'	: begin & histv = [0.1,0.,50.]   & vollername = 'Cloud Optical Thickness Ice' & end
 		'cth'		: begin & histv = [0.1,0.,16.]   & vollername = 'Cloud Top Height' & end
-		'cwp'		: begin & histv = [10.,0.,3000.] & vollername = 'Cloud Water Path' & end
-		'iwp'		: begin & histv = [10.,0.,3000.] & vollername = 'Ice Water Path' & end
-		'lwp'		: begin & histv = [10.,0.,3000.] & vollername = 'Liquid Water Path' & end
+		'cwp'		: begin & histv = [10.,0.,1500.] & vollername = 'Cloud Water Path' & end
+		'iwp'		: begin & histv = [10.,0.,1500.] & vollername = 'Ice Water Path' & end
+		'lwp'		: begin & histv = [10.,0.,1500.] & vollername = 'Liquid Water Path' & end
 		'ctp'		: begin & histv = [10.,0.,1100.] & vollername = 'Cloud Top Pressure' & end
 		'ctt'		: begin & histv = [1.,150.,320.] & vollername = 'Cloud Top Temperature' & end
 		'cfc'		: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Fraction' & end
@@ -407,8 +396,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'ref'		: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius' & end
 		'ref_liq'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Liquid' & end
 		'ref_ice'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Ice' & end
-		'cld_typ'	: begin & histv = [1.,2.,8.]   & vollername = 'Pavolonis Cloud Type' & end
-; 		else	: begin & ok = dialog_message("compare_cci: Set Variable to one of these ['ref','cfc','cot','cph','cwp','iwp','lwp','ctp','ctt','cth']") & return & end
+		'cer'		: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius' & end
+		'cer_liq'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Liquid' & end
+		'cer_ice'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Ice' & end
+		'cld_typ'	: begin & histv = [1.,2.,8.]     & vollername = 'Pavolonis Cloud Type' & end
  		else		: begin 
 					histv = adv_keyword_set(maxi) and adv_keyword_set(mini) ? $
 						[(10.^(strlen(strcompress(string(maxi,f='(i)'),/rem)))/1000.) < 10.,mini,maxi] : [1,0,100.]
@@ -422,10 +413,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif
 	if algo1 eq 'coll5' or algo2 eq 'coll5' and strmid(dat,0,3) eq 'cth' then begin
 		ok = dialog_message("compare_cci: 'COLL5' does not include 'CTH'!")
-		return
-	endif
-	if algo1 eq 'era-i' or algo2 eq 'era-i' and total(dat eq ['cot','cwp']) then begin
-		ok = dialog_message("compare_cci: 'ERA-Interim' does not include '"+strupcase(dat)+"'")
 		return
 	endif
 	if algo1 eq 'patmos' or algo2 eq 'patmos' and total(dat eq ['ref','cph'] and level eq 'l3c') then begin
@@ -497,15 +484,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			if ncs_cnt gt 0 then bild_cci[ncs] = fillvalue1[0]
 		endif
 		free, join_nodes
-
-; 		if limit_test then begin
-; stop
-; 			if (strmid(algo1,0,6) eq 'esacci' and limit[0] eq 'sunglint') then begin
-; 				node = level eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
-; 				glint = get_data(yyyy,mm,dd,file=ccifile[0], data = 'sunglint'+node, no_data_value = fillvalueg, found = found_glint,$
-; 				verbose = verbose, level=level, algo = algo1,join_nodes=join_nodes,error=error)
-; 			endif
-; 		endif
 		; ref l3u files
 		if level eq 'l3u' and ( algo1 eq 'clara' and (strmid(algo2,0,6) eq 'esacci' or algo2 eq 'patmos')) then join_nodes = 1
 		datdum   = strlowcase(sat) eq 'aatme' and strlowcase(algo2) eq 'coll5' and total(strmid(dat,0,8) eq ['ctp','cfc','ctt','cc_total']) ? dat+'_day' : dat 
@@ -523,26 +501,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			if ncs_cnt gt 0 then bild_gac[ncs] = fillvalue2[0]
 		endif
 		free, join_nodes
-; 		if limit_test then begin
-; 			if (strmid(algo2,0,6) eq 'esacci' and limit[0] eq 'sunglint' and ~keyword_set(found_glint)) then begin
-; 				node = level eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
-; 				glint = get_data(yyyy,mm,dd,file=ccifile[0], data = 'sunglint'+node, no_data_value = fillvalueg, found = found_glint,$
-; 				verbose = verbose, level=level, algo = algo2,join_nodes=join_nodes,error=error)
-; 			endif
-; 		endif
-; 		if keyword_set(found_glint) then begin
-; 			if get_grid_res(bild_cci) eq get_grid_res(bild_gac) and get_grid_res(bild_gac) eq get_grid_res(glint)then begin
-; 				idx = where(bild_cci eq fillvalue1[0] or bild_gac eq fillvalue2[0] or glint ne 1,nd_cnt)
-; 				bild_cci = bild_cci * glint
-; 				bild_gac = bild_gac * glint
-; 				if nd_cnt gt 0 then begin
-; 					bild_cci[idx] = fillvalue1[0]
-; 					bild_gac[idx] = fillvalue2[0]
-; 				endif
-; 			endif
-; 			limit_test = 0
-; 			free, limit
-; 		endif
 	endelse
 	;-------------------------histo1d_compare-------------------------------------
 	ndims = size(bild_cci,/n_dim)
@@ -721,7 +679,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		if keyword_set(save_dir) then save_as2 = save_as_diff
 		figure_title2 = 'Difference '+ algon_cci + ' - ' + algon_gac
 		title2 = vollername+' '+unit
-; 		!p.multi = 0
 		out = {bild:bild_gac,lon:lon,lat:lat,unit:unit}
 	endif else title2 = algon_gac+' '+get_product_name(data,algo=algo2,level=level,/upper)+unit
 
@@ -817,7 +774,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			endif
 		end_save, save_as3
 
-	endif ;else !p.multi = 0
+	endif
 
 	; zonal median
 	dum_bildc = bild_cci
