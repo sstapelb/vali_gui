@@ -948,7 +948,7 @@ function zonal_average, bild, latitude, fillvalue = fillvalue, lat_res = lat_res
 		lat_zon[i] = mean(lat[Ri[Ri[i] : Ri[i+1]-1]]) & $
 		dum_idx    = where(dum_bild ne fillvalue and finite(dum_bild), chk_idx) & $
 		if chk_idx gt 0 then mean_c[i] = keyword_set(mean) ? mean(dum_bild[dum_idx]) : median(dum_bild[dum_idx]) & $
-	endfor & $
+	endfor
 	return, mean_c
 end
 ;-------------------------------------------------------------------------------------------------------------------------

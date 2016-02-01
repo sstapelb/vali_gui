@@ -3784,7 +3784,7 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=sea,land=land, save_as=save_as,mini=mini,maxi=maxi, $
 			win_nr = win_nr,timeseries=timeseries,satellite=satellite,oplots=oplots,found=found,level=level		,$
-			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts
+			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts,simulator=simulator
 
 	opl   = keyword_set(oplots) ? fix(oplots) : 0
 	satn  = sat_name(algo,satellite, year=year, month=month)
@@ -3792,6 +3792,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	date  = keyword_set(datum) ? datum+' ' : ''
 	sav   = keyword_set(save_as) 
 	wbg   = keyword_set(white_bg)
+	sim   = keyword_set(simulator)
 
 ; 	datum = string(year[0],f='(i4.4)')+string(month[0],f='(i2.2)')
 
@@ -3852,11 +3853,11 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	idx  = where(medi ne fillvalue,chk_idx)
 	yr = [(adv_keyword_set(mini)? mini : (varname eq 'ctt' ? 200:0)),(adv_keyword_set(maxi)? maxi : max(medi)*1.05)] 
 
-	if sav then begin
+	if sav or sim then begin
 		charthick = 1.5
 		xcharsize = 1.7 
 		ycharsize = 1.7
-		lcharsize = 2.5
+		lcharsize = sim ? 2.0 : 2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg then begin
@@ -3877,7 +3878,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 
  	split = where((idx[1:*]-idx[0:*]) ne 1,count)
 	start_save,save_as,thick=thick,snapshot=(float(opl)?'png':'')
-		if wbg then thick = 4
+		if wbg or sim then thick = 4
 		if ~opl then begin
 			plot,[0,0],[1,1],xr=[-90,90],xs=3,/ys,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
 			xtitle='latitude [degrees]',ytitle='zonal mean of '+strupcase(varname)+unit,yr=yr,title=title, $
