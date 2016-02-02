@@ -3822,7 +3822,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	if alg eq 'l1modis' then begin
 		outdata = read_modis_l1b(filename[0], sat, dat, found = found, index = dim3, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit)
-	endif else if ((alg eq 'clara2' or alg eq 'clara' or alg eq 'claas') and dat eq 'cwp') then begin
+	endif else if (total(alg eq ['clara2','clara','claas','esacci']) and dat eq 'cwp') then begin
 		; 1) iwp
 		filename = get_filename(year,month,day,data='iwp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		dumdat = get_product_name('iwp',algo=alg,level=lev)
@@ -3838,7 +3838,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		read_data, cph_file, dumdat, cph, no_data_valuec, verbose = verbose, found = found
 		if not found then return,-1
-		; cwp = lwp * cph + iwp* (1-cph)
+		; cwp = lwp * cph + iwp * (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
 		cph = cph/100.
 		outdata = ( (temporary(ice) > 0.) * (1- (cph)) ) + ( (temporary(liq) > 0.) * (temporary(cph)) )
