@@ -101,7 +101,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 			view2d,bild1-bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 			xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
 			title='Diff. '+name1+' - '+name2, $
-			mini = mini, maxi = maxi,charsize = (keyword_set(save_as) ? 4 : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
+			mini = mini, maxi = maxi,charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 			xmargin = [8,9], ymargin = [5,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
 			oplot,[2,2],!y.crange,thick=(keyword_set(save_as) ? 8:2),col=cgcolor('White')
@@ -118,7 +118,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 		if keyword_set(save_as) then start_save, save_1, thick = thick, size=[32,32] else thick = 2
 			view2d,bild1,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 			xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name1, $
-			mini = mini, maxi = maxi,charsize = (keyword_set(save_as) ? 4 : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
+			mini = mini, maxi = maxi,charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 			xmargin = [8,9], ymargin = [5,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
 			oplot,[2,2],!y.crange,thick=(keyword_set(save_as) ? 8:2),col=cgcolor('White')
@@ -135,7 +135,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 			if keyword_set(save_as) then start_save, save_2, thick = thick, size=[32,32] else thick = 2
 				view2d,bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 				xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name2, $
-				mini = mini, maxi = maxi,charsize = (keyword_set(save_as) ? 4 : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
+				mini = mini, maxi = maxi,charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 				xmargin = [8,9], ymargin = [5,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 				; plot cloud type boxes
 				oplot,[2,2],!y.crange,thick=(keyword_set(save_as) ? 8:2),col=cgcolor('White')
@@ -1259,7 +1259,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		endif
 		si = size(bild,/dim)
 		if hct eq 'overview' then begin
-			plot_isccp_uebersicht, short=short, save_as = save_dum, win_nr = win_nr
+			plot_isccp_uebersicht, short=save_dum, save_as = save_dum, win_nr = win_nr
 			return
 		endif
 		if hct eq 'max' then begin

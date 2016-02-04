@@ -3977,17 +3977,22 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			outdata[*,*,*,0] = liq
 			outdata[*,*,*,1] = ice
 		endif else begin
-			idx  = where(ice eq no_data_value[0] or liq eq no_data_value1[0],idx_cnt)
-			outdata = temporary(ice)+temporary(liq)
+			idx  = where(ice eq no_data_value[0] and liq eq no_data_value1[0],idx_cnt)
+			outdata = (temporary(ice)>0)+(temporary(liq)>0)
 			if idx_cnt gt 0 then outdata[idx]=no_data_value[0]
 		endelse
 		longname = 'Joint cloud property Histogram of ice and water clouds'
-	endif else if (total(alg eq ['clara2','esacci','era-i']) and (is_jch(dat,/combined)or is_jch(dat,/ratio))) then begin
+	endif else if (total(alg eq ['clara2','esacci','era-i']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
 		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose, var_dim_names=var_dim_names 
+
 		if not found then return,-1
 		; total ist "total" langsam ca. 0.95 sek im vergleich zu 0.15 sek!!!
 ;   		outdata  = total(outdata>0,5)
-		outdata = is_jch(dat,/ratio) ? outdata : reform((outdata[*,*,*,*,0]>0)+(outdata[*,*,*,*,1]>0))
+		if is_jch(dat,/combined) then begin 
+			idx  = where(outdata[*,*,*,*,0] eq no_data_value[0] and outdata[*,*,*,*,1] eq no_data_value[0],idx_cnt)
+			outdata = reform((outdata[*,*,*,*,0]>0)+(outdata[*,*,*,*,1]>0))
+			if idx_cnt gt 0 then outdata[idx] = no_data_value[0]
+		endif
 	endif else if (total(alg eq ['clara2','esacci','era-i']) and is_jch(dat,/liquid)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
 		if not found then return,-1
@@ -4241,6 +4246,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			5	: outdata = reform(outdata[*,*,*,*,fix(month)-1])
 			else	: 
 		endcase
+
 	endif
 
 	if keyword_set(make_compareable) then begin 
@@ -5544,12 +5550,13 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 	alg = ref2algo(algoname)
 	dum  = array
 	si   = size(dum,/dim)
+
 	if n_elements(si) ne 4 then begin
 		print, 'Get_2d_rel_hist_from_jch: array must have 4 dimensions (lon,lat,cotbin,ctpbin)'
 		found = 0.
 		return, -1.
 	endif
-
+; qwas
 	bild = fltarr(si[2:3])
 	lidx_cnt = 0
 	lidx = !NULL
@@ -5581,15 +5588,15 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 ; view2d,dum,no_data_val=-999
 ; found = 0.
 ; return,-1
-	for i = 0,si[2] -1 do begin
-		for j = 0,si[3] -1 do begin
+	for i = 0,si[2] -1 do begin & $
+		for j = 0,si[3] -1 do begin & $
 			; Ab sofort werden auch 4dim colls in read_hdf4 rotiert
 ; 			bla_bild = strmid(alg,0,4) eq 'coll' ? rotate(reform(dum[*,*,i,j]),7) : reform(dum[*,*,i,j])
-			bla_bild = reform(dum[*,*,i,j])
-			if lidx_cnt gt 0 then bla_bild[lidx] = fillvalue
-			didx = where(bla_bild ne fillvalue,didx_cnt)
-			if didx_cnt gt 0 then bild[i,j] = total(bla_bild[didx])
-		endfor
+			bla_bild = reform(dum[*,*,i,j]) & $
+			if lidx_cnt gt 0 then bla_bild[lidx] = fillvalue & $
+			didx = where(bla_bild ne fillvalue,didx_cnt) & $
+			if didx_cnt gt 0 then bild[i,j] = total(bla_bild[didx]) & $
+		endfor & $
 	endfor
 
 	si = size(bild,/dim)
