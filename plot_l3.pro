@@ -3785,7 +3785,7 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=sea,land=land, save_as=save_as,mini=mini,maxi=maxi, $
 			win_nr = win_nr,timeseries=timeseries,satellite=satellite,oplots=oplots,found=found,level=level		,$
-			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts,simulator=simulator
+			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts,simulator=simulator,dirname=dirname
 
 	opl   = keyword_set(oplots) ? fix(oplots) : 0
 	satn  = sat_name(algo,satellite, year=year, month=month)
@@ -3818,7 +3818,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		date     = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
 ; date=''
 	endif else begin
-		bild = get_data(year,month,day,file=file,data=varname,no_data_value=fillvalue,minvalue=minvalue,algo=algo,sat=satellite, $
+		bild = get_data(year,month,day,file=file,data=varname,no_data_value=fillvalue,minvalue=minvalue,algo=algo,sat=satellite,dirname=dirname, $
 			maxvalue=maxvalue,longname=longname,unit=unit,verbose=verbose,found=found,/make_compareable,level=level,dim3=dim3,error=error)
 			make_geo,file=file,lon,lat,grid=get_grid_res(bild),found=found_geo
 		if ~found_geo then begin
