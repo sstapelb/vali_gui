@@ -3988,7 +3988,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		; total ist "total" langsam ca. 0.95 sek im vergleich zu 0.15 sek!!!
 ;   		outdata  = total(outdata>0,5)
-		if is_jch(dat,/combined) then begin 
+		if is_jch(dat,/combined) then begin
 			idx  = where(outdata[*,*,*,*,0] eq no_data_value[0] and outdata[*,*,*,*,1] eq no_data_value[0],idx_cnt)
 			outdata = reform((outdata[*,*,*,*,0]>0)+(outdata[*,*,*,*,1]>0))
 			if idx_cnt gt 0 then outdata[idx] = no_data_value[0]

@@ -310,7 +310,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			histogramm = histogramm,difference = difference, level=level,error=error, $
 			ztext = ztext, algo1=algo1,zonal_only=zonal_only, nobar=nobar		, $
 			stereographic = stereographic, out=out, hist_cloud_type=hist_cloud_type	, $
-			logarithmic = logarithmic,timeseries=timeseries,dim3=dim3,white_bg=white_bg
+			logarithmic = logarithmic,timeseries=timeseries,dim3=dim3		, $
+			white_bg=white_bg,dirname2=dirname2
 
 	if n_params() lt 1 then begin
 		print,"Syntax: compare_cci_with_clara, year, month, day, /data, /sat, /mini, /maxi, /zoom, /stop, /limit, /win_nr, /save_as"
@@ -487,7 +488,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		; ref l3u files
 		if level eq 'l3u' and ( algo1 eq 'clara' and (strmid(algo2,0,6) eq 'esacci' or algo2 eq 'patmos')) then join_nodes = 1
 		datdum   = strlowcase(sat) eq 'aatme' and strlowcase(algo2) eq 'coll5' and total(strmid(dat,0,8) eq ['ctp','cfc','ctt','cc_total']) ? dat+'_day' : dat 
-		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=datdum,sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level, $
+		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=datdum,sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level,dirname=dirname2, $
 		longname=longname, unit=unit, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,var_dim_names=var_dim_names_gac)
 
 		if not found then begin
