@@ -474,7 +474,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif else begin 
 		; cci l3u files
 		if level eq 'l3u' and ref eq 'gac' and (strmid(algo1,0,6) eq 'esacci' or algo1 eq 'patmos') then join_nodes = 1
-		bild_cci = get_data(yyyy,mm,dd,file=ccifile[0], data = dat, no_data_value = fillvalue1, longname = longname, unit = unit, found = found,$
+		bild_cci = get_data(yyyy,mm,dd,file=ccifile[0], data = dat,sat=sat, no_data_value = fillvalue1, longname = longname, unit = unit, found = found,$
 		verbose = verbose, level=level, algo = algo1,join_nodes=join_nodes,error=error,dim3=dim3,var_dim_names=var_dim_names_cci)
 		if not found then begin
 			ok = dialog_message('compare_cci: Data '+dat+' not found in '+level+' '+algo1+' file. Right product name? e.g. cc_mask_asc')

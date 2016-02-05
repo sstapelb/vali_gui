@@ -52,6 +52,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'cot_desc'  then dat = 'cwp'
 			if dat eq 'cwp_asc'   then dat = 'cwp'
 			if dat eq 'cwp_desc'  then dat = 'cwp'
+			if dat eq 'lwp_allsky'  then dat = 'lwp'
+			if dat eq 'iwp_allsky'  then dat = 'iwp'
 			if total(strmid(dat,0,6) eq ['solzen','sunzen','satzen','relazi','sungli','glint_','scanli','time_a','time_d']) then dat = 'caa'
 			if total(strmid(dat,0,3) eq ['ctp','ctt','cth']) then dat = 'cto'
 			if total(strmid(dat,0,10) eq ['hist1d_ctp','hist1d_ctt','nobs','nobs_asc','nobs_desc']) then dat = 'cto'
@@ -3822,7 +3824,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	if alg eq 'l1modis' then begin
 		outdata = read_modis_l1b(filename[0], sat, dat, found = found, index = dim3, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit)
-	endif else if (total(alg eq ['clara2','clara','claas','esacci']) and dat eq 'cwp') then begin
+	endif else if (total(alg eq ['clara2','clara','claas','esacci','coll6']) and (dat eq 'cwp') or (dat eq 'cwp_allsky')) then begin
 		; 1) iwp
 		filename = get_filename(year,month,day,data='iwp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		dumdat = get_product_name('iwp',algo=alg,level=lev)
@@ -3844,6 +3846,80 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		outdata = ( (temporary(ice) > 0.) * (1- (cph)) ) + ( (temporary(liq) > 0.) * (temporary(cph)) )
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'monthly mean cloud water path'
+		if dat eq 'cwp_allsky' then begin
+			dumdat = get_product_name('cfc_day',algo=alg,level=lev)
+			liq_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+			read_data, liq_file, dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, unit, verbose = verbose, found = found
+			if not found then return,-1
+			no_idx_ice = where(cfc eq no_data_valuei[0] or outdata eq no_data_value[0],cnt_il)
+			outdata = ( (outdata > 0.) * (temporary(cfc)) )
+			if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
+			longname = 'All Sky '+longname
+		endif
+	endif else if (total(alg eq ['coll5','coll6']) and (dat eq 'iwp_allsky' or dat eq 'lwp_allsky' or dat eq 'cwp_allsky')) then begin
+		; 1) iwp oder lwp oder cwp
+		dumdat = get_product_name(strmid(dat,0,3),algo=alg,level=lev)
+		filename = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		read_data, filename[0], dumdat, cwp, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		if not found then return,-1
+		; 2) cloud fraction
+		dumdat = get_product_name('cfc_day',algo=alg,level=lev)
+		liq_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		read_data, liq_file, dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, unit, verbose = verbose, found = found
+		if not found then return,-1
+		; 3) cph
+		if dat ne 'cwp_allsky' then begin
+			dumdat = get_product_name('cph_day',algo=alg,level=lev)
+			cph_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+			read_data, cph_file, dumdat, cph, no_data_valuec, verbose = verbose, found = found
+			if not found then return,-1
+		endif
+		; lwp_allsky=lwp*cfc_day*cph_day
+		; iwp_allsky=iwp*cfc_day*(1.-cph_day)
+		; cwp_allsky=cwp*cfc_day
+; 		cph = cph/100.
+		if dat ne 'cwp_allsky' then no_idx_ice = where(cfc eq no_data_valuei[0] or cwp eq no_data_value[0] or cph eq no_data_valuec[0],cnt_il) $
+		else no_idx_ice = where(cfc eq no_data_valuei[0] or cwp eq no_data_value[0],cnt_il)
+		if dat eq 'iwp_allsky' then outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)) * (1- (temporary(cph))) )
+		if dat eq 'lwp_allsky' then outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)) * (   (temporary(cph))) )
+		if dat eq 'cwp_allsky' then outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)) )
+		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
+		longname = 'All Sky '+longname
+	endif else if ((alg eq 'coll6') and strmid(dat,0,3) eq 'cwp') then begin
+		; Not sure if this is 100% right ; for coll5 better use combined product
+		; update for coll6 now use same as cci and clara s.above.
+		apx = ''
+		if stregex(dat,'_16',/fold,/bool) then apx = '_16'
+		if stregex(dat,'_37',/fold,/bool) then apx = '_37'
+		pha = alg eq 'coll6' ? 'Retrieval_' : ''
+		; 1) iwp
+		read_data, filename[0], 'iwp'+apx, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		if not found then return,-1
+		; 2) lwp
+		read_data, filename[0], 'lwp'+apx, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		if not found then return,-1
+		; 3) undetermined
+		read_data, filename[0], 'Cloud_Water_Path'+apx+'_Undetermined_Mean_Mean', und, no_data_valueu, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		if not found then return,-1
+
+		; 4) liquid cloud fraction
+		read_data, filename[0], 'Cloud_'+pha+'Fraction'+apx+'_Liquid_FMean', lcf, no_data_valuelcf, verbose = verbose, found = found
+		if not found then return,-1
+		; 5) ice cloud fraction
+		read_data, filename[0], 'Cloud_'+pha+'Fraction'+apx+'_Ice_FMean', icf, no_data_valueicf, verbose = verbose, found = found
+		if not found then return,-1
+		; 6) undetermined cloud fraction
+		read_data, filename[0], 'Cloud_'+pha+'Fraction'+apx+'_Undetermined_FMean', ucf, no_data_valueucf, verbose = verbose, found = found
+		if not found then return,-1
+
+		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0] and und eq no_data_valueu[0]) or $
+				   (lcf eq no_data_valuelcf[0] and icf eq no_data_valueicf[0] and ucf eq no_data_valueucf[0]),cnt_il)
+
+		outdata = ( (temporary(ice) > 0.) * (temporary(icf) > 0.) ) + $
+			  ( (temporary(liq) > 0.) * (temporary(lcf) > 0.) ) + $
+			  ( (temporary(und) > 0.) * (temporary(ucf) > 0.) )
+
+		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
 		outdata = restore_var(!SAVS_DIR + 'blue_marble_0.10.sav')
 		no_data_value = -999.
@@ -3877,40 +3953,6 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if dat eq 'cot' then longname = 'monthly mean cloud optical thickness'
 		if dat eq 'ref' then longname = 'monthly mean cloud effective radius'
-	endif else if ((alg eq 'coll6') and strmid(dat,0,3) eq 'cwp') then begin
-		; Not sure if this is 100% right ; for coll5 better use combined product
-		apx = ''
-		if stregex(dat,'_16',/fold,/bool) then apx = '_16'
-		if stregex(dat,'_37',/fold,/bool) then apx = '_37'
-		pha = alg eq 'coll6' ? 'Retrieval_' : ''
-		; 1) iwp
-		read_data, filename[0], 'iwp'+apx, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
-		if not found then return,-1
-		; 2) lwp
-		read_data, filename[0], 'lwp'+apx, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
-		if not found then return,-1
-		; 3) undetermined
-		read_data, filename[0], 'Cloud_Water_Path'+apx+'_Undetermined_Mean_Mean', und, no_data_valueu, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
-		if not found then return,-1
-
-		; 4) liquid cloud fraction
-		read_data, filename[0], 'Cloud_'+pha+'Fraction'+apx+'_Liquid_FMean', lcf, no_data_valuelcf, verbose = verbose, found = found
-		if not found then return,-1
-		; 5) ice cloud fraction
-		read_data, filename[0], 'Cloud_'+pha+'Fraction'+apx+'_Ice_FMean', icf, no_data_valueicf, verbose = verbose, found = found
-		if not found then return,-1
-		; 6) undetermined cloud fraction
-		read_data, filename[0], 'Cloud_'+pha+'Fraction'+apx+'_Undetermined_FMean', ucf, no_data_valueucf, verbose = verbose, found = found
-		if not found then return,-1
-
-		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0] and und eq no_data_valueu[0]) or $
-				   (lcf eq no_data_valuelcf[0] and icf eq no_data_valueicf[0] and ucf eq no_data_valueucf[0]),cnt_il)
-
-		outdata = ( (temporary(ice) > 0.) * (temporary(icf) > 0.) ) + $
-			  ( (temporary(liq) > 0.) * (temporary(lcf) > 0.) ) + $
-			  ( (temporary(und) > 0.) * (temporary(ucf) > 0.) )
-
-		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 	endif else if is_hdf5(filename[0]) and (sat eq 'msg' or alg eq 'claas') then begin
 		outdata = read_cmsaf_seviri(filename[0], dat, fillvalue = no_data_value, longname = longname, found = found, $
 			  minvalue = minvalue, maxvalue = maxvalue, unit = unit, verbose = verbose)
@@ -4175,53 +4217,14 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 
 		; specials for testing etc, remove if not needed anymore
 		if keyword_set(error) then begin
-			if strmid(alg,0,6) eq 'esacci' and strmid(dat,0,7) eq 'cc_mask' and lev eq 'l3u' then begin
-				make_geo,lon,lat,grid=0.1
-				dem            = get_dem(grid=0.1)
-				idx            = where(outdata ne no_data_value[0],complement=nd_idx)
-				print,'GMean Original CC_Mask Full:', gmean(outdata[idx],lat[idx])
-				node = stregex(dat,'desc',/bool,/fold) ? '_desc' : '_asc'
-				outdata = get_data(year,month,day,file=filename[0], data='cccot'+node,no_data_value=no_data_value,algo=alg,level=lev,found=found_glint,/silent,error=error)
-
-				nise = restore_var(!SAVS_DIR +year[0]+month[0]+day[0]+'_L3U_NISE.sav',found=found_nise)
-				if ~found_nise then begin
-					nise  = map_nise_to_orbit(year+month+day, lon, lat, found = found_nise)
-					if found_nise then begin
-						nise = between(nise,50,105) 
-						save_var,nise,!SAVS_DIR +year[0]+month[0]+day[0]+'_L3U_NISE.sav'
-					endif else print,'No NISE file found!'
-				endif
-
-				idx            = where(outdata ne no_data_value[0],complement=nd_idx,ncomplement=nd_cnt)
-				idx_sea        = where(outdata ne no_data_value[0] and dem eq 0,is_cnt)
-				idx_land       = where(outdata ne no_data_value[0] and dem ne 0,il_cnt)
-				idx_sea_nise   = where(outdata ne no_data_value[0] and nise eq 1 and dem eq 0,isn_cnt)
-				idx_land_nise  = where(outdata ne no_data_value[0] and nise eq 1 and dem ne 0,iln_cnt)
-
-				exp1 = outdata
-				if is_cnt  gt 0 then exp1[idx_sea]       = 0 ;outdata[idx_sea]       gt 0.05	; ascending 0.01 , descending 
-				if il_cnt  gt 0 then exp1[idx_land]      = 1 ;outdata[idx_land]      gt 0.3	; ascending 0.25 , descending 
-				if isn_cnt gt 0 then exp1[idx_sea_nise]  = 2 ;outdata[idx_sea_nise]  gt 0.50	; ascending 0.50 , descending 
-				if iln_cnt gt 0 then exp1[idx_land_nise] = 3 ;outdata[idx_land_nise] gt 0.30	; ascending 0.20 , descending 
-				if nd_cnt  gt 0 then exp1[nd_idx]        = no_data_value[0]
-				outdata = exp1
-			endif
-
 			if strmid(alg,0,6) eq 'esacci' and strmid(dat,0,5) eq 'cccot' and lev eq 'l3u' then begin
 				make_geo,lon,lat,grid=0.1
 				idx            = where(outdata ne no_data_value[0],complement=nd_idx)
 				print,'GMean Original CCCOT   Full:', gmean(outdata[idx],lat[idx])
 				node = stregex(dat,'desc',/bool,/fold) ? '_desc' : '_asc'
 				glint = get_data(year,month,day,file=filename[0], data='glint_angle'+node,no_data_value=ndv_glint,algo=alg,level=lev,found=found_glint,/silent)
-				if ~found_glint then begin
-					print,'Take glint from Test9, only January 2008 Noaa18'
-					filen = file_basename(filename[0])
-					if stregex(filen,'fv1.2',/bool) then filen = strreplace(filen,'fv1.2','fv1.0') 
-					dum_file = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/ecmwf_scratch/NOAA18_ANN_PYGAC_TESTS/ANN_TEST9/l3u/'+filen
-					glint = get_data(year,month,day,file=dum_file, data='glint_angle'+node,no_data_value=ndv_glint,algo=alg,level=lev,found=found_glint)
-				endif
 				if found_glint then begin
-					dum = (( 1-cosd(glint)/cosd(50) ) < 0 )*(-.3)
+					dum = (( 1-cosd(glint)/cosd(50) ) < 0 )*(.3)
 					print,'Reduce cccot by min/max: ',minmax(dum)
 					exp1           = 0. > (outdata + dum) < 1.
 					exp1[nd_idx]   = no_data_value[0]
@@ -4293,7 +4296,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				maxvalue = 1.
 				unit = ' '
 			endif
-		endif else if total(datd eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp']) then begin
+		endif else if total(datd eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky']) then begin
 			if total(alg eq ['clara2','clara','claas']) then begin
 				outdata = float(outdata)
 				outdata[where(outdata ne no_data_value)] *= 1000.
@@ -4830,7 +4833,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit2 = ' '
 			if verb then print,'Divide now '+dat+' of '+alg2+' by 100.'
 		endif
-	endif else if total(dat eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp']) then begin
+	endif else if total(dat eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky']) then begin
 		if total(alg1 eq ['clara2','clara','claas']) then begin
 			bild1 = float(bild1)
 			bild1[where(bild1 ne fillvalue1)] *= 1000.
