@@ -1934,7 +1934,6 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	satnode   = ''
 
 	verb = keyword_set(verbose)
-
 	; hier mal ein versuch für die L1 avhrr dateien
 	if H5F_IS_HDF5(pathn+'/'+filen) and stregex(filen,'99999_satproj',/bool) then begin
 		dum = strsplit(filen,'_',/ext)
@@ -2286,7 +2285,9 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		'esacci_old' : reference = 'cci_old'
 		else :
 	endcase
-	
+
+	if level eq 'l3c' then datum = strmid(datum,0,6)
+
 	if ~keyword_set(infile) then begin
 		self.satname   =  satname[0]
 		self.algoname  =  algoname
@@ -3420,17 +3421,18 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;  	theData      = self -> ReadVariable((theList[index])[0], Success=success)
 ;	stapel (08/2014)  replaced with this. 
 ; 	read_data,self.directory+'/'+self.filename, (theList[index[0]])[0], thedata, found = success, fillvalue, minvalue, maxvalue
-	thedata = get_data(file=self.directory+'/'+self.filename,data=(theList[index[0]])[0], algo=self.algoname,level=self.level,/keep_data_name,$
-		  sat=self.satname,minvalue=minvalue,maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success)
-
-	; avoid converting byte into strings (ascii code!)
-	if size(minvalue,/type) eq 1 then minvalue = fix(minvalue)
-	if size(maxvalue,/type) eq 1 then maxvalue = fix(maxvalue)
+	thedata = get_data(self.year,self.month,self.day,file=self.directory+'/'+self.filename,data=(theList[index[0]])[0], $
+			   algo=self.algoname,level=self.level,/keep_data_name, sat=self.satname,minvalue=minvalue,$
+			   maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success,/silent)
 
 	if ~success then begin
 		ok=dialog_message('Could not read data '+(theList[index[0]])[0] +' from file.')
 		return
 	endif
+
+	; avoid converting byte into strings (ascii code!)
+	if size(minvalue,/type) eq 1 then minvalue = fix(minvalue)
+	if size(maxvalue,/type) eq 1 then maxvalue = fix(maxvalue)
 
 	si = [size(thedata,/dim),1,1]
 	if keyword_set(var_dim_names) and n_elements(si) ge 5 then begin
@@ -3999,7 +4001,13 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 	endif
 
 	; das alles hier muss noch getestet werden!!
-	dumdata = (strmid(algo,0,5) eq 'clara' and strlowcase(varname) eq 'cwp' ? 'iwp': varname)
+	dumdata = varname
+	if total(strmid(algo,0,5) eq ['clara','claas']) then begin
+;check this--
+		if total(strlowcase(varname) eq ['cwp']) then dumdata = 'iwp'
+		if total(strlowcase(varname) eq ['cwp_allsky']) then dumdata = 'cfc'
+;check this--
+	endif
 ; 	check   = (( Widget_Info(self.refself, /BUTTON_SET))); or keyword_set(compare)) and ( (strupcase(algo) eq self.algoname) ) )
 
 	if keyword_set(check) then begin & dirname = self.directory & filename = self.filename & version = self.version & end
@@ -4593,8 +4601,12 @@ if sel then sat  = self.satname
 				sat    = ok.satname ne '' ? ok.satname : sat
 				algo   = ok.algoname
 				ref    = ok.reference
-				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 				level  = ok.level
+				year   = ok.year
+				month  = ok.month
+				day    = ok.day
+				orbit  = ok.orbit
+				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 				file   = self.file2
 				found  = 1
 			endif else begin
@@ -4761,8 +4773,9 @@ if sel then sat  = self.satname
 		keep_mima = ( Widget_Info(self.enablemima,/BUTTON_SET) )
 		if ~keep_mima then begin
 ; 			read_data,self.directory+'/'+self.filename, self.varname_plotID, theData, found = success, algo = self.algoname, fillvalue, minvalue, maxvalue
-			thedata = get_data(file=self.directory+'/'+self.filename,data=self.varname_plotID, algo=self.algoname,level=self.level,/keep_data_name,$
-				sat=self.satname,minvalue=minvalue,maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success)
+			thedata = get_data(self.year,self.month,self.day,file=self.directory+'/'+self.filename,data=self.varname_plotID, $
+					  algo=self.algoname,level=self.level,/keep_data_name,sat=self.satname,minvalue=minvalue,$
+					  maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success,/silent)
 
 			; avoid converting byte into strings (ascii code!)
 			if size(minvalue,/type) eq 1 then minvalue = fix(minvalue)

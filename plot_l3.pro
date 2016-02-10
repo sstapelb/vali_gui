@@ -190,7 +190,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 		endfor
 	endif else begin
 		bild_cci  = get_data(year,month,day,file=file1,sat = sat,algo=algo,data=varname,level=level,no_data_value=fillv_b_cci,$
-			   found=found,unit=unit,verbose= verbose,finfo=cci_info,dim3=dim3)
+			   found=found,unit=unit,verbose= verbose,finfo=cci_info,dim3=dim3,/print_filename)
 		if ~found then begin
 			print,'plot_taylor_diagram: No data found!'
 			return
@@ -198,7 +198,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 
 		file_ref = keyword_set(file2) ? file2 : get_filename(year,month,day,data=varname,sat = sat,algo=reference,level=level)
 		bild_gac = get_data(year,month,day,file=file_ref,sat = sat,data=varname,algo=reference,level=level,no_data_value=fillv_b_gac,$
-			   unit=unit2,found=found,verbose= verbose,finfo=ref_info)
+			   unit=unit2,found=found,verbose= verbose,finfo=ref_info,/print_filename)
 		if ~found then begin
 			print,'plot_taylor_diagram: No reference data found!'
 			return
@@ -489,7 +489,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		if level eq 'l3u' and ( algo1 eq 'clara' and (strmid(algo2,0,6) eq 'esacci' or algo2 eq 'patmos')) then join_nodes = 1
 		datdum   = strlowcase(sat) eq 'aatme' and strlowcase(algo2) eq 'coll5' and total(strmid(dat,0,8) eq ['ctp','cfc','ctt','cc_total']) ? dat+'_day' : dat 
 		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=datdum,sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level,dirname=dirname2, $
-		longname=longname, unit=unit, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,var_dim_names=var_dim_names_gac)
+		longname=longname, unit=unit, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,var_dim_names=var_dim_names_gac,/print_filename)
 
 		if not found then begin
 			if ~file_test(gac_nc_file) then return
@@ -1032,7 +1032,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			maxvalue = mima[1]
 		endelse
 	endif else begin
-		bild = get_data(year,month,day,file=file[fidx],data=dat,algo=algo,no_data_value=fillvalue,level=level,sat=sat,dim3=dim3, $
+		bild = get_data(year,month,day,file=file[fidx],data=dat,algo=algo,no_data_value=fillvalue,level=level,sat=sat,dim3=dim3,/print_filename, $
 		minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found,verbose=verbose,error=error,/make_compare,var_dim_names=var_dim_names)
 		if is_string(bild) then begin
 			ok = dialog_message('plot_l2: Dont know what to do with an Array of type string')
@@ -1637,7 +1637,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	endif else begin
 		if keyword_set(check_quality) then qcflag1 = fix(get_data(file=file1,data='qcflag', verbose = verbose))
 		bild1 = get_data(year, month, day,file=file1,data=dat1,sat=sat1,algo=algo1,no_data_value=fillvalue1,dim3=dim3,unit=unit1,$
-			found=found,verbose=verbose,orbit=orbit,var_dim_names=var_dim_names1)
+			found=found,verbose=verbose,orbit=orbit,var_dim_names=var_dim_names1,/print_filename)
 	endelse
 
 	if not found then begin
@@ -1646,7 +1646,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	endif
 
 	if keyword_set(check_quality) then qcflag2 = fix(get_data(file=file2,data='qcflag',verbose = verbose))
-	bild2 = get_data(year, month, day,file=file2,data=dat2,sat=sat2,algo=algo2,dim3=dim3,no_data_value=fillvalue2,unit=unit2,found=found,verbose=verbose,orbit=orbit,level=level)
+	bild2 = get_data(year, month, day,file=file2,data=dat2,sat=sat2,algo=algo2,dim3=dim3,no_data_value=fillvalue2,unit=unit2,$
+		found=found,verbose=verbose,orbit=orbit,level=level,/print_filename)
 ; stop
 ; ; für Martins calispo jahresmittel; wegmachen wenn es sich ändert
 ; if algo2 eq 'calipso' then fillvalue2 = -1
@@ -1926,26 +1927,29 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		idx_neu1 = where(cci ne fillvalue1,chk_idx1)
 		if keyword_set(sea)  then idx_neu1 = where(cci ne fillvalue1 and dem eq 0,chk_idx1)
 		if keyword_set(land) then idx_neu1 = where(cci ne fillvalue1 and dem ne 0,chk_idx1)
-		if chk_idx1 gt 0 then medi1 = zonal_average(cci[idx_neu1],lat[idx_neu1],fillvalue=fillvalue1,/mean,/nan)
+		if chk_idx1 gt 0 then medi1 = zonal_average(cci[idx_neu1],lat[idx_neu1],fillvalue=fillvalue1,lat_zon=lat1d1,/mean,/nan)
 
 		; neu
 		cci2= bild2
 		idx_neu2 = where(cci2 ne fillvalue2,chk_idx2)
 		if keyword_set(sea) then idx_neu2 = where(cci2 ne fillvalue2 and dem eq 0,chk_idx2)
 		if keyword_set(land)  then idx_neu2 = where(cci2 ne fillvalue2 and dem ne 0,chk_idx2)
-		if chk_idx2 gt 0 then medi2 = zonal_average(cci2[idx_neu2],lat[idx_neu2],fillvalue=fillvalue2,/mean,/nan)
+		if chk_idx2 gt 0 then medi2 = zonal_average(cci2[idx_neu2],lat[idx_neu2],fillvalue=fillvalue2,lat_zon=lat1d2,/mean,/nan)
 
 		if chk_idx1 gt 0 and chk_idx2 gt 0 then begin
+			lat1d   = [[lat1d1],[lat1d2]]
 			array   = [[medi1],[medi2]]
 			name    = [f1str+satn1,f2str+satn2]
 			colors  = [(is_new eq 1 ? 'red':fg_col),(is_new ne 1 ? 'red':fg_col)]
 			lstyle  = [0,0]
 		endif else if chk_idx1 gt 0 and chk_idx2 eq 0 then begin
+			lat1d   = [[lat1d1]]
 			array   = [[medi1]]
 			name    = [f1str+satn1]
 			colors  = fg_col
 			lstyle  = 0
 		endif else if chk_idx1 eq 0 and chk_idx2 gt 0 then begin
+			lat1d   = [[lat1d2]]
 			array   = [[medi2]]
 			name    = [f2str+satn2]
 			colors  = fg_col
@@ -1959,10 +1963,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			set_algolist, algo_list, sat = sat, data = dat, exclude = [algo1,algo2],/default
 			struc = get_all_avail_data(year,month,day,data=dat+annex,sat=sat1,level=level,algo_list=algo_list,$
 			/make_compare,verbose=verbose,coverage = coverage,land=land,sea=sea,limit=limit,antarctic = antarctic, arctic = arctic,/zonal_mean)
-
 			if is_struct(struc) then begin
-				name  = [name,struc.algo_names]
-				array = [[array],[struc.zonal_mean]]
+				name    = [name,struc.algo_names]
+				lat1d   = [[lat1d],[struc.zonal_lats]]
+				array   = [[array],[struc.zonal_mean]]
 				lspos   = ['top','top',struc.LEGEND_SPOS]
 				lystr   = [0,1,struc.LEGEND_YSTRETCH]
 				colors  = [colors,struc.COLORS]
@@ -1971,13 +1975,14 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			endif
  		endif
 
-		plot,[0,0],[1,1],xr=[0,179],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
+		plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
 		xtitle='latitude [degrees]',ytitle='zonal mean of '+strupcase(dat+annex)+unit1,yr=[mini[0],maxi[0]],title=title, $
 		charthick = (keyword_set(save_as) ? 1.5:1.2), charsize = (keyword_set(save_as) ? 1.7:1.2), $
 		xcharsize = (keyword_set(save_as) ? 1.7:1.2), ycharsize= (keyword_set(save_as) ? 1.7:1.2), $
 		xmargin=[10,3]+(keyword_set(save_as) ? [4,0]:0),ymargin=[5,2]+(keyword_set(save_as) ? [2,1]:0)
+
 		for i = 0, n_elements(name)-1 do begin & $
-			oplot,where(finite(array[*,i])),array[where(finite(array[*,i])),i],thick=thick,color=cgcolor(colors[i]),linestyle= lstyle[i] & $
+			oplot,lat1d[*,i],array[*,i],thick=thick,color=cgcolor(colors[i]),linestyle= lstyle[i] & $
 			if i gt 1 then legend,name[i],color=cgcolor(colors[i]),thick=thick,spos=lspos[i],ystretch=lystr[i],$
 			charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? 2.5:1.5),linestyle= lstyle[i] & $
 		endfor
@@ -1999,8 +2004,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			idx2 = where(cci2 ne fillvalue2,chk_idx2)
 			if keyword_set(sea) then idx2 = where(cci2 ne fillvalue2 and dem eq 0,chk_idx2)
 			if keyword_set(land)  then idx2 = where(cci2 ne fillvalue2 and dem ne 0,chk_idx2)
-			maximum = adv_keyword_set(maxi) ? maxi[0] : max([cci[idx1],cci2[idx]])
-			minimum = adv_keyword_set(mini) ? mini[0] : min([cci[idx1],cci2[idx]])
+			maximum = adv_keyword_set(maxi) ? maxi[0] : max([cci[idx1],cci2[idx2]])
+			minimum = adv_keyword_set(mini) ? mini[0] : min([cci[idx1],cci2[idx2]])
 
 			chk1= where([chk_idx1,chk_idx2] ne 0,chknr1)
 			if chknr1 ne 2 then begin
@@ -2893,12 +2898,12 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		endif
 		fillvalue = -999.
 	endif else begin
-		gac = get_data(file=gacfile,year,month,sat=sat,algo=ref,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose)
+		gac = get_data(file=gacfile,year,month,sat=sat,algo=ref,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,/print_filename)
 		if not found then begin
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Reference file does not contain wanted data.')
 			return
 		endif
-		cci = get_data(file=ccifile,year,month,sat=sat,algo=algo1,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose)
+		cci = get_data(file=ccifile,year,month,sat=sat,algo=algo1,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,/print_filename)
 		if not found then begin
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: File does not contain wanted data.')
 			return
@@ -3662,12 +3667,12 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 		date     = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
 	endif else begin
 		if lev eq 'l3u' and ( ref eq 'gac' and (alg eq 'esacci' or alg eq 'patmos')) then join_nodes = 1
-		bild = 	get_data(year,month,day,file=file,data=varname,sat=sat,found=found,algo=alg,verbose=verbose,$
+		bild = 	get_data(year,month,day,file=file,data=varname,sat=sat,found=found,algo=alg,verbose=verbose,/print_filename,$
 			longname=longname,unit=unit,no_data_value=fillvalue1, level=lev,join_nodes=join_nodes,dim3=dim3,/make_compareable)
 		free,join_nodes
 		if keyword_set(reference) then begin
 			if lev eq 'l3u' and ( alg eq 'clara' and (ref eq 'cci' or ref eq 'pmx')) then join_nodes = 1
-			bild2 = get_data(strmid(date,0,4),strmid(date,4,2),strmid(date,6,2),algo=ref,data=varname,found=found,$
+			bild2 = get_data(strmid(date,0,4),strmid(date,4,2),strmid(date,6,2),algo=ref,data=varname,found=found,/print_filename,$
 				sat=sat,verbose=verbose,level=lev,join_nodes=join_nodes,/make_compareable,dim3=dim3,no_data_value=fillvalue2)
 			free,join_nodes
 			if ~found then begin
@@ -3818,7 +3823,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		date     = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
 ; date=''
 	endif else begin
-		bild = get_data(year,month,day,file=file,data=varname,no_data_value=fillvalue,minvalue=minvalue,algo=algo,sat=satellite,dirname=dirname, $
+		bild = get_data(year,month,day,file=file,data=varname,no_data_value=fillvalue,minvalue=minvalue,algo=algo,sat=satellite,dirname=dirname,/print_filename, $
 			maxvalue=maxvalue,longname=longname,unit=unit,verbose=verbose,found=found,/make_compareable,level=level,dim3=dim3,error=error)
 			make_geo,file=file,lon,lat,grid=get_grid_res(bild),found=found_geo
 		if ~found_geo then begin
@@ -4133,7 +4138,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 	endif else begin
 		datum = string(month,f='(i2.2)')+'/'+string(year,f='(i4.4)')
 
-		cci  = 	get_data(year,month,day,file = filename1,data=dat,algo=algo,sat=sat,glob=1,/mean,verbose=verbose,finfo=cci_info, $
+		cci  = 	get_data(year,month,day,file = filename1,data=dat,algo=algo,sat=sat,glob=1,/mean,verbose=verbose,finfo=cci_info,/print_filename, $
 			no_data=ndv_cci,unit=unit,longname=longname,found=found,level=level,/sil,/make_compareable,/join_nodes,dim3=dim3)
 		if not found then begin
 			ok=dialog_message('Data not found! '+algo+' '+dat)
@@ -4142,7 +4147,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		cci  =  percentile(cci [where(cci  ne ndv_cci  and dem eq 9999.)],[.5,.75,.25,.975,.025])
 
 		ref  = 	get_data(year,month,day,file = filename2,data=dat,algo=reference,sat=sat,glob=1,/mean,verbose=verbose,dim3=dim3, $
-			no_data=ndv_ref,found=found,level=level,/sil,/make_compareable,/join_nodes,finfo=ref_info)
+			no_data=ndv_ref,found=found,level=level,/sil,/make_compareable,/join_nodes,finfo=ref_info,/print_filename)
 		if not found then begin
 			ok=dialog_message('Data not found! '+reference+' '+dat)
 			return
@@ -4260,7 +4265,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 
 	; get the input_data
 	if keyword_set(file) then begin
-		cci1       = get_data(year,month,day,file = file[0],algo=algo1,data=dat,sat=sat,level=level,verbose=verbose,found=found,dim3=dim3)
+		cci1       = get_data(year,month,day,file = file[0],algo=algo1,data=dat,sat=sat,level=level,verbose=verbose,found=found,dim3=dim3,/print_filename)
 		if found then begin
 			dum = get_1d_hist_from_jch(cci1,algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic,land=land,sea=sea,found=found)
 			if found then begin
@@ -4279,7 +4284,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 		return
 	endelse
 	if keyword_set(file2) then begin
-		cci2       = get_data(year,month,day,file = file2,algo=algo2,data=dat,sat=sat,level=level,verbose=verbose,found=found,dim3=dim3)
+		cci2       = get_data(year,month,day,file = file2,algo=algo2,data=dat,sat=sat,level=level,verbose=verbose,found=found,dim3=dim3,/print_filename)
 		if found then begin
 			dum = get_1d_hist_from_jch(cci2,algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic,land=land,sea=sea,found=found)
 			if found then begin
