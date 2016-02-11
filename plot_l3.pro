@@ -763,7 +763,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		endif
 
 		start_save, save_as3, thick = thick, size = [32, 20]
-
+			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1 
 			view2d,aa,no_data_val=0,xtitle=algon_cci+' '+get_product_name(dat,algo=algo1,level=level,/upper),ytitle=algon_gac+' '+$
 			get_product_name(dat,algo=algo2,level=level,/upper),bar_title=bar_title, $
 			xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
@@ -776,7 +776,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				oplot,!x.crange,!y.crange
 			endif
 		end_save, save_as3
-
 	endif
 
 	; zonal median

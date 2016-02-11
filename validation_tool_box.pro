@@ -770,8 +770,8 @@ function sat_node,lon,diff=diff,vector=vector
 		return,-1
 	endif
 	si = size(lon,/dim)
-	lasc = fltarr(ydim1km) -999.
-	diff = fltarr(ydim1km) -999.
+	lasc = fltarr(si[1]) -999.
+	diff = fltarr(si[1]) -999.
 	real_fill_value = -999.
 
 	for jdim = 0, si[1] -1 do begin
@@ -5910,7 +5910,7 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		hist_name  = 'Cloud Water Path'
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: CWP. Nothing done so far for COLL?')
 	end
-	if stregex(data,'ref',/fold,/bool) then begin
+	if stregex(data,'ref',/fold,/bool) or stregex(data,'cer',/fold,/bool) then begin
 		bin_border = '0,10,20,30,40,50,60,70,80,90,100'
 		hist_name  = 'Cloud Effective Radius'
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: REF. Nothing done so far for '+algo)
@@ -5928,8 +5928,8 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		dum_bin_val = get_ncdf_data_by_name(file,var_dim_names[2],found=found)
 		dum_border  = get_ncdf_data_by_name(file,strreplace(var_dim_names[2],'_centre','_border'),found=found_border)
 		if found_border and stregex(var_dim_names[2],'_centre',/fold,/bool) then begin
-			xtickname = dum_border
-			bin_val   = dum_bin_val
+			xtickname = strlowcase(algo) eq 'claas' ? dum_border/1.e-06  : dum_border
+			bin_val   = strlowcase(algo) eq 'claas' ? dum_bin_val/1.e-06 : dum_bin_val
 		endif else begin
 			xtickname = strsplit(textoidl(bin_border),',',/ext)
 			bin_val   = (xtickname[1:*]+xtickname[0:*])/2.
@@ -5950,6 +5950,13 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		if idx_cnt gt 0 then bild[idx] = -999.
 		ytitle ='Relative Occurrence [%]'
 	endelse
+	if stregex(data,'ref',/fold,/bool) and total(strlowcase(algo) eq ['claas','clara2']) then begin
+		if xtickname[0] then begin
+			xtickname = [0.,xtickname]
+			bin_val   = [1.5,bin_val]
+			bild      = [0.,bild]
+		endif
+	endif
 
 	return, bild
 
