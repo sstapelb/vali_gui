@@ -3981,7 +3981,7 @@ l1g = 0
 
 end
 
-function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varname, level = level, dirname = dirname, found = found;,compare=compare;,load=load
+function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varname, level = level, dirname = dirname, found = found
 
 	scol = total(Widget_Info([self.avhrrs,self.modises,self.allsat],/button_set))
 	if strlowcase(self.leveltype) eq 'l3s' and ~scol then begin
@@ -4001,22 +4001,14 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 	endif
 
 	; das alles hier muss noch getestet werden!!
-	dumdata = varname
-	if total(strmid(algo,0,5) eq ['clara','claas']) then begin
-;check this--
-		if total(strlowcase(varname) eq ['cwp']) then dumdata = 'iwp'
-		if total(strlowcase(varname) eq ['cwp_allsky']) then dumdata = 'cfc'
-;check this--
-	endif
-; 	check   = (( Widget_Info(self.refself, /BUTTON_SET))); or keyword_set(compare)) and ( (strupcase(algo) eq self.algoname) ) )
-
+; 	check   = (( Widget_Info(self.refself, /BUTTON_SET)))
 	if keyword_set(check) then begin & dirname = self.directory & filename = self.filename & version = self.version & end
-	file =  get_filename(year, month, day, data=dumdata, sat=sat, algo = algo, level=level, found = found, $
+	file =  get_filename(year, month, day, data=varname, sat=sat, algo = algo, level=level, found = found, $
 	orbit = orbit[0], silent= check, dirname = dirname, filename = filename, version = version, node=node)
 
 	if found eq 0. and keyword_set(check) then begin
 		if (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit or level ne self.level) then begin
-			file =  get_filename(year, month, day, data=dumdata, sat=sat, algo = algo, level=level, found = found, $
+			file =  get_filename(year, month, day, data=varname, sat=sat, algo = algo, level=level, found = found, $
 			orbit = orbit[0], dirname = self.directory, filename = self.filename, version = self.version, node=node)
 		endif else begin
 			file = self.directory+'/'+self.filename
@@ -4187,11 +4179,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				algo   = ok.algoname eq '' ? self.algoname : ok.algoname
 				satn   = ok.satname  eq '' ? '' : ok.satname
 				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
-				print,'File1: ',file
+; 				print,'ncdf_data_def: File1: ',file[0]
 			endif else begin
+				if sel and (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
+				print,'Load button is checked! Search for file in loaded directory!'
 				file = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, level = level, found = found,$
 								 dirname = (sel ? self.directory:0))
-				print,'File1: ',file
+; 				print,'ncdf_data_def: File1: ',file[0]
 				datum=strjoin([year,month,day,orbit])
 			endelse
 			if ~found then return
@@ -4451,8 +4445,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				datum2 = strjoin([year,month,day,orbit])
 			endelse
 
-			print,'File1: '+file1
-			print,'File2: '+self.file2
+; 			print,'ncdf_data_def: File1: ',file1[0]
+; 			print,'ncdf_data_def: File2: ',self.file2[0]
 if sel then sat  = self.satname
 			if self-> filematch(file1,self.file2) then begin
 				ok = dialog_message('File1 and File2 are the same!',/cancel,/default_cancel)
@@ -4633,7 +4627,7 @@ if sel then sat  = self.satname
 			if ~found then begin
 				opl = 0 > (self.oplotnr -=1 )
 				return
-			endif else if ~pcmult then print,file
+			endif ;else if ~pcmult then print,'ncdf_data_def: File1: ',file[0]
 
 			if pmulti ne self.pmulti_default then begin
 				!p.multi = fix(strsplit(strcompress(pmulti,/rem),'],[()',/ext))
