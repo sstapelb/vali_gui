@@ -4149,6 +4149,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		if level eq 'l3u' then median = 1 else mean = 1
 		annex = (sat eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
 		set_algolist, algo_list, sat = sat, data = dat, exclude = [algo,reference],/default
+; algo_list = ['pmx','gac2','cci']
 		struc = get_all_avail_data(year,month,day,data=dat+annex,sat=sat,level=level,algo_list=algo_list,coverage=coverage, $
 			glob=1,/make_compare,mean=mean,median=median,verbose=verbose,percentile=[.5,.75,.25,.975,.025],limit=limit)
 		if is_struct(struc) then begin
@@ -4168,6 +4169,9 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 	free, array
 
 	case n_elements(medi) of 
+		8	: begin & xox = -0.35 & cc  = [-0.2,0.0,0.2,0.4,0.6,0.8,1.0,1.2] & end
+		7	: begin & xox = -0.25 & cc  = [-0.1,0.1,0.3,0.5,0.7,0.9,1.1] & end
+		6	: begin & xox = -0.15 & cc  = [0.0,0.2,0.4,0.6,0.8,1.0] & end
 		5	: begin & xox = -0.05 & cc  = [0.1,0.3,0.5,0.7,0.9] & end
 		4	: begin & xox =  0.05 & cc  = [0.2,0.4,0.6,0.8] & end
 		3	: begin & xox = -0.20 & cc  = [0.0,0.5,1.] & end
@@ -4344,25 +4348,27 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro create_cci_vs_gac_or_aqua_time_series, coverage=coverage,satellite=satellite, reference = reference
+pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,coverage
 
 	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
 
+	years  = string(indgen(33)+1982,f='(i4.4)')
+	months = string(indgen(12)+1,f='(i2.2)')
+
 	mem_cur = memory(/current)
 
-	cov = keyword_set(coverage)  ? strlowcase(coverage) : 'full'
-	sat = keyword_set(satellite) ? strlowcase(satellite): 'noaa18'
-	ref = keyword_set(reference) ? strlowcase(reference): 'gac'
+	cov = strlowcase(coverage)
+	sat = strlowcase(satellite)
+	ref = alg2ref(reference)
+	cli = alg2ref(climatology)
+	dat = strlowcase(dat)
 
-	cli = 'cci'
+	grid = 1.0
 	if ref eq 'gac'  then grid = 0.5
-	if ref eq 'myd'  then grid = 1.0
-	if ref eq 'mod'  then grid = 1.0
-	if ref eq 'myd2' then grid = 1.0
-	if ref eq 'mod2' then grid = 1.0
-	if ref eq 'pmx'  then grid = 1.0
-	if ref eq 'cci_old' then grid = 0.5
-	if ref eq 'gac2' then grid = 0.5 ; still to be prepared!
+	if ref eq 'gac2' then grid = 0.5
+	if ref eq 'cci'  then grid = 0.5
+	if ref eq 'cal'  then grid = 0.5
+	if ref eq 'cla'  then grid = 0.5
 
 	dem = get_dem(grid=grid)
 	make_geo,lon,lat,grid=grid
@@ -4380,87 +4386,29 @@ pro create_cci_vs_gac_or_aqua_time_series, coverage=coverage,satellite=satellite
 		else: begin print,'coverage not defined!' & return & end
 	endcase
 
-; 	years  = ['2007','2008','2009']
-	years  = ['2008']
-	years  = string(indgen(33)+1982,f='(i4.4)')
-	months = string(indgen(12)+1,f='(i2.2)')
-	if stregex(sat,'noaa',/bool,/fold) then begin
-		satcci = 'NOAA'+'-'+stregex(sat,"[0-9]+",/ext)
-		satgac = 'noaa'+stregex(sat,"[0-9]+",/ext)
-	endif else begin
-		satcci = sat
- 		satgac = ref eq 'cci_old' ? sat : ( total(satcci eq ['aatme','aatsr']) ? 'noaa17' : 'allsat' )
-	endelse
-	dt = (satcci eq 'aatme' and total(ref eq ['myd','mod','myd2','mod2','gac2','cci'])? '_day':'')
-	if total(sat eq ['avhrrs','modises','allsat']) then level  = 'l3s'
+	satcci = sat
+	satgac = ( total(satcci eq ['aatme','aatsr']) ? 'noaa17' : 'allsat' )
+	; fame-c only daytime
+	dt1 = (satcci eq 'aatme' and total(ref eq ['myd','mod','myd2','mod2','gac2','cci']) ? '_day':'')
+	dt2 = (satgac eq 'aatme' and total(ref eq ['myd','mod','myd2','mod2','gac2','cci']) ? '_day':'')
+	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
+
+	dat1 = dat+dt1
+	dat2 = dat+dt2
 
 	nyears=n_elements(years)
 	nmonths=n_elements(months)
 	dims = size(lon,/dim)
 	dim0 = 13
 
-	cfc_stats = fltarr(dim0,nyears*nmonths)-999.
-	cci_mean_cfc_2d = fltarr(dims)
-	cci_unce_cfc_2d = fltarr(dims)
-	gac_mean_cfc_2d = fltarr(dims)
-	anz_cfc_2d = fltarr(dims)
-	anz_unce_cfc_2d = fltarr(dims)
-
-; 	ctp_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_ctp_2d = fltarr(dims)
-; 	cci_unce_ctp_2d = fltarr(dims)
-; 	gac_mean_ctp_2d = fltarr(dims)
-; 	anz_ctp_2d = fltarr(dims)
-; 	anz_unce_ctp_2d = fltarr(dims)
-; 
-; 	ctt_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_ctt_2d = fltarr(dims)
-; 	cci_unce_ctt_2d = fltarr(dims)
-; 	gac_mean_ctt_2d = fltarr(dims)
-; 	anz_ctt_2d = fltarr(dims)
-; 	anz_unce_ctt_2d = fltarr(dims)
-; 
-; 	cot_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_cot_2d = fltarr(dims)
-; 	cci_unce_cot_2d = fltarr(dims)
-; 	gac_mean_cot_2d = fltarr(dims)
-; 	anz_cot_2d = fltarr(dims)
-; 	anz_unce_cot_2d = fltarr(dims)
-; 
-; 	lwp_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_lwp_2d = fltarr(dims)
-; 	cci_unce_lwp_2d = fltarr(dims)
-; 	gac_mean_lwp_2d = fltarr(dims)
-; 	anz_lwp_2d = fltarr(dims)
-; 	anz_unce_lwp_2d = fltarr(dims)
-; 
-; 	iwp_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_iwp_2d = fltarr(dims)
-; 	cci_unce_iwp_2d = fltarr(dims)
-; 	gac_mean_iwp_2d = fltarr(dims)
-; 	anz_iwp_2d = fltarr(dims)
-; 	anz_unce_iwp_2d = fltarr(dims)
-; 
-; 	cwp_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_cwp_2d = fltarr(dims)
-; 	cci_unce_cwp_2d = fltarr(dims)
-; 	gac_mean_cwp_2d = fltarr(dims)
-; 	anz_cwp_2d = fltarr(dims)
-; 	anz_unce_cwp_2d = fltarr(dims)
-; 
-; 	ref_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_ref_2d = fltarr(dims)
-; 	cci_unce_ref_2d = fltarr(dims)
-; 	gac_mean_ref_2d = fltarr(dims)
-; 	anz_ref_2d = fltarr(dims)
-; 	anz_unce_ref_2d = fltarr(dims)
-; 	
-; 	cph_stats = fltarr(dim0,nyears*nmonths)-999.
-; 	cci_mean_cph_2d = fltarr(dims)
-; 	cci_unce_cph_2d = fltarr(dims)
-; 	gac_mean_cph_2d = fltarr(dims)
-; 	anz_cph_2d = fltarr(dims)
-;  	anz_unce_cph_2d = fltarr(dims)
+	stats           = fltarr(dim0,nyears*nmonths)-999.
+	cci_mean_2d     = fltarr(dims)
+	cci_unce_2d     = fltarr(dims)
+	gac_mean_2d     = fltarr(dims)
+	gac_unce_2d     = fltarr(dims)
+	anz_2d          = fltarr(dims)
+	cci_anz_unce_2d = fltarr(dims)
+	gac_anz_unce_2d = fltarr(dims)
 
 	counti=0
 	for yy1=0,nyears-1,1 do begin
@@ -4469,615 +4417,100 @@ pro create_cci_vs_gac_or_aqua_time_series, coverage=coverage,satellite=satellite
 		yyyy=years[yy1]
 		mmmm=months[mm1]
 
-		ccifile = get_filename(yyyy,mmmm,data='cc_total',sat=satcci,algo='cci',found = c_cci,level=level,/silent)
-		gacfile = get_filename(yyyy,mmmm,data='cfc',sat=satgac,algo=ref ,found = c_gac,/silent)
+		cci_tmp = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,/mean,/make_compare,no_data_val=fv_cci,/silent,/print_file)
+		gac_tmp = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent,print_file=2)
 
-		if (c_cci eq 1 or c_gac eq 1) then begin
+		if (found_cci or found_gac) then begin
 
-			print, yyyy+'/'+mmmm+' '+sat+' '+cov+' - cci vs '+ref
-			; cfc
-			; compensate bug in cc4cl v1.4
-			cci_cld = get_data(yyyy,mmmm,file = ccifile[0],data='npoints_macro_cct_cloudy_raw',glob=grid,found=found_cld,/mean,/make_compare,no_data_val=fv_cld,/silent)
-			cci_clr = get_data(yyyy,mmmm,file = ccifile[0],data='npoints_macro_cct_clear_raw',glob=grid,found=found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent,/print_file)
-			if found_cld and found_cci then begin
-				cci_tmp = float(cci_cld) / float( (cci_cld + cci_clr) > 1)
-				idx = where(cci_cld eq fv_cld[0] or cci_clr eq fv_cci[0] or (cci_cld+cci_clr) eq 0,idxcnt)
-				if idxcnt gt 0 then cci_tmp[idx] = fv_cci[0]
-			endif
-; 			cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='cc_total',glob=grid,found=found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent,/print_file)
-			cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='cc_total_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-			gac_tmp = get_data(yyyy,mmmm,data='cfc'+dt,algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent,/print_file)
+			print, dat+' '+yyyy+'/'+mmmm+' '+sat+' '+cov+' - '+cli+' vs '+ref
+			cci_unc = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci_unc,glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
+			gac_unc = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac_unc,glob=grid,/mean,/make_compare,no_data_val=fv_gac_unc,/silent)
 			if found_cci then begin
 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
 				if good_count gt 0 then begin
-					cfc_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-					if idx2_cnt gt 0 then cfc_stats[9,counti] = gmean(((cci_unc[good_idx])[idx2])/100.,(lat[good_idx])[idx2])
-					cfc_stats[11,counti] = stddev(cci_tmp[good_idx])
+					stats[7,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
+					stats[8,counti] = stddev(cci_tmp[good_idx])
+					if found_cci_unc then begin
+						idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[9,counti] = gmean(((cci_unc[good_idx])[idx2]),(lat[good_idx])[idx2])
+					endif
 				endif
 			endif
 			if found_gac then begin
 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-				if good_count gt 0 then cfc_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-				if good_count gt 0 then cfc_stats[12,counti] = stddev(gac_tmp[good_idx])
+				if good_count gt 0 then begin
+					stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
+					stats[11,counti] = stddev(gac_tmp[good_idx])
+					if found_gac_unc then begin
+						idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[12,counti] = gmean(((gac_unc[good_idx])[idx2]),(lat[good_idx])[idx2])
+					endif
+				endif
 			endif
-
 			if found_cci and found_gac then begin
 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
 				if good_count gt 0 then begin
-					cfc_stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-					cfc_stats[1,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-					cfc_stats[2,counti] = bias(cci_tmp[good_idx],gac_tmp[good_idx])
-					cfc_stats[3,counti] = rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-					cfc_stats[4,counti] = stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-					cfc_stats[6,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-					cfc_stats[7,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-					if idx2_cnt gt 0 then cfc_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-					gac_cfc_all = adv_keyword_set(gac_cfc_all) ? [gac_cfc_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-					cci_cfc_all = adv_keyword_set(cci_cfc_all) ? [cci_cfc_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-					cci_mean_cfc_2d[good_idx] += cci_tmp[good_idx]
-					if idx2_cnt gt 0 then cci_unce_cfc_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-					gac_mean_cfc_2d[good_idx] += gac_tmp[good_idx]
-					anz_cfc_2d[good_idx]++
-					if idx2_cnt gt 0 then anz_unce_cfc_2d[good_idx[idx2]]++
+					stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
+					stats[1,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
+					stats[2,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+					stats[3,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+					stats[4,counti] = bc_rmse(stats[2,counti],stats[3,counti])
+					if found_cci_unc then begin
+						idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[5,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
+						if idx2_cnt gt 0 then cci_unce_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
+						if idx2_cnt gt 0 then cci_anz_unce_2d[good_idx[idx2]]++
+					endif
+					if found_gac_unc then begin
+						idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[6,counti] = gmean((gac_unc[good_idx])[idx2],(lat[good_idx])[idx2])
+						if idx2_cnt gt 0 then gac_unce_2d[good_idx[idx2]] += gac_unc[good_idx[idx2]]
+						if idx2_cnt gt 0 then gac_anz_unce_2d[good_idx[idx2]]++
+					endif
+					gac_all = adv_keyword_set(gac_all) ? [gac_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
+					cci_all = adv_keyword_set(cci_all) ? [cci_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
+					cci_mean_2d[good_idx] += cci_tmp[good_idx]
+					gac_mean_2d[good_idx] += gac_tmp[good_idx]
+					anz_2d[good_idx]++
 				endif
 			endif
 			free,cci_tmp
 			free,cci_unc
 			free,gac_tmp
-; 			; ctp
-; 			cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='ctp',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 			cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='ctp_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 			gac_tmp = get_data(yyyy,mmmm,data='ctp'+dt,algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					ctp_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then ctp_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					ctp_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then ctp_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then ctp_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					ctp_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					ctp_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					ctp_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					ctp_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					ctp_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					ctp_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					ctp_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then ctp_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_ctp_all = adv_keyword_set(gac_ctp_all) ? [gac_ctp_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_ctp_all = adv_keyword_set(cci_ctp_all) ? [cci_ctp_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_ctp_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_ctp_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_ctp_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_ctp_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_ctp_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; ctt
-; 			cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='ctt',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 			cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='ctt_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 			gac_tmp = get_data(yyyy,mmmm,data='ctt'+dt,algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					ctt_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then ctt_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					ctt_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then ctt_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then ctt_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					ctt_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					ctt_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					ctt_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					ctt_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					ctt_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					ctt_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					ctt_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then ctt_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_ctt_all = adv_keyword_set(gac_ctt_all) ? [gac_ctt_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_ctt_all = adv_keyword_set(cci_ctt_all) ? [cci_ctt_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_ctt_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_ctt_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_ctt_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_ctt_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_ctt_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; cot
-; 			cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='cot',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 			cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='cot_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 			gac_tmp = get_data(yyyy,mmmm,data='cot',algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					cot_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then cot_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					cot_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then cot_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then cot_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					cot_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					cot_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					cot_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					cot_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					cot_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					cot_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					cot_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then cot_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_cot_all = adv_keyword_set(gac_cot_all) ? [gac_cot_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_cot_all = adv_keyword_set(cci_cot_all) ? [cci_cot_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_cot_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_cot_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_cot_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_cot_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_cot_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; lwp
-; 			cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='lwp',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 			cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='lwp_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 			gac_tmp = get_data(yyyy,mmmm,data='lwp',algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					lwp_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then lwp_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					lwp_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then lwp_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then lwp_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					lwp_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					lwp_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					lwp_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					lwp_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					lwp_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					lwp_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					lwp_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne -999, idx2_cnt)
-; 					if idx2_cnt gt 0 then lwp_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_lwp_all = adv_keyword_set(gac_lwp_all) ? [gac_lwp_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_lwp_all = adv_keyword_set(cci_lwp_all) ? [cci_lwp_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_lwp_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_lwp_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_lwp_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_lwp_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_lwp_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; iwp
-; 			cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='iwp',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 			cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='iwp_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 			gac_tmp = get_data(yyyy,mmmm,data='iwp',algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					iwp_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then iwp_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					iwp_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then iwp_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then iwp_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					iwp_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					iwp_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					iwp_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					iwp_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					iwp_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					iwp_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					iwp_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then iwp_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_iwp_all = adv_keyword_set(gac_iwp_all) ? [gac_iwp_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_iwp_all = adv_keyword_set(cci_iwp_all) ? [cci_iwp_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_iwp_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_iwp_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_iwp_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_iwp_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_iwp_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; cwp
-; 			if ref eq 'pmx' then begin
-; 				found_cci = 0
-; 				found_gac = 0
-; 				gac_cwp_all = -999.
-; 				cci_cwp_all = -999.
-; 			endif else begin
-; 				cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='cwp',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 				cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='cwp_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 				gac_tmp = get_data(yyyy,mmmm,data='cwp',algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			endelse
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					cwp_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then cwp_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					cwp_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then cwp_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then cwp_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					cwp_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					cwp_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					cwp_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					cwp_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					cwp_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					cwp_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					cwp_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then cwp_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_cwp_all = adv_keyword_set(gac_cwp_all) ? [gac_cwp_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_cwp_all = adv_keyword_set(cci_cwp_all) ? [cci_cwp_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_cwp_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_cwp_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_cwp_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_cwp_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_cwp_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; cph
-; 			if ref eq 'pmx' then begin
-; 				found_cci = 0
-; 				found_gac = 0
-; 				gac_cph_all = -999.
-; 				cci_cph_all = -999.
-; 			endif else begin
-; 				cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='cph',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 				gac_tmp = get_data(yyyy,mmmm,data='cph'+dt,algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			endelse
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					cph_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; ; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; ; 					if idx2_cnt gt 0 then cph_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					cph_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then cph_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then cph_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					cph_stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					cph_stats[1,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 					cph_stats[2,counti] = bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					cph_stats[3,counti] = rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					cph_stats[4,counti] = stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					cph_stats[6,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					cph_stats[7,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; ;  					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; ;  					if idx2_cnt gt 0 then cph_stats[5,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_cph_all = adv_keyword_set(gac_cph_all) ? [gac_cph_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_cph_all = adv_keyword_set(cci_cph_all) ? [cci_cph_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_cph_2d[good_idx] += cci_tmp[good_idx]
-; ; 					if idx2_cnt gt 0 then cci_unce_cph_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_cph_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_cph_2d[good_idx]++
-; ;  					if idx2_cnt gt 0 then anz_unce_cph_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
-; 			; reff
-; 			if ref eq 'gac' or ref eq 'pmx' then begin
-; 				found_cci = 0
-; 				found_gac = 0
-; 				gac_ref_all = -999.
-; 				cci_ref_all = -999.
-; 			endif else begin
-; 				cci_tmp = get_data(yyyy,mmmm,file = ccifile[0],data='ref',glob=grid,found = found_cci,/mean,/make_compare,no_data_val=fv_cci,/silent)
-; 				cci_unc = get_data(yyyy,mmmm,file = ccifile[0],data='ref_uncertainty',glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
-; 				gac_tmp = get_data(yyyy,mmmm,data='ref',algo=ref,sat=satgac,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
-; 			endelse
-; 			if found_cci then begin
-; 				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					ref_stats[8,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then ref_stats[9,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					ref_stats[11,counti] = stddev(cci_tmp[good_idx])
-; 				endif
-; 			endif
-; 			if found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then ref_stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-; 				if good_count gt 0 then ref_stats[12,counti] = stddev(gac_tmp[good_idx])
-; 			endif
-; 			if found_cci and found_gac then begin
-; 				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-; 				if good_count gt 0 then begin
-; 					ref_stats[0,counti] =  gmean(cci_tmp[good_idx],lat[good_idx])
-; 					ref_stats[1,counti] =  gmean(gac_tmp[good_idx],lat[good_idx])
-; 					ref_stats[2,counti] =  bias(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					ref_stats[3,counti] =  rmse(cci_tmp[good_idx],gac_tmp[good_idx])
-; 					ref_stats[4,counti] =  stddev((cci_tmp[good_idx])-(gac_tmp[good_idx]))
-; 					ref_stats[6,counti] =  gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					ref_stats[7,counti] =  grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-; 					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-; 					if idx2_cnt gt 0 then ref_stats[5,counti] =  gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-; 					gac_ref_all = adv_keyword_set(gac_ref_all) ? [gac_ref_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-; 					cci_ref_all = adv_keyword_set(cci_ref_all) ? [cci_ref_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-; 					cci_mean_ref_2d[good_idx] += cci_tmp[good_idx]
-; 					if idx2_cnt gt 0 then cci_unce_ref_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-; 					gac_mean_ref_2d[good_idx] += gac_tmp[good_idx]
-; 					anz_ref_2d[good_idx]++
-; 					if idx2_cnt gt 0 then anz_unce_ref_2d[good_idx[idx2]]++
-; 				endif
-; 			endif
-; 			free,cci_tmp
-; 			free,cci_unc
-; 			free,gac_tmp
+			free,gac_unc
 		endif
 		counti++
 	    endfor
 	endfor
 
 	; cfc
-	qq = where(anz_cfc_2d eq 0,c_qq)
+	qq = where(anz_2d eq 0,c_qq)
 	if c_qq gt 0 then begin
-		cci_mean_cfc_2d[qq] = -999.
-		gac_mean_cfc_2d[qq] = -999.
+		cci_mean_2d[qq] = -999.
+		gac_mean_2d[qq] = -999.
 	endif
-	mean_cfc_cci  = cci_mean_cfc_2d/float(anz_cfc_2d > 1)
-	mean_cfc_gac  = gac_mean_cfc_2d/float(anz_cfc_2d > 1)
-	qq = where(anz_unce_cfc_2d eq 0,c_qq)
-	if c_qq gt 0 then cci_unce_cfc_2d[qq] = -999.
-	unce_cfc_cci  = cci_unce_cfc_2d/float(anz_unce_cfc_2d > 1)
+	mean_cci  = cci_mean_2d/float(anz_2d > 1)
+	mean_gac  = gac_mean_2d/float(anz_2d > 1)
+	qq = where(cci_anz_unce_2d eq 0,c_qq)
+	if c_qq gt 0 then cci_unce_2d[qq] = -999.
+	unce_cci  = cci_unce_2d/float(cci_anz_unce_2d > 1)
+	qq = where(gac_anz_unce_2d eq 0,c_qq)
+	if c_qq gt 0 then gac_unce_2d[qq] = -999.
+	unce_gac  = gac_unce_2d/float(gac_anz_unce_2d > 1)
+
 	;cleanup
-	free,cci_mean_cfc_2d 
-	free,cci_unce_cfc_2d 
-	free,gac_mean_cfc_2d 
-	free,anz_cfc_2d 	
-	free,anz_unce_cfc_2d 
-
-; 	; ctp
-; 	qq = where(anz_ctp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_ctp_2d[qq] = -999.
-; 		gac_mean_ctp_2d[qq] = -999.
-; 	endif
-; 	mean_ctp_cci  = cci_mean_ctp_2d/float(anz_ctp_2d > 1)
-; 	mean_ctp_gac  = gac_mean_ctp_2d/float(anz_ctp_2d > 1)
-; 	qq = where(anz_unce_ctp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_ctp_2d[qq] = -999.
-; 	unce_ctp_cci  = cci_unce_ctp_2d/float(anz_unce_ctp_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_ctp_2d 
-; 	free,cci_unce_ctp_2d 
-; 	free,gac_mean_ctp_2d 
-; 	free,anz_ctp_2d 	
-; 	free,anz_unce_ctp_2d 
-; 
-; 	; ctt
-; 	qq = where(anz_ctt_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_ctt_2d[qq] = -999.
-; 		gac_mean_ctt_2d[qq] = -999.
-; 	endif
-; 	mean_ctt_cci  = cci_mean_ctt_2d/float(anz_ctt_2d > 1)
-; 	mean_ctt_gac  = gac_mean_ctt_2d/float(anz_ctt_2d > 1)
-; 	qq = where(anz_unce_ctt_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_ctt_2d[qq] = -999.
-; 	unce_ctt_cci  = cci_unce_ctt_2d/float(anz_unce_ctt_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_ctt_2d 
-; 	free,cci_unce_ctt_2d 
-; 	free,gac_mean_ctt_2d 
-; 	free,anz_ctt_2d 	
-; 	free,anz_unce_ctt_2d 
-; 
-; 	; cot
-; 	qq = where(anz_cot_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_cot_2d[qq] = -999.
-; 		gac_mean_cot_2d[qq] = -999.
-; 	endif
-; 	mean_cot_cci  = cci_mean_cot_2d/float(anz_cot_2d > 1)
-; 	mean_cot_gac  = gac_mean_cot_2d/float(anz_cot_2d > 1)
-; 	qq = where(anz_unce_cot_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_cot_2d[qq] = -999.
-; 	unce_cot_cci  = cci_unce_cot_2d/float(anz_unce_cot_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_cot_2d 
-; 	free,cci_unce_cot_2d 
-; 	free,gac_mean_cot_2d 
-; 	free,anz_cot_2d 	
-; 	free,anz_unce_cot_2d 
-; 
-; 	; lwp
-; 	qq = where(anz_lwp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_lwp_2d[qq] = -999.
-; 		gac_mean_lwp_2d[qq] = -999.
-; 	endif
-; 	mean_lwp_cci  = cci_mean_lwp_2d/float(anz_lwp_2d > 1)
-; 	mean_lwp_gac  = gac_mean_lwp_2d/float(anz_lwp_2d > 1)
-; 	qq = where(anz_unce_lwp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_lwp_2d[qq] = -999.
-; 	unce_lwp_cci  = cci_unce_lwp_2d/float(anz_unce_lwp_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_lwp_2d 
-; 	free,cci_unce_lwp_2d 
-; 	free,gac_mean_lwp_2d 
-; 	free,anz_lwp_2d 	
-; 	free,anz_unce_lwp_2d 
-; 
-; 	; iwp
-; 	qq = where(anz_iwp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_iwp_2d[qq] = -999.
-; 		gac_mean_iwp_2d[qq] = -999.
-; 	endif
-; 	mean_iwp_cci  = cci_mean_iwp_2d/float(anz_iwp_2d > 1)
-; 	mean_iwp_gac  = gac_mean_iwp_2d/float(anz_iwp_2d > 1)
-; 	qq = where(anz_unce_iwp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_iwp_2d[qq] = -999.
-; 	unce_iwp_cci  = cci_unce_iwp_2d/float(anz_unce_iwp_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_iwp_2d 
-; 	free,cci_unce_iwp_2d 
-; 	free,gac_mean_iwp_2d 
-; 	free,anz_iwp_2d 	
-; 	free,anz_unce_iwp_2d 
-; 
-; 	; cwp
-; 	qq = where(anz_cwp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_cwp_2d[qq] = -999.
-; 		gac_mean_cwp_2d[qq] = -999.
-; 	endif
-; 	mean_cwp_cci  = cci_mean_cwp_2d/float(anz_cwp_2d > 1)
-; 	mean_cwp_gac  = gac_mean_cwp_2d/float(anz_cwp_2d > 1)
-; 	qq = where(anz_unce_cwp_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_cwp_2d[qq] = -999.
-; 	unce_cwp_cci  = cci_unce_cwp_2d/float(anz_unce_cwp_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_cwp_2d 
-; 	free,cci_unce_cwp_2d 
-; 	free,gac_mean_cwp_2d 
-; 	free,anz_cwp_2d 	
-; 	free,anz_unce_cwp_2d 
-; 
-; 	; cph
-; 	qq = where(anz_cph_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_cph_2d[qq] = -999.
-; 		gac_mean_cph_2d[qq] = -999.
-; 	endif
-; 	mean_cph_cci  = cci_mean_cph_2d/float(anz_cph_2d > 1)
-; 	mean_cph_gac  = gac_mean_cph_2d/float(anz_cph_2d > 1)
-; 	qq = where(anz_unce_cph_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_cph_2d[qq] = -999.
-; 	unce_cph_cci  = cci_unce_cph_2d/float(anz_unce_cph_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_cph_2d 
-; 	free,cci_unce_cph_2d 
-; 	free,gac_mean_cph_2d 
-; 	free,anz_cph_2d 	
-; 	free,anz_unce_cph_2d
-; 
-; 	; reff
-; 	qq = where(anz_ref_2d eq 0,c_qq)
-; 	if c_qq gt 0 then begin
-; 		cci_mean_ref_2d[qq] = -999.
-; 		gac_mean_ref_2d[qq] = -999.
-; 	endif
-; 	mean_ref_cci  = cci_mean_ref_2d/float(anz_ref_2d > 1)
-; 	mean_ref_gac  = gac_mean_ref_2d/float(anz_ref_2d > 1)
-; 	qq = where(anz_unce_ref_2d eq 0,c_qq)
-; 	if c_qq gt 0 then cci_unce_ref_2d[qq] = -999.
-; 	unce_ref_cci  = cci_unce_ref_2d/float(anz_unce_ref_2d > 1)
-; 	;cleanup
-; 	free,cci_mean_ref_2d 
-; 	free,cci_unce_ref_2d 
-; 	free,gac_mean_ref_2d 
-; 	free,anz_ref_2d 	
-; 	free,anz_unce_ref_2d 
-
+	free,cci_mean_2d 
+	free,cci_unce_2d 
+	free,gac_mean_2d 
+	free,gac_unce_2d 
+	free,anz_2d 	
+	free,cci_anz_unce_2d 
+	free,gac_anz_unce_2d 
 
 	if cov eq 'full' then cov = '' else cov = cov+'_'
-	save_var,{cci_all:temporary(cci_cfc_all),gac_all:temporary(gac_cfc_all),stats:temporary(cfc_stats),mean_cci:temporary(mean_cfc_cci), $
-		  unc_cci:temporary(unce_cfc_cci),mean_gac:temporary(mean_cfc_gac)}, $
-	!SAVS_DIR + 'time_series/compare_cfc_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_ctp_all),gac_all:temporary(gac_ctp_all),stats:temporary(ctp_stats),mean_cci:temporary(mean_ctp_cci), $
-; 		  unc_cci:temporary(unce_ctp_cci),mean_gac:temporary(mean_ctp_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_ctp_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_ctt_all),gac_all:temporary(gac_ctt_all),stats:temporary(ctt_stats),mean_cci:temporary(mean_ctt_cci), $
-; 		  unc_cci:temporary(unce_ctt_cci),mean_gac:temporary(mean_ctt_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_ctt_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_cot_all),gac_all:temporary(gac_cot_all),stats:temporary(cot_stats),mean_cci:temporary(mean_cot_cci), $
-; 		  unc_cci:temporary(unce_cot_cci),mean_gac:temporary(mean_cot_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_cot_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_lwp_all),gac_all:temporary(gac_lwp_all),stats:temporary(lwp_stats),mean_cci:temporary(mean_lwp_cci), $
-; 		  unc_cci:temporary(unce_lwp_cci),mean_gac:temporary(mean_lwp_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_lwp_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_iwp_all),gac_all:temporary(gac_iwp_all),stats:temporary(iwp_stats),mean_cci:temporary(mean_iwp_cci), $
-; 		  unc_cci:temporary(unce_iwp_cci),mean_gac:temporary(mean_iwp_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_iwp_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_cwp_all),gac_all:temporary(gac_cwp_all),stats:temporary(cwp_stats),mean_cci:temporary(mean_cwp_cci), $
-; 		  unc_cci:temporary(unce_cwp_cci),mean_gac:temporary(mean_cwp_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_cwp_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_ref_all),gac_all:temporary(gac_ref_all),stats:temporary(ref_stats),mean_cci:temporary(mean_ref_cci), $
-; 		  unc_cci:temporary(unce_ref_cci),mean_gac:temporary(mean_ref_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_ref_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
-; 	save_var,{cci_all:temporary(cci_cph_all),gac_all:temporary(gac_cph_all),stats:temporary(cph_stats),mean_cci:temporary(mean_cph_cci), $
-; 		  unc_cci:temporary(unce_cph_cci),mean_gac:temporary(mean_cph_gac)}, $
-; 	!SAVS_DIR + 'time_series/compare_cph_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
+	save_var,{cci_all:temporary(cci_all),gac_all:temporary(gac_all),stats:temporary(stats),mean_cci:temporary(mean_cci), $
+		  unc_cci:temporary(unce_cci),mean_gac:temporary(mean_gac),unc_gac:temporary(unce_gac)}, $
+	!SAVS_DIR + 'time_series/compare_'+dat+'_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
 
 	print, 'Memory used ', ( memory(/high) - mem_cur) / 1024d^2d, ' MB'
 
@@ -5087,19 +4520,21 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_create_all_cci_time_series
-	cov = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
-; 	sat = ['noaa12','noaa15','noaa17','metopa','metopb','aqua','terra','aatme','aatsr',avhrrs','modises','allsat']
- 	sat = ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19']
- 	ref = ['gac','gac2','pmx','myd2','myd','mod','mod2','cci_old']
+	cli  =  'cci'
+	cov  = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
+	sat  = ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19','noaa12','noaa15','noaa17', $
+		'metopa','metopb','aqua','terra','aatme','aatsr','avhrrs','modises','allsat']
+	ref  = ['gac2','pmx','myd2','mod2'];,'myd','mod','gac']
+	data = ['cfc','ctp','ctt','cot','ref','cth','lwp','iwp','cwp','cph']
 	for j=0,n_elements(cov) -1 do begin
 		for i= 0,n_elements(sat)-1 do begin
 			for k=0,n_elements(ref)-1 do begin
-				do_it = 1
-				if strmid(ref[k],0,3) eq 'myd' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12','noaa14']) then do_it = 0
-				if strmid(ref[k],0,3) eq 'mod' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12']) then do_it = 0
-				if ref[k] eq 'cci_old' and ~total(sat[i] eq ['noaa17','noaa18','metopa']) then do_it = 0
-				if ref[k] eq 'gac2' and total(sat[i] eq ['noaa14','noaa16','noaa18','noaa19']) then do_it=0 ; zur Zeit wird noch gerechnet
-				if do_it then create_cci_vs_gac_or_aqua_time_series, coverage=cov[j],satellite=sat[i],reference = ref[k]
+				for l=0,n_elements(data)-1 do begin
+					do_it = 1
+					if strmid(ref[k],0,3) eq 'myd' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12','noaa14']) then do_it = 0
+					if strmid(ref[k],0,3) eq 'mod' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12']) then do_it = 0
+					if do_it then create_cci_vs_gac_or_aqua_time_series, data[l], cli, ref[k], sat[i], cov[j]
+				endfor
 			endfor
 		endfor
 	endfor

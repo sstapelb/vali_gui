@@ -3730,48 +3730,28 @@ function get_new_lus,lus,nise
 
 end
 ;------------------------------------------------------------------------------------------
-function get_l3u_ecmwf_data, date, time, grid_res = grid_res, found = found, verbose = verbose,skt=skt,sd=sd,ci=ci
+function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose
 
 	gres = keyword_set(grid_res) ? grid_res : 0.1
 
-	if grid_res eq 0.1 and strmid(date,0,6) eq '200807' and keyword_set(skt) and keyword_set(sd) and keyword_set(ci) then begin
-		dd = fix(strmid(date,6,2))-1
-		stemp_00 = shift(rotate(congrid(reform(skt[*,*,(dd*4)+0]),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		stemp_06 = shift(rotate(congrid(reform(skt[*,*,(dd*4)+1]),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		stemp_12 = shift(rotate(congrid(reform(skt[*,*,(dd*4)+2]),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		stemp_18 = shift(rotate(congrid(reform(skt[*,*,(dd*4)+3]),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		dum_sd   = shift(rotate(congrid(((reform(sd[*,*,(dd*4)+0]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		dum_ci   = shift(rotate(congrid(((reform(ci[*,*,(dd*4)+0]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		sn_ic_00 = ( (dum_ci gt 0.15) ) or  ( (dum_sd gt 0.01) )
-		dum_sd   = shift(rotate(congrid(((reform(sd[*,*,(dd*4)+1]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		dum_ci   = shift(rotate(congrid(((reform(ci[*,*,(dd*4)+1]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		sn_ic_06 = ( (dum_ci gt 0.15) ) or  ( (dum_sd gt 0.01) )
-		dum_sd   = shift(rotate(congrid(((reform(sd[*,*,(dd*4)+2]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		dum_ci   = shift(rotate(congrid(((reform(ci[*,*,(dd*4)+2]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		sn_ic_12 = ( (dum_ci gt 0.15) ) or  ( (dum_sd gt 0.01) )
-		dum_sd   = shift(rotate(congrid(((reform(sd[*,*,(dd*4)+3]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		dum_ci   = shift(rotate(congrid(((reform(ci[*,*,(dd*4)+3]))),360./grid_res, 180./grid_res),7),180./grid_res,0)
-		sn_ic_18 = ( (dum_ci gt 0.15) ) or  ( (dum_sd gt 0.01) )
-	endif else begin
-		make_geo,lon,lat, grid = gres
-		; ECMWF Skin temperature
-		struc = map_ecmwf_to_orbit(date+'0000', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-		if ~found then return,-1
-			stemp_00 = struc.skt.data
- 			sn_ic_00 = ( (struc.ci.data gt 0.15) ) or  ( (struc.sd.data gt 0.01) )
-		struc = map_ecmwf_to_orbit(date+'0600', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-		if ~found then return,-1
-			stemp_06 = struc.skt.data
- 			sn_ic_06 = ( (struc.ci.data gt 0.15) ) or  ( (struc.sd.data gt 0.01) )
+	make_geo,lon,lat, grid = gres
+	; ECMWF Skin temperature
+	struc = map_ecmwf_to_orbit(date+'0000', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+	if ~found then return,-1
+		stemp_00 = struc.skt.data
+		sn_ic_00 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
+	struc = map_ecmwf_to_orbit(date+'0600', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+	if ~found then return,-1
+		stemp_06 = struc.skt.data
+		sn_ic_06 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
 		struc = map_ecmwf_to_orbit(date+'1200', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-		if ~found then return,-1
-			stemp_12 = struc.skt.data
-			sn_ic_12 = ( (struc.ci.data gt 0.15) ) or  ( (struc.sd.data gt 0.01) )
-		struc = map_ecmwf_to_orbit(date+'1800', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-		if ~found then return,-1
-			stemp_18 = struc.skt.data
- 			sn_ic_18 = ( (struc.ci.data gt 0.15) ) or  ( (struc.sd.data gt 0.01) )
-	endelse
+	if ~found then return,-1
+		stemp_12 = struc.skt.data
+		sn_ic_12 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
+	struc = map_ecmwf_to_orbit(date+'1800', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+	if ~found then return,-1
+		stemp_18 = struc.skt.data
+		sn_ic_18 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
 
 	nd_idx = where(time lt 0,nd_cnt)
 	dum = fix(time > 0 )/6
@@ -4709,9 +4689,9 @@ pro set_algolist, algo_list, sat = sat, data = data, default = default, exclude 
 		ampm  = noaa_ampm(sat)
 		; define algo_list
 		if ampm eq 'am' then begin
-			algo_list = co5 ? ['mod2','cci','cci_old','cal'] : ['pmx','gac','gac2','cci','cci_old','mod2','cal']
+			algo_list = co5 ? ['mod2','cci'] : ['pmx','gac2','cci','mod2','gac']
 		endif else begin
-			algo_list = co5 ? ['myd2','cci','cci_old','cal'] : ['pmx','gac','gac2','cci','cci_old','myd2','cal']
+			algo_list = co5 ? ['myd2','cci','cal'] : ['pmx','gac2','cci','myd2','cal','gac']
 		endelse
 	endif else algo_list = ['cci','cci_old','pmx','myd','myd2','mod','mod2','gac','gac2','gwx','cla','isp','era','cal']
 
