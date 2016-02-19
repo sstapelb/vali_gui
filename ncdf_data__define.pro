@@ -4280,7 +4280,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pcmult and pcts then begin
 				if verbose then print,'Time Series + 2d Histo + Zonal Mean'
 				!p.multi = [0,1,2]
-				plot_cci_gac_time_series, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, $
+				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, $
 				single_var = varname,mini=mini,maxi=maxi,limit=limit,error=error, show_values = show_values, $
 				verbose = verbose, other = oth, ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, $
@@ -4298,7 +4298,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pczm and pcmult then begin
 				if verbose then print,'Zonal Average Multi Time Step'
-				plot_cci_gac_time_series, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/zonal_only,$
+				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/zonal_only,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
@@ -4307,7 +4307,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
-				plot_cci_gac_time_series, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/diff,$
+				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/diff,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
@@ -4316,7 +4316,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcvar and pcmult then begin
 				if verbose then print,'Map2d Multi Time Step'
-				plot_cci_gac_time_series, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/mean_2d, verbose = verbose,$
+				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/mean_2d, verbose = verbose,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
 				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log
@@ -4378,6 +4378,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
 
 			if ~found then return
+
+			if (pcmult) then begin
+				ok = dialog_message('Multi Time steps not allowed with File difference! Try "Compare" instead!')
+				return
+			endif
 
 			if (pcms and ~save_as) or pchov then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" or "Multi Time Steps" instead!')
@@ -4639,7 +4644,7 @@ if sel then sat  = self.satname
 			if pchov then begin
 				; hovmoeller
 				if hist2d then begin 
-					   ok=dialog_message('Not available for '+varname)
+					   ok=dialog_message('Hovmoeller Diagram Not available for '+varname)
 					   return
 				endif
 				if ptr_valid(self.out_hovmoeller) then begin

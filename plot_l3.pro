@@ -170,7 +170,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 	apx = ''
 
 	if keyword_set(time_series) then begin
-		period = '2008-2008'
+		period = '1982-2014'
 		corr_arr = fltarr(ncov) -999.
 		bias_arr = fltarr(ncov) -999.
 		stdd_arr_cci = fltarr(ncov) -999.
@@ -179,14 +179,15 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 		for ii = 0, ncov-1 do begin
 			d = get_available_time_series( algo, varname, sat, coverage = coverage[ii], reference = reference, period = period, sav_file = sav_file, found = found)
 			if not found then begin
-				ok = dialog_message("Sav File not found! "+sav_file)
+				ok = dialog_message("plot_taylor_diagram: Sav File not found! "+sav_file)
 				return
 			endif
-			corr_arr[ii] = d.correlation
-			bias_arr[ii] = mean(d.stats[6,*])
-			stdd_arr_cci[ii] = d.cci_stdd
-			stdd_arr_gac[ii] = d.gac_stdd
-			bild_cci[ii] = max(d.cci_all)
+			corr_arr[ii]     = d.OVERALL_STATS.CORRELATION
+			bias_arr[ii]     = d.OVERALL_STATS.BIAS
+			stdd_arr_cci[ii] = d.OVERALL_STATS.STDDEV
+			stdd_arr_gac[ii] = d.OVERALL_STATS.STDDEV2
+			bild_cci[ii]     = d.OVERALL_STATS.MAXVALUE
+			datum            = d.actual_date
 		endfor
 	endif else begin
 		bild_cci  = get_data(year,month,day,file=file1,sat = sat,algo=algo,data=varname,level=level,no_data_value=fillv_b_cci,$
@@ -390,6 +391,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'ctt'		: begin & histv = [1.,150.,320.] & vollername = 'Cloud Top Temperature' & end
 		'cfc'		: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Fraction' & end
 		'cc_mask'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
+		'cmask_a'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
+		'cmask_d'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
 		'cc_tota'	: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Fraction' & end
 		'cph'		: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Phase' & end
 		'cph_asc'	: begin & histv = [1.,1.,2.]     & vollername = 'Cloud Phase Ascending' & end
@@ -771,7 +774,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 3, $
 			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,/log,charthick = 1.2, xcharsize = 1.2,ycharsize = 1.2
 			if chk_idx gt 0 and total(size(aa,/dim)) gt 4 then begin
-; 				oplot,!x.crange,[regr[0]/bin,regr[1]*!x.crange[1]+regr[0]/bin],linestyle=2
 				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2
 				oplot,!x.crange,!y.crange
 			endif
@@ -957,7 +959,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	if keyword_set(timeseries) then begin
 		if histo1d then begin
-			datum = '200801-200812'
+			datum = '1982-2014'
 			if stregex(dat,'ratio',/fold,/bool) then begin
 				sav_file = !SAVS_DIR + 'hist1d/'+strlowcase(strreplace(dat,'ratio','liq',/fold))+'_'+datum+'_'+algo2ref(algo,sat=sat)+'_'+$
 					(total(algo eq ['coll5','coll6','claas']) ? '':sat)+'.sav'
@@ -994,14 +996,17 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			maxvalue = max(bild)
 			unit = ''
 		endif else if histo2d then begin
-			datum = '200801-200812'
+			datum = '1982-2014'
 			sav_file = !SAVS_DIR + 'cot_ctp_hist2d/'+get_product_name(dat,algo='cci_old')+'_'+datum+'_'+algo2ref(algo,sat=sat)+'_'+$
 				(total(algo eq ['coll5','coll6','claas']) ? '':sat)+'.sav'
-			bild = 	restore_var(sav_file,found=found)
+			struc = restore_var(sav_file,found=found)
 			if not found then begin
 				ok = dialog_message('plot_l2: sav_file not found! '+sav_file)
 				return
 			endif
+			bild  = struc.bild
+			datum = struc.actual_date
+			free,struc
 			print,'Sav File: ',sav_file
 			fillvalue = -999.
 			longname = 'Joint cloud property Histogram of ice and water clouds'
@@ -1014,18 +1019,10 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				ok = dialog_message('plot_l2: Sav_file not found: '+sfile)
 				return
 			endif
-			if algo eq 'esacci' then begin
-				bild = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool) ? d.unc_cci : d.mean_cci
-				ii   = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool) ? 9 : 8
-			endif else begin
-				bild = d.mean_gac
-				ii   = 10
-			endelse
+			bild = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool) ? d.unc : d.mean
 			glob_grid = get_grid_res(bild)
 			fillvalue = -999.
-			dumyear  = minmax(where(d.stats[ii,*] ne -999.))/12 + fix((strsplit(d.period,/ext,'-'))[0])
-			dummonth = minmax(where(d.stats[ii,*] ne -999.)) mod 12
-			datum    = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')
+			datum=d.actual_date
 			mima=minmax(bild,no=fillvalue)
 			minvalue = mima[0]
 			maxvalue = mima[1]
@@ -1626,35 +1623,37 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	ls = ( keyword_set(land) or keyword_set(sea))
 
 	if keyword_set(timeseries) then begin
+		;hier kommt man nie hin, glaub ich
 		if keyword_set(land) then cov = 'land'
 		if keyword_set(sea)  then cov = 'sea'
-		ref  = (algo2ref(algo1) eq 'cci') ? 'gac' : algo2ref(algo1)
-		d = get_available_time_series( algo1, dat1, sat1, coverage = coverage, reference = ref, period = zeitraum, sav_file = sav_file, found = found)
-		bild1 = (algo2ref(algo1) eq 'cci') ? d.mean_cci : d.mean_gac
+		d = get_available_time_series( algo1, dat1, sat1, coverage = coverage, reference = algo2, period = '1982-2014', sav_file = sav_file, found = found)
+		if not found then begin
+			ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
+			return
+		endif
+		bild1 = d.mean
+		bild2 = d.mean2
 		fillvalue1 = -999.
+		fillvalue2 = -999.
 		unit1 = d.unit
+		unit2 = d.unit
+		datum=d.actual_date
 	endif else begin
 		if keyword_set(check_quality) then qcflag1 = fix(get_data(file=file1,data='qcflag', verbose = verbose))
 		bild1 = get_data(year, month, day,file=file1,data=dat1,sat=sat1,algo=algo1,no_data_value=fillvalue1,dim3=dim3,unit=unit1,$
 			found=found,verbose=verbose,orbit=orbit,var_dim_names=var_dim_names1,/print_filename)
+		if not found then begin
+			ok=dialog_message('compare_l2: Could not read data! '+file1+' '+dat1)
+			return
+		endif
+		if keyword_set(check_quality) then qcflag2 = fix(get_data(file=file2,data='qcflag',verbose = verbose))
+		bild2 = get_data(year, month, day,file=file2,data=dat2,sat=sat2,algo=algo2,dim3=dim3,no_data_value=fillvalue2,unit=unit2,$
+			found=found,verbose=verbose,orbit=orbit,level=level,print_filename=2)
+		if not found then begin
+			ok=dialog_message('compare_l2: Could not read data! '+file2+' '+dat2)
+			return
+		endif
 	endelse
-
-	if not found then begin
-		ok=dialog_message('compare_l2: Could not read data! '+file1+' '+dat1)
-		return
-	endif
-
-	if keyword_set(check_quality) then qcflag2 = fix(get_data(file=file2,data='qcflag',verbose = verbose))
-	bild2 = get_data(year, month, day,file=file2,data=dat2,sat=sat2,algo=algo2,dim3=dim3,no_data_value=fillvalue2,unit=unit2,$
-		found=found,verbose=verbose,orbit=orbit,level=level,print_filename=2)
-; stop
-; ; für Martins calispo jahresmittel; wegmachen wenn es sich ändert
-; if algo2 eq 'calipso' then fillvalue2 = -1
-;---------------------------------------------------------------
-	if not found then begin
-		ok=dialog_message('compare_l2: Could not read data! '+file2+' '+dat2)
-		return
-	endif
 	dat = dat1
 
 	if keyword_set(rot) then begin
@@ -2443,21 +2442,48 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 	endfor
 end
 ;------------------------------------------------------------------------------------------
+pro polyfill_ts_error,ts_data,ts_unce,error=error,color=color
+
+	idx     = where(finite(ts_data),nc_cnt)
+	idx_unc = where(finite(ts_unce),nc_unc_cnt)
+	col     = keyword_set(color) ? color : cgColor("Tan6")
+
+	if keyword_set(error) and nc_unc_cnt ne 0 then begin
+		split = where((idx[1:*]-idx[0:*]) ne 1,count)
+		if count ge 1 then begin
+			polyfill,[idx[0:split[0]],reverse(idx[0:split[0]])],[reform(ts_data[idx[0:split[0]]]+ts_unce[idx[0:split[0]]]), $
+			reverse(reform(ts_data[idx[0:split[0]]]-ts_unce[idx[0:split[0]]]))],col=col
+			if count gt 1 then begin
+				for i=1,count-1 do begin
+					polyfill,[idx[(split[i-1]+1):split[i]],reverse(idx[(split[i-1]+1):split[i]])],$
+					[reform(ts_data[idx[(split[i-1]+1):split[i]]]+ts_unce[idx[(split[i-1]+1):split[i]]]), $
+					reverse(reform(ts_data[idx[(split[i-1]+1):split[i]]]-ts_unce[idx[(split[i-1]+1):split[i]]]))],col=col
+				endfor
+			endif
+			polyfill,[idx[split[count-1]+1:*],reverse(idx[split[count-1]+1:*])],$
+			[reform(ts_data[idx[split[count-1]+1:*]]+ts_unce[idx[split[count-1]+1:*]]),$
+			reverse(reform(ts_data[idx[split[count-1]+1:*]]-ts_unce[idx[split[count-1]+1:*]]))],col=col
+		endif else begin
+			polyfill,[idx,reverse(idx)],[reform(ts_data[idx]+ts_unce[idx]),reverse(reform(ts_data[idx]-ts_unce[idx]))],col=col
+		endelse
+	endif
+end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro gac_ts_plots,hist_data1,hist_data2,mean_data1,mean_data2,ts_data,bin,dat,unit		, $
-		 yrange,lines,min_a,max_a,anz,xtickname,qu,ref,log=log,save_as=save_as,sat	, $
-		 single_var=single_var,thick=thick,error=error,show_values = show_values	, $
+pro gac_ts_plots,struc,dat,algon1,yrange,lines,anz,xtickname,qu,ref	,	$
+		 log=log,save_as=save_as,single_var=single_var,error=error,show_values = show_values	, $
 		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl		, $
-		 longname=longname,hct=hct,white_bg=white_bg,standard=standard, datum = datum
+		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum
 
-	sav = keyword_set(save_as)
-	sig = keyword_set(single_var)
-	zoo = keyword_set(zonal_only)
-	wbg = keyword_set(white_bg)
-	symsize=n_elements(xtickname) gt 5 ? 1.5 : 1.0
-	symsize=(sav or wbg ? 1+symsize : 0.5+symsize)
-	datum = keyword_set(datum) and keyword_set(zonal_only) ? datum : ''
-
+	sav     = keyword_set(save_as)
+	sig     = keyword_set(single_var)
+	zoo     = keyword_set(zonal_only)
+	wbg     = keyword_set(white_bg)
+	symsize = n_elements(xtickname) gt 5 ? 1.5 : 1.0
+	symsize = (sav or wbg ? 1+symsize : 0.5+symsize)
+	datum   = keyword_set(datum) ? datum : ''
+	d       = struc
+	tsi     = d.TS_INDICES
+	unit    = d.unit
 	if sav then begin
 		charthick = 1.5
 		xcharsize = 1.7 
@@ -2486,130 +2512,93 @@ pro gac_ts_plots,hist_data1,hist_data2,mean_data1,mean_data2,ts_data,bin,dat,uni
 	cc = 5
 	title = longname
 
-	if ~adv_keyword_set(no_compare) then begin
-		idx = where(hist_data1 ge 0 and hist_data2 ge 0,idx_cnt)
-		if idx_cnt gt 0 then begin
-			min_a = yrange[0]
-			max_a = yrange[1]
-			if ~zoo then begin
-				start_save, save_as1, thick = thick, size = [32,20]
-					regr = linfit(hist_data1[idx],hist_data2[idx],chisqr=chisqr,prob=prob,sigma=sigma, YFIT=yfit)
-					; 2d hist
-					if sig and ~sav then pos1 = [0.01,0.05,0.4,0.85]
-					aa = hist_2d(hist_data1[idx],hist_data2[idx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
-					view2d,aa,xtitle=sat_name('cci',sat)+' '+strupcase(dat)+' '+unit,ytitle=ref+' '+strupcase(dat)+' '+unit,$
-					bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
-					ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
-					xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f4.2)':'(i)')),/rem), $
-					ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f4.2)':'(i)')),/rem), $
-					title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,$
-					charthick = 1., xcharsize = 1., ycharsize = 1.,position=pos1
-; 					oplot,!x.crange,[regr[0]/bin,regr[1]*!x.crange[1]+regr[0]/bin],linestyle=2
-					oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
-					oplot,!x.crange,!y.crange
-				end_save, save_as1
-			endif
-			if sig or zoo then begin
-				start_save, save_as2, thick = thick, size = [32,20]
-					if wbg then thick=4
-					if ~sav and ~zoo then pos2 = [0.55,0.59,0.95,0.9]
-; 					;------zonal-means----------------------
-					fillvalue = -999.
-					make_geo,lon_d,lat_d,grid=([360.,180.]/size(mean_data1,/dim))[0]
-					medi_c = zonal_average(mean_data1,lat_d,fillvalue=fillvalue,lat_zon=lat1d_c,/nan,/mean)
-					medi_g = zonal_average(mean_data2,lat_d,fillvalue=fillvalue,lat_zon=lat1d_g,/nan,/mean)
-					yr  = [(dat eq 'CTT' ? 200:0.1),max([medi_c,medi_g])] 
-					; entweder normal
-; 					bias = mean(ts_data[2,where(ts_data[0,*] ne -999)])
-; 					rmse = mean(ts_data[3,where(ts_data[0,*] ne -999)])
-; 					stdd = mean(ts_data[4,where(ts_data[0,*] ne -999)])
-					; oder globale bias, rmse und bc-rmse gewichtet nach latitude
-					bias = mean(ts_data[6,where(ts_data[0,*] ne -999)])
-					rmse = mean(ts_data[7,where(ts_data[0,*] ne -999)])
-					stdd = sqrt((rmse^2. - bias^2.) > 0); bc_rmse
-					plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-					xtitle='latitude [degrees]',ytitle='zonal mean '+dat+unit,yr=yr,position=pos2,noerase=~zoo,ylog=log,$
-					title= 	'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+string(rmse,f='(f6.2)')+' ; stdd: '+string(stdd,f='(f6.2)')+unit
-					oplot,lat1d_c,medi_c,thick=thick,col=cgColor("Red")
-					oplot,lat1d_g,medi_g,thick=thick
-					if keyword_set(show_values) then begin
-						legend,[datum+' '+ref,datum+' '+sat_name('cci',sat)],thick=replicate(thick,2),spos='top',charsize=1.5,color=[-1,cgColor("Red")]
-					endif else begin
-						legend,datum+' '+ref,thick=thick,color=-1,spos='bl',charsize=1.5
-						legend,datum+' '+sat_name('cci',sat),thick=thick,color=cgColor("Red"),spos='br',charsize=1.5
-					endelse
-					;--------------------------------------------
-				end_save,save_as2
-				if zoo then return
-			endif
-
+	if ~keyword_set(no_compare) then begin
+		min_a = d.HIST_2D.minvalue[0]
+		max_a = d.HIST_2D.maxvalue[0]
+		bin   = d.HIST_2D.bin
+		if ~zoo then begin
+			start_save, save_as1, thick = thick, size = [32,20]
+				; 2d hist
+				if sig and ~sav then pos1 = [0.01,0.05,0.4,0.85]
+				aa = d.HIST_2D.data
+				regr = d.HIST_2D.linfit.regr
+				view2d,aa,xtitle=algon1+' '+strupcase(dat)+' '+unit,ytitle=ref+' '+strupcase(dat)+' '+unit,$
+				bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
+				ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
+				xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f4.2)':'(i)')),/rem), $
+				ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f4.2)':'(i)')),/rem), $
+				title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,$
+				charthick = 1., xcharsize = 1., ycharsize = 1.,position=pos1
+				oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
+				oplot,!x.crange,!y.crange
+			end_save, save_as1
+		endif
+		if sig or zoo then begin
+			start_save, save_as2, thick = thick, size = [32,20]
+				if wbg then thick=4
+				if ~sav and ~zoo then pos2 = [0.55,0.59,0.95,0.9]
+				date = ~sig ? datum : ''
+				;------zonal-means----------------------
+				fillvalue = -999.
+				make_geo,lon_d,lat_d,grid=([360.,180.]/size(d.MEAN,/dim))[0]
+				medi_c = zonal_average(d.MEAN,lat_d,fillvalue=fillvalue,lat_zon=lat1d_c,/nan,/mean)
+				medi_g = zonal_average(d.MEAN2,lat_d,fillvalue=fillvalue,lat_zon=lat1d_g,/nan,/mean)
+				yr  = [(dat eq 'CTT' ? 200:0.1),max([medi_c,medi_g])] 
+				; globale bias, rmse und bc-rmse gewichtet nach latitude
+				bias = d.OVERALL_STATS.BIAS
+				rmse = d.OVERALL_STATS.RMSE
+				stdd = d.OVERALL_STATS.BC_RMSE
+				plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
+				xtitle='latitude [degrees]',ytitle='zonal mean '+dat+unit,yr=yr,position=pos2,noerase=~zoo,ylog=log,$
+				title= 	'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit
+				oplot,lat1d_c,medi_c,thick=thick,col=cgColor("Red")
+				oplot,lat1d_g,medi_g,thick=thick
+				if keyword_set(show_values) then begin
+					legend,[date+' '+ref,date+' '+algon1],thick=replicate(thick,2),spos='top',charsize=1.5,color=[-1,cgColor("Red")]
+				endif else begin
+					legend,date+' '+ref,thick=thick,color=-1,spos='bl',charsize=1.5
+					legend,date+' '+algon1,thick=thick,color=cgColor("Red"),spos='br',charsize=1.5
+				endelse
+				;--------------------------------------------
+			end_save,save_as2
+			if zoo then return
 		endif
 
 		start_save, save_as3, thick = thick, size = [32,20]
+			anz=anz-0.5
 			plot,[0,0],[1,1],xr=[anz[0],anz[1]],xs=3,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=9,xticklen=0.01,ytitle=dat+' '+unit,$
-			title=title,xminor=xminor, ylog = log, $
+			title=title+' '+datum,xminor=xminor, ylog = log, $
 			xmargin=[10,10]+(sav ? [4,0]:0),ymargin=[5,2]+(sav ? [2,1]:0),$
 			charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
 			div = ((anz[1]-anz[0]) le 12 ? 4. : 12.)
 			for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],!y.crange,linestyle=2
 			for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
-			idx = where(ts_data[0,*] gt 0 and ts_data[1,*] gt 0,idx_cnt)
+			idx = where(finite(d.STATS[tsi.gm1,*]) and finite(d.STATS[tsi.gm2,*]),idx_cnt)
 			if idx_cnt eq 0 then return 
-			split = where((idx[1:*]-idx[0:*]) ne 1,count)
-			if count ge 1 then begin
-				if keyword_set(error) and mean(ts_data[5,*]) ne -999. then begin
-					polyfill,[idx[0:split[0]]+0.5,reverse(idx[0:split[0]]+0.5)],[reform(ts_data[0,idx[0:split[0]]]+ts_data[5,idx[0:split[0]]]), $
-					reverse(reform(ts_data[0,idx[0:split[0]]]-ts_data[5,idx[0:split[0]]]))],col=cgColor("Tan6")
-				endif
-				oplot,idx[0:split[0]]+0.5,ts_data[0,idx[0:split[0]]],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
-				oplot,idx[0:split[0]]+0.5,ts_data[1,idx[0:split[0]]],psym=-8,thick=thick,symsize=symsize
-				oplot,idx[0:split[0]]+0.5,ts_data[4,idx[0:split[0]]]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
-				if count gt 1 then begin
-					for i=1,count-1 do begin
-						if keyword_set(error) and mean(ts_data[5,*]) ne -999. then begin
-							polyfill,[idx[(split[i-1]+1):split[i]]+0.5,reverse(idx[(split[i-1]+1):split[i]]+0.5)],$
-							[reform(ts_data[0,idx[(split[i-1]+1):split[i]]]+ts_data[5,idx[(split[i-1]+1):split[i]]]), $
-							reverse(reform(ts_data[0,idx[(split[i-1]+1):split[i]]]-ts_data[5,idx[(split[i-1]+1):split[i]]]))],col=cgColor("Tan6")
-						endif
-						oplot,idx[(split[i-1]+1):split[i]]+0.5,ts_data[0,idx[(split[i-1]+1):split[i]]],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
-						oplot,idx[(split[i-1]+1):split[i]]+0.5,ts_data[1,idx[(split[i-1]+1):split[i]]],psym=-8,thick=thick,symsize=symsize
-						oplot,idx[(split[i-1]+1):split[i]]+0.5,ts_data[4,idx[(split[i-1]+1):split[i]]]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
-					endfor
-				endif
-				if keyword_set(error) and mean(ts_data[5,*]) ne -999. then begin
-					polyfill,[idx[split[count-1]+1:*]+0.5,reverse(idx[split[count-1]+1:*]+0.5)],$
-					[reform(ts_data[0,idx[split[count-1]+1:*]]+ts_data[5,idx[split[count-1]+1:*]]),$
-					reverse(reform(ts_data[0,idx[split[count-1]+1:*]]-ts_data[5,idx[split[count-1]+1:*]]))],col=cgColor("Tan6")
-				endif
-				oplot,idx[split[count-1]+1:*]+0.5,ts_data[0,idx[split[count-1]+1:*]],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
-				oplot,idx[split[count-1]+1:*]+0.5,ts_data[1,idx[split[count-1]+1:*]],psym=-8,thick=thick,symsize=symsize
-				oplot,idx[split[count-1]+1:*]+0.5,ts_data[4,idx[split[count-1]+1:*]]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
-			endif else begin
-				if keyword_set(error) and mean(ts_data[5,*]) ne -999. then begin
-					polyfill,[idx,reverse(idx)]+0.5,[reform(ts_data[0,idx]+ts_data[5,idx]),reverse(reform(ts_data[0,idx]-ts_data[5,idx]))],col=cgColor("Tan6")
-				endif
-				oplot,idx+0.5,ts_data[0,idx],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
-				oplot,idx+0.5,ts_data[1,idx],psym=-8,thick=thick,symsize=symsize
-				oplot,idx+0.5,ts_data[4,idx]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
-			endelse
+			polyfill_ts_error,d.STATS[tsi.gm1,*],d.STATS[tsi.unc1,*],error=error
+			polyfill_ts_error,d.STATS[tsi.gm2,*],d.STATS[tsi.unc2,*],error=error,color=cgcolor('blue')
+			oplot,d.STATS[tsi.gm1,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
+			oplot,d.STATS[tsi.gm2,*],psym=-8,thick=thick,symsize=symsize
+			oplot,d.STATS[tsi.bcr,*]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
 			legend,ref,psym=-8,thick=thick,color=-1,spos='tl',charsize=lcharsize,charthick=charthick
-			legend,sat_name('cci',sat),psym=-8,thick=thick,color=[cgColor("Red")],spos='tr',charsize=lcharsize,charthick=charthick
+			legend,algon1,psym=-8,thick=thick,color=[cgColor("Red")],spos='tr',charsize=lcharsize,charthick=charthick
 			legend,'STDDEV',psym=-8,thick=thick,color=[cgColor("Slate Grey")],spos='top',charsize=lcharsize,charthick=charthick
-			axis,yaxis=1,ystyle=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='STD'+' '+unit, $
+			axis,yaxis=1,ystyle=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSE'+' '+unit, $
 			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
 		end_save,save_as3
 	endif
 
-	if adv_keyword_set(no_compare) then begin
-		nc     = no_compare eq 0 ? 8 : 10; no_compare 0 für cci und 1 für andere ; hier werden jetzt andere indexe genommen weil nicht verglichen wird 
-		nc_unc = 9
-		if keyword_set(standard) then nc = no_compare eq 0 ? 11 : 12
+	if keyword_set(no_compare) then begin
+		nc     = tsi.gm1
+		nc_unc = tsi.unc1
+		if keyword_set(standard) then begin nc = tsi.gm1_std & error = 0 & end
+		idx = where(finite(d.STATS[nc,*]),idx_cnt)
+		if idx_cnt eq 0 then return
+		apx    =  keyword_set(standard) ? ' STDD' : ''
 		start_save, save_as3, thick = thick, size = [32,20]
 			if wbg then thick=4
-			idx = where(ts_data[nc,*] gt 0,idx_cnt)
-			if idx_cnt eq 0 then return
-			split = where((idx[1:*]-idx[0:*]) ne 1,count)
 			if ~opl then begin
+				anz=anz-0.5
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=1,xticklen=0.01,$
 				ytitle= title+' '+unit,xminor=xminor,ylog=log,$
 				xmargin=[10,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=[5,2]+(sav or wbg ? [2,1]:0),$
@@ -2617,69 +2606,14 @@ pro gac_ts_plots,hist_data1,hist_data2,mean_data1,mean_data2,ts_data,bin,dat,uni
 				div = ((anz[1]-anz[0]) le 12 ? 4. : 12.)
 				for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],!y.crange,linestyle=2
 				for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
-				if count ge 1 then begin
-					if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-						polyfill,[idx[0:split[0]]+0.5,reverse(idx[0:split[0]]+0.5)],[reform(ts_data[nc,idx[0:split[0]]]+ts_data[nc_unc,idx[0:split[0]]]), $
-						reverse(reform(ts_data[nc,idx[0:split[0]]]-ts_data[nc_unc,idx[0:split[0]]]))],col=cgColor("Tan6")
-					endif
-					oplot,idx[0:split[0]]+0.5,ts_data[nc,idx[0:split[0]]],psym=-8,thick=thick,symsize=symsize
-					if count gt 1 then begin
-						for i=1,count-1 do begin
-							if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-								polyfill,[idx[(split[i-1]+1):split[i]]+0.5,reverse(idx[(split[i-1]+1):split[i]]+0.5)],$
-								[reform(ts_data[nc,idx[(split[i-1]+1):split[i]]]+ts_data[nc_unc,idx[(split[i-1]+1):split[i]]]), $
-								reverse(reform(ts_data[nc,idx[(split[i-1]+1):split[i]]]-ts_data[nc_unc,idx[(split[i-1]+1):split[i]]]))],col=cgColor("Tan6")
-							endif
-							oplot,idx[(split[i-1]+1):split[i]]+0.5,ts_data[nc,idx[(split[i-1]+1):split[i]]],psym=-8,thick=thick,symsize=symsize
-						endfor
-					endif
-					if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-						polyfill,[idx[split[count-1]+1:*]+0.5,reverse(idx[split[count-1]+1:*]+0.5)],$
-						[reform(ts_data[nc,idx[split[count-1]+1:*]]+ts_data[nc_unc,idx[split[count-1]+1:*]]),$
-						reverse(reform(ts_data[nc,idx[split[count-1]+1:*]]-ts_data[nc_unc,idx[split[count-1]+1:*]]))],col=cgColor("Tan6")
-					endif
-					oplot,idx[split[count-1]+1:*]+0.5,ts_data[nc,idx[split[count-1]+1:*]],psym=-8,thick=thick,symsize=symsize
-				endif else begin
-					if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-						polyfill,[idx,reverse(idx)]+0.5,[reform(ts_data[nc,idx]+ts_data[nc_unc,idx]),reverse(reform(ts_data[nc,idx]-ts_data[nc_unc,idx]))],col=cgColor("Tan6")
-					endif
-					oplot,idx+0.5,ts_data[nc,idx],psym=-8,thick=thick,symsize=symsize
-				endelse
-				legend,ref+hct,psym=-8,thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
+				polyfill_ts_error,d.STATS[nc,*],d.STATS[nc_unc,*],error=error
+				oplot,d.STATS[nc,*],psym=-8,thick=thick,symsize=symsize
+				legend,ref+hct+apx,psym=-8,thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
 			endif else begin
 				define_oplots, opl, cols, spos, linestyle, psym, ystretch,/timeseries
-				if count ge 1 then begin
-					if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-						polyfill,[idx[0:split[0]]+0.5,reverse(idx[0:split[0]]+0.5)],[reform(ts_data[nc,idx[0:split[0]]]+ts_data[nc_unc,idx[0:split[0]]]), $
-						reverse(reform(ts_data[nc,idx[0:split[0]]]-ts_data[nc_unc,idx[0:split[0]]]))],col=cgColor("Tan6")
-					endif
-					oplot,idx[0:split[0]]+0.5,ts_data[nc,idx[0:split[0]]],psym=psym,thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=symsize
-					if count gt 1 then begin
-						for i=1,count-1 do begin
-							if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-								polyfill,[idx[(split[i-1]+1):split[i]]+0.5,reverse(idx[(split[i-1]+1):split[i]]+0.5)],$
-								[reform(ts_data[nc,idx[(split[i-1]+1):split[i]]]+ts_data[nc_unc,idx[(split[i-1]+1):split[i]]]), $
-								reverse(reform(ts_data[nc,idx[(split[i-1]+1):split[i]]]-ts_data[nc_unc,idx[(split[i-1]+1):split[i]]]))],$
-								col=cgColor("Tan6")
-							endif
-							oplot,idx[(split[i-1]+1):split[i]]+0.5,ts_data[nc,idx[(split[i-1]+1):split[i]]],psym=psym,thick=thick,col=cgcolor(cols),$
-							linestyle=linestyle,symsize=symsize
-						endfor
-					endif
-					if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-						polyfill,[idx[split[count-1]+1:*]+0.5,reverse(idx[split[count-1]+1:*]+0.5)],$
-						[reform(ts_data[nc,idx[split[count-1]+1:*]]+ts_data[nc_unc,idx[split[count-1]+1:*]]),$
-						reverse(reform(ts_data[nc,idx[split[count-1]+1:*]]-ts_data[nc_unc,idx[split[count-1]+1:*]]))],col=cgColor("Tan6")
-					endif
-					oplot,idx[split[count-1]+1:*]+0.5,ts_data[nc,idx[split[count-1]+1:*]],psym=psym,thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=symsize
-				endif else begin
-					if keyword_set(error) and nc eq 8 and mean(ts_data[nc_unc,*]) ne -999. then begin
-						polyfill,[idx,reverse(idx)]+0.5,[reform(ts_data[nc,idx]+ts_data[nc_unc,idx]),reverse(reform(ts_data[nc,idx]-ts_data[nc_unc,idx]))],$
-						col=cgColor("Tan6")
-					endif
-					oplot,idx+0.5,ts_data[nc,idx],psym=psym,thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=symsize
-				endelse
-				legend,ref+hct,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
+				polyfill_ts_error,d.STATS[nc,*],d.STATS[nc_unc,*],error=error
+				oplot,d.STATS[nc,*],psym=psym,thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=symsize
+				legend,ref+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
 				charsize=lcharsize,charthick=charthick,linestyle = linestyle,psym=psym
 			endelse
 		end_save,save_as3
@@ -2687,7 +2621,7 @@ pro gac_ts_plots,hist_data1,hist_data2,mean_data1,mean_data2,ts_data,bin,dat,uni
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,mean_2d=mean_2d		, $
+pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,mean_2d=mean_2d		, $
 				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=limit,land=land,sea=sea		, $
 				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values,zoom=zoom,error=error,verbose=verbose	, $
 				other=other,ctable=ctable, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon		, $
@@ -2697,11 +2631,12 @@ pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, sa
 
 	sat = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
 	ref = keyword_set(reference) ? strlowcase(reference) : 'gac'
+	alg = keyword_set(algo) ? algo2ref(algo) : 'cci'
 	win_nr = keyword_set(win_nr) ? win_nr : 1
 	if stregex(sat,'noaa',/bool,/fold) then sat = 'noaa'+stregex(sat,"[0-9]+",/ext)
 	if keyword_set(land) then coverage = 'land'
 	if keyword_set(sea) then coverage = 'sea'
-	datum = '2008-2008' ; start dummy
+	datum = '1982-2014' ; start dummy
 
 	algon = sat_name(ref,sat)
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
@@ -2715,17 +2650,13 @@ pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, sa
 		endif
 	endif
 
-	d = get_available_time_series( 	'esacci', single, sat, coverage = coverage, reference = ref, period = datum, $
+	d = get_available_time_series( 	alg, single, sat, coverage = coverage, reference = ref, period = datum, $
 					sav_file = sfile, longname = longname, unit = unit, found = found)
-
 	if not found then begin
 		ok = dialog_message('plot_cci_gac_time_series: Sav_file not found: '+sfile)
 		return
 	endif
-
-	dumyear  = minmax(where(d.stats[0,*] ne -999.))/12 + fix((strsplit(d.period,/ext,'-'))[0])
-	dummonth = minmax(where(d.stats[0,*] ne -999.)) mod 12
-	datum    = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
+	datum = d.actual_date
 
 	if keyword_set(save_as) then begin 
 		save_as = !SAVE_DIR +'timeseries'+'/'+cci_name(sat)+'_vs_'+algon+'_time_series_'+$
@@ -2740,13 +2671,13 @@ pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, sa
 		  no_color_bar=no_color_bar,countries=countries,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg, $
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert
 
-	make_geo,lon,lat,grid = get_grid_res(d.MEAN_CCI)
+	make_geo,lon,lat,grid = get_grid_res(d.MEAN)
 
 	if keyword_set(diff) then begin
 		start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
-			dumdata = d.mean_cci - d.mean_gac & minv = -20. & maxv = 20.
-			ititle = datum+' '+longname & btitle = 'Diff '+sat_name('cci',sat)+' - '+algon+' '+strupcase(single)+unit
-			m = obj_new("map_image",dumdata,lat,lon,void_index=where(d.mean_cci eq -999.),n_lev=4	, $
+			dumdata = d.mean - d.mean2 & minv = -20. & maxv = 20.
+			ititle = datum+' '+longname & btitle = 'Diff '+sat_name(alg,sat)+' - '+algon+' '+strupcase(single)+unit
+			m = obj_new("map_image",dumdata,lat,lon,void_index=where(d.mean eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv), $
 				countries=countries,magnify = magnify, figure_title = ititle, title= btitle, g_eq=g_eq, l_eq=l_eq	, $
 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5)	, $
@@ -2776,8 +2707,8 @@ pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, sa
 	if keyword_set(mean_2d) then begin
 		start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
 			!p.multi= (keyword_set(single_var) ? [0,2,1] : [0,2,6])
-			dumdata = d.mean_cci & minv = 0. & maxv = 100.
-			ititle = datum+' '+longname & btitle = sat_name('cci',sat)+' '+strupcase(single)+unit
+			dumdata = d.mean & minv = 0. & maxv = 100.
+			ititle = datum+' '+longname & btitle = sat_name(alg,sat)+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,magnify = magnify, figure_title = ititle, title= btitle, $
@@ -2791,7 +2722,7 @@ pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, sa
 				latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
 				limit = limit,debug=verbose)
 			obj_destroy,m
-			dumdata = d.mean_gac & minv = 0. & maxv = 100.
+			dumdata = d.mean2 & minv = 0. & maxv = 100.
 			ititle = datum+' '+longname & btitle = algon+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
@@ -2825,7 +2756,7 @@ pro plot_cci_gac_time_series, 	diff = diff, sat = sat, reference = reference, sa
 	else xtickname = (string(indgen(anz_yy+1)+1982,f='(i4.4)'))[0:*:2]
 
 	start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
-		plot_simple_timeseries, '2007','01', single_var[0], sat, 'esacci', cov, reference = ref, structure=d,zonal_only=zonal_only, $
+		plot_simple_timeseries, '2007','01', single_var[0], sat, alg, cov, reference = ref, structure=d,zonal_only=zonal_only, $
 		mini=mini, maxi=maxi,verbose=verbose,oplots=oplots,found=found,win_nr=win_nr,logarithmic=logarithmic,white_bg=white_bg,datum=datum,$
 		show_values = show_values
 	end_save,save_as
@@ -2883,7 +2814,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	sav = keyword_set(save_as)
 
 	if keyword_set(timeseries) then begin
-		datum = '200701-200912'
+		datum = '1982-2014'
 		cci = restore_var(!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_'+datum+'_'+algo2ref(algo1,sat=sat)+'_'+sat+'.sav',found=found)
 		if not found then begin
 			ok = dialog_message('No time_series "sav" file found for '+sat_name(algo1,sat))
@@ -3637,37 +3568,32 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	ref   = keyword_set(reference) ? strlowcase(reference) : '' 
 	alg   = keyword_set(algo)      ? strlowcase(algo)      : 'esacci' 
 	lev   = keyword_set(level)     ? strlowcase(level)     : 'l3c' 
-	hct   = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
-	date  = keyword_set(datum) ? datum+' ' : ''
+	hct   = keyword_set(addtext)   ? ' - '+strupcase(addtext[0]) : ''
+	date  = keyword_set(datum)     ? datum+' ' : ''
 	sav   = keyword_set(save_as)
 	wbg   = keyword_set(white_bg)
 	ts    = keyword_set(timeseries)
 
 	if ts then begin
-		datum = '2007-2009' ; use this as first guess
+		datum = '1982-2014' ; use this as first guess
 		d = get_available_time_series( alg, varname, sat, coverage = coverage, reference = reference, period = datum, sav_file = sav_file, found = found)
 		if not found then begin
-			ok = dialog_message("Sav File not found! "+sav_file)
+			ok = dialog_message("plot_histogram: Sav File not found! "+sav_file)
 			return
 		endif
 		unit = d.unit
-		dum  = strsplit(d.period,'-',/ext)
-		date = (dum[0] eq dum[1] ? dum[0] : d.period)+' '
+		date = d.actual_date
 		if keyword_set(limit) and ~keyword_set(coverage) then begin
-			bild = (algo2ref(alg) eq 'cci') ? d.mean_cci : d.mean_gac
-			ii   = (algo2ref(alg) eq 'cci') ? 8:10
-			if keyword_set(reference) then bild2 = (algo2ref(alg) eq 'cci') ? d.mean_gac : d.mean_cci
+			ok = dialog_message('Limit not possible choose pre defined areas!')
+			return
 		endif else begin
-			bild = (algo2ref(alg) eq 'cci') ? d.cci_all : d.gac_all
-			ii   = (algo2ref(alg) eq 'cci') ? 8:10
-			if keyword_set(reference) then bild2 = (algo2ref(alg) eq 'cci') ? d.gac_all  : d.cci_all
+			hh   = d.HISTOGRAM.data
+			bin  = d.HISTOGRAM.bin
+			minv = d.HISTOGRAM.minvalue
+			maxv = d.HISTOGRAM.maxvalue
+			xx   = findgen(n_elements(hh)) * bin + minv[0]
+			if keyword_set(reference) then hh2 = d.HISTOGRAM2.data
 		endelse
-		fillvalue1 = -999.
-		fillvalue2 = -999.
-		if keyword_set(reference) then ii = 0
-		dumyear  = minmax(where(d.stats[ii,*] ne -999.))/12 + fix((strsplit(d.period,/ext,'-'))[0])
-		dummonth = minmax(where(d.stats[ii,*] ne -999.)) mod 12
-		date     = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
 	endif else begin
 		if lev eq 'l3u' and ( ref eq 'gac' and (alg eq 'esacci' or alg eq 'patmos')) then join_nodes = 1
 		bild = 	get_data(year,month,day,file=file,data=varname,sat=sat,found=found,algo=alg,verbose=verbose,/print_filename,$
@@ -3724,26 +3650,35 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	endif
 
 	start_save,save_as,thick=thick,snapshot=(float(opl)?'png':'')
-		minv = keyword_set(mini) ? strsplit(mini[0],',',/ext) : min(bild[where(bild ne fillvalue1)])
-		maxv = keyword_set(maxi) ? strsplit(maxi[0],',',/ext) : max(bild[where(bild ne fillvalue1)])
-		bin  = 1.
-		bin  = (maxv[0] le 0.5 ? 0.001 : (maxv[0] le 1 ? 0.01 : (maxv[0] lt 10 ? 0.1 : 1)))
-		hh   = histogram(bild,bin=bin,min=minv[0],max=maxv[0])
-		if total(hh) eq 0 then begin
-			ok=dialog_message('Total histogram is zero. Reduce MIN/Max Value. Note, the unit of some Products might be altered to work with oplot.')
-			return
-		endif
-		xx   = findgen(n_elements(hh)) * bin + minv[0]
-		yrange = [(n_elements(minv) gt 1 ? minv[1]:0),(n_elements(maxv) gt 1 ? maxv[1]: max(hh/total(hh)) *100.)]
-		; yrange
-		if is_defined(bild2) then begin
-			hh2    = histogram(bild2,bin=bin,min=minv[0],max=maxv[0])
-			yrange = [(n_elements(minv) gt 1 ? minv[1]:0),(n_elements(maxv) gt 1 ? maxv[1]: max([hh/total(hh),hh2/total(hh2)]) *100.)]
-			if total(hh2) eq 0 then begin
+		if ~ts then begin
+			minv = keyword_set(mini) ? strsplit(mini[0],',',/ext) : min(bild[where(bild ne fillvalue1)])
+			maxv = keyword_set(maxi) ? strsplit(maxi[0],',',/ext) : max(bild[where(bild ne fillvalue1)])
+			bin  = 1.
+			bin  = (maxv[0] le 0.5 ? 0.001 : (maxv[0] le 1 ? 0.01 : (maxv[0] lt 10 ? 0.1 : 1)))
+			hh   = histogram(bild,bin=bin,min=minv[0],max=maxv[0])
+			if total(hh) eq 0 then begin
 				ok=dialog_message('Total histogram is zero. Reduce MIN/Max Value. Note, the unit of some Products might be altered to work with oplot.')
 				return
 			endif
-		endif
+			xx   = findgen(n_elements(hh)) * bin + minv[0]
+			yrange = [(n_elements(minv) gt 1 ? minv[1]:0),(n_elements(maxv) gt 1 ? maxv[1]: max(hh/total(hh)) *100.)]
+			; yrange
+			if is_defined(bild2) then begin
+				hh2    = histogram(bild2,bin=bin,min=minv[0],max=maxv[0])
+				if total(hh2) eq 0 then begin
+					ok=dialog_message('Total histogram is zero. Reduce MIN/Max Value. Note, the unit of some Products might be altered to work with oplot.')
+					return
+				endif
+			endif
+		endif else begin
+			minv = keyword_set(mini) ? strsplit(mini[0],',',/ext) : minv
+			maxv = keyword_set(maxi) ? strsplit(maxi[0],',',/ext) : maxv
+		endelse
+		if is_defined(hh2) then begin
+			yrange = [(n_elements(minv) gt 1 ? minv[1]:0),(n_elements(maxv) gt 1 ? maxv[1]: max([hh/total(hh),hh2/total(hh2)]) *100.)]
+		endif else begin
+			yrange = [(n_elements(minv) gt 1 ? minv[1]:0),(n_elements(maxv) gt 1 ? maxv[1]: max(hh/total(hh)) *100.)]
+		endelse
 
 		if sav then begin
 			charthick = 1.5
@@ -3773,7 +3708,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			plot,xx,hh/total(hh)*100.,xtitle=strupcase(varname)+' '+unit,title=date+ ' (Bin: '+strcompress(bin)+')',xr=[minv[0],maxv[0]],thick=thick,$
 			yrange=yrange,ytitle='% of occur.',xlog=logarithmic,$
 			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
-			if is_defined(bild2) then begin
+			if is_defined(hh2) then begin
 				oplot,xx,hh2/total(hh2)*100.,color = cgcolor('Red'),thick=thick
 				legend,[date+sat_name(algo,sat,year=year,month=month)+hct,date+sat_name(reference,sat,year=year,month=month)+hct],thick=[thick,thick],$
 				color=[-1,cgcolor('Red')],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
@@ -3806,25 +3741,17 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 ; 	datum = string(year[0],f='(i4.4)')+string(month[0],f='(i2.2)')
 
 	if keyword_set(timeseries) then begin
-		date = '2007-2009' ; use this as first guess
+		date = '1982-2014' ; use this as first guess
 		d = get_available_time_series( algo, varname, satellite, coverage = coverage, reference = reference, period = date, sav_file = sav_file, found = found)
 		if not found then begin
-			ok = dialog_message("Sav File not found! "+sav_file)
+			ok = dialog_message("plot_zonal_average: Sav File not found! "+sav_file)
 			return
 		endif
 		unit = d.unit
-		dum =strsplit(d.period,'-',/ext)
-		date = (dum[0] eq dum[1] ? dum[0] : d.period)+' '
-		bild = (algo2ref(algo) eq 'cci') ? d.mean_cci : d.mean_gac
-		ii   = (algo2ref(algo) eq 'cci') ? 8 : 10
+		bild = d.mean
 		make_geo,grid_res=get_grid_res(bild),lon,lat
 		fillvalue = -999.
-
-		if keyword_set(reference) or keyword_set(old_ts) then ii = 0
-		dumyear  = minmax(where(d.stats[ii,*] ne -999.))/12 + fix((strsplit(d.period,/ext,'-'))[0])
-		dummonth = minmax(where(d.stats[ii,*] ne -999.)) mod 12
-		date     = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
-; date=''
+		date=d.actual_date
 	endif else begin
 		bild = get_data(year,month,day,file=file,data=varname,no_data_value=fillvalue,minvalue=minvalue,algo=algo,sat=satellite,dirname=dirname,/print_filename, $
 			maxvalue=maxvalue,longname=longname,unit=unit,verbose=verbose,found=found,/make_compareable,level=level,dim3=dim3,error=error)
@@ -3909,72 +3836,46 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 			    logarithmic=logarithmic,version=version,correct=correct,zonal_only=zonal_only	, $
 			    datum = datum, show_values = show_values
 
-	hct   = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
-	win_nr = adv_keyword_set(win_nr) ? win_nr : 1
+	hct        = keyword_set(addtext)    ? ' - '+strupcase(addtext[0]) : ''
+	win_nr     = adv_keyword_set(win_nr) ? win_nr : 1
+	opl        = keyword_set(oplots)     ? fix(oplots) : 0
+	no_compare = ~keyword_set(reference)
 
 	if keyword_set(structure) then begin
 		d = structure
 	endif else begin
-
-		start_year = keyword_Set(year) 		? year		: 1982 ; 2007
-		anz        = keyword_Set(n_months)   	? n_months	: 12   ; 36
-
-		if fix(anz)/12 ne anz/12. then begin
-			print, "Anzahl der Monate muss ganzzahlig durch 12 teilbar sein."
-			return
-		endif
-
-		yy =  indgen((fix(anz)/12)+1)+start_year
-		xtickname = strcompress(yy,/rem)
-
-		zeitraum = xtickname[0]+'-'+xtickname[(anz/12)-1]
-
-		d = get_available_time_series( algo, varname, sat, coverage = cov, reference = reference, period = zeitraum, sav_file = sav_file, found = found)
-
+		d = get_available_time_series( algo, varname, sat, coverage = cov, reference = reference, period = '1982-2014', sav_file = sav_file, found = found)
 		if not found then begin
-			ok = dialog_message("Sav File not found! "+sav_file)
+			ok = dialog_message("plot_simple_timeseries: Sav File not found! "+sav_file)
 			return
 		endif
 	endelse
-
 	zeitraum = d.period
 	ts_data  = d.stats
 	longname = d.longname
-
-	dat   = (total(strlowcase(varname) eq ['a_ca','cc_total']) ? 'cfc' : strlowcase(varname))
+	dumyear  = minmax(where(finite(d.stats[0,*])))/12 + fix((strsplit(d.period,/ext,'-'))[0])
+	dummonth = minmax(where(finite(d.stats[0,*]))) mod 12
+	algon    = sat_name(algo,sat,year=dumyear[0],month=dummonth[0],version=version)
+	ref      = sat_name((keyword_set(reference) ? reference:algo),sat,year=dumyear[0],month=dummonth[0],version=version)
+	datum    = d.actual_date
+	dat      = (total(strlowcase(varname) eq ['a_ca','cc_total']) ? 'cfc' : strlowcase(varname))
 	; temporär cfc zeitreihen ect korrektur
-	if keyword_set(correct) and (dat eq 'cfc' or dat eq 'ctp') and total(sat eq ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19']) then begin
-;    		corr  = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/compare_cfc_cci_vs_gac_time_series_cci_correction_1982-2014.sav')
-;  		corr  = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/compare_cfc_cci_vs_gac_time_series_cci_correction_1982-2014_wo_pinatubu.sav')
-		corr  = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/compare_'+dat+'_cci_vs_gac_time_series_cci_correction_1982-2014_pinatubu_removed.sav')
-		idx   = where(ts_data[8,*] lt 0,idxcnt)
-		ts_data[8,*] -= transpose(corr)
-		if idxcnt gt 0 then ts_data[8,idx] = -999.
-		longname = 'ECT(LST14) '+longname
-		;---------------------------------------------------
- 		; CFC Uncertainty, here is the trick, 
-		; we devide the cci cfc uncertainty by 5 to decrease it! cool!
-; 		dumidx=where(ts_data[9,*] eq -999.,dumidx_cnt)
-; 		ts_data[9,*] /= 5.
-; 		if dumidx_cnt gt 0 then ts_data[9,dumidx] = -999.
-		;---------------------------------------------------
-	endif
-	opl   = keyword_set(oplots) ? fix(oplots) : 0
-	dumyear  = min(where(ts_data[0,*] ne -999.))/12+zeitraum[0]
-	dummonth = min(where(ts_data[0,*] ne -999.)) mod 12
-	algon = keyword_set(reference) ? sat_name(reference,sat,year=dumyear,month=dummonth,version=version) : sat_name(algo,sat,year=dumyear,month=dummonth,version=version)
+; 	if keyword_set(correct) and (dat eq 'cfc' or dat eq 'ctp') and total(sat eq ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19']) then begin
+; 		corr  = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/compare_'+dat+'_cci_vs_gac_time_series_cci_correction_1982-2014_pinatubu_removed.sav')
+; 		;---------------------------------------------------
+; 		idx   = where(ts_data[8,*] lt 0,idxcnt)
+; 		ts_data[8,*] -= transpose(corr)
+; 		if idxcnt gt 0 then ts_data[8,idx] = -999.
+; 		longname = 'ECT(LST14) '+longname
+; 		;---------------------------------------------------
+; 	endif
 
 	if keyword_set(save_as) then begin
 		save_as = !save_dir +'/timeseries/'+file_basename(sav_file,'.sav')+'.eps'
 	endif else if win_nr ne -1 then win, win_nr,title=dat
 
-	no_compare = algo2ref(algo) ne 'cci'
-	hist_data1 = keyword_set(reference) ? d.CCI_ALL  : -999
-	hist_data2 = keyword_set(reference) ? d.GAC_ALL  : -999
-	mean_data1 = keyword_set(reference) ? d.MEAN_CCI : -999
-	mean_data2 = keyword_set(reference) ? d.MEAN_GAC : -999
-	yrange     = minmax(ts_data[0,*],no=-999)
-	qu         = 1.
+	yrange     = minmax(ts_data[0,*],/nan)
+	qu         = 1. ; ??
 	dum        = fix(strsplit(zeitraum,'-',/ext))
 	if keyword_set(mini) and keyword_set(maxi) then begin
 		mini = float(strsplit(mini[0],',',/ext))
@@ -3983,6 +3884,7 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 		if n_elements(maxi) gt 1 then dum[1] = fix(maxi[1])-1
 		if n_elements(mini) gt 1 then dum[0] = fix(mini[1])
 	endif
+	lines = pgrid(yrange)
 
 	jumps=0
 	nochmal:
@@ -3999,59 +3901,35 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 		if jumps lt 5 then goto, nochmal
 		divi_yy = 2
 	endelse
+
 	xtickname = strcompress(vector(dum[0],dum[1]+1,(2>(num_of_yy/divi_yy+1))),/rem)
+
 	anz = ( dum[1]-dum[0] + 1 ) *12.
 	if anz lt n_elements(ts_data[0,*]) then begin
 		ori_period = fix(strsplit(d.period,'-',/ext))
 		anf = ((dum[0]-ori_period[0])*12)
 		eef = ((dum[1]-ori_period[0]+1)*12-1)
-		if dum[0] gt ori_period[0] then ts_data[*,0:(anf-1)] = -999.
-		if ori_period[1] gt dum[1] then ts_data[*,(eef+1):*] = -999.
+		if dum[0] gt ori_period[0] then ts_data[*,0:(anf-1)] = !values.f_nan
+		if ori_period[1] gt dum[1] then ts_data[*,(eef+1):*] = !values.f_nan
 		anz = [anf,eef+1]
 	endif else anz = [0,anz]
 
+	str_pholder = strjoin(replicate(' ',max([strlen(algon),strlen(ref)])))
+	print,'Glob. Mean    '+algon+': ',string(d.OVERALL_STATS.AVGERAGE,f='(f11.4)')
 	if keyword_set(reference) then begin
-		idx = where(ts_data[0,*] ne -999.,idxcnt)
-		if idxcnt gt 0 then begin
-			str_pholder = strjoin(replicate(' ',max([strlen(sat_name(algo,sat)),strlen(algon)])))
-			print,'Glob. Mean    '+sat_name(algo,sat) +': ',string(mean(ts_data[0,idx]),f='(f11.4)')
-			print,'Glob. Mean    '+algon              +': ',string(mean(ts_data[1,idx]),f='(f11.4)')
-			print,'Glob. BIAS    '+str_pholder        +': ',string(mean(ts_data[6,idx]),f='(f11.4)')
-			print,'Glob. RMSE    '+str_pholder        +': ',string(mean(ts_data[7,idx]),f='(f11.4)')
-			print,'Glob. BC-RMSE '+str_pholder        +': ',string(mean(sqrt((ts_data[7,idx])^2 - (ts_data[6,idx])^2)),f='(f11.4)')
-			print,'minmax BC-RMSE'+str_pholder        +': ',string(minmax(sqrt((ts_data[7,idx])^2 - (ts_data[6,idx])^2)),f='(f11.4)')
-			print,'      BIAS    '+str_pholder        +': ',string(mean(ts_data[2,idx]),f='(f11.4)')
-			print,'      RMSE    '+str_pholder        +': ',string(mean(ts_data[3,idx]),f='(f11.4)')
-			print,'STDDEV(Diff)  '+str_pholder        +': ',string(mean(ts_data[4,idx]),f='(f11.4)')
-		endif
+		print,'Glob. Mean    '+ref                +': ',string(d.OVERALL_STATS.AVGERAGE2,f='(f11.4)')
+		print,'Glob. BIAS    '+str_pholder        +': ',string(d.OVERALL_STATS.BIAS,f='(f11.4)')
+		print,'Glob. RMSE    '+str_pholder        +': ',string(d.OVERALL_STATS.RMSE,f='(f11.4)')
+		print,'Glob. BC-RMSE '+str_pholder        +': ',string(d.OVERALL_STATS.BC_RMSE,f='(f11.4)')
+		print,'Correlation   '+str_pholder        +': ',string(d.OVERALL_STATS.CORRELATION,f='(f11.4)')
 	endif
 
-	year = dum[0]
-	month='01'
-	bin  = 1.
-	bin  = (yrange[1] le 0.5 ? 0.001 : (yrange[1] le 1 ? 0.01 : (yrange[1] lt 10 ? 0.1 : 1)))
-	lines      = pgrid(yrange)
-	min_a      = 0.
-	max_a      = 100.
-if sat eq 'noaa11' and dat eq 'ctp' then begin
-ts_data[8,153] = -999.
-ts_data[9,153] = -999.
-endif
-	if keyword_set(reference) then free,no_compare
-	gac_ts_plots,hist_data1,hist_data2,mean_data1,mean_data2,ts_data,bin,strupcase(dat),d.unit,yrange,lines,$
-	min_a,max_a,anz,xtickname,qu,algon,log=logarithmic,save_as=save_as,sat,/single_var,thick=thick,error=error,$
-	show_values = show_values,no_compare=no_compare,opl=opl,longname=longname,hct=hct,white_bg=white_bg,$
-	standard=stregex(varname,'_std',/bool,/fold),zonal_only=zonal_only, datum = datum
+	gac_ts_plots,d,strupcase(dat),algon,yrange,lines,anz,xtickname,qu,ref	, $
+		 log=logarithmic,save_as=save_as,/single_var,error=error,show_values=show_values, $
+		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl		, $
+		 longname=longname,hct=hct,white_bg=white_bg,datum=datum			, $
+		 standard=stregex(varname,'_std',/bool,/fold)
 
-	if keyword_set(verbose) then begin
-		print,'----'+dat+'------'
-		print,'Mean CCI : ', mean(ts_data[0,where(ts_data[0,*] ne -999)])
-		if keyword_set(error) then print,'Mean CCI UNC : ', mean(ts_data[5,where(ts_data[5,*] ne -999)])
-		print,'Mean '+algon+' : ', mean(ts_data[1,where(ts_data[1,*] ne -999)])
-		print,'Mean Bias : ', mean(ts_data[2,where(ts_data[0,*] ne -999)])
-		print,'Mean RMSE : ', mean(ts_data[3,where(ts_data[0,*] ne -999)])
-		print,'Mean STDD : ', mean(ts_data[4,where(ts_data[0,*] ne -999)])
-	endif
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = timeseries, limit = limit, coverage = coverage	, $
@@ -4101,16 +3979,11 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		datum = '1982-2014'
 		d = get_available_time_series( algo, dat, sat, reference = reference, coverage = cov, period = datum, found = found)
 		if found then begin
-			cci = percentile(d.cci_all,[.5,.75,.25,.975,.025],no_data_value=-999.)
-			ref = percentile(d.gac_all,[.5,.75,.25,.975,.025],no_data_value=-999.)
+			cci = d.percentiles
+			ref = d.percentiles2
 			unit = d.unit
 			longname = d.longname
-			; true period
-			dum   = fix(strsplit(d.period,'-',/ext))
-			date  = strarr(n_elements(d.STATS[0,*]))
-			for i = dum[0],dum[1] do date[(i-dum[0])*12:((i-dum[0]+1)*12)-1] = string(i,f='(i4.4)') + string(indgen(12)+1,f='(i2.2)')
-			idx = where(d.STATS[0,*] ne -999.,idxcnt)
-			if idxcnt gt 0 then datum = date[min(idx)]+'-'+date[max(idx)]
+			datum = d.actual_date
 			name  = [sat_name(algo,sat),sat_name(reference,sat)]
 			array = [[temporary(cci)],[temporary(ref)]]
 			free,d
@@ -4355,19 +4228,17 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	years  = string(indgen(33)+1982,f='(i4.4)')
 	months = string(indgen(12)+1,f='(i2.2)')
 
-	mem_cur = memory(/current)
-
 	cov = strlowcase(coverage)
 	sat = strlowcase(satellite)
-	ref = alg2ref(reference)
-	cli = alg2ref(climatology)
-	dat = strlowcase(dat)
+	ref = algo2ref(reference)
+	cli = algo2ref(climatology)
+	dat = strlowcase(data)
 
 	grid = 1.0
 	if ref eq 'gac'  then grid = 0.5
 	if ref eq 'gac2' then grid = 0.5
 	if ref eq 'cci'  then grid = 0.5
-	if ref eq 'cal'  then grid = 0.5
+	if ref eq 'cal'  then grid = 2.0
 	if ref eq 'cla'  then grid = 0.5
 
 	dem = get_dem(grid=grid)
@@ -4386,11 +4257,26 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		else: begin print,'coverage not defined!' & return & end
 	endcase
 
+	case strmid(dat,0,3) of
+		'cot'	: begin & histv = [0.1,0.,100.]    & vollername = 'Cloud Optical Thickness' & end
+		'cth'	: begin & histv = [0.1,0.,20.]     & vollername = 'Cloud Top Height' & end
+		'cwp'	: begin & histv = [10.,0.,1000.]   & vollername = 'Cloud Water Path' & end
+		'iwp'	: begin & histv = [10.,0.,1000.]   & vollername = 'Cloud Ice Water Path' & end
+		'lwp'	: begin & histv = [10.,0.,1000.]   & vollername = 'Cloud Liquid Water Path' & end
+		'ctp'	: begin & histv = [10.,100.,1000.] & vollername = 'Cloud Top Pressure' & end
+		'ctt'	: begin & histv = [1.,180.,330.]   & vollername = 'Cloud Top Temperature' & end
+		'cfc'	: begin & histv = [0.01,0.,1.]     & vollername = 'Cloud Fraction' & end
+		'cph'	: begin & histv = [0.01,0.,1.]     & vollername = 'Liquid Cloud Fraction' & end
+		'ref'	: begin & histv = [1.,0.,80.]      & vollername = 'Cloud Effective Radius' & end
+		'sal'	: begin & histv = [0.1,0.,100.]    & vollername = 'Surface Albedo' & end
+		else : begin & print, 'tbd' & stop & end
+	endcase
+
 	satcci = sat
-	satgac = ( total(satcci eq ['aatme','aatsr']) ? 'noaa17' : 'allsat' )
-	; fame-c only daytime
-	dt1 = (satcci eq 'aatme' and total(ref eq ['myd','mod','myd2','mod2','gac2','cci']) ? '_day':'')
-	dt2 = (satgac eq 'aatme' and total(ref eq ['myd','mod','myd2','mod2','gac2','cci']) ? '_day':'')
+	satgac = ( total(satcci eq ['aatme','aatsr']) ? 'noaa17' : sat )
+	; fame-c only daytime, set ref dat to _day and compare if available
+	dt1 = (satgac eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) ? '_day':'')
+	dt2 = (satcci eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) ? '_day':'')
 	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
 
 	dat1 = dat+dt1
@@ -4399,9 +4285,9 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	nyears=n_elements(years)
 	nmonths=n_elements(months)
 	dims = size(lon,/dim)
-	dim0 = 13
+	dim0 = 12 ;[cci-gmean,cci-stdd,cci-unc-gmean,cci-unc-stdd,gac-gmean,gac-stdd,gac-unc-gmean,gac-unc-stdd,gbias,grmse,bc_rmse,correlate]
 
-	stats           = fltarr(dim0,nyears*nmonths)-999.
+	stats           = fltarr(dim0,nyears*nmonths) + !values.f_nan
 	cci_mean_2d     = fltarr(dims)
 	cci_unce_2d     = fltarr(dims)
 	gac_mean_2d     = fltarr(dims)
@@ -4409,70 +4295,85 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	anz_2d          = fltarr(dims)
 	cci_anz_unce_2d = fltarr(dims)
 	gac_anz_unce_2d = fltarr(dims)
+	mini            = histv[1]
+	maxi            = histv[2]
+	bin             = histv[0]
+	histo1          = histogram(findgen(maxi),min=mini,max=maxi,bin=bin) * 0.
+	histo2          = histogram(findgen(maxi),min=mini,max=maxi,bin=bin) * 0.
+	histo2D         = hist_2d(findgen(maxi),findgen(maxi),min1=mini,max1=maxi,bin1=bin,min2=mini,max2=maxi,bin2=bin) * 0.
+	sum_diff        = 0.
+	sum_diff2       = 0.
+	sum_cci         = 0.
+	sum_cci2        = 0.
+	sum_gac         = 0.
+	sum_gac2        = 0.
+	nnn             = 0ul
+	sum_prod        = 0.
+	maxv            = -999.
+	maxv2           = -999.
+	minv            = 99999.
+	minv2           = 99999.
 
-	counti=0
+	counti=0ul
 	for yy1=0,nyears-1,1 do begin
 	    for mm1=0,nmonths-1,1 do begin
 
 		yyyy=years[yy1]
 		mmmm=months[mm1]
 
-		cci_tmp = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,/mean,/make_compare,no_data_val=fv_cci,/silent,/print_file)
-		gac_tmp = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent,print_file=2)
+		gac_tmp = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent);,print_file=2)
+		if ~found_gac then continue
+		cci_tmp = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,/mean,/make_compare,no_data_val=fv_cci,/silent,unit=unit);,/print_file)
+		if ~found_cci then continue
 
-		if (found_cci or found_gac) then begin
-
+		if found_cci and found_gac then begin
 			print, dat+' '+yyyy+'/'+mmmm+' '+sat+' '+cov+' - '+cli+' vs '+ref
 			cci_unc = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci_unc,glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
 			gac_unc = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac_unc,glob=grid,/mean,/make_compare,no_data_val=fv_gac_unc,/silent)
-			if found_cci then begin
-				good_idx = where(cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-				if good_count gt 0 then begin
-					stats[7,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-					stats[8,counti] = stddev(cci_tmp[good_idx])
-					if found_cci_unc then begin
-						idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-						if idx2_cnt gt 0 then stats[9,counti] = gmean(((cci_unc[good_idx])[idx2]),(lat[good_idx])[idx2])
-					endif
+			good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
+			if good_count gt 0 then begin
+				stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
+				stats[1,counti] = stddev(cci_tmp[good_idx])
+				if found_cci_unc then begin
+					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
+					if idx2_cnt gt 0 then stats[2,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
+					if idx2_cnt gt 0 then stats[3,counti] = stddev((cci_unc[good_idx])[idx2])
+					if idx2_cnt gt 0 then cci_unce_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
+					if idx2_cnt gt 0 then cci_anz_unce_2d[good_idx[idx2]]++
 				endif
-			endif
-			if found_gac then begin
-				good_idx = where(gac_tmp ne fv_gac[0] and dem eq 9999.,good_count)
-				if good_count gt 0 then begin
-					stats[10,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-					stats[11,counti] = stddev(gac_tmp[good_idx])
-					if found_gac_unc then begin
-						idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
-						if idx2_cnt gt 0 then stats[12,counti] = gmean(((gac_unc[good_idx])[idx2]),(lat[good_idx])[idx2])
-					endif
+				stats[4,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
+				stats[5,counti] = stddev(gac_tmp[good_idx])
+				if found_gac_unc then begin
+					idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
+					if idx2_cnt gt 0 then stats[6,counti] = gmean((gac_unc[good_idx])[idx2],(lat[good_idx])[idx2])
+					if idx2_cnt gt 0 then stats[7,counti] = stddev((gac_unc[good_idx])[idx2])
+					if idx2_cnt gt 0 then gac_unce_2d[good_idx[idx2]] += gac_unc[good_idx[idx2]]
+					if idx2_cnt gt 0 then gac_anz_unce_2d[good_idx[idx2]]++
 				endif
-			endif
-			if found_cci and found_gac then begin
-				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-				if good_count gt 0 then begin
-					stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-					stats[1,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-					stats[2,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-					stats[3,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-					stats[4,counti] = bc_rmse(stats[2,counti],stats[3,counti])
-					if found_cci_unc then begin
-						idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-						if idx2_cnt gt 0 then stats[5,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-						if idx2_cnt gt 0 then cci_unce_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-						if idx2_cnt gt 0 then cci_anz_unce_2d[good_idx[idx2]]++
-					endif
-					if found_gac_unc then begin
-						idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
-						if idx2_cnt gt 0 then stats[6,counti] = gmean((gac_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-						if idx2_cnt gt 0 then gac_unce_2d[good_idx[idx2]] += gac_unc[good_idx[idx2]]
-						if idx2_cnt gt 0 then gac_anz_unce_2d[good_idx[idx2]]++
-					endif
-					gac_all = adv_keyword_set(gac_all) ? [gac_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-					cci_all = adv_keyword_set(cci_all) ? [cci_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-					cci_mean_2d[good_idx] += cci_tmp[good_idx]
-					gac_mean_2d[good_idx] += gac_tmp[good_idx]
-					anz_2d[good_idx]++
-				endif
+				stats[8,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+				stats[9,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+				stats[10,counti]= bc_rmse(stats[8,counti],stats[9,counti])
+				stats[11,counti]= correlate(cci_tmp[good_idx],gac_tmp[good_idx])
+				gac_all = adv_keyword_set(gac_all) ? [gac_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
+				cci_all = adv_keyword_set(cci_all) ? [cci_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
+				histo1   += histogram(cci_tmp[good_idx],min=mini,max=maxi,bin=bin)
+				histo2   += histogram(gac_tmp[good_idx],min=mini,max=maxi,bin=bin)
+				histo2D  += hist_2d(cci_tmp[good_idx],gac_tmp[good_idx],min1=mini,max1=maxi,bin1=bin,min2=mini,max2=maxi,bin2=bin)
+				cci_mean_2d[good_idx] += cci_tmp[good_idx]
+				gac_mean_2d[good_idx] += gac_tmp[good_idx]
+				anz_2d[good_idx]++
+				sum_diff  += total((cci_tmp[good_idx]-gac_tmp[good_idx]))
+				sum_diff2 += total((cci_tmp[good_idx]-gac_tmp[good_idx])^2.)
+				sum_cci   += total((cci_tmp[good_idx]))
+				sum_cci2  += total((cci_tmp[good_idx])^2.)
+				sum_gac   += total((gac_tmp[good_idx]))
+				sum_gac2  += total((gac_tmp[good_idx])^2.)
+				sum_prod  += total((cci_tmp[good_idx] * gac_tmp[good_idx]))
+				maxv      = max([maxv ,max(cci_tmp[good_idx])])
+				maxv2     = max([maxv2,max(gac_tmp[good_idx])])
+				minv      = min([minv ,min(cci_tmp[good_idx])])
+				minv2     = min([minv2,min(gac_tmp[good_idx])])
+				nnn       += good_count
 			endif
 			free,cci_tmp
 			free,cci_unc
@@ -4483,7 +4384,44 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	    endfor
 	endfor
 
-	; cfc
+	if nnn le 100 then return
+
+	histo1  = {data:histo1 ,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+	histo2  = {data:histo2 ,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+	histo2d = {data:histo2D,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+
+	; statistics over all good pixel and monthly means
+	anz          = nnn
+	nnn          = float(nnn)
+	;cci
+	all_avg_cci  = sum_cci / (nnn > 1l)						; average
+	dum_var_cci  = ( (sum_cci2 - nnn * all_avg_cci^2) > 0.)
+	all_var_cci  = dum_var_cci / ((nnn-1l) > 1l) 					; varianz
+	all_sdv_cci  = sqrt(all_var_cci)						; stddev
+	; gac
+	all_avg_gac  = sum_gac / (nnn > 1l)						; average
+	dum_var_gac  = ( (sum_gac2 - nnn * all_avg_gac^2) > 0.)				; 
+	all_var_gac  = dum_var_gac / ((nnn-1l) > 1l) 					; varianz
+	all_sdv_gac  = sqrt(all_var_gac)						; stddev
+	; both
+	all_bias     = sum_diff/nnn							; BIAS
+	all_rmse     = sqrt(sum_diff2/nnn)						; RMSE
+	all_bcrmse   = sqrt((all_rmse)^2. - (all_bias)^2. )				; Bias corrected RMSE
+	all_cov      = sum_prod - nnn * all_avg_cci * all_avg_gac			; Verschiebungssatz Covarianz
+	all_corr     = all_cov / sqrt( dum_var_cci * dum_var_gac)			; Correlation
+
+	all = {	nnn:anz,minvalue:minv,maxvalue:maxv,avgerage:all_avg_cci,variance:all_var_cci,stddev:all_sdv_cci,$
+		minvalue2:minv2,maxvalue2:maxv2,avgerage2:all_avg_gac,variance2:all_var_gac,stddev2:all_sdv_gac,$
+		bias:all_bias,rmse:all_rmse,bc_rmse:all_bcrmse,covariance:all_cov,correlation:all_corr}
+
+	percentiles  = percentile(cci_all,[.5,.75,.25,.975,.025],no_data_value=-999.)
+	percentiles2 = percentile(gac_all,[.5,.75,.25,.975,.025],no_data_value=-999.)
+	regr = linfit(cci_all,gac_all,chisqr=chisqr,prob=prob,sigma=sigma,covar=covar)
+	histo2d = create_struct(histo2d,'linfit',{regr:regr,chisqr:chisqr,prob:prob,sigma:sigma,covar:covar})
+	free,cci_all
+	free,gac_all
+
+	; 2D average
 	qq = where(anz_2d eq 0,c_qq)
 	if c_qq gt 0 then begin
 		cci_mean_2d[qq] = -999.
@@ -4508,23 +4446,177 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	free,gac_anz_unce_2d 
 
 	if cov eq 'full' then cov = '' else cov = cov+'_'
-	save_var,{cci_all:temporary(cci_all),gac_all:temporary(gac_all),stats:temporary(stats),mean_cci:temporary(mean_cci), $
-		  unc_cci:temporary(unce_cci),mean_gac:temporary(mean_gac),unc_gac:temporary(unce_gac)}, $
-	!SAVS_DIR + 'time_series/compare_'+dat+'_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
+	out_struc = {varname:dat,longname:vollername,unit:unit,coverage:coverage,percentiles:percentiles,percentiles2:percentiles2,$
+			stats:temporary(stats),mean:temporary(mean_cci),unc:temporary(unce_cci),mean2:temporary(mean_gac),unc2:temporary(unce_gac)}
+	out_struc = create_struct(out_struc,'histogram',histo1)
+	out_struc = create_struct(out_struc,'histogram2',histo2)
+	out_struc = create_struct(out_struc,'hist_2d',histo2D)
+	out_struc = create_struct(out_struc,'Overall_Stats',all)
 
-	print, 'Memory used ', ( memory(/high) - mem_cur) / 1024d^2d, ' MB'
+	save_var,out_struc,!SAVS_DIR + 'time_series/compare/compare_'+dat+'_'+cli+'_vs_'+ref+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
+
+end
+; ----------------------------------------------------------------------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------------------------------------------------------------------
+pro create_time_series,data,algon,coverage
+
+	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
+
+	years  = string(indgen(33)+1982,f='(i4.4)')
+	months = string(indgen(12)+1,f='(i2.2)')
+
+	cov = strlowcase(coverage)
+	dat = strlowcase(data)
+	dum = strsplit(strlowcase(algon[0]),'-',/ext)
+	cli = algo2ref(dum[0])
+	sat = n_elements(dum) eq 2 ? dum[1] : ''
+
+	grid = 1.0
+	if cli eq 'gac'  then grid = 0.25
+	if cli eq 'gac2' then grid = 0.25
+	if cli eq 'cci'  then grid = 0.5
+	if cli eq 'cal'  then grid = 2.0
+	if cli eq 'cla'  then grid = 0.25
+
+	dem = get_dem(grid=grid)
+	make_geo,lon,lat,grid=grid
+
+	case cov of
+		'full'		: dem = dem *0. + 9999.
+		'land'		: dem[where(dem ne 0)] = 9999.
+		'sea'		: dem[where(dem eq 0)] = 9999.
+		'antarctica'	: dem[where(between(lat,-90.0,-65.5))] = 9999.
+		'midlat_south'	: dem[where(between(lat,-65.5,-23.5))] = 9999.
+		'tropic'	: dem[where(between(lat,-23.5, 23.5))] = 9999.
+		'midlat_north'	: dem[where(between(lat, 23.5, 65.5))] = 9999.
+		'arctic'	: dem[where(between(lat, 65.5, 90.0))] = 9999.
+		'midlat_trop'	: dem[where(between(lat,-60.0, 60.0))] = 9999.
+		else: begin print,'coverage not defined!' & return & end
+	endcase
+
+	case strmid(dat,0,3) of
+		'cot'	: begin & histv = [0.1,0.,100.]    & vollername = 'Cloud Optical Thickness' & end
+		'cth'	: begin & histv = [0.1,0.,20.]     & vollername = 'Cloud Top Height' & end
+		'cwp'	: begin & histv = [10.,0.,1000.]   & vollername = 'Cloud Water Path' & end
+		'iwp'	: begin & histv = [10.,0.,1000.]   & vollername = 'Cloud Ice Water Path' & end
+		'lwp'	: begin & histv = [10.,0.,1000.]   & vollername = 'Cloud Liquid Water Path' & end
+		'ctp'	: begin & histv = [10.,100.,1000.] & vollername = 'Cloud Top Pressure' & end
+		'ctt'	: begin & histv = [1.,180.,330.]   & vollername = 'Cloud Top Temperature' & end
+		'cfc'	: begin & histv = [0.01,0.,1.]     & vollername = 'Cloud Fraction' & end
+		'cph'	: begin & histv = [0.01,0.,1.]     & vollername = 'Liquid Cloud Fraction' & end
+		'ref'	: begin & histv = [1.,0.,80.]      & vollername = 'Cloud Effective Radius' & end
+		'sal'	: begin & histv = [0.1,0.,100.]    & vollername = 'Surface Albedo' & end
+		else : begin & print, 'tbd' & stop & end
+	endcase
+
+	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
+
+	nyears=n_elements(years)
+	nmonths=n_elements(months)
+	dims = size(lon,/dim)
+	dim0 = 3
+
+	stats       = fltarr(dim0,nyears*nmonths) +!values.f_nan
+	mean_2d     = fltarr(dims)
+	unce_2d     = fltarr(dims)
+	anz_2d      = fltarr(dims)
+	anz_unce_2d = fltarr(dims)
+	mini        = histv[1]
+	maxi        = histv[2]
+	bin         = histv[0]
+	histo       = histogram(findgen(maxi),min=mini,max=maxi,bin=bin) * 0
+	sum         = 0.
+	sum2        = 0.
+	maxv        = -999.
+	minv        = 99999.
+	nnn         = 0ul
+
+	counti = 0ul
+	for yy1=0,nyears-1,1 do begin
+	    for mm1=0,nmonths-1,1 do begin
+
+		yyyy=years[yy1]
+		mmmm=months[mm1]
+
+		tmp = get_data(yyyy,mmmm,file=dum_file,data=dat,algo=cli,sat=sat,level=lev,found=found,no_data_val=fv,unit=unit,/silent,/make_compare)
+
+		if (found) then begin
+
+			print, sat_name(cli,sat)+': '+ dat+' '+yyyy+'/'+mmmm+' '+cov+' (File: '+temporary(dum_file)+')'
+			unc = get_data(yyyy,mmmm,data=dat+'_unc',algo=cli,sat=sat,level=lev,found=found_unc,no_data_val=fv_unc,/silent,/make_compare)
+			good_idx = where(tmp ne fv[0] and dem eq 9999.,good_count)
+				if good_count gt 0 then begin
+					stats[0,counti] = gmean (tmp[good_idx],lat[good_idx])
+					stats[1,counti] = stddev(tmp[good_idx])
+					if found_unc then begin
+						idx2 = where(unc[good_idx] ne fv_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[2,counti] = gmean(((unc[good_idx])[idx2]),(lat[good_idx])[idx2])
+						if idx2_cnt gt 0 then unce_2d[good_idx[idx2]] += unc[good_idx[idx2]]
+						if idx2_cnt gt 0 then anz_unce_2d[good_idx[idx2]]++
+					endif
+					histo   += histogram(tmp[good_idx],min=mini,max=maxi,bin=bin)
+					mean_2d[good_idx] += tmp[good_idx]
+					anz_2d[good_idx]++
+					sum     += total((tmp[good_idx]))
+					sum2    += total((tmp[good_idx])^2.)
+					maxv    = max([maxv ,max(tmp[good_idx])])
+					minv    = min([minv ,min(tmp[good_idx])])
+					nnn     += good_count
+				endif
+			free,tmp
+			free,unc
+		endif
+		counti++
+	    endfor
+	endfor
+
+	if nnn le 100 then return
+
+	histo = {data:histo,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+	; statistics over all good pixel and monthly means
+	anz     = nnn
+	nnn     = float(nnn)
+	;cci
+	all_avg = sum / (nnn > 1l)					; average
+	all_var = ( (sum2 - nnn * all_avg^2) > 0.) / ((nnn-1l) > 1l) 	; varianz
+	all_sdv = sqrt(all_var)					; stddev
+
+	all     = {nnn:anz,minvalue:minv,maxvalue:maxv,avgerage:all_avg,variance:all_var,stddev:all_sdv}
+
+	;average
+	qq = where(anz_2d eq 0,c_qq)
+	if c_qq gt 0 then mean_2d[qq] = -999.
+	cci  = mean_2d/float(anz_2d > 1)
+	qq = where(anz_unce_2d eq 0,c_qq)
+	if c_qq gt 0 then unce_2d[qq] = -999.
+	unce  = unce_2d/float(anz_unce_2d > 1)
+
+	;cleanup
+	free,mean_2d 
+	free,unce_2d 
+	free,anz_2d
+	free,anz_unce_2d 
+
+	if cov eq 'full' then cov = '' else cov = cov+'_'
+	out_struc = {nnn:anz,varname:dat,longname:vollername,unit:unit,coverage:coverage,stats:temporary(stats),mean:temporary(cci),unc:temporary(unce)}
+	out_struc = create_struct(out_struc,'histogram',histo)
+	out_struc = create_struct(out_struc,'Overall_Stats',all)
+	save_var,out_struc,	!SAVS_DIR + 'time_series/plot/plot_'+dat+'_'+cli+'_time_series_'+sat+'_'+cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; do jobs
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro do_create_all_cci_time_series
-	cli  =  'cci'
+pro do_create_all_compare_time_series
+	starttime = systime(1)
+	mem_cur   = memory(/current)
+
+	cli  = 'gac2'
 	cov  = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
 	sat  = ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19','noaa12','noaa15','noaa17', $
-		'metopa','metopb','aqua','terra','aatme','aatsr','avhrrs','modises','allsat']
-	ref  = ['gac2','pmx','myd2','mod2'];,'myd','mod','gac']
+		'metopa','metopb','allsat'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
+	ref  = ['pmx','gac','myd2','mod2'];,'myd','mod'];'cci'
 	data = ['cfc','ctp','ctt','cot','ref','cth','lwp','iwp','cwp','cph']
 	for j=0,n_elements(cov) -1 do begin
 		for i= 0,n_elements(sat)-1 do begin
@@ -4538,27 +4630,85 @@ pro do_create_all_cci_time_series
 			endfor
 		endfor
 	endfor
+	caldat, systime(/utc, /julian), mo, da, ye, ho, mi, se
+	dat_str	= string(da, mo, ye, ho, mi, format = '(i2.2,".",i2.2,".",i4.4," ",i2.2,":",i2.2,"[UTC] / ")')
+	print, dat_str + 'create_all_compare_time_series -> '+string((systime(1)-starttime)/3600.,f='("Duration        : ", f7.3, " hrs")')
+	print, dat_str + 'create_all_compare_time_series -> '+string(float(memory(/highwater)-mem_cur)/1024.^3,f='("Memory required : ", f7.3, " GiB")')
+
+end
+; ----------------------------------------------------------------------------------------------------------------------------------------------
+pro do_create_all_single_time_series
+
+	starttime = systime(1)
+	mem_cur   = memory(/current)
+
+ 	data = ['cfc','ctp','ctt','cot','ref','cth','lwp','iwp','cwp','cph'];,'sal']
+
+	cov  = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
+	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb'];'noaa10'
+	; cci
+; 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']; not ready yet
+	; gac
+	gac_list = ['gac-'+avh_list,'gac-allsat']
+	; gac2
+	gac2_list = ['gac2-'+avh_list];,'gac2-allsat']
+	; pmx
+	pmx_list = ['pmx-'+avh_list,'pmx-noaa10']
+	; coll6
+	coll6_list = ['myd2-','mod2-']
+	; coll5
+	coll5_list = ['myd-','mod-']
+
+	; combine all you need
+	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
+
+; 	algon_list='gac2-allsat'; including 'sal'
+
+	for j=0,n_elements(cov) -1 do begin
+		for i= 0,n_elements(algon_list)-1 do begin
+			for l=0,n_elements(data)-1 do begin
+				do_it = 1
+				if do_it then create_time_series, data[l], algon_list[i], cov[j]
+			endfor
+		endfor
+	endfor
+
+	caldat, systime(/utc, /julian), mo, da, ye, ho, mi, se
+	dat_str	= string(da, mo, ye, ho, mi, format = '(i2.2,".",i2.2,".",i4.4," ",i2.2,":",i2.2,"[UTC] / ")')
+	print, dat_str + 'create_all_single_time_series -> '+string((systime(1)-starttime)/3600.,f='("Duration        : ", f7.3, " hrs")')
+	print, dat_str + 'create_all_single_time_series -> '+string(float(memory(/highwater)-mem_cur)/1024.^3,f='("Memory required : ", f7.3, " GiB")')
+
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_hist_cloud_type_time_series
-; 	algon_list = ['cci-aqua','cci-terra','cci_noaa12','cci-noaa15','cci-noaa17','cci-metopa','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
-	algon_list = [	'cci-noaa7','cci-noaa9','cci-noaa11','cci-noaa14','cci-noaa16','cci-noaa18','cci-noaa19', $
-			'gac-noaa7','gac-noaa9','gac-noaa11','gac-noaa14','gac-noaa16','gac-noaa18','gac-noaa19', $
-			'gac-noaa12','gac-noaa15','gac-noaa17','gac-metopa','gac-allsat'			, $
-			'myd','mod','myd2','mod2','cci_old-noaa15','pmx-noaa7','pmx-noaa12'			, $
-			'cci_old-noaa16','cci_old-noaa17','cci_old-noaa18','cci_old-aqua','cci_old-terra']
 
-	years      = string(indgen(33)+1982,f='(i2.2)')
-; 	years      = ['2007','2008','2009']
+	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb'];'noaa10'
+	; cci
+; 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']; not ready yet
+; 	; gac
+ 	gac_list = ['gac-'+avh_list,'gac-allsat']
+	; gac2
+	gac2_list = ['gac2-'+avh_list,'gac2-allsat']
+; 	; pmx
+ 	pmx_list = ['pmx-'+avh_list,'pmx-noaa10']
+; 	; coll6
+ 	coll6_list = ['myd2-','mod2-']
+; 	; coll5
+ 	coll5_list = ['myd-','mod-']
+
+	; combine all you need
+	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
+
+	years      = string(indgen(33)+1982,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
 	plot_l3
 	datestr = years[0]+'-'+(reverse(years))[0]
-	temp_dir = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/feedback_loops/loop3/' ; cci temporäres verzeichnis von cci
  	for k = 0,n_elements(algon_list) -1 do begin
 		dum = strsplit(algon_list[k],'-',/ext)
 		ref = dum[0]
-		if ref eq 'cci' then dirname=temp_dir
 		sat = n_elements(dum) eq 2 ? dum[1] : ''
+		datum = strarr(3,n_elements(years)*n_elements(months))
+		count = 0
 		for i = 0,n_elements(years) -1 do begin
 			yyyy = years[i]
 			print,'Reading '+sat_name(ref,sat)+' '+yyyy
@@ -4566,57 +4716,83 @@ pro do_hist_cloud_type_time_series
 				mm = months[j]
 				if ref eq 'gwx' or ref eq 'pmx' then begin
 					; read full year at once
-					bla = get_data(yyyy,sat=sat,algo=ref,data='hist2d_cot_ctp',found = found_all)
+					bla = get_data(yyyy,sat=sat,algo=ref,data='hist2d_cot_ctp',found = found_all,/silent)
 					if found_all then tmp_all = total(bla,5) 
+					if found_all then datum[0,count:count+11]=yyyy+months
+					found_liq = 0
+					found_ice = 0
 					j   = 11
 				endif else begin
 					tmp_all = get_data(yyyy,mm,sat=sat,algo=ref,data='hist2d_cot_ctp'    ,found = found_all,/silent,dirname=dirname)
 					tmp_liq = get_data(yyyy,mm,sat=sat,algo=ref,data='hist2d_cot_ctp_liq',found = found_liq,/silent,dirname=dirname)
 					tmp_ice = get_data(yyyy,mm,sat=sat,algo=ref,data='hist2d_cot_ctp_ice',found = found_ice,/silent,dirname=dirname)
 				endelse
-
 				if found_all then if n_elements(final_array_all) eq 0 then final_array_all = (tmp_all>0) else final_array_all += (tmp_all>0)
 				if found_liq then if n_elements(final_array_liq) eq 0 then final_array_liq = (tmp_liq>0) else final_array_liq += (tmp_liq>0)
 				if found_ice then if n_elements(final_array_ice) eq 0 then final_array_ice = (tmp_ice>0) else final_array_ice += (tmp_ice>0)
+				if found_all and (ref ne 'pmx' or ref ne 'gwx') then datum[0,count]=yyyy+mm
+				if found_liq then datum[1,count]=yyyy+mm
+				if found_ice then datum[2,count]=yyyy+mm
+				count++
 			endfor
 		endfor
+
 		if n_elements(final_array_all) ne 0 then begin
+			idx = where(datum[0,*] ne '',idxcnt)
+			actual_date = idxcnt gt 0 ? datum[0,min(idx)]+'-'+datum[0,max(idx)] : datestr
 			print,'Save -> '+!SAVS_DIR +'cot_ctp_hist2d/cot_ctp_hist2d_'+datestr+'_'+ref+'_'+sat+'.sav'
-			save_var,final_array_all,!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_'+datestr+'_'+ref+'_'+sat+'.sav'
+			save_var,{actual_date:actual_date,bild:final_array_all},!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_'+datestr+'_'+ref+'_'+sat+'.sav'
 			free,final_array_all
+			free,actual_date
 		endif
+		idx = where(datum[1,*] ne '',idxcnt)
+		actual_date = idxcnt gt 0 ? datum[1,min(idx)]+'-'+datum[1,max(idx)] : datestr
 		if n_elements(final_array_liq) ne 0 then begin
 			print,'Save -> '+!SAVS_DIR +'cot_ctp_hist2d/cot_ctp_hist2d_liq_'+datestr+'_'+ref+'_'+sat+'.sav'
-			save_var,final_array_liq,!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_liq_'+datestr+'_'+ref+'_'+sat+'.sav'
+			save_var,{actual_date:actual_date,bild:final_array_liq},!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_liq_'+datestr+'_'+ref+'_'+sat+'.sav'
 			free,final_array_liq
+			free,actual_date
 		endif
+		idx = where(datum[2,*] ne '',idxcnt)
+		actual_date = idxcnt gt 0 ? datum[2,min(idx)]+'-'+datum[2,max(idx)] : datestr
 		if n_elements(final_array_ice) ne 0 then begin
 			print,'Save -> '+!SAVS_DIR +'cot_ctp_hist2d/cot_ctp_hist2d_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
-			save_var,final_array_ice,!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
+			save_var,{actual_date:actual_date,bild:final_array_ice},!SAVS_DIR + 'cot_ctp_hist2d/cot_ctp_hist2d_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
 			free,final_array_ice
+			free,actual_date
 		endif
-		free,dirname
 	endfor
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_1d_hist_time_series
-	algon_list = [	'cci-aqua','cci-terra','cci-noaa15','cci-noaa16','cci-noaa17','cci-noaa18','cci-aatme', $
-			'cci-aatsr','myd','mod', 'myd2']
-	algon_list = [	'cci-aatsr','cci-aatme'];,'cci-aqua','cci-noaa17','cci-noaa18','myd','mod','myd2']
+	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb'];'noaa10'
+	; cci
+	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']; not ready yet
+	; gac2
+	gac2_list = ['gac2-'+avh_list,'gac2-allsat']
+	; coll6
+	coll6_list = ['myd2-','mod2-']
+	; coll5
+	coll5_list = ['myd-','mod-']
+
+	algon_list = [gac2_list,coll6_list,coll5_list]
+
 	prod_list  = ['cwp','cot','ctp','ctt','ref']
-	years      = ['2008']
-	months     = string(findgen(12)+1,f='(i2.2)')
+
+	years      = string(indgen(33)+1982,f='(i4.4)')
+	months     = string(indgen(12)+1,f='(i2.2)')
 	plot_l3
 	datestr = years[0]+'-'+(reverse(years))[0]
-	temp_dir = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/feedback_loops/loop3/' ; cci temporäres verzeichnis von cci
  
 	for k = 0,n_elements(algon_list) -1 do begin
 		dum = strsplit(algon_list[k],'-',/ext)
 		ref = dum[0]
-		if ref eq 'cci' then dirname=temp_dir
 		sat = n_elements(dum) eq 2 ? dum[1] : ''
 		for p = 0,n_elements(prod_list) -1 do begin
 			dat = prod_list[p]
+; 			if total(strmid(ref,0,3) eq ['myd','mod']) and dat ne 'ctt' then cycle
+			datum = strarr(3,n_elements(years)*n_elements(months))
+			count = 0
 			for i = 0,n_elements(years) -1 do begin
 				yyyy = years[i]
 				print,'Reading hist1d_'+dat+' '+sat_name(ref,sat)+' '+yyyy
@@ -4624,42 +4800,64 @@ pro do_1d_hist_time_series
 					mm = months[j]
 					tmp = get_data(yyyy,mm,sat=sat,algo=ref,data='hist1d_'+dat,found = found,/silent,dirname=dirname)
 					if found then if n_elements(final_array) eq 0 then final_array = (tmp>0) else final_array += (tmp>0)
+					if found then datum[0,count]=yyyy+mm
 					tmp = get_data(yyyy,mm,sat=sat,algo=ref,data='hist1d_'+dat+'_liq',found = found,/silent,dirname=dirname)
 					if found then if n_elements(final_array_liq) eq 0 then final_array_liq = (tmp>0) else final_array_liq += (tmp>0)
+					if found then datum[1,count]=yyyy+mm
 					tmp = get_data(yyyy,mm,sat=sat,algo=ref,data='hist1d_'+dat+'_ice',found = found,/silent,dirname=dirname)
 					if found then if n_elements(final_array_ice) eq 0 then final_array_ice = (tmp>0) else final_array_ice += (tmp>0)
+					if found then datum[2,count]=yyyy+mm
+					count++
 				endfor
 			endfor
 			if n_elements(final_array) ne 0 then begin
+				idx = where(datum[0,*] ne '',idxcnt)
+				actual_date = idxcnt gt 0 ? datum[0,min(idx)]+'-'+datum[0,max(idx)] : datestr
 				print,'Save -> '+!SAVS_DIR + 'hist1d/hist1d_'+dat+'_'+datestr+'_'+ref+'_'+sat+'.sav'
-				save_var,final_array,!SAVS_DIR + 'hist1d/hist1d_'+dat+'_'+datestr+'_'+ref+'_'+sat+'.sav'
+				save_var,{actual_date:actual_date,bild:final_array},!SAVS_DIR + 'hist1d/hist1d_'+dat+'_'+datestr+'_'+ref+'_'+sat+'.sav'
 				free,final_array
-			endif
-			if n_elements(final_array_ice) ne 0 then begin
-				print,'Save -> '+!SAVS_DIR + 'hist1d/hist1d_'+dat+'_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
-				save_var,final_array_ice,!SAVS_DIR + 'hist1d/hist1d_'+dat+'_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
-				free,final_array_ice
+				free,actual_date
 			endif
 			if n_elements(final_array_liq) ne 0 then begin
+				idx = where(datum[1,*] ne '',idxcnt)
+				actual_date = idxcnt gt 0 ? datum[0,min(idx)]+'-'+datum[0,max(idx)] : datestr
 				print,'Save -> '+!SAVS_DIR + 'hist1d/hist1d_'+dat+'_liq_'+datestr+'_'+ref+'_'+sat+'.sav'
-				save_var,final_array_liq,!SAVS_DIR + 'hist1d/hist1d_'+dat+'_liq_'+datestr+'_'+ref+'_'+sat+'.sav'
+				save_var,{actual_date:actual_date,bild:final_array_liq},!SAVS_DIR + 'hist1d/hist1d_'+dat+'_liq_'+datestr+'_'+ref+'_'+sat+'.sav'
 				free,final_array_liq
+				free,actual_date
+			endif
+			if n_elements(final_array_ice) ne 0 then begin
+				idx = where(datum[2,*] ne '',idxcnt)
+				actual_date = idxcnt gt 0 ? datum[0,min(idx)]+'-'+datum[0,max(idx)] : datestr
+				print,'Save -> '+!SAVS_DIR + 'hist1d/hist1d_'+dat+'_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
+				save_var,{actual_date:actual_date,bild:final_array_ice},!SAVS_DIR + 'hist1d/hist1d_'+dat+'_ice_'+datestr+'_'+ref+'_'+sat+'.sav'
+				free,final_array_ice
+				free,actual_date
 			endif
 		endfor
-		free,dirname
 	endfor
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_create_hovmoeller
 
 	plot_l3
-; 	algon_list = ['cci-aqua','cci-terra','cci_noaa12','cci-noaa15','cci-noaa17','cci-metopa','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
-	algon_list = [	'cci-noaa7','cci-noaa9','cci-noaa11','cci-noaa14','cci-noaa16','cci-noaa18','cci-noaa19', $
-			'gac-noaa7','gac-noaa9','gac-noaa11','gac-noaa14','gac-noaa16','gac-noaa18','gac-noaa19', $
-			'gac-noaa12','gac-noaa15','gac-noaa17','gac-metopa','gac-allsat'			, $
-			'myd','mod','myd2','mod2','cci_old-noaa15','pmx-noaa7','pmx-noaa12'			, $
-			'cci_old-noaa16','cci_old-noaa17','cci_old-noaa18','cci_old-aqua','cci_old-terra']
-	algon_list = [	'gac2-noaa7']
+	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb'];'noaa10'
+	; cci
+	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']; not ready yet
+; 	; gac
+; 	gac_list = ['gac-'+avh_list,'gac-allsat']
+	; gac2
+; 	gac2_list = ['gac2-'+avh_list,'gac2-allsat']
+; 	; pmx
+; 	pmx_list = ['pmx-'+avh_list,'pmx-noaa10']
+; 	; coll6
+; 	coll6_list = ['myd2-','mod2-']
+; 	; coll5
+; 	coll5_list = ['myd-','mod-']
+
+	; combine all you need
+	algon_list = [gac2_list]
+
 	years      = string(indgen(33)+1982,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')
 	datestr    = years[0]+'-'+(reverse(years))[0]
@@ -4671,10 +4869,9 @@ pro do_create_hovmoeller
 		dum    = strsplit(algon_list[k],'-',/ext)
 		ref    = dum[0]
 		sat    = n_elements(dum) eq 2 ? dum[1] : ''
-		data   = ['cfc','ctp','cot','ctt','ref','cwp','iwp','lwp','cph']
-		case ref of 
+		data   = ['cfc','ctp','cot','ctt','cth','ref','cwp','iwp','lwp','cph']
+		case ref of
 			'cci'		: grid = 0.5
-			'cci_old'	: grid = 0.5
 			'gac'		: grid = 0.25
 			'gac2'		: grid = 0.25
 			else		: grid = 1.
@@ -4685,7 +4882,7 @@ pro do_create_hovmoeller
 		idx_sea = where(dem eq 0,complement=idx_land)
 
 		for dd = 0,n_elements(data)-1 do begin
-			if data[dd] eq 'ref' and (ref eq 'gac' or ref eq 'gac2') then continue
+			if data[dd] eq 'ref' and (ref eq 'gac') then continue
 			matrix_all  = fltarr(180./lat_res,nyears*nmonths)-999.
 			matrix_land = fltarr(180./lat_res,nyears*nmonths)-999.
 			matrix_sea  = fltarr(180./lat_res,nyears*nmonths)-999.
@@ -4711,30 +4908,6 @@ pro do_create_hovmoeller
 		endfor
 	endfor
 
-	return
-	; example plot 
-	!p.multi=[0,7,2]
-	win,1,/full
-	aa = file_search(!SAVS_DIR +'hovmoeller/cfc_hovmoeller_*')
-	ff = aa[[6,7,8,9,3,10,1,12,13,14,15,17,16,0]]
-	for i = 0,n_elements(ff)-1 do begin & $
-		file   = ff[i] & $
-		dum    = strupcase(reverse(strsplit(file_basename(file,'.sav'),/ext,'_'))) & $
-		if dum[0] eq 'MOD' then dum = ['TERRA','COLL5'] & $
-		if dum[0] eq 'MYD' then dum = ['AQUA' ,'COLL5'] & $
-		matrix = transpose(restore_var(file)) & $
-		idx = where(matrix le 0,icnt) & $
-		if icnt gt 0 then matrix[idx]=0. & $
-		xtickname = ['2007','2008','2009','2010'] & $
-		ytickname = ['-90','-60','-30','0','30','60','90'] & $
-		make_cool_contour,matrix,findgen(36),findgen(180),11,/lines, charsize=2,xmargin=[8,3],ymargin=[5,2], $
-;		view2d, matrix,$
-		title=dum[1]+' '+dum[0],bar_title='Cloud Fraction',no_data_idx=where(matrix le 0.), $
-		ytickname=ytickname,yticks=n_elements(ytickname)-1, ytitle='Latitude', $
-		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=10.,max=100,color=0,col_tab=4 & $;col_tab=105,color=(i/7 eq i/7. ? 1:0 ) & $
-		for j = 1,5 do oplot,!x.crange,[j*30,j*30],linestyle=1 & $
-		for j = 1,2 do oplot,[(j*12),(j*12)],!y.crange,linestyle=2 & $
-	endfor
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
