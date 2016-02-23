@@ -2973,17 +2973,17 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						if strmid(dat,0,3) eq 'cma' then dum = 'CFC'
 						if total(dat eq ['clwp','cwp','cot','cph']) then dum = 'CPP'
 						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
-						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld5/SEVIRI/operational/inst/'+dum+'/'+yyyy+'/'+mm+'/'
+						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/cmsaf_cld5/SEVIRI/operational/inst/'+dum+'/'+yyyy+'/'+mm+'/'
 						filen = dir+dum+'in'+yyyy+mm+dd+orbdum+'*MD.hdf'
 					endif else if dat eq 'zenith_angle' then begin
-						dir   = '/cmsaf/cmsaf-cld5/SEVIRI/repr1/aux/'
+						dir   = '/cmsaf/cmsaf-cld7/cmsaf_cld5/SEVIRI/repr1/aux/'
 						filen = dir+'meteosat'+(julday(mm,1,yyyy) ge julday(04,11,2007,13,00) ? '9':'8')+'zenanlge.nc'
 					endif else begin
 						dat   = strmid(get_product_name(dat,algo=alg,/lower),0,3)
 ; 						if dat eq 'cc_total' then dat = 'cfc' 
 ; 						dat   = dat eq 'cot_ctp_hist2d' ? 'jch' : (strsplit(dat,'_',/ext))[0]
 						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
-						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld5/SEVIRI/repr1/level3_ncdf/'+(total(dat eq ['ctp','ctt','cth']) ? 'cto' : dat)+'/'+yyyy+'/'
+						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/cmsaf_cld5/SEVIRI/repr1/level3_ncdf/'+(total(dat eq ['ctp','ctt','cth']) ? 'cto' : dat)+'/'+yyyy+'/'
 						apx   = dat eq 'jch' ? 'mh' : (dd ? 'dm' : 'mm')
 						filen = dir+(total(dat eq ['ctp','ctt','cth']) ? 'CTO' : strupcase(dat))+apx+$
 							yyyy+mm+dd+'*MA.nc'
@@ -3039,7 +3039,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
 						  end
 					'ESACCI_OLD': begin
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
 							if lev eq 'l2' then begin 
 								sat = strjoin(strsplit(sat,/ext,'-'))
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
@@ -3066,7 +3066,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 										dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
 									endif
 								endif
-								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/AVHRR_GAC/gacrepr1/level3_ncdf/CLARA-A1_cloudproperties/'+ $
+								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/AVHRR_GAC/gacrepr1/level3_ncdf/CLARA-A1_cloudproperties/'+ $
 									pathdat+'/'+ $
 									strlowcase(strjoin(strsplit((sat eq 'METOPA' ? 'metop02' : (sat eq 'AVHRRS' ? 'allsat' : sat)),/ext,'-')))+$
 									'/'+yyyy+'/'
@@ -3144,7 +3144,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'GEWEX': begin
 							if lev ne 'l3c' then goto, ende
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/gewex/'+yyyy+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/gewex/'+yyyy+'/'
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
 							filen = dir+dat+'_ESACCI_NOAA_*_'+yyyy+'.nc*'
 						 end
@@ -3176,7 +3176,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-MODIS*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
 						  end
 					'ESACCI_OLD': begin
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
 							if lev eq 'l2' then begin
 								sat = strjoin(strsplit(sat,/ext,'-'))
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/'
@@ -3234,7 +3234,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/ral_l2_aatsr/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+'*PP.primary.nc'
 					endif else begin
-						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
 						vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 						filen = dir+yyyy+mm+dd+'*ESACCI*'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-AATSR*-f'+vers+'.nc'
 					endelse
@@ -3248,7 +3248,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/l2_meris_aatsr/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+'*'+yyyy+mm+dd+orbdum+'*.nc'
 					endif else begin
-						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
 						vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 						zwisch = alg eq 'ESACCI_OLD' ? '' : '-'
 						filen = dir+yyyy+mm+dd+'-ESACCI-'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-MERIS'+zwisch+'AATSR_ENVISAT-f'+vers+'.nc'
@@ -3257,7 +3257,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 			  end
 		'ALL'	: begin
 				if strmid(alg,0,6) eq 'ESACCI' then begin
-					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/l3s/'+yyyy+'/'+mm+'/'+dd+'/'
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/l3s/'+yyyy+'/'+mm+'/'+dd+'/'
 					vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 					filen = dir+yyyy+mm+dd+'*ESACCI-L3S_CLOUD-CLD_PRODUCTS-MERGED-f'+vers+'.nc'
 				endif
@@ -3313,6 +3313,8 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	dat = (strlowcase(data))[0]
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
 
+	if algo2ref(algo,sat=sat) eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
+
 	vali_set_path
 
 	if keyword_set(reference) then begin
@@ -3335,7 +3337,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	dat = strmid(dat,0,3)
 
 	case dat of
-		'cfc' : begin & unit = (cli eq 'cci' ? '' : ' [%]')                		& longname = 'Cloud Fractional Cover' & end
+		'cfc' : begin & unit = '' 			               			& longname = 'Cloud Fractional Cover' & end
 		'lwp' : begin & unit = textoidl((cli eq 'cci' ? ' [g/m^2]' : ' [kg/m^2]')) 	& longname = 'Cloud Liquid Water Path' & end
 		'iwp' : begin & unit = textoidl((cli eq 'cci' ? ' [g/m^2]' : ' [kg/m^2]')) 	& longname = 'Cloud Ice Water Path' & end
 		'cwp' : begin & unit = textoidl((cli eq 'cci' ? ' [g/m^2]' : ' [kg/m^2]')) 	& longname = 'Cloud Water Path' & end
@@ -3593,7 +3595,7 @@ function map_osisaf_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = 
 	mm = strmid(orb_date,4,2)
 	dd = strmid(orb_date,6,2)
 
-	osi_file = file_search('/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/ecmwf_scratch/osisaf/ice_conc_??_polstere-100_reproc_'+yy+mm+dd+'1200.nc',count=anz_files)
+	osi_file = file_search('/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/ecmwf_scratch/osisaf/ice_conc_??_polstere-100_reproc_'+yy+mm+dd+'1200.nc',count=anz_files)
 
 	if anz_files ne 2 then begin
 		print,'No OSI file found! For Orbit date '+orb_date
@@ -3739,7 +3741,7 @@ function map_usgs_to_orbit, orb_date, orb_lon, orb_lat, parameter, high_res = hi
 
 	; find proper ecmwf file
 	orb_us    = ymdhms2unix(strmid(orb_date,0,12))
-	usgs_file = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/usgs_type_dem/'+file
+	usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/'+file
 
 	if ~file_test(usgs_file) then begin
 		print,'No USGS file found! For Orbit date '+orb_date
@@ -4094,8 +4096,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		unit = ''
 	endif else if ( total(strmid(dat,0,5) eq ['usgs_']) ) then begin
-		usgs_file = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_ori_0.05deg.nc'
-; 		usgs_file = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_0.25deg.nc'
+		usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_ori_0.05deg.nc'
+; 		usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_0.25deg.nc'
 		read_data, usgs_file, strmid(dat,5), outdata, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose,found = found
 		outdata = rotate(outdata,7)
 	endif else if ( (total(alg eq ['coll5','coll6']) and dat eq 'cph_day') ) then begin
@@ -4767,7 +4769,7 @@ pro set_algolist, algo_list, sat = sat, data = data, default = default, exclude 
 		if ampm eq 'am' then begin
 			algo_list = co5 ? ['mod2','cci'] : ['pmx','gac2','cci','mod2','gac']
 		endif else begin
-			algo_list = co5 ? ['myd2','cci','cal'] : ['pmx','gac2','cci','myd2','cal','gac']
+			algo_list = co5 ? ['myd2','cci'] : ['pmx','gac2','cci','myd2','gac']
 		endelse
 	endif else algo_list = ['cci','cci_old','pmx','myd','myd2','mod','mod2','gac','gac2','gwx','cla','isp','era','cal']
 
@@ -6117,7 +6119,7 @@ pro test_first_bits, file_type
 	ft = keyword_set(file_type) ? strlowcase(file_type) : 'ncdf4'
 
 	case ft of 
-		'eos'		: file = '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/esa_cld1/data/AUXDATA/MCD43C1_MODIS_BRDF/2000/02/18/MCD43C1.A2000049.005.2011206184931.hdf'
+		'eos'		: file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/esa_cld1/data/AUXDATA/MCD43C1_MODIS_BRDF/2000/02/18/MCD43C1.A2000049.005.2011206184931.hdf'
 		; hdf4 eos point or grid file - braucht ca. 2 min zum einlesen; coll5 l3c
 		'hdf4'		: file = get_filename(2008,06,algo='coll5',sat='terra')
 		; hdf5 file - nur datsets  ; claas l2

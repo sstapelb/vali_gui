@@ -3416,7 +3416,7 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi = maxi, win_nr=win_nr,$
 			ctable=ctable,other=other,reference = reference, out = out, land = land, sea = sea,$
-			oplots=oplots,found=found
+			oplots=oplots,found=found,nobar=nobar
 
 	vali_set_path
 
@@ -3547,15 +3547,17 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		title     = strcompress(dum[0],/rem)+'  '+title
 	endif
 
+	form_len = strlen(strcompress(floor(float(mima[1])),/rem))
+	plus = form_len eq 1 ? 1 : 0
+	bar_format = '(f'+strcompress(form_len+3+plus,/rem)+'.'+string(1+plus,f='(i1)')+')'
+
 	start_save, save_as
-	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,/lines, charsize=2,xmargin=[8,3],ymargin=[5,2], $
-		title=title,bar_title=strupcase(dat),no_data_val=no_data_val, $
-		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle='Latitude',c_charsize = 2., $
-		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=0,$
+	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[8,3],ymargin=[5,2], $
+		title=title,bar_title=strupcase(dat),no_data_val=no_data_val,/cc4cl_hovmoeller,$
+		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle='Latitude',c_charsize = 2., format = bar_format, $
+		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
 		col_table=col_tab,brewer =brewer,xticklen=0.00001;,xminor=2,col_tab=105,color=(i/7 eq i/7. ? 1:0 )
 		if si[0] eq 12 then axis,xaxis=0,xtickname=[' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],xticks=11,xminor=2
-		for j = 1,5 do oplot,!x.crange,[j*30,j*30],linestyle=1
-		for j = 1, si[0]/12 -1 do oplot,j*[12.,12.],!y.crange,linestyle=2
 	end_save, save_as
 end
 ;-------------------------------------------------------------------------------------------------------------------------
@@ -3784,8 +3786,9 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		if keyword_set(sea) then lat[where(dem ne 0)] = fillvalue
 		if keyword_set(land) then lat[where(dem eq 0)] = fillvalue
 	endif
-
-	medi = zonal_average(bild[where(lat ne fillvalue)],lat[where(lat ne fillvalue)],fillvalue=fillvalue,lat_zon=lat1d,/mean,/nan);,/median)
+	
+	if strlowcase(algo) eq 'calipso' then lat_res =2.
+	medi = zonal_average(bild[where(lat ne fillvalue)],lat[where(lat ne fillvalue)],fillvalue=fillvalue,lat_zon=lat1d,/mean,/nan,lat_res = lat_res);,/median)
 	idx  = where(finite(medi),chk_idx)
 	yr = [(adv_keyword_set(mini)? mini : (varname eq 'ctt' ? 200:0)),(adv_keyword_set(maxi)? maxi : max(medi[idx])*1.05)] 
 
@@ -3815,8 +3818,9 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	start_save,save_as,thick=thick,snapshot=(float(opl)?'png':'')
 		if wbg or sim then thick = 4
 		if ~opl then begin
+			varn = strlowcase(varname) eq 'cc_total' ? 'CFC' : strupcase(varname)
 			plot,[0,0],[1,1],xr=[-90,90],xs=3,/ys,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-			xtitle='latitude [degrees]',ytitle='zonal mean of '+strupcase(varname)+unit,yr=yr,title=title, $
+			xtitle='latitude [degrees]',ytitle='zonal mean of '+varn+unit,yr=yr,title=title, $
 			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
 			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick+2
 			legend,date+satn+hct,thick=thick,spos='top',charsize=lcharsize,color =-1,charthick=charthick
@@ -4321,64 +4325,66 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		yyyy=years[yy1]
 		mmmm=months[mm1]
 
-		gac_tmp = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent);,print_file=2)
-		if ~found_gac then continue
-		cci_tmp = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,/mean,/make_compare,no_data_val=fv_cci,/silent,unit=unit);,/print_file)
-		if ~found_cci then continue
+		dumcci = get_filename(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,/silent)
+		dumgac = get_filename(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,/silent)
 
 		if found_cci and found_gac then begin
-			print, dat+' '+yyyy+'/'+mmmm+' '+sat+' '+cov+' - '+cli+' vs '+ref
+			cci_tmp = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,/mean,/make_compare,no_data_val=fv_cci,/silent,unit=unit)
+			gac_tmp = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,/mean,/make_compare,no_data_val=fv_gac,/silent)
 			cci_unc = get_data(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci_unc,glob=grid,/mean,/make_compare,no_data_val=fv_cci_unc,/silent)
 			gac_unc = get_data(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac_unc,glob=grid,/mean,/make_compare,no_data_val=fv_gac_unc,/silent)
-			good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
-			if good_count gt 0 then begin
-				stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
-				stats[1,counti] = stddev(cci_tmp[good_idx])
-				if found_cci_unc then begin
-					idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
-					if idx2_cnt gt 0 then stats[2,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-					if idx2_cnt gt 0 then stats[3,counti] = stddev((cci_unc[good_idx])[idx2])
-					if idx2_cnt gt 0 then cci_unce_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
-					if idx2_cnt gt 0 then cci_anz_unce_2d[good_idx[idx2]]++
+			if found_cci and found_gac then begin
+				print, dat+' '+yyyy+'/'+mmmm+' '+sat+' '+cov+' - '+cli+' vs '+ref
+				good_idx = where(gac_tmp ne fv_gac[0] and cci_tmp ne fv_cci[0] and dem eq 9999.,good_count)
+				if good_count gt 0 then begin
+					stats[0,counti] = gmean(cci_tmp[good_idx],lat[good_idx])
+					stats[1,counti] = stddev(cci_tmp[good_idx])
+					if found_cci_unc then begin
+						idx2 = where(cci_unc[good_idx] ne fv_cci_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[2,counti] = gmean((cci_unc[good_idx])[idx2],(lat[good_idx])[idx2])
+						if idx2_cnt gt 0 then stats[3,counti] = stddev((cci_unc[good_idx])[idx2])
+						if idx2_cnt gt 0 then cci_unce_2d[good_idx[idx2]] += cci_unc[good_idx[idx2]]
+						if idx2_cnt gt 0 then cci_anz_unce_2d[good_idx[idx2]]++
+					endif
+					stats[4,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
+					stats[5,counti] = stddev(gac_tmp[good_idx])
+					if found_gac_unc then begin
+						idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
+						if idx2_cnt gt 0 then stats[6,counti] = gmean((gac_unc[good_idx])[idx2],(lat[good_idx])[idx2])
+						if idx2_cnt gt 0 then stats[7,counti] = stddev((gac_unc[good_idx])[idx2])
+						if idx2_cnt gt 0 then gac_unce_2d[good_idx[idx2]] += gac_unc[good_idx[idx2]]
+						if idx2_cnt gt 0 then gac_anz_unce_2d[good_idx[idx2]]++
+					endif
+					stats[8,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+					stats[9,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+					stats[10,counti]= bc_rmse(stats[8,counti],stats[9,counti])
+					stats[11,counti]= correlate(cci_tmp[good_idx],gac_tmp[good_idx])
+					gac_all = adv_keyword_set(gac_all) ? [gac_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
+					cci_all = adv_keyword_set(cci_all) ? [cci_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
+					histo1   += histogram(cci_tmp[good_idx],min=mini,max=maxi,bin=bin)
+					histo2   += histogram(gac_tmp[good_idx],min=mini,max=maxi,bin=bin)
+					histo2D  += hist_2d(cci_tmp[good_idx],gac_tmp[good_idx],min1=mini,max1=maxi,bin1=bin,min2=mini,max2=maxi,bin2=bin)
+					cci_mean_2d[good_idx] += cci_tmp[good_idx]
+					gac_mean_2d[good_idx] += gac_tmp[good_idx]
+					anz_2d[good_idx]++
+					sum_diff  += total((cci_tmp[good_idx]-gac_tmp[good_idx]))
+					sum_diff2 += total((cci_tmp[good_idx]-gac_tmp[good_idx])^2.)
+					sum_cci   += total((cci_tmp[good_idx]))
+					sum_cci2  += total((cci_tmp[good_idx])^2.)
+					sum_gac   += total((gac_tmp[good_idx]))
+					sum_gac2  += total((gac_tmp[good_idx])^2.)
+					sum_prod  += total((cci_tmp[good_idx] * gac_tmp[good_idx]))
+					maxv      = max([maxv ,max(cci_tmp[good_idx])])
+					maxv2     = max([maxv2,max(gac_tmp[good_idx])])
+					minv      = min([minv ,min(cci_tmp[good_idx])])
+					minv2     = min([minv2,min(gac_tmp[good_idx])])
+					nnn       += good_count
 				endif
-				stats[4,counti] = gmean(gac_tmp[good_idx],lat[good_idx])
-				stats[5,counti] = stddev(gac_tmp[good_idx])
-				if found_gac_unc then begin
-					idx2 = where(gac_unc[good_idx] ne fv_gac_unc[0],idx2_cnt)
-					if idx2_cnt gt 0 then stats[6,counti] = gmean((gac_unc[good_idx])[idx2],(lat[good_idx])[idx2])
-					if idx2_cnt gt 0 then stats[7,counti] = stddev((gac_unc[good_idx])[idx2])
-					if idx2_cnt gt 0 then gac_unce_2d[good_idx[idx2]] += gac_unc[good_idx[idx2]]
-					if idx2_cnt gt 0 then gac_anz_unce_2d[good_idx[idx2]]++
-				endif
-				stats[8,counti] = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-				stats[9,counti] = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
-				stats[10,counti]= bc_rmse(stats[8,counti],stats[9,counti])
-				stats[11,counti]= correlate(cci_tmp[good_idx],gac_tmp[good_idx])
-				gac_all = adv_keyword_set(gac_all) ? [gac_all,gac_tmp[good_idx]] : gac_tmp[good_idx]
-				cci_all = adv_keyword_set(cci_all) ? [cci_all,cci_tmp[good_idx]] : cci_tmp[good_idx]
-				histo1   += histogram(cci_tmp[good_idx],min=mini,max=maxi,bin=bin)
-				histo2   += histogram(gac_tmp[good_idx],min=mini,max=maxi,bin=bin)
-				histo2D  += hist_2d(cci_tmp[good_idx],gac_tmp[good_idx],min1=mini,max1=maxi,bin1=bin,min2=mini,max2=maxi,bin2=bin)
-				cci_mean_2d[good_idx] += cci_tmp[good_idx]
-				gac_mean_2d[good_idx] += gac_tmp[good_idx]
-				anz_2d[good_idx]++
-				sum_diff  += total((cci_tmp[good_idx]-gac_tmp[good_idx]))
-				sum_diff2 += total((cci_tmp[good_idx]-gac_tmp[good_idx])^2.)
-				sum_cci   += total((cci_tmp[good_idx]))
-				sum_cci2  += total((cci_tmp[good_idx])^2.)
-				sum_gac   += total((gac_tmp[good_idx]))
-				sum_gac2  += total((gac_tmp[good_idx])^2.)
-				sum_prod  += total((cci_tmp[good_idx] * gac_tmp[good_idx]))
-				maxv      = max([maxv ,max(cci_tmp[good_idx])])
-				maxv2     = max([maxv2,max(gac_tmp[good_idx])])
-				minv      = min([minv ,min(cci_tmp[good_idx])])
-				minv2     = min([minv2,min(gac_tmp[good_idx])])
-				nnn       += good_count
+				free,cci_tmp
+				free,cci_unc
+				free,gac_tmp
+				free,gac_unc
 			endif
-			free,cci_tmp
-			free,cci_unc
-			free,gac_tmp
-			free,gac_unc
 		endif
 		counti++
 	    endfor
@@ -4616,7 +4622,7 @@ pro do_create_all_compare_time_series
 	cov  = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
 	sat  = ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19','noaa12','noaa15','noaa17', $
 		'metopa','metopb','allsat'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref  = ['pmx','gac','myd2','mod2'];,'myd','mod'];'cci'
+	ref  = ['gac','pmx','myd2','mod2'];,'myd','mod'];'cci'
 	data = ['cfc','ctp','ctt','cot','ref','cth','lwp','iwp','cwp','cph']
 	for j=0,n_elements(cov) -1 do begin
 		for i= 0,n_elements(sat)-1 do begin
