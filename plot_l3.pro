@@ -3456,6 +3456,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 	mima=float(mima)
 	nlev = ((mima[1]-mima[0])/dist)+1
+	nbar = nlev < 11
 
 	if keyword_set(save_as) then begin
 		save_as = !SAVE_DIR +'hovmoeller/'+(keyword_set(ref) ? 'Diff_'+algon+'_-_'+ref_name:algon)+'_'+dat+'_hovmoeller_L3C_2007-2009' $
@@ -3514,6 +3515,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		if jumps lt 5 then goto, nochmal
 		divi_yy = 2
 	endelse
+
 	xtickname = strcompress(vector(dum[0],dum[1]+1,(2>(num_of_yy/divi_yy+1))),/rem)
 	ori_period = fix(strsplit(d.period,'-',/ext))
 	anf = ((dum[0]-ori_period[0])*12)
@@ -3553,7 +3555,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 	start_save, save_as
 	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[8,3],ymargin=[5,2], $
-		title=title,bar_title=strupcase(dat),no_data_val=no_data_val,/cc4cl_hovmoeller,$
+		title=title,bar_title=strupcase(dat),no_data_val=no_data_val,/cc4cl_hovmoeller,nbar=nbar,$
 		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle='Latitude',c_charsize = 2., format = bar_format, $
 		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
 		col_table=col_tab,brewer =brewer,xticklen=0.00001;,xminor=2,col_tab=105,color=(i/7 eq i/7. ? 1:0 )

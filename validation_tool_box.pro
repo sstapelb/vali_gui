@@ -4559,7 +4559,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endif
 		endif else if total(datd eq ['scanline_time_asc','scanline_time_desc','time_asc','time_desc']) then begin
 			if total(alg eq ['esacci']) then begin
-				minzeit = rnd(min(outdata[where(outdata ne no_data_value)]),0.5)
+				minzeit = rnd(min(outdata[where(outdata ne no_data_value)]))
 				outdata[where(outdata ne no_data_value)] = (outdata[where(outdata ne no_data_value)] - minzeit)*24d
 				if keyword_set(minvalue) then minvalue =  0d
 				if keyword_set(maxvalue) then maxvalue = 24d
