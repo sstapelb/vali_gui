@@ -58,7 +58,7 @@
 @/cmsaf/nfshome/sstapelb/idl/max/file_io/misc/save_var.pro
 @/cmsaf/nfshome/sstapelb/idl/var_restore.pro
 @/cmsaf/nfshome/sstapelb/idl/restore_var.pro
-@/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro
+; @/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro
 @/cmsaf/nfshome/sstapelb/idl/rene/get_dem.pro
 @/cmsaf/nfshome/sstapelb/idl/plot_hist.pro
 @/cmsaf/nfshome/sstapelb/idl/isccp/isccp_read_d2.pro

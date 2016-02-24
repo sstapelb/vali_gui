@@ -3426,7 +3426,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	algo  = keyword_set(algo) ? strlowcase(algo) : 'esacci'
 	sat   = keyword_set(satellite) ? strlowcase(strjoin(strsplit(satellite,'-',/ext))) : 'noaa18'
 	algon = sat_name(algo,sat)
-	ref   = keyword_set(reference) ? strlowcase(reference) : '' ; must be of type 'gac','myd','mod',etc
+	ref   = keyword_set(reference) ? algo2ref(reference) : '' ; must be of type 'gac','myd','mod',etc
 	if keyword_set(ref) then ref_name = sat_name(ref,sat)
 	no_data_val = -999.
 
@@ -3436,30 +3436,9 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	if keyword_set(land) and keyword_set(sea) then begin
 		struc_idx = 0
 		land = 0
-		sea = 0
+		sea  = 0
 	endif
 	set_colors,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
-
-	if total(dat eq ['cc_total','a_ca']) then dat =  'cfc'
-	case dat of 
-		'cfc'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:1]   & dist = 0.05  & end
-		'ctp'	: begin & mima = [keyword_set(mini)? mini[0]:100,keyword_set(maxi)? maxi[0]:900] & dist = 20.   & end
-		'cot'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:100] & dist = 5.    & end
-		'ctt'	: begin & mima = [keyword_set(mini)? mini[0]:210,keyword_set(maxi)? maxi[0]:300] & dist = 10.   & end
-		'ref'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:100] & dist = 5.    & end
-		'cwp'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:800] & dist = 100.  & end
-		'iwp'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:500] & dist = 100.  & end
-		'lwp'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:500] & dist = 100.  & end
-		'cph'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:1]   & dist = 0.05  & end
-		else	: begin 
-				ok = dialog_message('plot_hovmoeller: Varname not defined '+dat)
-				return
-			  end
-	endcase
-
-	mima=float(mima)
-	nlev = ((mima[1]-mima[0])/dist)+1
-	nbar = nlev < 11
 
 	if keyword_set(save_as) then begin
 		save_as = !SAVE_DIR +'hovmoeller/'+(keyword_set(ref) ? 'Diff_'+algon+'_-_'+ref_name:algon)+'_'+dat+'_hovmoeller_L3C_2007-2009' $
@@ -3472,6 +3451,10 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		ok = dialog_message('plot_hovmoeller: File not found for '+algon+' '+dat)
 		return
 	endif
+	mima = [keyword_set(mini)? mini[0]:d.minv[0],keyword_set(maxi)? maxi[0]:d.maxv[0]]
+	mima=float(mima)
+	nlev = ((mima[1]-mima[0])/float(d.dist[0]))+1
+	nbar = nlev < 11
 
 	matrix = transpose(d.(struc_idx))
 	datum  = d.period
@@ -3487,7 +3470,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		idx     = where(matrix lt 0 or mat_ref lt 0,icnt)
 		matrix  = matrix - mat_ref
 		; contour blacks out all values lower or greater than min / max values
-		; set values lower/greater to min/max to avoid this 
+		; set values lower/greater to min/max to avoid this
 		matrix = mima[0] > matrix < mima[1]
 	endif else idx = where(matrix le 0,icnt)
 	if icnt gt 0 then matrix[idx]=no_data_val

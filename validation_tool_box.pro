@@ -3337,15 +3337,16 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	dat = strmid(dat,0,3)
 
 	case dat of
-		'cfc' : begin & unit = '' 			               			& longname = 'Cloud Fractional Cover' & end
-		'lwp' : begin & unit = textoidl((cli eq 'cci' ? ' [g/m^2]' : ' [kg/m^2]')) 	& longname = 'Cloud Liquid Water Path' & end
-		'iwp' : begin & unit = textoidl((cli eq 'cci' ? ' [g/m^2]' : ' [kg/m^2]')) 	& longname = 'Cloud Ice Water Path' & end
-		'cwp' : begin & unit = textoidl((cli eq 'cci' ? ' [g/m^2]' : ' [kg/m^2]')) 	& longname = 'Cloud Water Path' & end
-		'cph' : begin & unit = (cli eq 'cci' ? '' : ' [%]')                		& longname = 'Liquid Cloud Fraction' & end
-		'cot' : begin & unit = ''                    					& longname = 'Cloud optical thickness' & end
-		'ref' : begin & unit = textoidl(' [\mum]')   					& longname = 'Cloud effective radius' & end
-		'ctp' : begin & unit = ' [hPa]'              					& longname = 'Cloud Top Pressure' & end
-		'ctt' : begin & unit = ' [K]'                					& longname = 'Cloud Top Temperature' & end
+		'cfc' : begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' & end
+		'lwp' : begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path' & end
+		'iwp' : begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path' & end
+		'cwp' : begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path' & end
+		'cph' : begin & unit = ''		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction' & end
+		'cot' : begin & unit = '' 		    & minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness' & end
+		'ref' : begin & unit = textoidl(' [\mum]')  & minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius' & end
+		'ctp' : begin & unit = ' [hPa]'		    & minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure' & end
+		'ctt' : begin & unit = ' [K]'		    & minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature' & end
+		'cth' : begin & unit = ' [km]'		    & minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height' & end
 		else  :
 	endcase
 
@@ -3394,7 +3395,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 
 	if found then begin
 		if keyword_set(hovmoeller) then begin
-			struc = create_struct(struc,{period:datum,longname:longname,unit:unit})
+			struc = create_struct(struc,{period:datum,longname:longname,unit:unit,minv:minv,maxv:maxv,dist:dist})
 		endif else begin
 			struc.coverage = cov
 			if ~is_tag(struc,'actual_date') then begin
