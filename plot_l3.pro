@@ -3451,7 +3451,10 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		'iwp'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:500] & dist = 100.  & end
 		'lwp'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:500] & dist = 100.  & end
 		'cph'	: begin & mima = [keyword_set(mini)? mini[0]:0  ,keyword_set(maxi)? maxi[0]:1]   & dist = 0.05  & end
-		else	: return
+		else	: begin 
+				ok = dialog_message('plot_hovmoeller: Varname not defined '+dat)
+				return
+			  end
 	endcase
 
 	mima=float(mima)
@@ -3555,7 +3558,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 	start_save, save_as
 	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[8,3],ymargin=[5,2], $
-		title=title,bar_title=strupcase(dat),no_data_val=no_data_val,/cc4cl_hovmoeller,nbar=nbar,$
+		title=title,bar_title=strupcase(dat),no_data_val=no_data_val,/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
 		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle='Latitude',c_charsize = 2., format = bar_format, $
 		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
 		col_table=col_tab,brewer =brewer,xticklen=0.00001;,xminor=2,col_tab=105,color=(i/7 eq i/7. ? 1:0 )
