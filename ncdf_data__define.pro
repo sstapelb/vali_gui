@@ -3272,7 +3272,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.ctlistID= Widget_combobox(bla, Value=[color_tbl_name],UVALUE=[color_tbl_name],Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_CTLIST')
 	    label = Widget_Label(row, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270)
 	    bla = Widget_Base(row, Column=5,Frame=0, Scr_XSize=270)
-	      yy_list        = reverse(string(indgen(34)+1982,f='(i4.4)'))
+	      yy_list        = reverse(string(indgen(38)+1978,f='(i4.4)'))
 	      self.yearID    = Widget_combobox(bla,VALUE=['--',yy_list],UVALUE=['--',yy_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_YEARLIST')
 	      mm_list        = string(indgen(12)+1,f='(i2.2)')
 	      self.monthID   = Widget_combobox(bla,VALUE=['--',mm_list],UVALUE=['--',mm_list],Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_MONTHLIST')

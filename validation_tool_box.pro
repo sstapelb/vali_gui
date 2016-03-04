@@ -56,11 +56,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'cfc_allclouds'	then dat = 'cfc'
 			if dat eq 'cfc_allclouds_day'	then dat = 'cfc'
 			if dat eq 'cfc_allclouds_night'	then dat = 'cfc'
-			if dat eq 'ctp_mean_all'	then dat = 'cto'
-			if dat eq 'ctp_mean_ice'	then dat = 'cto'
-			if dat eq 'ctp_mean_liq'	then dat = 'cto'
-			if dat eq 'ctp_mean_th_ice'	then dat = 'cto'
-			if dat eq 'ctp_mean_sc_liq'	then dat = 'cto'
 			; ------------
 			if dat eq 'cc_total' then dat = 'cfc'
 			if dat eq 'cc_total_day' then dat = 'cfc'
@@ -132,11 +127,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cfc_allclouds'		: dat = 'cfc'
 				'cfc_allclouds_day'	: dat = 'cfc_day'
 				'cfc_allclouds_night'	: dat = 'cfc_night'
-				'ctp_mean_all'		: dat = 'cto'
-				'ctp_mean_ice'		: dat = 'cto'
-				'ctp_mean_liq'		: dat = 'cto'
-				'ctp_mean_th_ice'	: dat = 'cto'
-				'ctp_mean_sc_liq'	: dat = 'cto'
 				;------------------------------------------
 				'cc_total' 		: dat = 'cfc'
 				'cc_total_day' 		: dat = 'cfc_day'
@@ -180,6 +170,12 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cot_unc'		: dat = 'cot_error'
 				'hist1d_cer'		: dat = 'hist1d_ref'
 				else			:
+			endcase
+			case strmid(dat,0,3) of 
+				'ctp'	: dat = 'ctp'
+				'ctt'	: dat = 'ctt'
+				'cth'	: dat = 'cth'
+				else	:
 			endcase
 		endelse
 	endif
@@ -249,6 +245,12 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'ref_ice'		: dat = 'ref_37_ice'
 			else	:
 		endcase
+		case strmid(dat,0,3) of 
+			'ctp'	: dat = 'ctp'
+			'ctt'	: dat = 'ctt'
+			'cth'	: dat = 'cth'
+			else	:
+		endcase
 	endif
 	if alg eq 'esacci_old' or alg eq 'cci_old' then begin ; version 1.4
 		case dat of
@@ -306,7 +308,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cot_ctp_hist2d': dat = 'h_cod_cp'
 			'hist2d_cot_ctp': dat = 'h_cod_cp'
 			'jch'		: dat = 'h_cod_cp'
-			'ctp'		: dat = 'a_cp'
 			'cfc'		: dat = 'a_ca'
 			'cfc_cloudsgt03': dat = 'a_ca'
 			'cfc_cloudsgt02': dat = 'a_ca'
@@ -320,11 +321,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cfc_middle'	: dat = 'a_cam'
 			'cfc_low'	: dat = 'a_cal'
 			'cloud_fraction': dat = 'a_ca'
-			'cc_total'	: dat = 'a_ca'
-			'cc_low'	: dat = 'a_cal'
-			'cc_middle'	: dat = 'a_cam'
-			'cc_high'	: dat = 'a_cah'
-			'ctt'		: dat = 'a_ct'
 			'cot'		: dat = 'a_cod'
 			'cot_liq'	: dat = 'a_codw'
 			'cot_ice'	: dat = 'a_codi'
@@ -335,7 +331,14 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cwp_ice'	: dat = 'a_ciwp'
 			'ref_liq'	: dat = 'a_crew'
 			'ref_ice'	: dat = 'a_crei'
+			'cer_liq'	: dat = 'a_crew'
+			'cer_ice'	: dat = 'a_crei'
 			else		: 
+		endcase
+		case strmid(dat,0,3) of 
+			'ctp'	: dat = 'a_cp'
+			'ctt'	: dat = 'a_ct'
+			else	:
 		endcase
 	endif
 	if alg eq 'era-i' or alg eq 'era' then begin
@@ -1055,7 +1058,7 @@ function get_grid_res, data, found = found
 	found=0.
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function zonal_average, bild, latitude, fillvalue = fillvalue, lat_res = lat_res, mean = mean, median = median, lat_zon=lat_zon,lat_idx=lat_idx,nan=nan,found=found
+function zonal_average, bild, latitude, fillvalue = fillvalue, lat_res = lat_res, mean = mean, median = median,lat_zon=lat_zon,nan=nan,found=found
 
 	found=1
 
@@ -1124,7 +1127,7 @@ function patmos_sats,year,month, ampm=ampm	,$ ; ampm := 0  am,1 pm, 2 ampm
 		1982:  sats = ['nn','07']
 		1983:  sats = ['nn','07']
 		1984:  sats = ['nn','07']
-		1985:  sats = ['nn',(fix(month) gt 1 ? '07':'09')]  ; not sure about this
+		1985:  sats = ['nn',(fix(month) gt 1 ? '09':'07')]  ; not sure about this
 		1986:  sats = ['nn','09']
 		1987:  sats = ['10','09']
 		1988:  sats = ['10',(fix(month) gt 10 ? '09':'11')] ; not sure about this
@@ -1218,45 +1221,32 @@ function noaa_ampm, satellite, ampm = ampm
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-function sat_name, algo, sat, only_sat=only_sat, year = year, month=month,version=version
+function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,version=version,level=level
 
 	; e.g. convert noaa18 -> CC4CL-NOAA-18
-	algo  = keyword_set(algo) ? algo : ''
-	satn  = keyword_set(sat)  ? sat  : ''
-	case strlowcase(algo) of
-		'esacci': algon = (total(strlowcase(satn) eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C' : 'CC4CL') +(keyword_set(version) ? '-'+version : '')
-		'cci'	: algon = total(strlowcase(satn) eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C' : 'CC4CL' +(keyword_set(version) ? '-'+version : '')
-		'esacci_old': algon = total(strlowcase(satn) eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C-v1.0' : 'CC4CL-v1.0'
-		'cci_old': algon = total(strlowcase(satn) eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C-v1.0' : 'CC4CL-v1.0'
-		'isccp'	: return,'ISCCP'
+	satn  = keyword_set(sat)       ? strlowcase(sat)    : ''
+	lev   = keyword_set(level)     ? strlowcase(level) : ''
+	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
+	case algo of
+		'cci'	: algon = total(satn eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C' : 'CC4CL' +(keyword_set(version) ? '-'+version : '')
+		'cci_old': algon = total(satn eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C-v1.0' : 'CC4CL-v1.0'
 		'isp'	: return,'ISCCP'
-		'coll5'	: algon = 'COLL5'
-		'coll6'	: algon = 'COLL6'
-		'clara'	: algon = 'CLARA-A1'
 		'gac'	: algon = 'CLARA-A1'
-		'clara2': algon = 'CLARA-A2'
 		'gac2'	: algon = 'CLARA-A2'
 		'l1gac' : algon = 'L1-GAC'
 		'myd'	: return,'COLL5-AQUA'
 		'mod'	: return,'COLL5-TERRA'
 		'myd2'	: return,'COLL6-AQUA'
 		'mod2'	: return,'COLL6-TERRA'
-		'gewex'	: algon = 'CC4CL-GEWEX'
 		'gwx'	: algon = 'CC4CL-GEWEX'
-		'calipso': return,'CALIPSO-CALIPSO'
 		'cal'	: return,'CALIPSO-CALIPSO'
 		'era'	: return,'ERA-INTERIM'
-		'era-i'	: return,'ERA-INTERIM'
-		'patmos': begin
+		'cla'	: return,'CLAAS'
+		'pmx'	: begin
 				algon = 'PATMOS-X'
+				if lev eq 'l3c' then $
 				satn  = keyword_set(year) and keyword_set(month) ? patmos_sats(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : ''
 			  end
-		'pmx': begin
-				algon = 'PATMOS-X'
-				satn  = keyword_set(year) and keyword_set(month) ? patmos_sats(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : ''
-			  end
-		'claas'	: return,'CLAAS'
-		'cla'   : return,'CLAAS'
 		else	: algon = strupcase(algo)
 	endcase
  
@@ -1497,7 +1487,7 @@ pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 			if keyword_set(xygrid) then begin
 				if between(lo,0,si[0]) and between(la,0,si[1]) then begin
 					dum_string = '['+strjoin(string([lo,la],f='(i5)'),',')+'] '
-					werte      = bitset ? '['+strjoin(strcompress( where( (byte(bild_dum[lo,la]) and 2^(indgen(9))) ne 0),/rem ),',')+']' : $
+					werte      = bitset ? '['+strjoin(strcompress( where( (fix(bild_dum[lo,la]) and 2^(indgen(11))) ne 0),/rem ),',')+']' : $
 							strcompress(bild_dum[lo,la],/rem)
 					widget_control,wtext,set_value='[x,y] '+dum_string+' '+werte
 				endif else widget_control,wtext,set_value=value
@@ -1506,9 +1496,9 @@ pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 				if count gt 0 then begin
 					idx=qw[where((abs(lon[qw]-lo)+abs(lat[qw] -la)) eq min(abs(lon[qw]-lo)+abs(lat[qw] -la))) ]
 					dum_string = '['+strjoin(string([lo,la],f='(f6.1)'),',')+'] '
-					werte      = bitset ? '['+strjoin(strcompress( where( (byte(bild_dum[idx[0]]) and 2^(indgen(9))) ne 0),/rem ),',')+']' : $
+					werte      = bitset ? '['+strjoin(strcompress( where( (fix(bild_dum[idx[0]]) and 2^(indgen(11))) ne 0),/rem ),',')+']' : $
 					strcompress(bild_dum[idx[0]],/rem)
-					widget_control,wtext,set_value='[lon,lat] '+dum_string+' '+werte
+					widget_control,wtext,set_value=(bitset ? '' : '[lon,lat] ')+dum_string+' '+werte
 				endif else widget_control,wtext,set_value=value
 			endelse
 		endif else widget_control,wtext,set_value=value
@@ -3969,18 +3959,35 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			orbit=orbit,silent=silent,dirname=dirname,node=node)
 	endif
 
-	if keyword_set(print_filename) and file_test(filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
-
 	dat = keyword_set(keep_data_name) ? strlowcase(data) : get_product_name(data,algo=alg,level=lev)
 
 	found = file_test(filename[0])
-	if not found then return,-1
+	if ~found and ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus']) then return,-1
+
+	if keyword_set(print_filename) and file_test(filename) and ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus']) then $
+	print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
 
 	if arg_present(finfo) then finfo = file_info(filename[0])
 	; create additional products
 	if alg eq 'l1modis' then begin
 		outdata = read_modis_l1b(filename[0], sat, dat, found = found, index = dim3, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit)
+	endif else if ( dat eq 'rgb' and lev eq 'l3u') then begin
+		avn = 'AVN'+string(stregex(sat,'[0-9]+',/ext),f='(i2.2)')
+		rgb_file = file_search('/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/CLARA_A2_*_rgb_'+avn+'_'+year+month+day+'*.jpg',count=found)
+		found = float(found)
+		if found then begin
+			if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(rgb_file[0],/rem)
+			outdata = read_image(rgb_file)
+			outdata = transpose(outdata,[1,2,0])
+			no_data_value = -999.
+			longname = 'RGB derived from CLARA-A2 L2b'
+			minvalue = 0
+			maxvalue = 1
+			unit=''
+		endif else begin
+			ok=dialog_message('No RGB File found in /cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/')
+		endelse
 	endif else if ( (total(alg eq ['clara2','clara','claas']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
@@ -4090,7 +4097,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if ~sil then print,''
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
-		outdata = restore_var(!SAVS_DIR + 'blue_marble_0.10.sav')
+		marble_file = !SAVS_DIR + 'blue_marble_0.10.sav'
+		outdata = restore_var(marble_file)
+		if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(marble_file[0],/rem)
 		no_data_value = -999.
 		longname = 'Blue Marble 0.1 degree global grid'
 		maxvalue = 1
@@ -4099,6 +4108,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	endif else if ( total(strmid(dat,0,5) eq ['usgs_']) ) then begin
 		usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_ori_0.05deg.nc'
 ; 		usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_0.25deg.nc'
+		if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(usgs_file[0],/rem)
 		read_data, usgs_file, strmid(dat,5), outdata, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose,found = found
 		outdata = rotate(outdata,7)
 	endif else if ( (total(alg eq ['coll5','coll6']) and dat eq 'cph_day') ) then begin
@@ -4542,7 +4552,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				if keyword_set(maxvalue) then maxvalue *= 1000.
 				unit = textoidl(' [ g/m^2]')
 			endif
-		endif else if total(datd eq ['cth','cth_arith_mean']) then begin
+		endif else if total(datd eq ['cth','cth_arith_mean','cth_corrected']) then begin
 			if total(alg eq ['clara2','clara','claas']) then begin
 				outdata = float(outdata)
 				outdata[where(outdata ne no_data_value)] /= 1000.
@@ -5093,7 +5103,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit2 = textoidl(' [ g/m^2]')
 			if verb then print,'Multiply now '+dat+' of '+alg2+' with 1000.'
 		endif
-	endif else if total(dat eq ['cth','cth_day','cth_arith_mean']) then begin
+	endif else if total(dat eq ['cth','cth_day','cth_arith_mean','cth_corrected']) then begin
 		if total(alg1 eq ['clara2','clara','claas']) then begin
 			bild1 = float(bild1)
 			bild1[where(bild1 ne fillvalue1)] /= 1000.
@@ -5987,8 +5997,8 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		dum_bin_val = get_ncdf_data_by_name(file,var_dim_names[2],found=found)
 		dum_border  = get_ncdf_data_by_name(file,strreplace(var_dim_names[2],'_centre','_border'),found=found_border)
 		if found_border and stregex(var_dim_names[2],'_centre',/fold,/bool) then begin
-			xtickname = strlowcase(algo) eq 'claas' ? dum_border/1.e-06  : dum_border
-			bin_val   = strlowcase(algo) eq 'claas' ? dum_bin_val/1.e-06 : dum_bin_val
+			xtickname = strlowcase(algo) eq 'claas' and stregex(data,'ref',/fold,/bool) ? dum_border/1.e-06  : dum_border
+			bin_val   = strlowcase(algo) eq 'claas' and stregex(data,'ref',/fold,/bool) ? dum_bin_val/1.e-06 : dum_bin_val
 		endif else begin
 			xtickname = strsplit(textoidl(bin_border),',',/ext)
 			bin_val   = (xtickname[1:*]+xtickname[0:*])/2.

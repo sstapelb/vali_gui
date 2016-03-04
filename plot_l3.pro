@@ -387,8 +387,14 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'cwp'		: begin & histv = [10.,0.,1500.] & vollername = 'Cloud Water Path' & end
 		'iwp'		: begin & histv = [10.,0.,1500.] & vollername = 'Ice Water Path' & end
 		'lwp'		: begin & histv = [10.,0.,1500.] & vollername = 'Liquid Water Path' & end
+		'cwp_all'	: begin & histv = [10.,0.,1500.] & vollername = 'Grid Mean Cloud Water Path' & end
+		'iwp_all'	: begin & histv = [10.,0.,1500.] & vollername = 'Grid Mean Ice Water Path' & end
+		'lwp_all'	: begin & histv = [10.,0.,1500.] & vollername = 'Grid Mean Liquid Water Path' & end
 		'ctp'		: begin & histv = [10.,0.,1100.] & vollername = 'Cloud Top Pressure' & end
 		'ctt'		: begin & histv = [1.,150.,320.] & vollername = 'Cloud Top Temperature' & end
+		'ctp_cor'	: begin & histv = [10.,0.,1100.] & vollername = 'Cloud Top Pressure' & end
+		'ctt_cor'	: begin & histv = [1.,150.,320.] & vollername = 'Cloud Top Temperature' & end
+		'cth_cor'	: begin & histv = [0.1,0.,16.]   & vollername = 'Cloud Top Height' & end
 		'cfc'		: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Fraction' & end
 		'cc_mask'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
 		'cmask_a'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
@@ -860,7 +866,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			_extra=_extra, win_nr = win_nr, save_as= save_as, g_eq = g_eq		, $
 			l_eq = l_eq, logarithmic=logarithmic, land = land, sea = sea, globe = globe		, $
 			iso = iso, file = file, magnify=magnify, verbose = verbose, out = out	, $
-			hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, algo = algo	, $ 
+			hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, algoname = algoname	, $ 
 			show_values = show_values, level = level, orbit = orbit,lon = lon	, $
 			lat = lat, unit = unit, bild = bild, timeseries = timeseries		, $
 			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
@@ -902,7 +908,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	month    = keyword_set(month)   ? month  : '06'
 	day      = keyword_set(day)     ? day    : ''
 ; 	algo     = keyword_set(algo)    ? strlowcase(algo)   : 'esacci'
-	algo     = keyword_set(algo)    ? strlowcase(algo)   : ''
+	algo     = keyword_set(algoname) ? ref2algo(algoname) : ''
 	level    = keyword_set(level)   ? level  : ''
 	fidx     = keyword_set(orbit)   ? orbit  : 0
 	dat      = keyword_set(data)    ? get_product_name(data,algo=algo,level=level,/upper) : 'CC_TOTAL'
@@ -914,7 +920,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	; ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
 
-	algon = sat_name(algo,sat, year=year, month=month)
+	algon = sat_name(algo,sat, year=year, month=month,level=level)
 
 	if ~keyword_set(timeseries) then begin
 		if not keyword_set(file) then begin
@@ -1056,7 +1062,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			bild = get_1d_rel_hist_from_1d_hist( bild, dat, algo = algo, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
 							     xtickname=xtickname, ytitle=ytitle, hist_name = data_name, file=file[fidx], $
 							     var_dim_names=var_dim_names, bin_val=bin_val, found=found)
-
 			if ~found then return
 			apx = 'Liq + Ice'
 			if is_h1d(dat,/ice)    then apx = 'Ice ' 
@@ -1359,7 +1364,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0])]) lt mini[0] then l_eq = 1
 
 		n_lev=6
-		if total(dat eq ['CLD_TYPE_ASC','CLD_TYPE_DESC','CLDTYPE','CPH_EXTENDED','CPH_EXTENDED_ASC','CPH_EXTENDED_DESC']) then begin
+		if total(dat eq ['CLD_TYPE_ASC','CLD_TYPE_DESC','CLDTYPE','CPH_EXTENDED','CPH_EXTENDED_ASC','CPH_EXTENDED_DESC','CLOUD_TYPE']) then begin
 			; leave out fillvalue(-999),clear(0) and N/A(1)
 			; remove 0:clear, 1:(N/A) and 5(mixed) from bild
 			bild=bild-2
@@ -1369,7 +1374,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				if keyword_set(land) then void_index = where(~between(bild,0,10) or dem eq 0,vi_count,complement = nv_idx,ncomplement=nv_cnt)
 				if keyword_set(sea)  then void_index = where(~between(bild,0,10) or dem ne 0,vi_count,complement = nv_idx,ncomplement=nv_cnt)
 			endif else void_index = where(~between(bild,0,10),vi_count,complement = nv_idx,ncomplement=nv_cnt)
-			ctypes = strupcase(["fog","water","supercooled","opaque ice","cirrus","overlap","p. opaque ice"])
+			ctypes = strupcase(["fog","water","supercooled","opaque ice","cirrus","overlap",(algo eq 'patmos' ? "overshooting":"p. opaque ice")])
 			bar_tickname= [ctypes]
 			discrete=findgen(n_elements(ctypes)+1)
 			; brewer /cool
@@ -1380,6 +1385,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			maxi = n_elements(ctypes)+1
 			maxvalue = n_elements(ctypes)+1
 			title = 'Cloud type'
+			longname = 'Pavolonis Cloud Types'
 			g_eq = 0
 			l_eq = 0
 		endif
