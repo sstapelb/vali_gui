@@ -3076,6 +3076,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								'l3pm'	:	apx = 'pm'
 								else 	: 	apx=(dd ? 'in' : 'mm')
 							endcase
+
 							if ( (dat eq 'JCH' or is_h1d(dumdat)) and apx eq 'mm' ) then apx = 'mh'
 ; 							if  dat eq 'JCH' and apx eq 'dm' then apx = 'dh'
 
@@ -3095,9 +3096,13 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
 								endif
 							endif
-;  							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/AVHRR_GAC_2/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
- 							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/AVHRR_GAC_2/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
-							filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
+							if dat eq 'RGB' then begin
+								dir   = din ? dirname+'/' : '/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/'
+								filen = 'CLARA_A2_*_rgb_'+satn+'_'+yyyy+mm+dd+'*.jpg'
+							endif else begin
+								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/AVHRR_GAC_2/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
+								filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
+							endelse
 						end
 					'PATMOS': begin
 							if lev eq 'l3c' then begin
@@ -3284,7 +3289,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 	if ~found and ~sil then begin
 		dir = keyword_set(dir) ? dir : 'unknown'
 		ok  = dialog_message('get_filename: (Database: '+dir+'): No '+alg+' level '+strcompress(lev)+$
-			' data files found! Satellite: '+sat+' '+inst+', Date: '+yyyy+'/'+mm+'/'+dd+addon)
+			' data files found! '+(dat ne '' ? 'Varname: '+dat+', ':'')+'Satellite: '+sat+' '+inst+', Date: '+yyyy+'/'+mm+'/'+dd+addon)
 		if strmid(alg,0,5) eq 'CLARA' then begin
 			print,'For CLARA files make sure you have the right combination of Product-Name and Product-Level: '
 		endif
@@ -3951,7 +3956,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 
 	if not keyword_set(filename) then begin
 		if n_params() eq 0 then begin
-			print, "Syntax: result = get_data( year, month, day, /data, /satellite, /instrument, /global_grid, /no_data_value,/found,/level,/filename,/algo)"
+			print, "Syntax: result = get_data( year, month, day, /data, /algo, /satellite, /instrument, /global_grid, /no_data_value,/found,/level,/filename)"
 			found = 0.
 			return, -1
 		endif
@@ -3964,7 +3969,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	found = file_test(filename[0])
 	if ~found and ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus']) then return,-1
 
-	if keyword_set(print_filename) and file_test(filename) and ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus']) then $
+	if keyword_set(print_filename) and file_test(filename) and ~total(dat eq ['blue_marble','marble','usgs_dem','usgs_lus']) then $
 	print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
 
 	if arg_present(finfo) then finfo = file_info(filename[0])
@@ -3973,21 +3978,16 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		outdata = read_modis_l1b(filename[0], sat, dat, found = found, index = dim3, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit)
 	endif else if ( dat eq 'rgb' and lev eq 'l3u') then begin
-		avn = 'AVN'+string(stregex(sat,'[0-9]+',/ext),f='(i2.2)')
-		rgb_file = file_search('/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/CLARA_A2_*_rgb_'+avn+'_'+year+month+day+'*.jpg',count=found)
-		found = float(found)
+		found = file_test(filename[0])
 		if found then begin
-			if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(rgb_file[0],/rem)
-			outdata = read_image(rgb_file)
+			outdata = read_image(filename[0])
 			outdata = transpose(outdata,[1,2,0])
 			no_data_value = -999.
-			longname = 'RGB derived from CLARA-A2 L2b'
+			longname = 'True color image'
 			minvalue = 0
 			maxvalue = 1
 			unit=''
-		endif else begin
-			ok=dialog_message('No RGB File found in /cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/')
-		endelse
+		endif else return,-1
 	endif else if ( (total(alg eq ['clara2','clara','claas']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''

@@ -4001,6 +4001,11 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 	endif
 
 	; das alles hier muss noch getestet werden!!
+	set_dummy = total(strlowcase(varname) eq ['blue_marble','usgs_lus','usgs_dem'])
+	if keyword_set(set_dummy) then begin
+		found=1
+		return,self.directory+'/'+self.filename
+	endif
 ; 	check   = (( Widget_Info(self.refself, /BUTTON_SET)))
 	if keyword_set(check) then begin & dirname = self.directory & filename = self.filename & version = self.version & end
 	file =  get_filename(year, month, day, data=varname, sat=sat, algo = algo, level=level, found = found, $
