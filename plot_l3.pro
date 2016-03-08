@@ -2475,7 +2475,7 @@ pro polyfill_ts_error,ts_data,ts_unce,error=error,color=color
 	endif
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro gac_ts_plots,struc,dat,algon1,yrange,lines,anz,xtickname,qu,ref	,	$
+pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref	,	$
 		 log=log,save_as=save_as,single_var=single_var,error=error,show_values = show_values	, $
 		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl		, $
 		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum
@@ -2579,13 +2579,13 @@ pro gac_ts_plots,struc,dat,algon1,yrange,lines,anz,xtickname,qu,ref	,	$
 			div = ((anz[1]-anz[0]) le 12 ? 4. : 12.)
 			for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],!y.crange,linestyle=2
 			for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
-			idx = where(finite(d.STATS[tsi.gm1,*]) and finite(d.STATS[tsi.gm2,*]),idx_cnt)
+			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
 			if idx_cnt eq 0 then return 
-			polyfill_ts_error,d.STATS[tsi.gm1,*],d.STATS[tsi.unc1,*],error=error
-			polyfill_ts_error,d.STATS[tsi.gm2,*],d.STATS[tsi.unc2,*],error=error,color=cgcolor('blue')
-			oplot,d.STATS[tsi.gm1,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
-			oplot,d.STATS[tsi.gm2,*],psym=-8,thick=thick,symsize=symsize
-			oplot,d.STATS[tsi.bcr,*]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
+			polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error
+			polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue')
+			oplot,ts_data[tsi.gm1,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
+			oplot,ts_data[tsi.gm2,*],psym=-8,thick=thick,symsize=symsize
+			oplot,ts_data[tsi.bcr,*]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
 			legend,ref,psym=-8,thick=thick,color=-1,spos='tl',charsize=lcharsize,charthick=charthick
 			legend,algon1,psym=-8,thick=thick,color=[cgColor("Red")],spos='tr',charsize=lcharsize,charthick=charthick
 			legend,'STDDEV',psym=-8,thick=thick,color=[cgColor("Slate Grey")],spos='top',charsize=lcharsize,charthick=charthick
@@ -2598,7 +2598,7 @@ pro gac_ts_plots,struc,dat,algon1,yrange,lines,anz,xtickname,qu,ref	,	$
 		nc     = tsi.gm1
 		nc_unc = tsi.unc1
 		if keyword_set(standard) then begin nc = tsi.gm1_std & error = 0 & end
-		idx = where(finite(d.STATS[nc,*]),idx_cnt)
+		idx = where(finite(ts_data[nc,*]),idx_cnt)
 		if idx_cnt eq 0 then return
 		apx    =  keyword_set(standard) ? ' STDD' : ''
 		start_save, save_as3, thick = thick, size = [32,20]
@@ -2612,13 +2612,13 @@ pro gac_ts_plots,struc,dat,algon1,yrange,lines,anz,xtickname,qu,ref	,	$
 				div = ((anz[1]-anz[0]) le 12 ? 4. : 12.)
 				for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],!y.crange,linestyle=2
 				for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
-				polyfill_ts_error,d.STATS[nc,*],d.STATS[nc_unc,*],error=error
-				oplot,d.STATS[nc,*],psym=-8,thick=thick,symsize=symsize
+				polyfill_ts_error,ts_data[nc,*],ts_data[nc_unc,*],error=error
+				oplot,ts_data[nc,*],psym=-8,thick=thick,symsize=symsize
 				legend,ref+hct+apx,psym=-8,thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
 			endif else begin
 				define_oplots, opl, cols, spos, linestyle, psym, ystretch,/timeseries
-				polyfill_ts_error,d.STATS[nc,*],d.STATS[nc_unc,*],error=error
-				oplot,d.STATS[nc,*],psym=psym,thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=symsize
+				polyfill_ts_error,ts_data[nc,*],ts_data[nc_unc,*],error=error
+				oplot,ts_data[nc,*],psym=psym,thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=symsize
 				legend,ref+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
 				charsize=lcharsize,charthick=charthick,linestyle = linestyle,psym=psym
 			endelse
@@ -3922,7 +3922,7 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 		print,'Correlation   '+str_pholder        +': ',string(d.OVERALL_STATS.CORRELATION,f='(f11.4)')
 	endif
 
-	gac_ts_plots,d,strupcase(dat),algon,yrange,lines,anz,xtickname,qu,ref	, $
+	gac_ts_plots,d,ts_data,strupcase(dat),algon,yrange,lines,anz,xtickname,qu,ref	, $
 		 log=logarithmic,save_as=save_as,/single_var,error=error,show_values=show_values, $
 		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl		, $
 		 longname=longname,hct=hct,white_bg=white_bg,datum=datum			, $
@@ -4642,7 +4642,9 @@ pro do_create_all_single_time_series
 	starttime = systime(1)
 	mem_cur   = memory(/current)
 
- 	data = ['cfc','ctp','ctt','cot','ref','cth','lwp','iwp','cwp','cph'];,'sal']
+;  	data = ['cfc','ctp','ctt','cot','ref','cth','lwp','iwp','cwp','cph'];,'sal']
+
+	data = ['cfc_day','cfc_night']
 
 	cov  = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb'];'noaa10'
@@ -4651,7 +4653,7 @@ pro do_create_all_single_time_series
 	; gac
 	gac_list = ['gac-'+avh_list,'gac-allsat']
 	; gac2
-	gac2_list = ['gac2-'+avh_list];,'gac2-allsat']
+	gac2_list = ['gac2-'+avh_list,'gac2-allsat']
 	; pmx
 	pmx_list = ['pmx-'+avh_list,'pmx-noaa10']
 	; coll6
@@ -4660,7 +4662,7 @@ pro do_create_all_single_time_series
 	coll5_list = ['myd-','mod-']
 
 	; combine all you need
-	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
+	algon_list = [coll6_list,gac2_list,coll5_list]
 
 ; 	algon_list='gac2-allsat'; including 'sal'
 

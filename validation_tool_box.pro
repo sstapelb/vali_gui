@@ -3329,19 +3329,20 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 
 	if total(dat eq ['cloud_fraction','cc_total','a_ca','cc_total_std','a_ca_std']) then dat =  'cfc'
 	if total(dat eq ['a_cod','a_cod_std']) then dat =  'cot'
-	dat = strmid(dat,0,3)
 
 	case dat of
-		'cfc' : begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' & end
-		'lwp' : begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path' & end
-		'iwp' : begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path' & end
-		'cwp' : begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path' & end
-		'cph' : begin & unit = ''		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction' & end
-		'cot' : begin & unit = '' 		    & minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness' & end
-		'ref' : begin & unit = textoidl(' [\mum]')  & minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius' & end
-		'ctp' : begin & unit = ' [hPa]'		    & minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure' & end
-		'ctt' : begin & unit = ' [K]'		    & minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature' & end
-		'cth' : begin & unit = ' [km]'		    & minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height' & end
+		'cfc' 		: begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' & end
+		'cfc_day' 	: begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Day' & end
+		'cfc_night' 	: begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Night' & end
+		'lwp' 		: begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path' & end
+		'iwp' 		: begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path' & end
+		'cwp' 		: begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path' & end
+		'cph' 		: begin & unit = ''		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction' & end
+		'cot' 		: begin & unit = '' 		    & minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness' & end
+		'ref' 		: begin & unit = textoidl(' [\mum]')  & minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius' & end
+		'ctp' 		: begin & unit = ' [hPa]'		    & minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure' & end
+		'ctt' 		: begin & unit = ' [K]'		    & minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature' & end
+		'cth' 		: begin & unit = ' [km]'		    & minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height' & end
 		else  :
 	endcase
 
@@ -3363,11 +3364,11 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)
 			endif
-; 			if found eq 0 and total(ref eq ['myd','mod','myd2','mod2']) then begin
-; 				; for MODIS coll? try again without sat, cause ref is always the same for those!
-; 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_noaa??'+(cov eq '' ? '':'_')+cov+'_????-????.sav'
-; 				sfile    = file_search( sav_file ,count = found)
-; 			endif
+			if found eq 0 and total(cli eq ['myd','mod','myd2','mod2']) then begin
+				; for MODIS coll? try again without sat, cause ref is always the same for those!
+				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+(cov eq '' ? '':'_')+cov+'_????-????.sav'
+				sfile    = file_search( sav_file ,count = found)
+			endif
 		endif
 	endelse
 	if found eq 0 then return,-1
