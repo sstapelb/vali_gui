@@ -3343,7 +3343,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'cwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path'			& end
 		'cph' 		: begin & unit = ''			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction'		& end
 		'cot' 		: begin & unit = '' 			& minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness'		& end
-		'ref' 		: begin & unit = textoidl(' [\mum]')	& minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius'		& end
+		'cer' 		: begin & unit = textoidl(' [\mum]')	& minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius'		& end
 		'ctp' 		: begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure'		& end
 		'ctt' 		: begin & unit = ' [K]'			& minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature'		& end
 		'cth' 		: begin & unit = ' [km]'		& minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height'			& end
@@ -3353,7 +3353,6 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if keyword_set(hovmoeller) then begin
 		dumsat = sat
 		if total(strmid(cli,0,3) eq ['myd','mod']) then dumsat = ''
-		if cli eq 'pmx' then dumsat = (noaa_ampm(sat) eq 'pm' ? 'noaa7':'noaa12')
 		sav_file = !SAVS_DIR + 'hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+'_'+dumsat+'.sav'
 		sfile    = file_search( sav_file ,count = found)
 		if found eq 0 and keyword_set(period) then begin
