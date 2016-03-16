@@ -185,6 +185,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'iwp_allsky'  then dat = 'iwp'
 			if dat eq 'cwp_allsky'  then dat = 'cfc'
  			if dat eq 'cwp'         then dat = 'iwp'
+			if dat eq 'cfc_day'     then dat = 'cfc'
+			if dat eq 'cfc_night'   then dat = 'cfc'
 			if strmid(dat,0,6) eq 'hist2d' then dat = 'jch'
 			if total(strmid(dat,0,3) eq ['ctp','ctt','cth']) then dat = 'cto'
 			return, keyword_set(upper_case) ? strupcase(dat) : strlowcase(dat)
@@ -243,6 +245,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cer_ice'		: dat = 'ref_37_ice'
 			'ref_liq'		: dat = 'ref_37_liq'
 			'ref_ice'		: dat = 'ref_37_ice'
+			'hist1d_cer'		: dat = 'hist1d_ref'
 			else	:
 		endcase
 		case strmid(dat,0,3) of 
@@ -1130,7 +1133,7 @@ function patmos_sats,year,month, ampm=ampm	,$ ; ampm := 0  am,1 pm, 2 ampm
 		1985:  sats = ['nn',(fix(month) gt 1 ? '09':'07')]  ; not sure about this
 		1986:  sats = ['nn','09']
 		1987:  sats = ['10','09']
-		1988:  sats = ['10',(fix(month) gt 10 ? '09':'11')] ; not sure about this
+		1988:  sats = ['10',(fix(month) le 10 ? '09':'11')] ; not sure about this
 		1989:  sats = ['10','11']
 		1990:  sats = ['10','11']
 		1991:  sats = ['10','11']
@@ -3188,7 +3191,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								orbdum= strlen(orb) eq 4 ? orb : '*'
 								dir   = din ? dirname+'/' : dir+teaq+'06_L2_051/'+yyyy+'/'+mm+'/'+dd+'/'
 								filen = dir+teaq+'06_L2.A'+yyyy+doy+'.'+orbdum+'.051.*.hdf'
-							endif else if lev eq 'l3c' then begin
+							endif else if total(lev eq ['l3s','l3c']) then begin
 								dir   = din ? dirname+'/' : dir+teaq+'08_M3_051/'+yyyy+'/'
 								filen = dir+teaq+'08_M3.A'+yyyy+doy+'.051.*.hdf'
 							endif
@@ -3202,7 +3205,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								orbdum= strlen(orb) eq 4 ? orb : '*'
 								dir   = din ? dirname+'/' : dir+teaq+'06_L2_006/'+yyyy+'/'+mm+'/'+dd+'/'
 								filen = dir+teaq+'06_L2.A'+yyyy+doy+'.'+orbdum+'.006.*.hdf'
-							endif else if lev eq 'l3c' then begin
+							endif else if total(lev eq ['l3s','l3c']) then begin
 ; 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-scr1/QualiMon/output_new/cloud/val_raw/CTP/'
 ; 								filen = dir+yyyy+mm+strlowcase(teaq)+'.hdf'
 								dir   = din ? dirname+'/' : dir+teaq+'08_M3_006/'+yyyy+'/'
@@ -3327,22 +3330,23 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		tsi = {gm1:0,gm1_std:1,unc1:2}
 	endelse
 
+	dat = strreplace(dat,'_std','',/fold)
 	if total(dat eq ['cloud_fraction','cc_total','a_ca','cc_total_std','a_ca_std']) then dat =  'cfc'
 	if total(dat eq ['a_cod','a_cod_std']) then dat =  'cot'
 
 	case dat of
-		'cfc' 		: begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' & end
-		'cfc_day' 	: begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Day' & end
-		'cfc_night' 	: begin & unit = '' 		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Night' & end
-		'lwp' 		: begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path' & end
-		'iwp' 		: begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path' & end
-		'cwp' 		: begin & unit = textoidl(' [g/m^2]') & minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path' & end
-		'cph' 		: begin & unit = ''		    & minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction' & end
-		'cot' 		: begin & unit = '' 		    & minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness' & end
-		'ref' 		: begin & unit = textoidl(' [\mum]')  & minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius' & end
-		'ctp' 		: begin & unit = ' [hPa]'		    & minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure' & end
-		'ctt' 		: begin & unit = ' [K]'		    & minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature' & end
-		'cth' 		: begin & unit = ' [km]'		    & minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height' & end
+		'cfc' 		: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' 		& end
+		'cfc_day' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Day'	& end
+		'cfc_night' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Night'	& end
+		'lwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path'		& end
+		'iwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path'		& end
+		'cwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path'			& end
+		'cph' 		: begin & unit = ''			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction'		& end
+		'cot' 		: begin & unit = '' 			& minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness'		& end
+		'ref' 		: begin & unit = textoidl(' [\mum]')	& minv = 0   & maxv = 100 & dist =  5.  & longname = 'Cloud effective radius'		& end
+		'ctp' 		: begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure'		& end
+		'ctt' 		: begin & unit = ' [K]'			& minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature'		& end
+		'cth' 		: begin & unit = ' [km]'		& minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height'			& end
 		else  :
 	endcase
 
@@ -3982,6 +3986,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		found = file_test(filename[0])
 		if found then begin
 			outdata = read_image(filename[0])
+			if outdata[0] eq -1 then begin
+				found = 0
+				return,-1
+			endif
 			outdata = transpose(outdata,[1,2,0])
 			no_data_value = -999.
 			longname = 'True color image'
@@ -4538,8 +4546,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				maxvalue = 1.
 				unit = ' '
 			endif
-		endif else if total(datd eq ['cph','cph_day']) and lev eq 'l3c' then begin
+		endif else if total(datd eq ['cph','cph_day']) and total(lev eq ['l3c','l3s']) then begin
 			if total(alg eq ['clara2','clara','claas','isccp']) then begin
+				outdata = float(outdata)
 				outdata[where(outdata ne no_data_value,/null)] /= 100.
 				minvalue = 0.
 				maxvalue = 1.
@@ -4575,6 +4584,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				outdata[where(outdata ne no_data_value)] = (outdata[where(outdata ne no_data_value)] - minzeit)*24d
 				if keyword_set(minvalue) then minvalue =  0d
 				if keyword_set(maxvalue) then maxvalue = 24d
+				unit = textoidl(' [ hours]')
 			endif
 		endif
 		if is_stdd then datd = datd + '_std'

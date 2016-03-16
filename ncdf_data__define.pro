@@ -3915,16 +3915,16 @@ l1g = 0
 
 	; limit will be overwritten by defaults (if set!) 
 	if ant then begin
-		if pczm or pchist then limit = [-90.0,-180,-65.5,180] else begin
+		if pczm or pchist then limit = [-90.0,-180,-60.0,180] else begin
 			globe = 1
 			p0lat = -90
 		endelse
 	end
-	if mls then limit = [-65.5,-180,-23.5,180]
-	if tro then limit = [-23.5,-180, 23.5,180]
-	if mln then limit = [ 23.5,-180, 65.5,180]
+	if mls then limit = [-60.0,-180,-30.0,180]
+	if tro then limit = [-30.0,-180, 30.0,180]
+	if mln then limit = [ 30.0,-180, 60.0,180]
 	if arc then begin
- 		if pczm or pchist then limit = [ 65.5,-180, 90.0,180] else begin
+ 		if pczm or pchist then limit = [ 60.0,-180, 90.0,180] else begin
 			globe = 1 
 			p0lat = 90
 		endelse
@@ -4664,7 +4664,7 @@ if sel then sat  = self.satname
 				; time series
 				plot_simple_timeseries, year[0],month[0],varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,correct=show_values
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values;,correct=show_values
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pchist then begin
 				; histogram
