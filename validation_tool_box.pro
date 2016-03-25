@@ -279,12 +279,12 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	if alg eq 'esacci' or alg eq 'cci' then begin
 		case dat of
 			; Martins Calipso Jahresmittel
-			'cfc_cloudsgt03'	: dat = 'cc_total'
-			'cfc_cloudsgt02'	: dat = 'cc_total'
-			'cfc_cloudsgt01'	: dat = 'cc_total'
-			'cfc_allclouds'		: dat = 'cc_total'
-			'cfc_allclouds_day'	: dat = 'cc_total_day'
-			'cfc_allclouds_night'	: dat = 'cc_total_night'
+			'cfc_cloudsgt03'	: dat = 'cfc'
+			'cfc_cloudsgt02'	: dat = 'cfc'
+			'cfc_cloudsgt01'	: dat = 'cfc'
+			'cfc_allclouds'		: dat = 'cfc'
+			'cfc_allclouds_day'	: dat = 'cfc_day'
+			'cfc_allclouds_night'	: dat = 'cfc_night'
 			'ctp_mean_all'		: dat = 'ctp'
 			'ctp_mean_ice'		: dat = 'ctp'
 			'ctp_mean_liq'		: dat = 'ctp'
@@ -348,9 +348,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	if alg eq 'era-i' or alg eq 'era' then begin
 		case dat of
-			'ref'		: dat = 'cer'
-			'ref_liq'	: dat = 'cer_liq'
-			'ref_ice'	: dat = 'cer_ice'
 			'cwp_ice'	: dat = 'iwp'
 			'79'		: dat = 'iwp'
 			'var79'		: dat = 'iwp'
@@ -375,7 +372,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cfc'		: dat = 'cc_total'
 				else		:
 			endcase
-; 			'ctp','ctt','cth','cth','cot','cot','ref','ref','cc_total','cwp'
 		endif else begin
 			node  = strlowcase((reverse(strsplit(dat,'_',/ext)))[0])
 			if total(node eq ['asc','des','desc']) then dat = strreplace(dat,'_'+node,'')
@@ -476,7 +472,7 @@ function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = com
 	return,hist1d
 
 end
-
+;------------------------------------------------------------------------------------------
 pro symball,filled=filled,thick=thick
 	aa = findgen(17) * (!PI*2/16.) & usersym, cos(aa), sin(aa),fill=filled,thick=thick ; kullerchen
 end
@@ -594,17 +590,19 @@ function is_number, str
 end
 ;------------------------------------------------------------------------------------------
 function is_struct, file
-	if size(file,/type) eq 8 then return,1b
-	return,0b
+	return, (size(file,/type) eq 8)
 end
 ;------------------------------------------------------------------------------------------
 function is_string, file
-	if size(file,/type) eq 7 then return,1b
-	return,0b
+	return, (size(file,/type) eq 7)
 end
 ;------------------------------------------------------------------------------------------
 function is_defined, keyword
-	return,(size(keyword,/type) < 1)
+	return, (size(keyword,/type) < 1)
+end
+;-------------------------------------------------------------------------------------------------------
+function adv_keyword_set, keyword
+	return, (size(keyword,/type) < 1)
 end
 ;------------------------------------------------------------------------------------------
 function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=fill_index, $
@@ -758,12 +756,12 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'esacci_old'	: ref = 'cci_old'
 		'esacci-pt'	: ref = 'cci_old'
 		'cci'		: ref = 'cci'
-		'esacci'	: ref = 'cci'
+		'esacci'		: ref = 'cci'
 		'gac'		: ref = 'gac'
 		'clara'		: ref = 'gac'
 		'clara-a1'	: ref = 'gac'
 		'gac2'		: ref = 'gac2'
-		'clara2'	: ref = 'gac2'
+		'clara2'		: ref = 'gac2'
 		'clara-a2'	: ref = 'gac2'
 		'mod'		: ref = 'mod'
 		'coll5-terra'	: ref = 'mod'
@@ -779,7 +777,7 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'gewex'		: ref = 'gwx'
 		'cci-gewex'	: ref = 'gwx'
 		'pmx'		: ref = 'pmx'
-		'patmos'	: ref = 'pmx'
+		'patmos'		: ref = 'pmx'
 		'patmos-x'	: ref = 'pmx'
 		'cla'		: ref = 'cla'
 		'claas'		: ref = 'cla'
@@ -793,10 +791,6 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 
 	return , (keyword_set(upper_case) ? strupcase(ref) : strlowcase(ref))
 
-end
-;-------------------------------------------------------------------------------------------------------
-function adv_keyword_set, keyword
-	return,(size(keyword,/type) < 1)
 end
 ;-------------------------------------------------------------------------------------------------------
 function lat_sat_node,lat
@@ -944,7 +938,6 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error, timeseries=timeseries
 	if keyword_set(error) then spos = ("tl"+strcompress(indgen(12)+1,/rem))[(opl-1) mod 12] else $
-;  	cb_tables = "CG"+strcompress([2,5,4,9,6,1,8,7,3,10,11,12],/rem)
 	cb_tables = "CG"+strcompress([2,5,9,4,6,1,8,7,3,10,11,12],/rem)
 	spos      = (['tl1','tr1','tl2','tr2','tl3','tr3','tl4','tr4','tl5','tr5','tl6','tr6'])[(opl-1) mod 12]	
 	even      = opl/2 eq opl/2.
@@ -1185,36 +1178,40 @@ function noaa_ampm, satellite, ampm = ampm
 	ampm = 2
 
 	case sat of
-		'tirosn'	: result = 'pm'
+		'tirosn'		: result = 'pm'
+		'noaa5'		: result = 'pm'
+		'noaa05'		: result = 'pm'
 		'noaa6'		: result = 'am'
-		'noaa06'	: result = 'am'
+		'noaa06'		: result = 'am'
 		'noaa7'		: result = 'pm'
-		'noaa07'	: result = 'pm'
+		'noaa07'		: result = 'pm'
+		'noaa8'		: result = 'am'
+		'noaa08'		: result = 'am'
 		'noaa9'		: result = 'pm'
-		'noaa09'	: result = 'pm'
-		'noaa10'	: result = 'am'
-		'noaa11'	: result = 'pm'
-		'noaa12'	: result = 'am'
-		'noaa14'	: result = 'pm'
-		'noaa15'	: result = 'am'
-		'noaa16'	: result = 'pm'
-		'noaa17'	: result = 'am'
-		'noaa18'	: result = 'pm'
-		'noaa19'	: result = 'pm'
-		'metopa'	: result = 'am'
-		'metopb'	: result = 'am'
+		'noaa09'		: result = 'pm'
+		'noaa10'		: result = 'am'
+		'noaa11'		: result = 'pm'
+		'noaa12'		: result = 'am'
+		'noaa14'		: result = 'pm'
+		'noaa15'		: result = 'am'
+		'noaa16'		: result = 'pm'
+		'noaa17'		: result = 'am'
+		'noaa18'		: result = 'pm'
+		'noaa19'		: result = 'pm'
+		'metopa'		: result = 'am'
+		'metopb'		: result = 'am'
 		'metop01'	: result = 'am'
 		'metop02'	: result = 'am'
-		'metop1'	: result = 'am'
-		'metop2'	: result = 'am'
+		'metop1'		: result = 'am'
+		'metop2'		: result = 'am'
 		'npp'		: result = 'pm'
-		'allsat'	: result = 'ampm'
-		'avhrrs'	: result = 'ampm'
+		'allsat'		: result = 'ampm'
+		'avhrrs'		: result = 'ampm'
 		'modises'	: result = 'ampm'
 		'aqua'		: result = 'pm'
 		'terra'		: result = 'am'
 		'envisat'	: result = 'am'
-		'ers-2'		: result = 'am'
+		'ers2'		: result = 'am'
 		'aatme'		: result = 'am'
 		else		: result = 'unknown'
 	endcase
@@ -1610,7 +1607,7 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 			; workaround strange effect bei map_image
 			; bei midlat North wurde p0lat auf 44.5 gesetzt (limit = [ 23.5,-180, 65.5,180])
 			; map_set meldet % MAP_SET_LIMITS: Warning, MAP limits are invalid
-			if ~total(limit) eq 89. then p0lat = (limit[2]+limit[0])/2.
+; 			if ~(total(limit) eq 89.) then p0lat = (limit[2]+limit[0])/2.
 		endif else begin
 			free, p0lon
 			free, p0lat
@@ -1652,17 +1649,18 @@ end
 ; 
 function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sample = sample, found = found, nan_fillv = nan_fillv
  
-	fillvalue    = keyword_set(no_data_value) ? float(no_data_value[0]) : -999.
+	fillvalue    = keyword_set(no_data_value) ? double(no_data_value[0]) : -999d0
 	if ~finite(fillvalue) then begin
-		fillvalue = -999.
+		fillvalue = -999d0
 		nan_fillv = 1
 	endif
-	found        = 1
-	error_status = 0
-	array = array_in
+	found = 1
+	gres  = double(grid_res)
+	array = double(array_in)
 	fvidx = where(~finite(array),fvcnt)
 	if fvcnt gt 0 then array[fvidx] = fillvalue
 
+	error_status = 0
 	catch, error_status
 	if (error_status ne 0) then begin
 		catch, /cancel
@@ -1672,34 +1670,31 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sam
 	endif
 
 	if keyword_set(sample) then begin
-		result = rebin(array,[360.,180.]/grid_res,/sample)
+		result = rebin(array,[360d0,180d0]/gres,/sample)
 		if keyword_set(nan_fillv) then begin
 			fvidx = where(result eq fillvalue,fvcnt) 
 			if fvcnt gt 0 then result[fvidx] = !values.f_nan
 		endif
 	endif else begin
-		N       = float(product(size(array,/dim)/([360,180]/grid_res))) ; number of elements of new grid
-		avg_all = rebin(float(array),360/grid_res,180/grid_res)  ; average over new grid
+		N       = double(product(size(array,/dim)/([360d0,180d0]/gres))) ; number of elements of new grid
+		avg_all = rebin(array,360d0/gres,180d0/gres)  ; average over new grid
 
 		; fillvalues included?
 		dum = array eq fillvalue
 
 		if total(dum) eq 0. then return, avg_all
 
-; 		avg_all = float(round(avg_all*1000)/1000.); try this to avoid some rounding errors leading to strange neg. values at the end
-
-		anz_fv  = round(rebin(float(temporary(dum)),360/grid_res,180/grid_res) * N) ; number of fillvalues
+		anz_fv  = round(rebin(double(temporary(dum)),360d0/gres,180d0/gres) * N) ; number of fillvalues
 		tot_fv  = anz_fv * fillvalue
 
-		divisor = float( N - anz_fv)
+		divisor = double( N - anz_fv)
 		fvidx   = where(temporary(anz_fv) eq N,fvcnt)
 		if fvcnt gt 0 then divisor[fvidx] = 1.
 		result  = ( temporary(avg_all) * N - temporary(tot_fv) ) / temporary(divisor)
-; 		result  = float(round(result*1000)/1000.); do it again there should not be too much harm
 		if fvcnt gt 0 then result[fvidx] = keyword_set(nan_fillv) ? !values.f_nan : fillvalue
 	endelse
 
-	return, result
+	return, float(result)
 
 end
 ;------------------------------------------------------------------------------------------
