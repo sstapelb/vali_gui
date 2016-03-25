@@ -3511,6 +3511,7 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 
 	found = 1.
 	error_status = 0
+	ecmwf_path = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'
 	para = keyword_set(parameter) ? strlowcase(parameter) : 'stemp'
 	plot_l3
 
@@ -3522,65 +3523,60 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 		return, -1
 	endif
 
+; 	ecm_tres = long64(6l*3600l) ; ecmwf files have six hour temporal resolution
+; 	v1_us     = orb_us - (orb_us mod ecm_tres)
+; 	v2_us     = orb_us + (ecm_tres  - (orb_us mod ecm_tres))
+
 	; find proper ecmwf file
-	if is_string(orb_date) then begin
-		orb_us   = ymdhms2unix(strmid(orb_date,0,12))
-	endif else begin
-		;unixseconds otherwise!
-		orb_us   = long64(orb_date)
-	endelse
-	ecm_tres = long64(6l*3600l) ; ecmwf files have six hour temporal resolution
+	orb_usecs = is_string(orb_date) ? ymdhms2unix(strmid(orb_date,0,12)) :long64(orb_date)
+	orb_udays = (orb_usecs / 86400d0)
+	orb_date  = unix2ymdhms(orb_usecs)
 
-; 	ecm_date = unix2ymdhms((orb_us mod ecm_tres) gt ecm_tres/2 ? (orb_us + (ecm_tres  - (orb_us mod ecm_tres))) : ( orb_us - (orb_us mod ecm_tres) ),/arr)
-	v1_us     = orb_us - (orb_us mod ecm_tres)
-	v2_us     = orb_us + (ecm_tres  - (orb_us mod ecm_tres))
-	ecm_date1 = unix2ymdhms(v1_us,/arr)
-	ecm_date2 = unix2ymdhms(v2_us,/arr)
+	t1 = floor(orb_udays / (6d0/24d0))       * (6d0/24d0)
+	t2 = floor(orb_udays / (6d0/24d0) + 1d0) * (6d0/24d0)
+	w2 = (orb_udays[0] - t1[0])/(t2[0] -t1[0])
+	w1 = (1d0 - w2[0])
 
-	t0 = (floor((orb_us / 86400d0) /(6d0/24d0))     * 6d0/24d0)[0]
-	t1 = (floor((orb_us / 86400d0) /(6d0/24d0)+1d0) * 6d0/24d0)[0]
-	b  = (((orb_us / 86400d0) - t0)/(t1 -t0))[0]
-	a  = (1. - b)[0]
+	ecm_date1 = unix2ymdhms(long64(t1[0] * 86400d0))
+	ecm_date2 = unix2ymdhms(long64(t2[0] * 86400d0))
 
-	day      = strjoin(ecm_date1[0:2])
-	hh       = ecm_date1[3]
-	ecmwf_file = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00_HR.nc'
-	if ~file_test(ecmwf_file) then ecmwf_file = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00.nc'
-
-	if ~file_test(ecmwf_file) then begin
-		print,'No ECMWF file found! For Orbit date '+orb_date
-		found = 0.
-		return,-1
-	endif
-
-	day      = strjoin(ecm_date2[0:2])
-	hh       = ecm_date2[3]
-	ecmwf_file1 = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00_HR.nc'
-	if ~file_test(ecmwf_file1) then ecmwf_file1 = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00.nc'
-
+	day = strmid(strreplace(ecm_date1,['/',':',' '],['','','']),0,8)
+	hh  = strmid(strreplace(ecm_date1,['/',':',' '],['','','']),8,2)
+	ecmwf_file1 = ecmwf_path+day+'/ERA_Interim_an_'+day+'_'+hh+'+00_HR.nc'
+	if ~file_test(ecmwf_file1) then ecmwf_file1 = ecmwf_path+day+'/ERA_Interim_an_'+day+'_'+hh+'+00.nc'
 	if ~file_test(ecmwf_file1) then begin
 		print,'No ECMWF file found! For Orbit date '+orb_date
 		found = 0.
 		return,-1
 	endif
+
+	day = strmid(strreplace(ecm_date2,['/',':',' '],['','','']),0,8)
+	hh  = strmid(strreplace(ecm_date2,['/',':',' '],['','','']),8,2)
+	ecmwf_file2 = ecmwf_path+day+'/ERA_Interim_an_'+day+'_'+hh+'+00_HR.nc'
+	if ~file_test(ecmwf_file2) then ecmwf_file2 = ecmwf_path+day+'/ERA_Interim_an_'+day+'_'+hh+'+00.nc'
+	if ~file_test(ecmwf_file2) then begin
+		print,'No ECMWF file found! For Orbit date '+orb_date
+		found = 0.
+		return,-1
+	endif
 	;check if lon/lat dims are equal
-	lon_dim  = strcompress(get_ncdf_data_by_name(ecmwf_file ,'lon',/dim,found=found_londim),/rem)
-	lat_dim  = strcompress(get_ncdf_data_by_name(ecmwf_file ,'lat',/dim,found=found_latdim),/rem)
 	lon_dim1 = strcompress(get_ncdf_data_by_name(ecmwf_file1,'lon',/dim,found=found_londim1),/rem)
 	lat_dim1 = strcompress(get_ncdf_data_by_name(ecmwf_file1,'lat',/dim,found=found_latdim1),/rem)
-	if ~found_londim or ~found_latdim or ~found_londim1 or ~found_latdim1 then begin
+	lon_dim2 = strcompress(get_ncdf_data_by_name(ecmwf_file2,'lon',/dim,found=found_londim2),/rem)
+	lat_dim2 = strcompress(get_ncdf_data_by_name(ecmwf_file2,'lat',/dim,found=found_latdim2),/rem)
+	if ~found_londim1 or ~found_latdim1 or ~found_londim2 or ~found_latdim2 then begin
 		print,'No Dimension Information found in ECMWF file! Orbit date '+orb_date
 		found = 0.
 		return,-1
 	endif
-	if (lon_dim ne lon_dim1 or lat_dim ne lat_dim1) then begin
-		print,'Dimension do not agree! Orbit date '+orb_date
+	if (lon_dim1 ne lon_dim2 or lat_dim1 ne lat_dim2) then begin
+		print,'Dimensions do not agree! Orbit date '+orb_date
 		found = 0.
 		return,-1
 	endif
 
 	if keyword_set(grid) then begin
-		sav_file = !SAVS_DIR + 'ECMWF_dimension_'+lon_dim+'_'+lat_dim+'_collocation_index_to_global_grid_'+string(grid,f='(f4.2)')+'.sav'
+		sav_file = !SAVS_DIR + 'ECMWF_dimension_'+lon_dim1+'_'+lat_dim1+'_collocation_index_to_global_grid_'+string(grid,f='(f4.2)')+'.sav'
 		index = restore_var(sav_file,found=found_idx)
 		if ~found_idx then begin
 			save_sav  = 1
@@ -3618,25 +3614,25 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 		free,lon
 	endif
 
-	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> Read and interpolate ECMWF data. ', unix2ymdhms(orb_us)
-	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> ',ecmwf_file
+	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> Read and interpolate ECMWF data. ', orb_date
 	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> ',ecmwf_file1
+	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> ',ecmwf_file2
 
 	for i = 0,n_elements(para)-1 do begin
 		; read data from file
 		if para[i] eq 'stemp' then begin
-			read_ncdf,ecmwf_file,'t',data
-			data1 = reform(data[*,*,59])
 			read_ncdf,ecmwf_file1,'t',data
+			data1 = reform(data[*,*,59])
+			read_ncdf,ecmwf_file2,'t',data
 			data2 = reform(data[*,*,59])
 			free,data
 		endif else begin
-			read_ncdf,ecmwf_file ,para[i],data1
-			read_ncdf,ecmwf_file1,para[i],data2
+			read_ncdf,ecmwf_file1,para[i],data1
+			read_ncdf,ecmwf_file2,para[i],data2
 		endelse
-		dum = a * data1 + b * data2
-		sub = {data1:data1,data2:data2,time1:unix2ymdhms(v1_us),time2:unix2ymdhms(v2_us),index:long(index),weight1:a,weight2:b}
-		sub = {time:unix2ymdhms(orb_us), data : reform((dum)[index],size(orb_lon,/dim)>1),ori_data:sub}
+		dum = float(w1[0] * data1 + w2[0] * data2)
+		sub = {data1:data1,data2:data2,time1:ecm_date1,time2:ecm_date2,index:long(index),weight1:w1,weight2:w2}
+		sub = {time:orb_date,data:reform((dum)[index],size(orb_lon,/dim)>1),ori_data:sub}
 		num   = para[i]
 		struc = is_defined(struc) ? create_struct(struc,num,sub) : create_struct(num,sub)
 		free, dum
