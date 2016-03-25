@@ -137,6 +137,7 @@ PRO NCDF_BROWSER, filename, $
     YOFFSET=yoffset, $
     here=here, $
     default=default,$
+    fromECMWF=fromECMWF, $
     debug=debug
 
    ; Error handling. 
@@ -155,7 +156,10 @@ PRO NCDF_BROWSER, filename, $
 
    ; Need a filename?
    IF N_Elements(filename) EQ 0 THEN BEGIN
-      filename = cgPickfile(/READ, TITLE='Select a File to Open', FILTER=extension,PATH=(keyword_set(here)? '.': !STD_DIR ))
+      path = !STD_DIR
+      if keyword_set(here) then path = '.'
+      if keyword_set(fromECMWF) then path = !ECMWF_DIR
+      filename = cgPickfile(/READ, TITLE='Select a File to Open', FILTER=extension,PATH=path)
     ENDIF
     IF filename EQ "" THEN RETURN
     

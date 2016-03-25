@@ -169,14 +169,16 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cot_liq_unc'		: dat = 'cot_liq_error'
 				'cot_unc'		: dat = 'cot_error'
 				'hist1d_cer'		: dat = 'hist1d_ref'
+				'hist1d_cer_liq'	: dat = 'hist1d_ref_liq'
+				'hist1d_cer_ice'	: dat = 'hist1d_ref_ice'
 				else			:
 			endcase
-			case strmid(dat,0,3) of 
-				'ctp'	: dat = 'ctp'
-				'ctt'	: dat = 'ctt'
-				'cth'	: dat = 'cth'
-				else	:
-			endcase
+; 			case strmid(dat,0,3) of 
+; 				'ctp'	: dat = 'ctp'
+; 				'ctt'	: dat = 'ctt'
+; 				'cth'	: dat = 'cth'
+; 				else	:
+; 			endcase
 		endelse
 	endif
 	if total(alg eq ['gac','clara']) then begin
@@ -248,12 +250,12 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'hist1d_cer'		: dat = 'hist1d_ref'
 			else	:
 		endcase
-		case strmid(dat,0,3) of 
-			'ctp'	: dat = 'ctp'
-			'ctt'	: dat = 'ctt'
-			'cth'	: dat = 'cth'
-			else	:
-		endcase
+; 		case strmid(dat,0,3) of 
+; 			'ctp'	: dat = 'ctp'
+; 			'ctt'	: dat = 'ctt'
+; 			'cth'	: dat = 'cth'
+; 			else	:
+; 		endcase
 	endif
 	if alg eq 'esacci_old' or alg eq 'cci_old' then begin ; version 1.4
 		case dat of
@@ -338,11 +340,11 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cer_ice'	: dat = 'a_crei'
 			else		: 
 		endcase
-		case strmid(dat,0,3) of 
-			'ctp'	: dat = 'a_cp'
-			'ctt'	: dat = 'a_ct'
-			else	:
-		endcase
+; 		case strmid(dat,0,3) of 
+; 			'ctp'	: dat = 'a_cp'
+; 			'ctt'	: dat = 'a_ct'
+; 			else	:
+; 		endcase
 	endif
 	if alg eq 'era-i' or alg eq 'era' then begin
 		case dat of
@@ -1130,10 +1132,10 @@ function patmos_sats,year,month, ampm=ampm	,$ ; ampm := 0  am,1 pm, 2 ampm
 		1982:  sats = ['nn','07']
 		1983:  sats = ['nn','07']
 		1984:  sats = ['nn','07']
-		1985:  sats = ['nn',(fix(month) gt 1 ? '09':'07')]  ; not sure about this
+		1985:  sats = ['nn',(fix(month) gt 1 ? '09':'07')]
 		1986:  sats = ['nn','09']
 		1987:  sats = ['10','09']
-		1988:  sats = ['10',(fix(month) le 10 ? '09':'11')] ; not sure about this
+		1988:  sats = ['10',(fix(month) le 10 ? '09':'11')]
 		1989:  sats = ['10','11']
 		1990:  sats = ['10','11']
 		1991:  sats = ['10','11']
@@ -1255,7 +1257,7 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
  
 	if strmid(algon,0,6) eq 'Fame-C' then return, algon
 
-	dumsat = stregex(satn,'noaa',/bool,/fold) ? strjoin(strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,2]),'-') : satn
+	dumsat = stregex(satn,'noaa',/bool,/fold) ? strjoin(strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,90]),'-') : satn
 	if keyword_set(only_sat) then return, strupcase(dumsat)
 	return,algon+(keyword_set(dumsat) and keyword_set(algon) ? '-':'')+strupcase(dumsat)
 end
@@ -3302,6 +3304,98 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 	return, filename
 end
 ;------------------------------------------------------------------------------------------
+function get_histo_time_series, algo, data, satellite, period = period, this_period_only = this_period_only, $
+				longname = longname, unit = unit, sav_file = sav_file, found = found
+
+	sat = strlowcase(satellite)
+	alg = algo2ref(algo,sat=sat)
+	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
+	dat = (strlowcase(data))[0]
+	dat = stregex(dat,'hist1d_ref',/fold,/bool) ? strlowcase(strreplace(dat,'_ref','_cer',/fold)) : strlowcase(dat)
+	if alg eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
+	satdum = (total(strmid(alg,0,3) eq ['myd','mod','cla']) ? '':sat)
+	found = 0.
+	phase = ''
+	try_again = keyword_set(period) and ~keyword_set(this_period_only)
+	if stregex(dat,'_liq',/fold,/bool) then phase ='liquid water'
+	if stregex(dat,'_ice',/fold,/bool) then phase ='ice water'
+	if stregex(dat,'_ratio',/fold,/bool) then begin & dat = strreplace(dat,'_ratio','_liq',/fold) & phase ='ratio' & end
+
+	if is_h1d(dat) then begin
+		sfile = !SAVS_DIR + 'time_series/hist1d/'+dat+'_'+per+'_'+alg+'_'+satdum+'.sav'
+		sav_file = file_search( sfile ,count = found)
+		if found eq 0 and try_again then begin
+			sfile = !SAVS_DIR + 'time_series/hist1d/'+dat+'_????-????_'+alg+'_'+satdum+'.sav'
+			sav_file = file_search( sfile ,count = found)
+		endif
+		dum = strsplit(dat,'_',/ext)
+		case dum[1] of
+			'cot'	: longname = 'Cloud optical thickness'
+			'cer'	: longname = 'Cloud effective radius'
+			'ctp'	: longname = 'Cloud Top Pressure'
+			'ctt'	: longname = 'Cloud Top Temperature'
+			'cwp'	: longname = 'Cloud Water Path'
+			'cla'	: longname = 'Cloud Albedo '+strupcase(dum[2])
+			else	: longname = 'I dont know this variable'
+		endcase
+		longname = '1D Histogram of '+phase+' '+longname
+		unit = ''
+	endif else if is_jch(dat) then begin
+		sfile = !SAVS_DIR + 'time_series/hist2d/'+get_product_name(dat,algo='gac2')+'_'+per+'_'+alg+'_'+satdum+'.sav'
+		sav_file = file_search( sfile ,count = found)
+		if found eq 0 and try_again then begin
+			sfile = !SAVS_DIR + 'time_series/hist2d/'+get_product_name(dat,algo='gac2')+'_????-????_'+alg+'_'+satdum+'.sav'
+			sav_file = file_search( sfile ,count = found)
+		endif
+		longname = 'Joint cloud property Histogram of ice and water clouds'
+		unit = ''
+	endif
+
+	if found then begin
+		datum = (stregex(file_basename(sav_file),'[0-9]+-[0-9]+',/ext))[0]
+		struc = restore_var(sav_file,found=found)
+		if found then begin
+			if phase eq 'ratio' then begin
+				struci = restore_var(strreplace(sav_file,'_liq','_ice'),found=found)
+				if found then begin
+					bildl = struc.bild
+					bildi = struci.bild
+					sil = size(bildl,/dim)
+					sii = size(bildi,/dim)
+					if (n_elements(sil) eq n_elements(sii)) and (total(sii) eq total(sil)) then begin
+						bild  = lonarr([sii,2])
+						if is_jch(dat) and n_elements(sii) eq 4 then begin
+							bild[*,*,*,*,0] = temporary(bildl)
+							bild[*,*,*,*,1] = temporary(bildi)
+						endif else if is_h1d(dat) and n_elements(sii) eq 3 then begin
+							bild[*,*,*,0] = temporary(bildl)
+							bild[*,*,*,1] = temporary(bildi)
+						endif else begin
+							ok=dialog_message('get_histo_time_series: Kenn ich nich! Stop')
+							stop
+						endelse
+						struc = {bild:bild,actual_date:struc.actual_date,period:datum}
+						print,'Sav File: ',sav_file
+						return, struc
+					endif else begin
+						print,'Liquid and Ice water dimensions do not agree! No Ratio possible!'
+						print,'Liq Dim: ',sil
+						print,'Ice Dim: ',sii
+						found = 0.
+					endelse
+				endif
+			endif
+			if found then begin
+				struc = create_struct(struc,{period:datum})
+				print,'Sav File: ',sav_file
+				return,struc
+			endif
+		endif
+	endif
+
+	return,-1
+end
+;------------------------------------------------------------------------------------------
 function get_available_time_series, algo, data, satellite, coverage = coverage, reference = reference, period = period	, $
 				longname = longname, unit = unit, sav_file = sav_file, found = found			, $
 				hovmoeller = hovmoeller
@@ -3353,10 +3447,10 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if keyword_set(hovmoeller) then begin
 		dumsat = sat
 		if total(strmid(cli,0,3) eq ['myd','mod']) then dumsat = ''
-		sav_file = !SAVS_DIR + 'hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+'_'+dumsat+'.sav'
+		sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+'_'+dumsat+'.sav'
 		sfile    = file_search( sav_file ,count = found)
 		if found eq 0 and keyword_set(period) then begin
-			sav_file = !SAVS_DIR + 'hovmoeller/'+dat+'_hovmoeller_????-????_'+cli+'_'+dumsat+'.sav'
+			sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_????-????_'+cli+'_'+dumsat+'.sav'
 			sfile    = file_search( sav_file ,count = found)
 		endif
 	endif else begin
@@ -3367,7 +3461,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)
 			endif
-			if found eq 0 and total(cli eq ['myd','mod','myd2','mod2']) then begin
+			if found eq 0 and total(strmid(cli,0,3) eq ['myd','mod']) then begin
 				; for MODIS coll? try again without sat, cause ref is always the same for those!
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)
@@ -3429,11 +3523,27 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 	endif
 
 	; find proper ecmwf file
-	orb_us   = ymdhms2unix(strmid(orb_date,0,12))
-	ecm_tres = (6l*3600l) ; ecmwf files have six hour temporal resolution
-	ecm_date = unix2ymdhms((orb_us mod ecm_tres) gt ecm_tres/2 ? (orb_us + (ecm_tres  - (orb_us mod ecm_tres))) : ( orb_us - (orb_us mod ecm_tres) ),/arr)
-	day      = strjoin(ecm_date[0:2])
-	hh       = ecm_date[3]
+	if is_string(orb_date) then begin
+		orb_us   = ymdhms2unix(strmid(orb_date,0,12))
+	endif else begin
+		;unixseconds otherwise!
+		orb_us   = long64(orb_date)
+	endelse
+	ecm_tres = long64(6l*3600l) ; ecmwf files have six hour temporal resolution
+
+; 	ecm_date = unix2ymdhms((orb_us mod ecm_tres) gt ecm_tres/2 ? (orb_us + (ecm_tres  - (orb_us mod ecm_tres))) : ( orb_us - (orb_us mod ecm_tres) ),/arr)
+	v1_us     = orb_us - (orb_us mod ecm_tres)
+	v2_us     = orb_us + (ecm_tres  - (orb_us mod ecm_tres))
+	ecm_date1 = unix2ymdhms(v1_us,/arr)
+	ecm_date2 = unix2ymdhms(v2_us,/arr)
+
+	t0 = (floor((orb_us / 86400d0) /(6d0/24d0))     * 6d0/24d0)[0]
+	t1 = (floor((orb_us / 86400d0) /(6d0/24d0)+1d0) * 6d0/24d0)[0]
+	b  = (((orb_us / 86400d0) - t0)/(t1 -t0))[0]
+	a  = (1. - b)[0]
+
+	day      = strjoin(ecm_date1[0:2])
+	hh       = ecm_date1[3]
 	ecmwf_file = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00_HR.nc'
 	if ~file_test(ecmwf_file) then ecmwf_file = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00.nc'
 
@@ -3443,14 +3553,33 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 		return,-1
 	endif
 
+	day      = strjoin(ecm_date2[0:2])
+	hh       = ecm_date2[3]
+	ecmwf_file1 = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00_HR.nc'
+	if ~file_test(ecmwf_file1) then ecmwf_file1 = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+day+'/ERA_Interim_an_'+day+'_'+hh+'+00.nc'
+
+	if ~file_test(ecmwf_file1) then begin
+		print,'No ECMWF file found! For Orbit date '+orb_date
+		found = 0.
+		return,-1
+	endif
+	;check if lon/lat dims are equal
+	lon_dim  = strcompress(get_ncdf_data_by_name(ecmwf_file ,'lon',/dim,found=found_londim),/rem)
+	lat_dim  = strcompress(get_ncdf_data_by_name(ecmwf_file ,'lat',/dim,found=found_latdim),/rem)
+	lon_dim1 = strcompress(get_ncdf_data_by_name(ecmwf_file1,'lon',/dim,found=found_londim1),/rem)
+	lat_dim1 = strcompress(get_ncdf_data_by_name(ecmwf_file1,'lat',/dim,found=found_latdim1),/rem)
+	if ~found_londim or ~found_latdim or ~found_londim1 or ~found_latdim1 then begin
+		print,'No Dimension Information found in ECMWF file! Orbit date '+orb_date
+		found = 0.
+		return,-1
+	endif
+	if (lon_dim ne lon_dim1 or lat_dim ne lat_dim1) then begin
+		print,'Dimension do not agree! Orbit date '+orb_date
+		found = 0.
+		return,-1
+	endif
+
 	if keyword_set(grid) then begin
-		lon_dim = strcompress(get_ncdf_data_by_name(ecmwf_file,'lon',/dim,found=found_londim),/rem)
-		lat_dim = strcompress(get_ncdf_data_by_name(ecmwf_file,'lat',/dim,found=found_latdim),/rem)
-		if ~found_londim or ~found_latdim then begin
-			print,'No Dimension Information found in ECMWF file! Orbit date '+orb_date
-			found = 0.
-			return,-1
-		endif
 		sav_file = !SAVS_DIR + 'ECMWF_dimension_'+lon_dim+'_'+lat_dim+'_collocation_index_to_global_grid_'+string(grid,f='(f4.2)')+'.sav'
 		index = restore_var(sav_file,found=found_idx)
 		if ~found_idx then begin
@@ -3468,33 +3597,51 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 		bla = where(lon gt 180)
 		lon_ec=lon
 		lon_ec[bla] = lon[bla] - 360
-
 		if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> Triangulate/Griddata.'
 		; find nearest neighbor and make it fast!
 		triangulate, lon_ec, lat_ec, c
-		index = GRIDDATA(lon_ec,lat_ec, LINDGEN(n_elements(lon_ec)), XOUT=orb_lon, YOUT=orb_lat, /NEAREST_N,TRIANGLES = c)
+		if n_elements(orb_lon) eq 1 and n_elements(orb_lat) eq 1 then begin
+			; griddata needs at least two points
+			o_lon  = [orb_lon,orb_lon]
+			o_lat  = [orb_lat,orb_lat]
+			n_eq_1 = 1
+		endif else begin
+			o_lon  = orb_lon
+			o_lat  = orb_lat
+			n_eq_1 = 0
+		endelse
+		index = GRIDDATA(lon_ec,lat_ec, LINDGEN(n_elements(lon_ec)), XOUT=o_lon, YOUT=o_lat, /NEAREST_N,TRIANGLES = c)
+		if n_eq_1 then index = index[0]
 
 		free,lon_ec
 		free,lat_ec
 		free,lon
 	endif
 
-	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> Read ECMWF data.'
+	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> Read and interpolate ECMWF data. ', unix2ymdhms(orb_us)
 	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> ',ecmwf_file
+	if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> ',ecmwf_file1
+
 	for i = 0,n_elements(para)-1 do begin
 		; read data from file
 		if para[i] eq 'stemp' then begin
 			read_ncdf,ecmwf_file,'t',data
-			data = reform(data[*,*,59])
-		endif else read_ncdf,ecmwf_file,para[i],data
-		dum=data
-		if keyword_set(grid) then data_cg_inter = shift(congrid(rotate(data>0,7),360./grid,180./grid,/inter),180./grid,0)
-		if keyword_set(grid) then data_cg_nearn = shift(congrid(rotate(data>0,7),360./grid,180./grid),180./grid,0)
-		if keyword_set(grid) then sub = {ori_data:dum, data : reform((temporary(data))[index],size(orb_lon,/dim)),$
-		data_cg_inter:data_cg_inter,data_cg_nearn:data_cg_nearn} else $
-		sub = {ori_data:dum, data : reform((temporary(data))[index],size(orb_lon,/dim))}
-                num   = para[i]
-                struc = is_defined(struc) ? create_struct(struc,num,sub) : create_struct(num,sub)
+			data1 = reform(data[*,*,59])
+			read_ncdf,ecmwf_file1,'t',data
+			data2 = reform(data[*,*,59])
+			free,data
+		endif else begin
+			read_ncdf,ecmwf_file ,para[i],data1
+			read_ncdf,ecmwf_file1,para[i],data2
+		endelse
+		dum = a * data1 + b * data2
+		sub = {data1:data1,data2:data2,time1:unix2ymdhms(v1_us),time2:unix2ymdhms(v2_us),index:long(index),weight1:a,weight2:b}
+		sub = {time:unix2ymdhms(orb_us), data : reform((dum)[index],size(orb_lon,/dim)>1),ori_data:sub}
+		num   = para[i]
+		struc = is_defined(struc) ? create_struct(struc,num,sub) : create_struct(num,sub)
+		free, dum
+		free, data1
+		free, data2
 	endfor
 
 	if keyword_set(save_sav) then save_var, index, sav_file
@@ -3794,7 +3941,37 @@ function get_new_lus,lus,nise
 
 end
 ;------------------------------------------------------------------------------------------
-function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose
+function int_stemp,cen_time,ecmwf_time,skt,start_time=start_time
+
+	;cen_time entweder zentrum von orbit oder start von orbit oder vom aktuellen pixel
+
+	time0 = (floor(cen_time/(6d0/24d0))     * 6d0/24d0)[0]
+	time1 = (floor(cen_time/(6d0/24d0)+1d0) * 6d0/24d0)[0]
+
+	b = ((cen_time - time0)/(time1-time0))[0]
+	a = (1d0 - b)[0]
+
+	; v1 = ECMWF SKT time_step vor  cen_time
+	; v2 = ECMWF SKT time_step nach cen_time
+	diff    = keyword_set(start_time) ? (ecmwf_time-start_time) : (ecmwf_time-cen_time)
+	absdiff = abs(diff)
+
+	idx = where(absdiff eq min(absdiff))
+	if diff[idx] lt 0. then begin
+		v1 = skt[idx]
+		v2 = skt[idx+1]
+	endif else begin
+		v1 = skt[idx-1]
+		v2 = skt[idx]
+	endelse
+
+	result = a * v1 + b * v2
+
+	return, result
+
+end
+;------------------------------------------------------------------------------------------
+function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose,pixel_based = pixel_based
 
 	gres = keyword_set(grid_res) ? grid_res : 0.1
 
@@ -3816,11 +3993,28 @@ function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found,
 	if ~found then return,-1
 		stemp_18 = struc.skt.data
 		sn_ic_18 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
+	struc = map_ecmwf_to_orbit(strjoin(unix2ymdhms(ymdhms2unix(date)+86400l,/arr)), lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+	if ~found then return,-1
+		stemp_24 = struc.skt.data
+		sn_ic_24 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
 
 	nd_idx = where(time lt 0,nd_cnt)
 	dum = fix(time > 0 )/6
-	stemp = (dum eq 0) *stemp_00 + (dum eq 1) * stemp_06 + (dum eq 2) * stemp_12 + (dum eq 3) * stemp_18
 	nise  = (dum eq 0) *sn_ic_00 + (dum eq 1) * sn_ic_06 + (dum eq 2) * sn_ic_12 + (dum eq 3) * sn_ic_18
+	if keyword_set(pixel_based) then begin
+		si   = size(time,/dim)
+		nn   = n_elements(time)
+		st2d = fltarr(nn)
+		yy   = strmid(date,0,4)
+		mm   = strmid(date,4,2)
+		dd   = strmid(date,6,2)
+		t2d  = (reform(time>0.01,nn) / 24.) + julday(mm,dd,yy,0,0,0)
+		ecmwf_time = julday(mm,dd,yy,[0.,6.,12.,18.,24.],0,0)
+		for ii = 0ul,nn-1 do st2d[ii] = int_stemp(t2d[ii],ecmwf_time,[stemp_00[ii],stemp_06[ii],stemp_12[ii],stemp_18[ii],stemp_24[ii]])
+		stemp = reform(st2d,si)
+	endif else begin
+		stemp = (dum eq 0) *stemp_00 + (dum eq 1) * stemp_06 + (dum eq 2) * stemp_12 + (dum eq 3) * stemp_18
+	endelse
 	if nd_cnt gt 0 then stemp[nd_idx] = -999.
 	if nd_cnt gt 0 then nise[nd_idx]  = -999.
 
@@ -3996,7 +4190,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
-	endif else if ( (total(alg eq ['clara2','clara','claas']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error')) then begin
+	endif else if ( (total(alg eq ['clara2','clara','claas']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
+			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
 		; 1) iwp
@@ -4027,7 +4222,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'monthly mean cloud water path'
 		if ~sil then print,''
-	endif else if (total(alg eq ['esacci','coll6']) and (dat eq 'cwp')) then begin
+	endif else if (total(alg eq ['esacci','coll6']) and (dat eq 'cwp') and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		; 1) iwp
 		dumdat = get_product_name('iwp',algo=alg,level=lev)
 		read_data, filename[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
@@ -6041,6 +6236,12 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 
 end
 ;---------------------------------------------------------------------------------------------------------------------------------------------
+function join_time_series_structures,struc1,struc2
+
+
+
+end
+;---------------------------------------------------------------------------------------------------------------------------------------------
 pro hitrates, obs, ref, illum, ls, titel, out = out, dont_print = dont_print,lun=lun
 
 	ls_string=['All cases : ','day&land  : ','night&land: ','day&sea   : ','night&sea : ']
@@ -6257,8 +6458,9 @@ pro mach_zeitreihe,start_year,n_months,data=data
 
 end
 
-
-
+;------------------------------------------------------------------------------------------
+;------------------------------------------------------------------------------------------
+;------------------------------------------------------------------------------------------
 
 pro validation_tool_box
 

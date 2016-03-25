@@ -4063,7 +4063,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif else Widget_Control, self.lalgID,sensitive=1
 			none   = widget_Info(self.refnone,/BUTTON_SET)
 			pcmult = Widget_Info(self.pcmulti,/BUTTON_SET)
-			hide   = ((sel+none) eq 2 );or pcmult)
+			hide   = ((sel+none) eq 2 and ~pcmult);or pcmult)
 			if hide then begin
 				Widget_Control, self.yearID  ,SET_COMBOBOX_SELECT=self.year_idx,sensitive=( hide ? 0:1 )
 				Widget_Control, self.monthID ,SET_COMBOBOX_SELECT=self.month_idx,sensitive=( hide ? 0:1 )
@@ -4284,12 +4284,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmult and pcts then begin
 				if verbose then print,'Time Series + 2d Histo + Zonal Mean'
-				!p.multi = [0,1,2]
+; 				!p.multi = [0,1,2]
 				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, $
 				single_var = varname,mini=mini,maxi=maxi,limit=limit,error=error, show_values = show_values, $
 				verbose = verbose, other = oth, ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, $
-				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log
+				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pczm and pcsing then begin
