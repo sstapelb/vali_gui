@@ -5314,27 +5314,11 @@ pro bring_to_same_grid_and_unit,data,bild1,bild2,fillvalue1,fillvalue2,file1=fil
 
 	dat  = strlowcase(data[0])
 	lev  = keyword_set(level) ? strlowcase(level) : 'l3c'
-	; patmos l3u files haben fillvalues wo wolkenmaske 0 ist, cci nicht!!
-	; update: obsolete, cci schreibt jetzt auch nur noch cloudy raus
-	if ( 	( total('patmos' eq [alg1,alg2]) or total('pmx' eq [alg1,alg2]) )   and $
-		( total('esacci' eq strmid([alg1,alg2],0,6)) or total('cci' eq strmid([alg1,alg2],0,3)) ) ) and lev eq 'l3u' then begin
-		if ~total(dat eq ['cloud_mask','cc_mask_asc','cc_mask_desc']) then begin
-			node = (reverse(strsplit(dat,/ext,'_')))[0]
-			num1 = (alg1 eq 'esacci' or alg1 eq 'cci')
-			if verb then print,'Will now set all clear pixel of ESACCI to fillvalue to compare to Patmos-X!'
-			cm   = get_data(file=(num1 ? file1:file2),data='cc_mask_'+node,found=found,verbose=verbose)
-			if found then begin
-				if num1 then bild1[where(cm le 0)] = fillvalue1 else bild2[where(cm le 0)] = fillvalue2
-			endif else begin
-				print,'No cloud cc_mask_'+node+' information found in file '+(num1 ? file1:file2)
-			endelse
-		endif
-	endif
 
 	bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file2		, $
 			lon,lat,grid_res_out,verbose = verbose,algo1=algo1,algo2=algo2,level=level
 
-	bring_to_same_unit,data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1,unit2	, $
+	bring_to_same_unit,data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1,unit2		, $
 			level=level,verbose = verbose,all1=all1,all2=all2,mean1=mean1		, $
 			mean2=mean2,minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2
 
@@ -5748,44 +5732,6 @@ function get_hct_maxtype, array, algo, grid_res = grid_res,lon=lon,lat=lat,fillv
 	endfor
 
 	return, max_type
-
-; ; compare 2x
-; 		; -------maxtype
-; 		htypes = ['cu','sc','st','ac','as','ns','ci','cs','cb']
-; 		max_cci = dblarr(360,180)-1
-; 		dum_maxtype  = dblarr(360,180,n_elements(htypes))
-; 		for i =0,n_elements(htypes)-1 do begin & $
-; 			dum = get_hct_data(htypes[i],reform(cci[*,*,*,*,0]),algo1,found=found) & $
-; 			dum_maxtype[*,*,i] = (sat2global(lon,lat,dum,grid=1.)).sum & $
-; 		endfor
-; 		for i =0,359 do begin & $
-; 			for j =0,179 do begin  & $
-; 				dum_idx = where(dum_maxtype[i,j,*] eq max(dum_maxtype[i,j,*]),dum_cnt) & $
-; 				if dum_cnt ne n_elements(htypes) then max_cci[i,j] = dum_idx[0] & $
-; 			endfor & $
-; 		endfor
-; 		cci = max_cci
-; 		; -------
-; ;--------------
-; ; plot_l2 1x
-; 		htypes = ['cu','sc','st','ac','as','ns','ci','cs','cb']
-; 		max_type  = intarr(si[0],si[1])-1
-; 		cntgteins = intarr(si[0],si[1],n_elements(htypes))
-; 		dum_maxtype  = dblarr(si[0],si[1],n_elements(htypes))
-; 		for i =0,n_elements(htypes)-1 do begin & $
-; 			dum_maxtype[*,*,i] = get_hct_data(htypes[i],reform(bild[*,*,*,*,0]),algo,found=found) & $ ; coll5 wird in get_hct_data gedreht
-; 		endfor
-; 		for i =0,si[0]-1 do begin & $
-; 			for j =0,si[1]-1 do begin  & $
-; 				dum_idx = where(dum_maxtype[i,j,*] eq max(dum_maxtype[i,j,*]),dum_cnt) & $
-; 				if dum_cnt gt 1 then cntgteins[i,j,dum_idx] = 1  & $
-; 				if dum_cnt ne n_elements(htypes) then max_type[i,j] = dum_idx[0] & $
-; 			endfor & $
-; 		endfor
-; 		bar_tickname= [htypes]
-; 		bild = algo eq 'coll5' ? rotate(max_type,7) : max_type ; richtig oder falsch?????????
-; 		bild = max_type
-; ;--------------
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found = found	, $
@@ -5812,8 +5758,8 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 
 	;-------prepare------------------------
 	if keyword_set(limit)     then dumlimit = limit
-	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-65.5,180]
-	if keyword_set(arctic)    then dumlimit = [ 65.5,-180, 90.0,180]
+	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
+	if keyword_set(arctic)    then dumlimit = [ 60.0,-180, 90.0,180]
 	if keyword_set(dumlimit)  then begin
 		if ~keyword_set(lon) or ~keyword_set(lat) then begin
 			make_geo,lon,lat,grid=get_grid_res(bild[*,*,0,0,0]),found=found
@@ -5929,8 +5875,8 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 	endif
 
 	ls = keyword_set(land) or keyword_set(sea)
-	if keyword_set(antarctic) then limit = [-90.0,-180,-65.5,180]
-	if keyword_set(arctic) then limit = [ 65.5,-180, 90.0,180]
+	if keyword_set(antarctic) then limit = [-90.0,-180,-60.0,180]
+	if keyword_set(arctic) then limit = [ 60.0,-180, 90.0,180]
 	alg = ref2algo(algoname)
 	dum  = array
 	si   = size(dum,/dim)
@@ -5940,7 +5886,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		found = 0.
 		return, -1.
 	endif
-; qwas
+
 	bild = fltarr(si[2:3])
 	lidx_cnt = 0
 	lidx = !NULL
@@ -5966,12 +5912,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 			return,-1
 		endif
 	endif
-; teste limits und land sea idxse
-; dum = fltarr(720,360)
-; dum[lidx] = -999
-; view2d,dum,no_data_val=-999
-; found = 0.
-; return,-1
+
 	for i = 0,si[2] -1 do begin & $
 		for j = 0,si[3] -1 do begin & $
 			; Ab sofort werden auch 4dim colls in read_hdf4 rotiert
@@ -6043,8 +5984,8 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 	if ls then dem = get_dem(grid=get_grid_res(array[*,*,0]))
 
 	if keyword_set(limit)     then dumlimit = limit
-	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-65.5,180]
-	if keyword_set(arctic)    then dumlimit = [ 65.5,-180, 90.0,180]
+	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
+	if keyword_set(arctic)    then dumlimit = [ 60.0,-180, 90.0,180]
 	if keyword_set(dumlimit)  then begin
 		make_geo,lon,lat,grid=get_grid_res(bild[*,*,0,0]),file = file
 		qw  = where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),qw_cnt)
@@ -6163,12 +6104,6 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 
 end
 ;---------------------------------------------------------------------------------------------------------------------------------------------
-function join_time_series_structures,struc1,struc2
-
-
-
-end
-;---------------------------------------------------------------------------------------------------------------------------------------------
 pro hitrates, obs, ref, illum, ls, titel, out = out, dont_print = dont_print,lun=lun
 
 	ls_string=['All cases : ','day&land  : ','night&land: ','day&sea   : ','night&sea : ']
@@ -6237,7 +6172,7 @@ pro test_ncdf_browser, file_type
 	ft = keyword_set(file_type) ? strlowcase(file_type) : 'ncdf4'
 
 	case ft of 
-		; hdf4 eos point or grid file - braucht ca. 2 min zum einlesen; coll5 l3c
+		; hdf4 eos point or grid file - coll5 l3c braucht ca. 2 min zum einlesen
 		'hdf4'		: file = get_filename(2008,06,algo='coll5',sat='terra')
 		; hdf5 file - nur datsets  ; claas l2
 		'hdf5_data'	: file = get_filename(2008,06,06,orbit='1245',algo='claas',level='l2',data='cfc')
