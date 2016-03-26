@@ -1830,7 +1830,6 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		nise = nise,nsidc=nsidc,pick_file=pick_file,osisaf=osisaf,algo=algo
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
-; 	filen = keyword_set(file)  ? file[0]        : '/dum'
 	if keyword_set(algo) then begin
 		claas = algo2ref(algo) eq 'cla'
 	endif else claas = 0
@@ -1862,26 +1861,11 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		return
 	endif
 	if keyword_set(grid_res) then begin
-		; findgen keywords start und increment erst ab IDL 8.3
-; 		lon_dum = findgen(360./grid_res,start=(-180.+grid_res/2.),increment=grid_res)
-; 		lat_dum = findgen(180./grid_res,start=(- 90.+grid_res/2.),increment=grid_res)
 		lon_dum = findgen(360./grid_res) * grid_res - (180.- grid_res/2.)
 		lat_dum = findgen(180./grid_res) * grid_res - ( 90.- grid_res/2.)
-; 		lon_dum = vector((-180.+grid_res/2.),(180.-grid_res/2.),360./grid_res)
-; 		lat_dum = vector((- 90.+grid_res/2.),( 90.-grid_res/2.),180./grid_res)
 		found = 1
 	endif else begin
 		if keyword_set(nise) then begin
-; 			spawn,'/cmsaf/nfshome/sstapelb/eos2dump -c1 '+file[0]+' "Northern Hemisphere" > /cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_nhk.txt'
-; 			spawn,'/cmsaf/nfshome/sstapelb/eos2dump -c2 '+file[0]+' "Northern Hemisphere" > /cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_nhk.txt'
-; 			spawn,'/cmsaf/nfshome/sstapelb/eos2dump -c1 '+file[0]+' "Southern Hemisphere" > /cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_shk.txt'
-; 			spawn,'/cmsaf/nfshome/sstapelb/eos2dump -c2 '+file[0]+' "Southern Hemisphere" > /cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_shk.txt'
-; 			lon_nhk = reform((read_ascii('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_nhk.txt')).(0),721,721)
-; 			lat_nhk = reform((read_ascii('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_nhk.txt')).(0),721,721)
-; 			lon_shk = reform((read_ascii('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_shk.txt')).(0),721,721)
-; 			lat_shk = reform((read_ascii('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_shk.txt')).(0),721,721)
-; 			file_delete,'/tmp/lon_nhk.txt','/tmp/lat_nhk.txt','/tmp/lon_shk.txt','/tmp/lat_shk.txt',/allow_nonexistent
-; stop
 			lon_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_nhk.sav')
 			lat_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_nhk.sav')
 			lon_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_shk.sav')
@@ -1991,16 +1975,10 @@ end
 pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = algoname, set_fillvalue = set_fillvalue , $		;input 
 		bild, fillvalue, minvalue, maxvalue, longname, unit, raw=raw, attribute = attribute, var_dim_names = var_dim_names	;output
 
-; 	; is_compressed?
-; 	if is_compressed(nc_file[0]) then begin
-; 		ff = adv_tempname('nc')
-; 		spawn,'zcat '+ nc_file[0] +' >'+ ff
-; 	endif else ff = nc_file[0]
 	ff = nc_file[0]
 	bild_raw = get_ncdf_data_by_name(ff, data, found = found, verbose = verbose, var_dim_names = var_dim_names)
 	if not found then begin
 		if keyword_set(verbose) then print, data+' not found!'
-; 		if is_compressed(nc_file[0]) then file_delete, ff, /allow
 		return
 	end
 	bild_raw  = reform(bild_raw)
@@ -2011,18 +1989,15 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		raw_type = 2
 		bild_raw = fix(bild_raw)
 	endif
-;  	fillvalue = -999.
 	fillvalue = make_array(1,val=-999,type=raw_type)
 
 	scale  = get_ncdf_data_by_name(ff,data,attr='scale_factor',verbose=verbose,found=found_scl) 
 	if not found_scl then scale  = get_ncdf_data_by_name(ff,data,attr='scale',verbose=verbose,found=found_scl) 
 	if not found_scl then scale  = get_ncdf_data_by_name(ff,data,attr='gain',verbose=verbose,found=found_scl) 
-;  	if not found_scl then scale  = 1. else scale = float(scale)
 	scale  = found_scl ? scale : make_array(1,val=1,type=raw_type)
 	offset = get_ncdf_data_by_name(ff,data,attr='add_offset',verbose=verbose,found=found_ofs)
 	if not found_ofs then offset = get_ncdf_data_by_name(ff,data,attr='offset',verbose=verbose,found=found_ofs)
 	if not found_ofs then offset = get_ncdf_data_by_name(ff,data,attr='intercept',verbose=verbose,found=found_ofs)
-;  	if not found_ofs then offset = 0. else offset = float(offset)
 	offset = found_ofs ? offset : make_array(1,val=0,type=raw_type)
 
 	; find fillvalue if not defined set attribute fillvalue to -999. 
@@ -2046,12 +2021,7 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		n_miss    = 0
 	endelse
 
-; 	minvalue = get_ncdf_data_by_name(ff,data,attr='valid_min',verbose=verbose,found=found_attr)
-; 	minvalue = found_attr ? (minvalue * scale + offset) : (total(bild eq fillvalue) eq 0 ? min(bild,max=maxdum) : min(bild[where(bild ne fillvalue[0])],max=maxdum))
 	minvalue = min((n_miss gt 0 ? bild[where(bild_raw ne _fill_value[0])] : bild),max=maxvalue)
-
-; 	maxvalue = get_ncdf_data_by_name(ff,data,attr='valid_max',verbose=verbose,found=found_attr)
-; 	maxvalue = found_attr ? (maxvalue * scale + offset) : (size(maxdum,/type) gt 0) ? maxdum : max(bild)
 
 	longname     = string(get_ncdf_data_by_name(ff,data,attr='long_name',verbose=verbose,found=found_attr))
 	if not found_attr then longname = 'long_name unknown'
@@ -2136,8 +2106,6 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		print,'Longname         :  '+longname
 		print,'--------------------------------------------------'
 	endif
-
-; 	if is_compressed(nc_file[0]) then file_delete, ff, /allow
 
 	free, bild_raw
 
@@ -2231,10 +2199,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			if collection eq 'coll5' and level eq 'l3c' then c5_l3 = 1
 			if collection eq 'coll5' and level eq 'l2'  then c5_l2 = 1
 		endif
-; 		IF stregex(name,'STRUCTMETADATA.0',/fold,/bool) then begin
-; 			dum = read_modis_obj_val(name,'SWATH_1',value='SwathName',found=found_name)
-; 			if found_name and strlowcase(dum) eq 'modis_swath_type_l1b' then co_l1 = 1
-; 		endif
 	ENDFOR
 
 	isccp  = stregex(file_basename(hdf_file),'ISCCP.D2',/bool,/fold)
@@ -2268,6 +2232,7 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			print,'Longname         :  '+longname
 			print,'--------------------------------------------------'
 		endif
+		HDF_SD_END,sd_id
 		return
 	endif
 
@@ -2284,12 +2249,12 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 ; 			;coll5/6 1d_histogramme ctp und ctt nicht! getrennt für ice+liquid
 			'HIST1D_CTT'		: hdf_var = h1d_ctt
 			'HIST1D_CTP'		: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
-			'HIST1D_COT_LIQ'	: hdf_var = 'Cloud_Optical_Thickness_Liquid_Histogram_Counts'
-			'HIST1D_COT_ICE'	: hdf_var = 'Cloud_Optical_Thickness_Ice_Histogram_Counts'
-			'HIST1D_REF_LIQ'	: hdf_var = 'Cloud_Effective_Radius_Liquid_Histogram_Counts'
-			'HIST1D_REF_ICE'	: hdf_var = 'Cloud_Effective_Radius_Ice_Histogram_Counts'
-			'HIST1D_CWP_LIQ'	: hdf_var = 'Cloud_Water_Path_Liquid_Histogram_Counts'
-			'HIST1D_CWP_ICE'	: hdf_var = 'Cloud_Water_Path_Ice_Histogram_Counts'
+			'HIST1D_COT_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_Liquid_Histogram_Counts'
+			'HIST1D_COT_ICE'		: hdf_var = 'Cloud_Optical_Thickness_Ice_Histogram_Counts'
+			'HIST1D_REF_LIQ'		: hdf_var = 'Cloud_Effective_Radius_Liquid_Histogram_Counts'
+			'HIST1D_REF_ICE'		: hdf_var = 'Cloud_Effective_Radius_Ice_Histogram_Counts'
+			'HIST1D_CWP_LIQ'		: hdf_var = 'Cloud_Water_Path_Liquid_Histogram_Counts'
+			'HIST1D_CWP_ICE'		: hdf_var = 'Cloud_Water_Path_Ice_Histogram_Counts'
 			;coll5 only
 			'HIST2D_CTT_CPH_DAY'	: hdf_var = 'Cloud_Phase_Infrared_Day_Joint_Histogram_vs_Temperature'
 			'HIST2D_CTT_CPH_NIGHT'	: hdf_var = 'Cloud_Phase_Infrared_Night_Joint_Histogram_vs_Temperature'
@@ -2304,8 +2269,8 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'CTP_HIST'		: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
 			'CTP_STD' 		: hdf_var = 'Cloud_Top_Pressure_Mean_Std'
 			'CTP_DAY_HIST'		: hdf_var = 'Cloud_Top_Pressure_Day_Histogram_Counts'
-			'CTP_DAY_COUNTS'	: hdf_var = 'Cloud_Top_Pressure_Day_Pixel_Counts'
-			'CTP_NIGHT_HIST'	: hdf_var = 'Cloud_Top_Pressure_Night_Histogram_Counts'
+			'CTP_DAY_COUNTS'		: hdf_var = 'Cloud_Top_Pressure_Day_Pixel_Counts'
+			'CTP_NIGHT_HIST'		: hdf_var = 'Cloud_Top_Pressure_Night_Histogram_Counts'
 			'CTP_NIGHT_COUNTS'	: hdf_var = 'Cloud_Top_Pressure_Night_Pixel_Counts'
 
 			'COT'			: hdf_var = 'Cloud_Optical_Thickness_Combined_Mean_Mean'    
@@ -2317,7 +2282,7 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'COT_LOG_ICE'		: hdf_var = 'Cloud_Optical_Thickness_Ice_Log_Mean_Mean'
 			'COT_CTP_HIST2D_LIQ'	: hdf_var = jch_liq ; andere bins keine ISCCP standard bins -> nicht vergleichbar
 			'COT_CTP_HIST2D_ICE'	: hdf_var = jch_ice ; andere bins keine ISCCP standard bins -> nicht vergleichbar
-			'COT_CTP_HIST2D'	: hdf_var = jch
+			'COT_CTP_HIST2D'		: hdf_var = jch
 
 			;nur c5_l3
 			'REF'			: hdf_var = 'Cloud_Effective_Radius_Combined_Mean_Mean'
@@ -2333,17 +2298,17 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'REF_ICE'		: hdf_var = 'Cloud_Effective_Radius_Ice_Mean_Mean'
 			'REF_ICE_UNC'		: hdf_var = 'Cloud_Effective_Radius_Ice_Mean_Uncertainty'
 			'REF_16_LIQ'		: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Mean'
-			'REF_16_LIQ_STD'	: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Std'
-			'REF_16_LIQ_UNC'	: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Uncertainty'
+			'REF_16_LIQ_STD'		: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Std'
+			'REF_16_LIQ_UNC'		: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Uncertainty'
 			'REF_16_ICE'		: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Mean'
-			'REF_16_ICE_STD'	: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Std'
-			'REF_16_ICE_UNC'	: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Uncertainty'
+			'REF_16_ICE_STD'		: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Std'
+			'REF_16_ICE_UNC'		: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Uncertainty'
 			'REF_37_LIQ'		: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Mean'
-			'REF_37_LIQ_STD'	: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Std'
-			'REF_37_LIQ_UNC'	: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Uncertainty'
+			'REF_37_LIQ_STD'		: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Std'
+			'REF_37_LIQ_UNC'		: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Uncertainty'
 			'REF_37_ICE'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Mean'
-			'REF_37_ICE_STD'	: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Std'
-			'REF_37_ICE_UNC'	: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Uncertainty'
+			'REF_37_ICE_STD'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Std'
+			'REF_37_ICE_UNC'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Uncertainty'
 			'CFC'			: hdf_var = 'Cloud_Fraction_Mean_Mean'    
 			'CFC_STD'		: hdf_var = 'Cloud_Fraction_Mean_Std'     
 			'CFC_COUNTS'		: hdf_var = 'Cloud_Fraction_Pixel_Counts' 
@@ -2352,19 +2317,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 
 			; coll6 cph: "Cloud_Retrieval_Fraction_Liquid_FMean(FSTD,Pixel_Counts)"
 			'CPH'			: hdf_var = 'Cloud_Phase_Infrared_Histogram_Counts'
-; 			'CPH_DAY'		: hdf_var = 'Cloud_'+pha+'Fraction_Liquid_FMean'
-; 			'CPH_STD' 		: hdf_var = 'Cloud_'+pha+'Fraction_Liquid_FStd' 
-; 			'CPH_COUNTS'		: hdf_var = 'Cloud_'+pha+'Fraction_Liquid_Pixel_Counts' 
-			; nur coll6
-; 			'CPH_16'		: hdf_var = 'Cloud_'+pha+'Fraction_16_Liquid_FMean' 
-; 			'CPH_16_DAY'		: hdf_var = 'Cloud_'+pha+'Fraction_16_Liquid_FMean'
-; 			'CPH_16_STD' 		: hdf_var = 'Cloud_'+pha+'Fraction_16_Liquid_FStd' 
-; 			'CPH_16_COUNTS'		: hdf_var = 'Cloud_'+pha+'Fraction_16_Liquid_Pixel_Counts' 
-; 			'CPH_37'		: hdf_var = 'Cloud_'+pha+'Fraction_37_Liquid_FMean' 
-; 			'CPH_37_DAY'		: hdf_var = 'Cloud_'+pha+'Fraction_37_Liquid_FMean'
-; 			'CPH_37_STD' 		: hdf_var = 'Cloud_'+pha+'Fraction_37_Liquid_FStd' 
-; 			'CPH_37_COUNTS'		: hdf_var = 'Cloud_'+pha+'Fraction_37_Liquid_Pixel_Counts' 
-
 			'CTT'			: hdf_var = 'Cloud_Top_Temperature_Mean_Mean'
 			'CTT_DAY'		: hdf_var = 'Cloud_Top_Temperature_Day_Mean_Mean'
 			'CTT_NIGHT'		: hdf_var = 'Cloud_Top_Temperature_Night_Mean_Mean'
@@ -2375,10 +2327,10 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'LWP_UNC'		: hdf_var = 'Cloud_Water_Path_Liquid_Mean_Uncertainty'
 			'LWP_STD'		: hdf_var = 'Cloud_Water_Path_Liquid_Mean_Std'
 			; nur coll6
-			'LWP_16'		: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Mean'
+			'LWP_16'			: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Mean'
 			'LWP_16_UNC'		: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Uncertainty'
 			'LWP_16_STD'		: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Std'
-			'LWP_37'		: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Mean'
+			'LWP_37'			: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Mean'
 			'LWP_37_UNC'		: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Uncertainty'
 			'LWP_37_STD'		: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Std'
 	
@@ -2386,10 +2338,10 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'IWP_UNC'		: hdf_var = 'Cloud_Water_Path_Ice_Mean_Uncertainty'
 			'IWP_STD'		: hdf_var = 'Cloud_Water_Path_Ice_Mean_Std'
 			; nur coll6
-			'IWP_16'		: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Mean'
+			'IWP_16'			: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Mean'
 			'IWP_16_UNC'		: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Uncertainty'
 			'IWP_16_STD'		: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Std'
-			'IWP_37'		: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Mean'
+			'IWP_37'			: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Mean'
 			'IWP_37_UNC'		: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Uncertainty'
 			'IWP_37_STD'		: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Std'
 
@@ -2403,8 +2355,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 
 	IF hdf_var eq 'not yet found' then hdf_var = data
 
-; 	sd_id = HDF_SD_START(hdf_file[0],/read)
-; 	HDF_SD_FILEINFO, sd_id , num_sds , num_attr
 	patmos = 0
 	if (~modis) then begin
 		for i = 0, num_attr -1 do begin
@@ -2464,7 +2414,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 	offset         = 0
 	raw_fill_value = 'not_defined'
 	minvalue       = 0
-; 	maxvalue       = max(bild_raw)
 	unit           = ''
 	longname       = 'long_name unknown'
 	scaling_method = -1
@@ -2509,10 +2458,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 		if strmatch(name,'long_name',/fold)      then longname = datatt
 		if strmatch(name,'longname',/fold)       then longname = datatt
 	endfor
-
-; 	if n_elements(maxvalue) eq 0 then begin
-; 		maxvalue = strcompress(raw_fill_value[0],/rem) ne 'not_defined' ? max(bild_raw[where(bild_raw ne raw_fill_value[0])],min=minvalue) : max(bild_raw,min=minvalue)
-; 	endif 
 
 	if patmos then begin
 		hdf_sd_getinfo,varid,hdf_type=data_type
@@ -2559,7 +2504,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 	HDF_SD_ENDACCESS,varid
 	HDF_SD_END,sd_id
 
-; 	if minvalue gt maxvalue then maxvalue = minvalue + 1.
 	; cph muss noch berechnet werden
 	if modis and strUpCase(data) eq 'CPH' then begin
 		liq = reform(bild[*,*,1])
@@ -2602,7 +2546,6 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 		if ndim gt 4 then begin
 			print,'Found MODIS data with more than 4 dimensions, dont know if it needs to be rotated! Please check!'
 		endif
-
 	endif
 
 	if patmos and adv_keyword_set(la_res) and adv_keyword_set(lo_res) then begin
@@ -2675,10 +2618,6 @@ pro read_hdf, 	hdf_file, data, verbose = verbose ,find_tagnames=find_tagnames, a
 				return
 			endif
 			maxvalue = max(bild_raw)
-; 			if ~is_struct(att) then begin
-; 				; try again with what , normally in groups /what contains attribute data
-; 				dummy = read_hdf5(hdf_file[0], strreplace(data,'/data','/what'), att=att)
-; 			endif
 
 			if ~is_struct(att) then begin
 				; is dataset member of a group?  
@@ -3932,84 +3871,81 @@ function get_new_lus,lus,nise
 
 end
 ;------------------------------------------------------------------------------------------
-function int_stemp,cen_time,ecmwf_time,skt,start_time=start_time
+function int_stemp,cen_time,ecmwf_time,skt
 
 	;cen_time entweder zentrum von orbit oder start von orbit oder vom aktuellen pixel
+	time1 = (floor(cen_time/(6d0/24d0))     * 6d0/24d0)[0]
+	time2 = (floor(cen_time/(6d0/24d0)+1d0) * 6d0/24d0)[0]
 
-	time0 = (floor(cen_time/(6d0/24d0))     * 6d0/24d0)[0]
-	time1 = (floor(cen_time/(6d0/24d0)+1d0) * 6d0/24d0)[0]
+	w2 = ((cen_time - time1)/(time2-time1))[0]
+	w1 = (1d0 - w2)[0]
 
-	b = ((cen_time - time0)/(time1-time0))[0]
-	a = (1d0 - b)[0]
+	idx1 = where(long64(ecmwf_time*100) eq long64(time1*100),idx1_cnt)
+	idx2 = where(long64(ecmwf_time*100) eq long64(time2*100),idx2_cnt)
 
-	; v1 = ECMWF SKT time_step vor  cen_time
-	; v2 = ECMWF SKT time_step nach cen_time
-	diff    = keyword_set(start_time) ? (ecmwf_time-start_time) : (ecmwf_time-cen_time)
-	absdiff = abs(diff)
-
-	idx = where(absdiff eq min(absdiff))
-	if diff[idx] lt 0. then begin
-		v1 = skt[idx]
-		v2 = skt[idx+1]
-	endif else begin
-		v1 = skt[idx-1]
-		v2 = skt[idx]
-	endelse
-
-	result = a * v1 + b * v2
-
-	return, result
-
+	return, ( ((idx1_cnt+idx2_cnt) eq 2) ? (w1 * skt[idx1] + w2 * skt[idx2]) : -1)
 end
 ;------------------------------------------------------------------------------------------
-function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose,pixel_based = pixel_based
+function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose
 
-	gres = keyword_set(grid_res) ? grid_res : 0.1
+	gres  = keyword_set(grid_res) ? float(grid_res) : 0.1
+	date1 = strmid(strjoin(unix2ymdhms(ymdhms2unix(date)+86400l,/arr)),0,8) ; next day
 
 	make_geo,lon,lat, grid = gres
 	; ECMWF Skin temperature
-	struc = map_ecmwf_to_orbit(date+'0000', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-	if ~found then return,-1
-		stemp_00 = struc.skt.data
-		sn_ic_00 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
-	struc = map_ecmwf_to_orbit(date+'0600', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-	if ~found then return,-1
-		stemp_06 = struc.skt.data
-		sn_ic_06 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
-		struc = map_ecmwf_to_orbit(date+'1200', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-	if ~found then return,-1
-		stemp_12 = struc.skt.data
-		sn_ic_12 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
-	struc = map_ecmwf_to_orbit(date+'1800', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-	if ~found then return,-1
-		stemp_18 = struc.skt.data
-		sn_ic_18 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
-	struc = map_ecmwf_to_orbit(strjoin(unix2ymdhms(ymdhms2unix(date)+86400l,/arr)), lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
-	if ~found then return,-1
-		stemp_24 = struc.skt.data
-		sn_ic_24 = ( (struc.ci.data gt 0.15) and (ls eq 0) ) or  ( (struc.sd.data gt 0.01) and (ls eq 1) ) or ( (lat lt -60) and (struc.sd.data gt 0.01) )
+	struc = map_ecmwf_to_orbit(date+'0000' , lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+		if ~found then return,-1
+		skt_00 = struc.skt.data
+		sd_00  = struc.sd.data
+		ci_00  = struc.ci.data
+	struc = map_ecmwf_to_orbit(date+'0600' , lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+		if ~found then return,-1
+		skt_06 = struc.skt.data
+		sd_06  = struc.sd.data
+		ci_06  = struc.ci.data
+	struc = map_ecmwf_to_orbit(date+'1200' , lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+		if ~found then return,-1
+		skt_12 = struc.skt.data
+		sd_12  = struc.sd.data
+		ci_12  = struc.ci.data
+	struc = map_ecmwf_to_orbit(date+'1800' , lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+		if ~found then return,-1
+		skt_18 = struc.skt.data
+		sd_18  = struc.sd.data
+		ci_18  = struc.ci.data
+	struc = map_ecmwf_to_orbit(date1+'0000', lon, lat, ['skt','ci','sd'], grid = gres, found = found, verbose = verbose)
+		if ~found then return,-1
+		skt_24 = struc.skt.data
+		sd_24  = struc.sd.data
+		ci_24  = struc.ci.data
+	free, struc
+	free, lon
 
-	nd_idx = where(time lt 0,nd_cnt)
-	dum = fix(time > 0 )/6
-	nise  = (dum eq 0) *sn_ic_00 + (dum eq 1) * sn_ic_06 + (dum eq 2) * sn_ic_12 + (dum eq 3) * sn_ic_18
-	if keyword_set(pixel_based) then begin
-		si   = size(time,/dim)
-		nn   = n_elements(time)
-		st2d = fltarr(nn)
-		yy   = strmid(date,0,4)
-		mm   = strmid(date,4,2)
-		dd   = strmid(date,6,2)
-		t2d  = (reform(time>0.01,nn) / 24.) + julday(mm,dd,yy,0,0,0)
-		ecmwf_time = julday(mm,dd,yy,[0.,6.,12.,18.,24.],0,0)
-		for ii = 0ul,nn-1 do st2d[ii] = int_stemp(t2d[ii],ecmwf_time,[stemp_00[ii],stemp_06[ii],stemp_12[ii],stemp_18[ii],stemp_24[ii]])
-		stemp = reform(st2d,si)
-	endif else begin
-		stemp = (dum eq 0) *stemp_00 + (dum eq 1) * stemp_06 + (dum eq 2) * stemp_12 + (dum eq 3) * stemp_18
-	endelse
-	if nd_cnt gt 0 then stemp[nd_idx] = -999.
-	if nd_cnt gt 0 then nise[nd_idx]  = -999.
+	ndx  = where(time lt 0,nd_cnt)
+	tdum = 	(time > 0) / 24.
+	t1   = 	floor(tdum/(6d0/24d0))
+	t2   = 	floor(tdum/(6d0/24d0)+1d0)
+	w2   = 	(temporary(tdum) - t1 * (6d0/24d0)) / ((t2-t1) * (6d0/24d0))
+	w1   = 	(1d0 - w2)
+	V1   = 	(t1 eq 0) * skt_00 + (t1 eq 1) * skt_06 + (t1 eq 2) * skt_12   + (t1 eq 3) * skt_18 + (t1 eq 4) * skt_24
+	V2   = 	(t2 eq 0) * temporary(skt_00)  + (t2 eq 1) * temporary(skt_06) + (t2 eq 2) * temporary(skt_12)  + $
+		(t2 eq 3) * temporary(skt_18)  + (t2 eq 4) * temporary(skt_24)
+	skt  = 	w1 * temporary(V1) + w2 * temporary(V2)
+	V1   = 	(t1 eq 0) * sd_00 + (t1 eq 1)  * sd_06  + (t1 eq 2) * sd_12    + (t1 eq 3) * sd_18  + (t1 eq 4) * sd_24
+	V2   = 	(t2 eq 0) * temporary(sd_00)   + (t2 eq 1) * temporary(sd_06)  + (t2 eq 2) * temporary(sd_12)   + $
+		(t2 eq 3) * temporary(sd_18)   + (t2 eq 4) * temporary(sd_24)
+	sd   = 	w1 * temporary(V1) + w2 * temporary(V2)
+	V1   = 	(t1 eq 0) * ci_00 + (t1 eq 1)  * ci_06  + (t1 eq 2) * ci_12    + (t1 eq 3) * ci_18  + (temporary(t1) eq 4) * ci_24
+	V2   = 	(t2 eq 0) * temporary(ci_00)   + (t2 eq 1) * temporary(ci_06)  + (t2 eq 2) * temporary(ci_12)   + $
+		(t2 eq 3) * temporary(ci_18)   + (temporary(t2) eq 4) * temporary(ci_24)
+	ci   = 	w1 * temporary(V1) + w2 * temporary(V2)
+	nise = 	( (temporary(ci) gt 0.15) and (ls eq 0) ) or ( (sd gt 0.01) and (ls eq 1) ) or $
+		( (temporary(lat) lt -60) and (temporary(sd) gt 0.01) )
 
-	return,{stemp:stemp,nise:nise}
+	if nd_cnt gt 0 then skt[ndx]  = -999.
+	if nd_cnt gt 0 then nise[ndx] = -999.
+
+	return,{stemp:skt,nise:nise}
 
 end
 ;------------------------------------------------------------------------------------------
