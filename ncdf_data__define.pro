@@ -3292,9 +3292,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.arcticID  = Widget_Button(bla, Value='Arctic       ', UVALUE='SET_PLOT_DEFAULTS')
 	      self.pm70ID    = Widget_Button(bla, Value=''+string(177b)+'60'+string(176b)+' Lat     ', UVALUE='SET_PLOT_DEFAULTS')
 	    self.sat_base = Widget_Base(row, Column=5, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
+; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05' , UVALUE='SET_PLOT_DEFAULTS')
 ; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N' , UVALUE='SET_PLOT_DEFAULTS')
 ; 	      self.noaa6     = Widget_Button(self.sat_base, Value='N06' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa7     = Widget_Button(self.sat_base, Value='N07' , UVALUE='SET_PLOT_DEFAULTS')
+; 	      self.noaa8     = Widget_Button(self.sat_base, Value='N08' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa9     = Widget_Button(self.sat_base, Value='N09' , UVALUE='SET_PLOT_DEFAULTS')
 ; 	      self.noaa10    = Widget_Button(self.sat_base, Value='N10', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa11    = Widget_Button(self.sat_base, Value='N11', UVALUE='SET_PLOT_DEFAULTS')
@@ -3525,9 +3527,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.oplotID   , Set_Button=0
 		Widget_Control, self.errID     , Set_Button=0
 		Widget_Control, self.noBarID   , Set_Button=0
+; 		Widget_Control, self.noaa5     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
 ; 		Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
 		Widget_Control, self.noaa7     , Set_Button=(self.satname eq 'noaa7'  ? 1:0)
+; 		Widget_Control, self.noaa8     , Set_Button=(self.satname eq 'noaa8'  ? 1:0)
 		Widget_Control, self.noaa9     , Set_Button=(self.satname eq 'noaa9'  ? 1:0)
 ; 		Widget_Control, self.noaa10    , Set_Button=(self.satname eq 'noaa10' ? 1:0)
 		Widget_Control, self.noaa11    , Set_Button=(self.satname eq 'noaa11' ? 1:0)
@@ -3902,15 +3906,12 @@ l1g = 0
 	pcms   = Widget_Info(self.pcms,/BUTTON_SET)
 	pchov  = Widget_Info(self.pchov,/BUTTON_SET)
 
-; 	limit_enabled = ( Widget_Info(self.enablelim,/BUTTON_SET) and dumlimit ne '' )
 	limit_enabled = ( Widget_Info(self.enablelim,/BUTTON_SET) )
 
 	if limit_enabled then begin
 		if dumlimit[0] eq '' then dumlimit = '[-90,-180,90,180]'
-		if total(dumlimit[0] eq ['sunglint','glint']) then limit = 'sunglint' else begin
-			dum = float(strsplit(strcompress(dumlimit,/rem),'],[()',/ext))
-			if n_elements(dum) eq 4 then limit = dum
-		endelse
+		dum = float(strsplit(strcompress(dumlimit,/rem),'],[()',/ext))
+		if n_elements(dum) eq 4 then limit = dum
 	endif
 
 	; limit will be overwritten by defaults (if set!) 
@@ -3945,6 +3946,10 @@ l1g = 0
 	endcase
 
 	setlist = Widget_Info([	self.noaa7,	$
+; 				self.tirosn,	$
+; 				self.noaa5,	$
+; 				self.noaa6,	$
+; 				self.noaa8,	$
 				self.noaa9,	$
 ; 				self.noaa10,	$
 				self.noaa11,	$
@@ -3966,7 +3971,8 @@ l1g = 0
 				self.aatsr,	$
 				self.aatme	$
 				],/button_set)
-; 	satlist = ['noaa'+strcompress([7,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme'];'metopb'
+; 	satlist = ['tirosn','noaa'+strcompress([5,6,7,8,9,10,11,12,14,15,16,17,18,19],/rem),$
+; 		   'metopa',metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme']
 	satlist = ['noaa'+strcompress([7,9,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme']
 	blabal = where(setlist eq 1,bla_cnt)
 	sat = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
@@ -4074,11 +4080,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				self.mm = ( self.month eq '' ? '--' : self.month )
 				self.dd = ( self.day   eq '' ? '--' : self.day )
 
-		; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
-		; 		Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
+;				Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
+;				Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
+;				Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
 				Widget_Control, self.noaa7     , Set_Button=(self.satname eq 'noaa7'  ? 1:0)
+;				Widget_Control, self.noaa8     , Set_Button=(self.satname eq 'noaa8'  ? 1:0)
 				Widget_Control, self.noaa9     , Set_Button=(self.satname eq 'noaa9'  ? 1:0)
-		; 		Widget_Control, self.noaa10    , Set_Button=(self.satname eq 'noaa10' ? 1:0)
+;				Widget_Control, self.noaa10    , Set_Button=(self.satname eq 'noaa10' ? 1:0)
 				Widget_Control, self.noaa11    , Set_Button=(self.satname eq 'noaa11' ? 1:0)
 				Widget_Control, self.noaa12    , Set_Button=(self.satname eq 'noaa12' ? 1:0)
 				Widget_Control, self.noaa15    , Set_Button=(self.satname eq 'noaa15' ? 1:0)
@@ -5776,10 +5784,12 @@ PRO NCDF_DATA__DEFINE, class
              whatever:'',              $
              compare_algo1:'',         $
              logid:0L,                 $
-             noaa6:0L,                 $
-             tirosn:0L,                $
              sat_base:0L,              $
+             tirosn:0L,                $
+             noaa5:0L,                 $
+             noaa6:0L,                 $
              noaa7:0L,                 $
+             noaa8:0L,                 $
              noaa9:0L,                 $
              noaa10:0L,                $
              noaa11:0L,                $
