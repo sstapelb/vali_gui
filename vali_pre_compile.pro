@@ -3,8 +3,8 @@
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
 @/cmsaf/nfshome/sstapelb/idl/file_name_info.pro
 @/cmsaf/nfshome/sstapelb/idl/win.pro
-@/cmsaf/nfshome/sstapelb/idl/lenstr.pro
-@/cmsaf/nfshome/sstapelb/idl/legend.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/lenstr.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/legend.pro
 @/cmsaf/nfshome/sstapelb/idl/max/is_win.pro
 @/cmsaf/nfshome/sstapelb/idl/max/advanced_keyword_set.pro
 @/cmsaf/nfshome/sstapelb/idl/start_eps.pro
@@ -23,7 +23,7 @@
 @/cmsaf/nfshome/sstapelb/idl/xhelp.pro
 @/cmsaf/nfshome/sstapelb/idl/minmax.pro
 @/cmsaf/nfshome/sstapelb/idl/aw_gewex_tools/subtools/between.pro
-@/cmsaf/nfshome/sstapelb/idl/my_timer__define.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/my_timer__define.pro
 @/cmsaf/nfshome/sstapelb/idl/max/vector.pro
 @/cmsaf/nfshome/sstapelb/idl/max/strings/textable.pro
 @/cmsaf/nfshome/sstapelb/idl/max/strings/strtrans.pro
@@ -41,7 +41,7 @@
 @/cmsaf/nfshome/sstapelb/idl/make_cool_contour.pro
 @/cmsaf/nfshome/sstapelb/idl/adv_tempname.pro
 @/cmsaf/nfshome/sstapelb/idl/is_compressed.pro
-@/cmsaf/nfshome/sstapelb/idl/get_ncdf_data_by_name.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/get_ncdf_data_by_name.pro
 @/cmsaf/nfshome/sstapelb/idl/remove_equal_elements.pro
 @/cmsaf/nfshome/sstapelb/idl/ree.pro
 @/cmsaf/nfshome/sstapelb/idl/plot_histo.pro
@@ -54,11 +54,8 @@
 @/cmsaf/nfshome/sstapelb/idl/max/file_io/hdf/read_hdf5.pro
 @/cmsaf/nfshome/sstapelb/idl/einlesen.pro
 @/cmsaf/nfshome/sstapelb/idl/msg_to_geo.pro
-@/cmsaf/nfshome/sstapelb/idl/max/file_io/misc/var_save.pro
 @/cmsaf/nfshome/sstapelb/idl/max/file_io/misc/save_var.pro
-@/cmsaf/nfshome/sstapelb/idl/var_restore.pro
 @/cmsaf/nfshome/sstapelb/idl/restore_var.pro
-; @/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro
 @/cmsaf/nfshome/sstapelb/idl/rene/get_dem.pro
 @/cmsaf/nfshome/sstapelb/idl/plot_hist.pro
 @/cmsaf/nfshome/sstapelb/idl/isccp/isccp_read_d2.pro
@@ -67,6 +64,6 @@
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_L1.pro
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_geo.pro
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
-@/cmsaf/nfshome/sstapelb/idl/read_modis_l1b.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/read_modis_l1b.pro
 @validation_tool_box.pro
 

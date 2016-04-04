@@ -4895,7 +4895,7 @@ function make_l3u_from_l2, year, month, day, data = data, algo = algo, satellite
 	if keyword_set(save_as) then begin
 		dir  = '/cmsaf/cmsaf-cld1/sstapelb/savs/l3u_from_l2/'
 		name = yyyy+mm+dd+'_'+sat_name(algo,satn)+'_L3U_'+dat+'_from_L2'+(asc ? '_descending':'')+(desc ? '_descending':'')+'.sav'
-		var_save,gwx,dir+name
+		save_var,gwx,dir+name
 		print,"Saved -> Open with d = restore_var('"+dir+name+"')"
 	endif
 
