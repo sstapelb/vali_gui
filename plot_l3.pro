@@ -989,7 +989,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				return
 			endif
 			bild = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool) ? d.unc : d.mean
-stop
+; stop
 ; bild9 = (restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/plot/plot_cfc_cci_time_series_noaa9_1978-2016.sav')).mean
 ; bild = (bild+bild9)/2.
 			glob_grid = get_grid_res(bild)
