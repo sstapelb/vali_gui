@@ -4353,7 +4353,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar, $
 				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found
 				if show_values then show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
-				self.out_hovmoeller = ptr_new(out.bild)
+; 				self.out_hovmoeller = ptr_new(out.bild)
+shelp,out
+				self.out_hovmoeller = ptr_new(out)
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif
 			if pchist then begin
@@ -4666,7 +4668,8 @@ if sel then sat  = self.satname
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,$
 				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar
 				if show_values and is_defined(out) then show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
-				if is_defined(out) then self.out_hovmoeller = ptr_new(out.bild)
+; 				if is_defined(out) then self.out_hovmoeller = ptr_new(out.bild)
+				if is_defined(out) then self.out_hovmoeller = ptr_new(out)
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcts and ~hist2d then begin
 				; time series

@@ -494,11 +494,14 @@ PRO cgTaylorDiagram, stddev, correlation, $
 
   ; Observed/Reference Circles. The dashed circles centered in the Observed value are the centered RMS
   ; (root-mean-square) values.
+
   ref_cir = 1000
   ref_max = ref_stddev
   ref_min = 0.0
   ref_cir_x = Findgen(ref_cir)/(ref_cir-1)*(ref_max-ref_min)+ref_min
   ref_cir_y = SQRT(ref_max^2 - ref_cir_x^2)
+;   cgPlots, ref_cir_x, ref_cir_y, LINESTYLE=2, COLOR='pur7'
+  for i = 2,fix(stddev_max/0.5) -1 do cgPlots, ref_cir_x*i*0.5, ref_cir_y*i*0.5, LINESTYLE=2, COLOR='pur7'
   cgPlots, ref_cir_x, ref_cir_y, LINESTYLE=2, COLOR='pur7'
 ;   cgText, ref_max, stddev_max * 0.05, 'Observed', ALIGNMENT=0.5, COLOR='pur7'
   cgText, ref_max, stddev_max * 0.05, observation, ALIGNMENT=0.5, COLOR='pur7'

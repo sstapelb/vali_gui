@@ -280,9 +280,9 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 	print,'Correlation : ',corr_arr
 	print,'Bias        : ',bias_perc
 
-	psym = replicate(17,9) ; 29 hütchen hoch
+	psym = replicate(17,9) ; 29: hütchen hoch
 	idx = where(bias_arr lt 0, idx_cnt)
-	if idx_cnt gt 0 then psym[idx]=18 ; 30 hütchen runter
+	if idx_cnt gt 0 then psym[idx]=18 ; 30: hütchen runter
 	idx = where(bias_arr eq 0, idx_cnt)
 	if idx_cnt gt 0 then psym[idx]=16
 
@@ -3406,15 +3406,21 @@ pro moviemaker, year, month, day, sat = sat, data = data, mini = mini, maxi = ma
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi = maxi, win_nr=win_nr,$
-			ctable=ctable,other=other,reference = reference, out = out, land = land, sea = sea,$
-			oplots=oplots,found=found,nobar=nobar
+pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi = maxi, win_nr = win_nr,$
+		     ctable = ctable, other = other, reference = reference, out = out, land = land, sea = sea,$
+		     oplots = oplots, found = found, nobar = nobar
 
 	vali_set_path
 
 	opl   = keyword_set(oplots)
 	datum = '1978-2016'
 	dat   = strlowcase(data[0])
+	anomalies = stregex(dat,'_anomalies',/bool)
+	if anomalies then dat = strreplace(dat,'_anomalies','')
+	if anomalies and keyword_set(reference) then begin
+		print,'anomalie and compare does not work until now'
+		anomalies = 0
+	endif
 	algo  = keyword_set(algo) ? strlowcase(algo) : 'esacci'
 	sat   = keyword_set(satellite) ? strlowcase(strjoin(strsplit(satellite,'-',/ext))) : 'noaa18'
 	algon = sat_name(algo,opl eq 0 ? sat:'')
@@ -3441,15 +3447,17 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	d = get_available_time_series( algo, dat, sat, period = datum, /hovmoeller, found = found)
 	if ~float(found) then begin
 		ok = dialog_message('plot_hovmoeller: File not found for '+algon+' '+dat)
-		if is_defined(out) then out = {bild:out}
+		if is_defined(out) then out = {bild:out.bild,sm:out.sm}
 		return
 	endif
+
 	mima = [keyword_set(mini)? mini[0]:d.minv[0],keyword_set(maxi)? maxi[0]:d.maxv[0]]
 	mima=float(mima)
 	nlev = ((mima[1]-mima[0])/float(d.dist[0]))+1
 	nbar = nlev < 11
 
 	matrix = transpose(d.(struc_idx))
+	mat_sm = transpose(d.SEASONAL_MEAN.(struc_idx))
 	datum  = d.period
 	unit   = d.unit
 
@@ -3460,17 +3468,15 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 			return
 		endif
 		mat_ref = transpose(d.(struc_idx))
-		idx     = where(matrix lt 0 or mat_ref lt 0,icnt)
+		idx     = where(matrix eq no_data_val[0] or mat_ref eq no_data_val[0],icnt)
 		matrix  = matrix - mat_ref
 		; contour blacks out all values lower or greater than min / max values
 		; set values lower/greater to min/max to avoid this
 		matrix = mima[0] > matrix < mima[1]
-	endif else idx = where(matrix le 0,icnt)
+	endif else idx = where(matrix eq no_data_val[0],icnt)
 	if icnt gt 0 then matrix[idx]=no_data_val
 
-	print,'Nlevel: ', string(nlev)
-	print,'Minmax: ', string(minmax(matrix))
-	if total(matrix ne no_data_val) eq 0 then print,'   !!! NO valid data found !!!'
+	if total(matrix ne no_data_val[0]) eq 0 then print,'   !!! NO valid data found !!!'
 	;-----------
 	dum        = fix(strsplit(datum,'-',/ext))
 	if keyword_set(mini) and keyword_set(maxi) then begin
@@ -3479,6 +3485,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		if n_elements(maxi) gt 1 then dum[1] = fix(maxi[1])-1
 		if n_elements(mini) gt 1 then dum[0] = fix(mini[1])
 	endif
+
 	jumps=0
 	nochmal:
 	num_of_yy = ((dum[1]+1)-dum[0])
@@ -3509,19 +3516,24 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		cnts = (ori_period[0] - dum[0]) *12
 		mat_dummy = fltarr(cnts,(size(matrix,/dim))[1]) -999.
 		matrix  = [mat_dummy,matrix]
+		mat_sm  = [mat_dummy,mat_sm]
 		ori_period[0] = dum[0]
 	endif
 	anf = ((dum[0]-ori_period[0])*12)
-	eef = ((dum[1]-ori_period[0]+1)*12-1)
+	eef = ((dum[1]-ori_period[0]+1)*12);-1)
 	if eef gt (size(matrix,/dim))[0] then begin
 		cnts = eef-(size(matrix,/dim))[0]+1
 		mat_dummy = fltarr(cnts,(size(matrix,/dim))[1]) -999.
 		matrix  = [matrix,mat_dummy]
+		mat_sm  = [mat_sm,mat_dummy]
 	endif
-	matrix = matrix[anf:eef,*]
+	matrix = matrix[anf:eef<((size(matrix,/dim))[0]-1),*]
+	mat_sm = mat_sm[anf:eef<((size(mat_sm,/dim))[0]-1),*]
 	;-----------
 	if opl gt 0 and keyword_set(out) then begin
 		; make sure both array have same size
+		osm = out.sm
+		out = out.bild
 		if total(size(out,/dim)) eq total(size(matrix,/dim)) and $
 		product(size(out,/dim)) eq product(size(matrix,/dim)) then begin
 			dum = [[[matrix]],[[out]]]
@@ -3530,10 +3542,25 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 			matrix = mean(dum,dim=3,/nan)
 			idx = where(~finite(matrix),idx_cnt)
 			if idx_cnt gt 0 then matrix[idx] = no_data_val[0]
+			dum = [[[mat_sm]],[[osm]]]
+			idx = where(dum eq no_data_val[0],idx_cnt)
+			if idx_cnt gt 0 then dum[idx] = !values.f_nan
+			mat_sm = mean(dum,dim=3,/nan)
+			idx = where(~finite(mat_sm),idx_cnt)
+			if idx_cnt gt 0 then mat_sm[idx] = no_data_val[0]
 		endif
-	endif 
-	out = {bild:matrix,unit:unit}
+	endif
+
+	out = {bild:matrix,sm:mat_sm,unit:unit}
+	if keyword_set(anomalies) then begin
+		idx = where(matrix eq no_data_val[0] or mat_sm eq no_data_val[0],icnt)
+		matrix = matrix-mat_sm
+		if icnt gt 0 then matrix[idx]=no_data_val[0]
+	endif
 	si  = size(matrix,/dim)
+
+	print,'Nlevel: ', string(nlev)
+	print,'Minmax: ', string(minmax(matrix,no=no_data_val))
 
 	ytickname = ['-90','-60','-30','0','30','60','90']
 	title     = keyword_set(ref) ? 'Difference '+algon+' - '+ref_name+' '+d.longname+' '+unit : algon+' '+d.longname+' '+unit
@@ -3552,7 +3579,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 	start_save, save_as
 	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[8,3],ymargin=[5,2], $
-		title=title,bar_title=strupcase(dat),no_data_val=no_data_val,/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
+		title=title,bar_title=strupcase(dat),no_data_val=no_data_val[0],/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
 		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle='Latitude',c_charsize = 2., format = bar_format, $
 		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
 		col_table=col_tab,brewer =brewer,xticklen=0.00001;,xminor=2,col_tab=105,color=(i/7 eq i/7. ? 1:0 )
@@ -4692,11 +4719,11 @@ pro do_create_all_compare_time_series
 
 	cli  = 'cci'
 	cov  = ['full','land', 'sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
-	sat  = ['noaa7','noaa9'];,'noaa11','noaa14','noaa16','noaa18','noaa19','noaa12','noaa15','noaa17', $
-; 		'metopa','metopb','allsat'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
+	sat  = ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19','noaa12','noaa15','noaa17', $
+		'metopa','metopb','allsat'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
 	ref  = ['gac2','gac','pmx','myd2','mod2'];,'myd','mod'];'cci'
 	data = ['cfc','cfc_day','cfc_night','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph']
-
+sat  = ['noaa11','noaa12']
 	for j=0,n_elements(cov) -1 do begin
 		for i= 0,n_elements(sat)-1 do begin
 			for k=0,n_elements(ref)-1 do begin
@@ -4740,7 +4767,7 @@ pro do_create_all_single_time_series
 
 	; combine all you need
 ; 	algon_list = [gac_list,gac2_list,pmx_list,coll6_list,coll5_list]
-algon_list = ['cci-noaa7','cci-noaa9']
+algon_list = ['cci-noaa11','cci-noaa12']
 
 	for j=0,n_elements(cov) -1 do begin
 		for i= 0,n_elements(algon_list)-1 do begin
@@ -4776,7 +4803,7 @@ pro do_hist_cloud_type_time_series
 
 	; combine all you need
 ; 	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
-algon_list = ['cci-noaa7','cci-noaa9']
+algon_list = ['cci-noaa11','cci-noaa12']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -4858,7 +4885,7 @@ pro do_1d_hist_time_series
 	coll5_list = ['myd-','mod-']
 
 ; 	algon_list = [coll6_list,coll5_list]
-algon_list = ['cci-noaa7','cci-noaa9']
+algon_list = ['cci-noaa11','cci-noaa12']
 
 	prod_list  = ['cwp','cot','ctp','ctt','cer']
 
@@ -4941,7 +4968,7 @@ pro do_create_hovmoeller
 
 	; combine all you need
 ; 	algon_list = [gac2_list,pmx_list,coll6_list,coll5_list,gac_list]
-algon_list = ['cci-noaa7','cci-noaa9']
+algon_list = ['cci-noaa11','cci-noaa12']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')

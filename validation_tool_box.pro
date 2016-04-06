@@ -1655,7 +1655,7 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sam
 		nan_fillv = 1
 	endif
 	found = 1
-	gres  = double(grid_res)
+	gres  = float(grid_res)
 	array = double(array_in)
 	fvidx = where(~finite(array),fvcnt)
 	if fvcnt gt 0 then array[fvidx] = fillvalue
@@ -1670,21 +1670,21 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sam
 	endif
 
 	if keyword_set(sample) then begin
-		result = rebin(array,[360d0,180d0]/gres,/sample)
+		result = rebin(array,[360.,180.]/gres,/sample)
 		if keyword_set(nan_fillv) then begin
 			fvidx = where(result eq fillvalue,fvcnt) 
 			if fvcnt gt 0 then result[fvidx] = !values.f_nan
 		endif
 	endif else begin
-		N       = double(product(size(array,/dim)/([360d0,180d0]/gres))) ; number of elements of new grid
-		avg_all = rebin(array,360d0/gres,180d0/gres)  ; average over new grid
+		N       = double(product(size(array,/dim)/([360.,180.]/gres))) ; number of elements of new grid
+		avg_all = rebin(array,360./gres,180./gres)  ; average over new grid
 
 		; fillvalues included?
 		dum = array eq fillvalue
 
 		if total(dum) eq 0. then return, avg_all
 
-		anz_fv  = round(rebin(double(temporary(dum)),360d0/gres,180d0/gres) * N) ; number of fillvalues
+		anz_fv  = round(rebin(double(temporary(dum)),360./gres,180./gres) * N) ; number of fillvalues
 		tot_fv  = anz_fv * fillvalue
 
 		divisor = double( N - anz_fv)
@@ -3422,6 +3422,29 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 
 	if found then begin
 		if keyword_set(hovmoeller) then begin
+			; make seasonal mean for anomalies
+			anz_mm  = n_elements(struc.all[0,*])
+			all_sm  = fltarr(180,anz_mm)
+			land_sm = fltarr(180,anz_mm)
+			sea_sm  = fltarr(180,anz_mm)
+			all     = struc.all
+			all[where(all eq -999)]=!values.f_nan
+			land    = struc.land
+			land[where(land eq -999)]=!values.f_nan
+			sea     = struc.sea
+			sea[where(sea eq -999)]=!values.f_nan
+			for i = 0,anz_mm -1 do begin
+				all_sm[*,i]  = mean(all [*,(i mod 12):*:12],dim=2,/nan)
+				land_sm[*,i] = mean(land[*,(i mod 12):*:12],dim=2,/nan)
+				sea_sm[*,i]  = mean(sea [*,(i mod 12):*:12],dim=2,/nan)
+			endfor
+			idx = where(~finite(all_sm),idx_cnt)
+			if idx_cnt gt 0 then all_sm[idx] = -999.
+			idx = where(~finite(land_sm),idx_cnt)
+			if idx_cnt gt 0 then land_sm[idx] = -999.
+			idx = where(~finite(sea_sm),idx_cnt)
+			if idx_cnt gt 0 then sea_sm[idx] = -999.
+			struc = create_struct(struc,'seasonal_mean',{all:all_sm,land:land_sm,sea:sea_sm})
 			struc = create_struct(struc,{period:datum,longname:longname,unit:unit,minv:minv,maxv:maxv,dist:dist})
 		endif else begin
 			struc.coverage = cov
@@ -4736,6 +4759,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif
 	endif
 	if keyword_set(verbose) then print,'Validation_tool_box get_data:',systime(1)-x
+
+	;make fillvalue of same datatype as outdata
+	no_data_value = (make_array(1,type=size(outdata,/type),value=no_data_value))[0]
 	return, outdata
 end
 ;------------------------------------------------------------------------------------------
