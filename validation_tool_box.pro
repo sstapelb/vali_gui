@@ -64,6 +64,10 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'cfc_day' then dat = 'cfc'
 			if dat eq 'cfc_night' then dat = 'cfc'
 			if dat eq 'cfc_twl' then dat = 'cfc'
+			if dat eq 'cfc_middle' then dat = 'cfc'
+			if dat eq 'cfc_high' then dat = 'cfc'
+			if dat eq 'cfc_low' then dat = 'cfc'
+			if dat eq 'cfc_mid' then dat = 'cfc'
 			if dat eq 'cfc' and lev eq 'l3u' then dat = 'cma'
 			if dat eq 'cc_mask_asc'   then dat = 'cma'
 			if dat eq 'cc_mask_desc'  then dat = 'cma'
@@ -128,6 +132,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cfc_allclouds_day'	: dat = 'cfc_day'
 				'cfc_allclouds_night'	: dat = 'cfc_night'
 				;------------------------------------------
+				'cfc_mid' 		: dat = 'cfc_middle'
+				'cc_total_mid' 		: dat = 'cfc_middle'
 				'cc_total' 		: dat = 'cfc'
 				'cc_total_day' 		: dat = 'cfc_day'
 				'cc_total_night' 	: dat = 'cfc_night'
@@ -323,6 +329,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cfc_ice'	: dat = 'a_cai'
 			'cfc_liq'	: dat = 'a_caw'
 			'cfc_high'	: dat = 'a_cah'
+			'cfc_mid'	: dat = 'a_cam'
 			'cfc_middle'	: dat = 'a_cam'
 			'cfc_low'	: dat = 'a_cal'
 			'cloud_fraction': dat = 'a_ca'
@@ -1254,7 +1261,15 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
  
 	if strmid(algon,0,6) eq 'Fame-C' then return, algon
 
-	dumsat = stregex(satn,'noaa',/bool,/fold) ? strjoin(strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,90]),'-') : satn
+; 	dumsat = stregex(satn,'noaa',/bool,/fold) ? strjoin(strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,90]),'-') : satn
+	if stregex(satn,'noaa',/bool,/fold) then begin
+		dum = strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,90])
+		if n_elements(dum) gt 1 then begin
+			if (strlen(dum[1]) eq 1) and is_number(dum[1]) then dum[1] = string(dum[1],f='(i2.2)')
+		endif
+		dumsat = strjoin(dum,'-')
+	endif else dumsat = satn
+
 	if keyword_set(only_sat) then return, strupcase(dumsat)
 	return,algon+(keyword_set(dumsat) and keyword_set(algon) ? '-':'')+strupcase(dumsat)
 end
@@ -3366,6 +3381,9 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'cfc' 		: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' 		& end
 		'cfc_day' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Day'	& end
 		'cfc_night' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Night'	& end
+		'cfc_low' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Low Cloud Fractional Cover'	& end
+		'cfc_mid' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Mid Cloud Fractional Cover'	& end
+		'cfc_high' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'High Cloud Fractional Cover'	& end
 		'lwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path'		& end
 		'iwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path'		& end
 		'cwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path'			& end

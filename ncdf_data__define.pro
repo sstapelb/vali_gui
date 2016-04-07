@@ -3254,11 +3254,12 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','MSG']; EASE-grid  = equal angle 'Lambert' ??
 	      self.projlist = Widget_combobox(bla, Value=[proj_list],UVALUE=[proj_list],Scr_XSize=85,Scr_YSize=28,UNAME='PLOTS_PROJLIST')
 
-	    label = Widget_Label(row, Value='  Add Text      Bin/ZDim Rotate  P0lon  P0lat ', SCR_XSIZE=270)
+	    label = Widget_Label(row, Value='  Add Text      Bin/ZDim Rot/Qu  P0lon  P0lat ', SCR_XSIZE=270)
 	    bla = Widget_Base(row, Column=5,Frame=0, Scr_XSize=270)
 	      self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=89,/Editable)
 	      self.zkompID   = Widget_combobox(bla,VALUE=strcompress(indgen(12),/rem),UVALUE=strcompress(indgen(12),/rem),Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_ZLIST')
-	      rotlist        = string(indgen(8),f='(i1)')
+; 	      rotlist        = string(indgen(8),f='(i1)')
+              rotlist        = string(indgen(20)/2.,f='(f3.1)')
 	      self.rotateID  = Widget_combobox(bla, Value=[rotlist],UVALUE=[rotlist],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_ROTATELIST') 
 	      self.p0lonID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
 	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
@@ -3797,7 +3798,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	if hct eq 'h_1d' then hct = '1d'
 	if hct eq '-cot' then hct = '1d_cot'
 	if hct eq '-ctp' then hct = '1d_ctp'
-	rot = fix(self.rot)
+	rot = self.rot
 
 	pmulti=strjoin(['0',strsplit(self.pmulti,'x',/ext)],',')
 	ctab = strcompress((strsplit(self.ctab,/ext,':'))[0],/rem)
@@ -4297,7 +4298,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				single_var = varname,mini=mini,maxi=maxi,limit=limit,error=error, show_values = show_values, $
 				verbose = verbose, other = oth, ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, $
-				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl
+				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),rot=rot
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pczm and pcsing then begin
@@ -4350,11 +4352,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				if verbose then print,'Hovmoeller Time Series'
-				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar, $
-				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found
+				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
+				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit
 				if show_values then show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
 ; 				self.out_hovmoeller = ptr_new(out.bild)
-shelp,out
 				self.out_hovmoeller = ptr_new(out)
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif
@@ -4666,7 +4667,7 @@ if sel then sat  = self.satname
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,$
-				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar
+				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc
 				if show_values and is_defined(out) then show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
 ; 				if is_defined(out) then self.out_hovmoeller = ptr_new(out.bild)
 				if is_defined(out) then self.out_hovmoeller = ptr_new(out)
@@ -5750,7 +5751,7 @@ PRO NCDF_DATA__DEFINE, class
              zkompID:'',               $
              dim3:0L,                  $
              rotateID:'',              $
-             rot:0L,                   $
+             rot:0.,                   $
              histct:'',                $
              other:'',                 $
              ctab:'',                  $
