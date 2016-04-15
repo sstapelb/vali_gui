@@ -17,10 +17,17 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 		if dat eq 'cfc'       then dat = 'cfc_allclouds'
 		if dat eq 'cfc_day'   then dat = 'cfc_allclouds_day'
 		if dat eq 'cfc_night' then dat = 'cfc_allclouds_night'
+		if dat eq 'ctp'       then dat = 'ctp_mean_all'
 	endif
 	if total(alg eq ['cla','claas']) then begin
 		if keyword_set(path) then begin
 			if strmid(dat,0,3) eq 'cph' then dat = 'cph'
+			if dat eq 'cfc_cloudsgt03'	then dat = 'cfc'
+			if dat eq 'cfc_cloudsgt02'	then dat = 'cfc'
+			if dat eq 'cfc_cloudsgt01'	then dat = 'cfc'
+			if dat eq 'cfc_allclouds'	then dat = 'cfc'
+			if dat eq 'cfc_allclouds_day'	then dat = 'cfc'
+			if dat eq 'cfc_allclouds_night'	then dat = 'cfc'
 			if dat eq 'lwp_allsky'  then dat = 'cwp'
 			if dat eq 'iwp_allsky'  then dat = 'cwp'
 			if dat eq 'lwp'  	then dat = 'cwp'
@@ -45,6 +52,12 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'cer_ice'    then dat = 'ref_ice'
 			if dat eq 'cer_liq'    then dat = 'ref_liq'
 			if dat eq 'hist1d_cer' then dat = 'hist1d_ref'
+			if dat eq 'cfc_cloudsgt03'	then dat = 'cfc'
+			if dat eq 'cfc_cloudsgt02'	then dat = 'cfc'
+			if dat eq 'cfc_cloudsgt01'	then dat = 'cfc'
+			if dat eq 'cfc_allclouds'	then dat = 'cfc'
+			if dat eq 'cfc_allclouds_day'	then dat = 'cfc_day'
+			if dat eq 'cfc_allclouds_night'	then dat = 'cfc_night'
 		endelse
 	endif
 	if total(alg eq ['gac2','clara2']) then begin
@@ -345,6 +358,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'ref_ice'	: dat = 'a_crei'
 			'cer_liq'	: dat = 'a_crew'
 			'cer_ice'	: dat = 'a_crei'
+			'ctp'		: dat = 'a_cp'
+			'ctt'		: dat = 'a_ct'
 			else		: 
 		endcase
 ; 		case strmid(dat,0,3) of 
@@ -861,8 +876,42 @@ function gmean,data,latitude
 		print,'% GMEAN: At least one input Variable is undefined: data , latitude'
 		return,-1
 	endif
-	weight = cosd(latitude)
-	return, total(data * weight) / total(weight)
+	weight = cosd(float(latitude))
+	return, total(float(data) * weight) / total(weight)
+end
+;-------------------------------------------------------------------------------------------------------------------------
+function gstddev,data,latitude
+; 	returns global standard deviation weighted with latitude
+	if n_params() ne 2 then begin
+		print,'% GSTDDEV: At least one input Variable is undefined: data, latitude'
+		return,-1
+	endif
+	weight = cosd(float(latitude))
+	nnn    = total(weight)
+	xx     = (float(data))
+	return, sqrt( ( total((xx)^2. * weight) - (total(xx * weight)^2. / nnn) ) / nnn )
+
+end
+;-------------------------------------------------------------------------------------------------------------------------
+function gcorrelate,data1,data2,latitude
+; 	returns global bias weighted with latitude
+	if n_params() ne 3 then begin
+		print,'% GCORRELATE: At least one input Variable is undefined: data1, data2, latitude'
+		return,-1
+	endif
+	weight   = cosd(double(latitude))
+	nnn      = total(weight)
+	sum_prod = total((double(data1) * double(data2)) * weight) 
+	sum2_1   = total(double(data1)^2. * weight)
+	sum2_2   = total(double(data2)^2. * weight)
+	avg1     = total(double(data1) * weight) / nnn
+	avg2     = total(double(data2) * weight) / nnn
+	var1     = ( (sum2_1 - nnn * avg1^2.) > 0.) 
+	var2     = ( (sum2_2 - nnn * avg2^2.) > 0.) 
+	covar    = sum_prod - nnn * avg1 * avg2				; Verschiebungssatz Covarianz
+	corr     = covar / sqrt( var1 * var2)				; Correlation
+
+	return, float(corr)
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function gbias,data1,data2,latitude
@@ -1132,20 +1181,20 @@ function patmos_sats,year,month, ampm=ampm	,$ ; ampm := 0  am,1 pm, 2 ampm
 		1982:  sats = ['nn','07']
 		1983:  sats = ['nn','07']
 		1984:  sats = ['nn','07']
-		1985:  sats = ['nn',(fix(month) gt 1 ? '09':'07')]
+		1985:  sats = ['nn',(fix(month) le 2 ? 'nn':'09')]
 		1986:  sats = ['nn','09']
 		1987:  sats = ['10','09']
-		1988:  sats = ['10',(fix(month) le 10 ? '09':'11')]
+		1988:  sats = ['10',(fix(month) le 10 ? '09':'nn')]
 		1989:  sats = ['10','11']
 		1990:  sats = ['10','11']
 		1991:  sats = ['10','11']
 		1992:  sats = ['12','11']
 		1993:  sats = ['12','11']
-		1994:  sats = ['12','11']
-		1995:  sats = ['12','14']
+		1994:  sats = ['12',(fix(month) le 9 ? '11':'nn')]
+		1995:  sats = ['12',(fix(month) ge 7 ? '14':'nn')]
 		1996:  sats = ['12','14']
 		1997:  sats = ['12','14']
-		1998:  sats = [(fix(month) gt 10 ? '15':'12'),'14']  ; 15 die letzten tage
+		1998:  sats = [(fix(month) ge 10 ? '15':'nn'),'14']  ; 15 die letzten tage
 		1999:  sats = ['15','14']  ; 14 only odd days
 		2000:  sats = ['15','14']
 		2001:  sats = ['15','16']
@@ -1236,8 +1285,9 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 	satn  = keyword_set(sat)       ? strlowcase(sat)    : ''
 	lev   = keyword_set(level)     ? strlowcase(level) : ''
 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
+
 	case algo of
-		'cci'	: algon = total(satn eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C' : 'CC4CL' +(keyword_set(version) ? '-'+version : '')
+		'cci'	: algon = total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) ? 'Fame-C' : 'CC4CL' +(keyword_set(version) ? '-'+version : '')
 		'cci_old': algon = total(satn eq ['aatme','aatsrmeris','merisaatsr']) ? 'Fame-C-v1.0' : 'CC4CL-v1.0'
 		'isp'	: return,'ISCCP'
 		'gac'	: algon = 'CLARA-A1'
@@ -1546,16 +1596,16 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 		ortho   = 1
 		iso     = 1
 		horizon = 1
-		grid    = 1
-		londel  = 15
-		latdel  = 15
- 		label   = 2
+; 		grid    = 1
+; 		londel  = 30
+; 		latdel  = 30
+; 		label   = 3
 		noborder= 1
 		no_color_bar = 1
 		countries = 0
 		box_axes = 0
 		no_draw_border = 1
-		magnify = 2
+		if ~adv_keyword_set(magnify) then magnify = 2
 		; create limit vector
 		if keyword_set(antarctic) then p0lat = -90
 		if keyword_set(arctic)    then p0lat =  90
@@ -1570,7 +1620,7 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 			limit = limit + [-50, 0,-50, 0,-50, 0,-50, 0]
 ; 			limit = limit + [-65, 0,-65, 0,-65, 0,-65, 0]
 			no_color_bar = 0
-			magnify = 1
+			if ~adv_keyword_set(magnify) then magnify = 1
 			horizon=0
 			label=1
 		endif
@@ -1579,7 +1629,7 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
  			limit = limit + [ 50, 0, 50, 0, 50, 0, 50, 0]
 ; 			limit = limit + [ 65, 0, 65, 0, 65, 0, 65, 0]
 			no_color_bar = 0
-			magnify = 1
+			if ~adv_keyword_set(magnify) then magnify = 1
 			horizon=0
 			label=1
 		endif
@@ -1636,7 +1686,7 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 					[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
 		ortho   = 1
 		iso     = 1
-		magnify = 1
+		if ~adv_keyword_set(magnify) then magnify = 1
 		box_axes = 0
 		grid    = 1
 		londel  = 15
@@ -1651,7 +1701,7 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 	endif
 	if keyword_set(nobar) then no_color_bar = 1
 
-; 	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'
+	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'
 
 end
 ;------------------------------------------------------------------------------------------
@@ -2850,7 +2900,8 @@ end
 function get_filename, year, month, day, data=data, satellite=satellite, instrument = instrument, $
 					 algo = algo, found = found, level = level, node = node , $
 					 silent = silent, orbit = orbit, dirname = dirname	, $
-					 filename = filename, version = version
+					 filename = filename, version = version, $
+					 no_recursive_search = no_recursive_search
 
 	filen = '-1'
 	addon = ''
@@ -2973,7 +3024,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		'AVHRR' : begin
 				case alg of
 					'ESACCI': begin
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strupcase(lev)+'/'+yyyy+'/'+mm+'/'+dd+'/'
 							if lev eq 'l2' then begin 
 								sat = strjoin(strsplit(sat,/ext,'-'))
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
@@ -2981,6 +3032,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif else orbdum = ''
 							vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
+						  end
+					'ESACCI_v14': begin
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+							filen = dir+yyyy+mm+dd+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-fv1.4.nc'
 						  end
 					'ESACCI_OLD': begin
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
@@ -3236,7 +3291,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		filename = file_search(filename[(fix(orb) < (found-1))],count = found)
 	endif
 	found = float(found)
-	if ~found and keyword_set(filen) and keyword_set(dir) then begin
+	if ~found and keyword_set(filen) and keyword_set(dir) and ~keyword_set(no_recursive_search) then begin
 		; try again recursively
 		filename = file_search(dir,file_basename(filen),count = found)
 	endif
@@ -3370,12 +3425,15 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		cli   = algo2ref(algo,sat=sat)
 		pref  = '/plot/plot_'
 		dumalgo = cli
-		tsi = {gm1:0,gm1_std:1,unc1:2}
+		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3}
 	endelse
 
 	dat = strreplace(dat,'_std','',/fold)
 	if total(dat eq ['cloud_fraction','cc_total','a_ca','cc_total_std','a_ca_std']) then dat =  'cfc'
 	if total(dat eq ['a_cod','a_cod_std']) then dat =  'cot'
+	if total(dat eq ['a_cp','a_cp_std']) then dat =  'ctp'
+	if total(dat eq ['a_ciwp','a_ciwp_std']) then dat =  'iwp'
+	if total(dat eq ['a_clwp','a_clwp_std']) then dat =  'lwp'
 
 	case dat of
 		'cfc' 		: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' 		& end
@@ -3466,12 +3524,19 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 			struc = create_struct(struc,{period:datum,longname:longname,unit:unit,minv:minv,maxv:maxv,dist:dist})
 		endif else begin
 			struc.coverage = cov
+			anz_mm      = n_elements(struc.stats[0,*])
+			stats_sm    = struc.stats * 0. + !values.f_nan
+			stats_sm_nw = struc.stats_non_weighted * 0. + !values.f_nan
+			for i = 0, anz_mm -1 do stats_sm[*,i]    = mean(struc.stats[*,(i mod 12):*:12],dim=2,/nan)
+			for i = 0, anz_mm -1 do stats_sm_nw[*,i] = mean(struc.stats_non_weighted[*,(i mod 12):*:12],dim=2,/nan)
+			struc = create_struct({stats_sm:stats_sm,stats_sm_non_weighted:stats_sm_nw},struc)
 			if ~is_tag(struc,'actual_date') then begin
 				dumyear     = minmax(where(finite(struc.stats[0,*])))/12 + fix((strsplit(datum,/ext,'-'))[0])
 				dummonth    = minmax(where(finite(struc.stats[0,*]))) mod 12
 				actual_date = strjoin(string(dumyear,f=('(i4.4)'))+string(dummonth+1,f=('(i2.2)')),'-')+' '
 				struc = create_struct(struc,{period:datum,actual_date:actual_date})
 			endif else struc = create_struct(struc,{period:datum})
+	
 			struc = create_struct(struc,'ts_indices',tsi)
 			if is_tag(struc,'unit') then unit = struc.unit
 			if is_tag(struc,'longname') then longname = struc.longname
@@ -4096,7 +4161,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			join_nodes=join_nodes,finfo=finfo,nan_fillv=nan_fillv	, $
 			dirname = dirname,error=error,node=node,dim3=dim3	, $
 			print_filename=print_filename,keep_data_name=keep_data_name, $
-			var_dim_names=var_dim_names
+			var_dim_names=var_dim_names				,$
+			no_recursive_search = no_recursive_search
 
 	if keyword_set(verbose) then x=systime(1)
 
@@ -4127,7 +4193,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			return, -1
 		endif
 		filename = get_filename(year,month,day,data=data,satellite=sat,level=lev,algo=alg,found=found,instrument=instrument,$
-			orbit=orbit,silent=silent,dirname=dirname,node=node)
+					orbit=orbit,silent=silent,dirname=dirname,node=node,no_recursive_search=no_recursive_search)
 	endif
 
 	dat = keyword_set(keep_data_name) ? strlowcase(data) : get_product_name(data,algo=alg,level=lev)
@@ -4719,7 +4785,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else if total(datd eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
 			if total(alg eq ['clara2','clara','claas']) then begin
 				outdata = float(outdata)
-				outdata[where(outdata ne no_data_value)] *= 1000.
+				outdata[where(outdata ne no_data_value,/null)] *= 1000.
 				if keyword_set(minvalue) then minvalue *= 1000.
 				if keyword_set(maxvalue) then maxvalue *= 1000.
 				unit = textoidl(' [ g/m^2]')
@@ -4727,7 +4793,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else if total(datd eq ['cth','cth_arith_mean','cth_corrected']) then begin
 			if total(alg eq ['clara2','clara','claas']) then begin
 				outdata = float(outdata)
-				outdata[where(outdata ne no_data_value)] /= 1000.
+				outdata[where(outdata ne no_data_value,/null)] /= 1000.
 				if keyword_set(minvalue) then minvalue /= 1000.
 				if keyword_set(maxvalue) then maxvalue /= 1000.
 				unit = textoidl(' [ km]')
@@ -4735,15 +4801,15 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else if total(strmid(datd,0,3) eq ['ref','cer']) then begin
 			if total(alg eq ['clara2','claas'])  and lev ne 'l3u' then begin
 				outdata = float(outdata)
-				outdata[where(outdata ne no_data_value)] /= 1.e-06
+				outdata[where(outdata ne no_data_value,/null)] /= 1.e-06
 				if keyword_set(minvalue) then minvalue /= 1.e-06
 				if keyword_set(maxvalue) then maxvalue /= 1.e-06
 				unit = textoidl(' [ \mum]')
 			endif
 		endif else if total(datd eq ['scanline_time_asc','scanline_time_desc','time_asc','time_desc']) then begin
 			if total(alg eq ['esacci']) then begin
-				minzeit = rnd(min(outdata[where(outdata ne no_data_value)]))
-				outdata[where(outdata ne no_data_value)] = (outdata[where(outdata ne no_data_value)] - minzeit)*24d
+				minzeit = rnd(min(outdata[where(outdata ne no_data_value,/null)]))
+				outdata[where(outdata ne no_data_value,/null)] = (outdata[where(outdata ne no_data_value,/null)] - minzeit)*24d
 				if keyword_set(minvalue) then minvalue =  0d
 				if keyword_set(maxvalue) then maxvalue = 24d
 				unit = textoidl(' [ hours]')
@@ -5212,7 +5278,7 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 end
 ;---------------------------------------------------------------------------------------------
 pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1,unit2,level=level,verbose = verbose , $
-			all1=all1,all2=all2,mean1=mean1,mean2=mean2,minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2
+			minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2
 
 	alg1 = ref2algo(algo1)
 	alg2 = ref2algo(algo2)
@@ -5240,9 +5306,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 
 		if total(alg1 eq ['clara2','clara','claas','isccp']) then begin
 			bild1 = float(bild1)
-			bild1[where(bild1 ne fillvalue1)] /= 100.
-			if keyword_set(all1)  then all1 [where(all1 ne fillvalue1)]  /= 100.
-			if keyword_set(mean1) then mean1[where(mean1 ne fillvalue1)] /= 100.
+			bild1[where(bild1 ne fillvalue1,/null)] /= 100.
 			if keyword_set(minv1) then minv1 /= 100.
 			if keyword_set(maxv1) then maxv1 /= 100.
 			unit1 = ' '
@@ -5250,9 +5314,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 		endif
 		if total(alg2 eq ['clara2','clara','claas','isccp']) then begin
 			bild2 = float(bild2)
-			bild2[where(bild2 ne fillvalue2)] /= 100.
-			if keyword_set(all2)  then all2 [where(all2 ne fillvalue2)]  /= 100.
-			if keyword_set(mean2) then mean2[where(mean2 ne fillvalue2)] /= 100.
+			bild2[where(bild2 ne fillvalue2,/null)] /= 100.
 			if keyword_set(minv2) then minv2 /= 100.
 			if keyword_set(maxv2) then maxv2 /= 100.
 			unit2 = ' '
@@ -5261,9 +5323,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 	endif else if total(dat eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
 		if total(alg1 eq ['clara2','clara','claas']) then begin
 			bild1 = float(bild1)
-			bild1[where(bild1 ne fillvalue1)] *= 1000.
-			if keyword_set(all1)  then all1 [where(all1 ne fillvalue1)]  *= 1000.
-			if keyword_set(mean1) then mean1[where(mean1 ne fillvalue1)] *= 1000.
+			bild1[where(bild1 ne fillvalue1,/null)] *= 1000.
 			if keyword_set(minv1) then minv1 *= 1000.
 			if keyword_set(maxv1) then maxv1 *= 1000.
 			unit1 = textoidl(' [ g/m^2]')
@@ -5271,9 +5331,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 		endif
 		if total(alg2 eq ['clara2','clara','claas']) then begin
 			bild2 = float(bild2)
-			bild2[where(bild2 ne fillvalue2)] *= 1000.
-			if keyword_set(all2)  then all2 [where(all2 ne fillvalue2)]  *= 1000.
-			if keyword_set(mean2) then mean2[where(mean2 ne fillvalue2)] *= 1000.
+			bild2[where(bild2 ne fillvalue2,/null)] *= 1000.
 			if keyword_set(minv2) then minv2 *= 1000.
 			if keyword_set(maxv2) then maxv2 *= 1000.
 			unit2 = textoidl(' [ g/m^2]')
@@ -5282,9 +5340,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 	endif else if total(dat eq ['cth','cth_day','cth_arith_mean','cth_corrected']) then begin
 		if total(alg1 eq ['clara2','clara','claas']) then begin
 			bild1 = float(bild1)
-			bild1[where(bild1 ne fillvalue1)] /= 1000.
-			if keyword_set(all1)  then all1 [where(all1 ne fillvalue1)]  /= 1000.
-			if keyword_set(mean1) then mean1[where(mean1 ne fillvalue1)] /= 1000.
+			bild1[where(bild1 ne fillvalue1,/null)] /= 1000.
 			if keyword_set(minv1) then minv1 /= 1000.
 			if keyword_set(maxv1) then maxv1 /= 1000.
 			unit1 = textoidl(' [ km]')
@@ -5292,9 +5348,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 		endif
 		if total(alg2 eq ['clara2','clara','claas']) then begin
 			bild2 = float(bild2)
-			bild2[where(bild2 ne fillvalue2)] /= 1000.
-			if keyword_set(all2)  then all2 [where(all2 ne fillvalue2)]  /= 1000.
-			if keyword_set(mean2) then mean2[where(mean2 ne fillvalue2)] /= 1000.
+			bild2[where(bild2 ne fillvalue2,/null)] /= 1000.
 			if keyword_set(minv2) then minv2 /= 1000.
 			if keyword_set(maxv2) then minv2 /= 1000.
 			unit2 = textoidl(' [ km]')
@@ -5303,9 +5357,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 	endif else if total(strmid(dat,0,3) eq ['ref','cer']) then begin
 		if total(alg1 eq ['clara2','claas']) and lev ne 'l3u' then begin
 			bild1 = float(bild1)
-			bild1[where(bild1 ne fillvalue1)] /= 1.e-06
-			if keyword_set(all1)  then all1 [where(all1 ne fillvalue1)]  /= 1.e-06
-			if keyword_set(mean1) then mean1[where(mean1 ne fillvalue1)] /= 1.e-06
+			bild1[where(bild1 ne fillvalue1,/null)] /= 1.e-06
 			if keyword_set(minv1) then minv1 /= 1.e-06
 			if keyword_set(maxv1) then maxv1 /= 1.e-06
 			unit1 = textoidl(' [ \mum]')
@@ -5313,9 +5365,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 		endif
 		if total(alg2 eq ['clara2','claas']) and lev ne 'l3u' then begin
 			bild2 = float(bild2)
-			bild2[where(bild2 ne fillvalue2)] /= 1.e-06
-			if keyword_set(all2)  then all2 [where(all2 ne fillvalue2)]  /= 1.e-06
-			if keyword_set(mean2) then mean2[where(mean2 ne fillvalue2)] /= 1.e-06
+			bild2[where(bild2 ne fillvalue2,/null)] /= 1.e-06
 			if keyword_set(minv2) then minv2 /= 1.e-06
 			if keyword_set(maxv2) then minv2 /= 1.e-06
 			unit2 = textoidl(' [ \mum]')
@@ -5323,20 +5373,16 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 		endif
 	endif else if total(dat eq ['scanline_time_asc','scanline_time_desc','time_asc','time_desc']) then begin
 		if total(alg1 eq ['esacci']) then begin
-			minzeit = rnd(min(bild1[where(bild1 ne fillvalue1)]),0.5)
-			bild1[where(bild1 ne fillvalue1)] = (bild1[where(bild1 ne fillvalue1)] - minzeit)*24d
-			if keyword_set(all1)  then all1 [where(all1 ne fillvalue1)]  = (all1 [where(all1 ne fillvalue1)] - minzeit)*24d
-			if keyword_set(mean1) then mean1[where(mean1 ne fillvalue1)] = (mean1[where(mean1 ne fillvalue1)] - minzeit)*24d
+			minzeit = rnd(min(bild1[where(bild1 ne fillvalue1,/null)]),0.5)
+			bild1[where(bild1 ne fillvalue1,/null)] = (bild1[where(bild1 ne fillvalue1,/null)] - minzeit)*24d
 			if keyword_set(minv1) then minv1 =  0d
 			if keyword_set(maxv1) then maxv1 = 24d
 			unit1 = ' [h]'
 			if verb then print,'Convert now '+dat+' of '+alg1+' to fractional hours'
 		endif
 		if total(alg2 eq ['esacci']) then begin
-			minzeit = rnd(min(bild2[where(bild2 ne fillvalue2)]),0.5)
-			bild2[where(bild2 ne fillvalue2)] = (bild2[where(bild2 ne fillvalue2)] - minzeit)*24d
-			if keyword_set(all2)  then all2 [where(all2 ne fillvalue2)]  = (all2[where(all2 ne fillvalue2)] - minzeit)*24d
-			if keyword_set(mean2) then mean2[where(mean2 ne fillvalue2)] = (mean2[where(mean2 ne fillvalue2)] - minzeit)*24d
+			minzeit = rnd(min(bild2[where(bild2 ne fillvalue2,/null)]),0.5)
+			bild2[where(bild2 ne fillvalue2,/null)] = (bild2[where(bild2 ne fillvalue2,/null)] - minzeit)*24d
 			if keyword_set(minv2) then minv2 =  0d
 			if keyword_set(maxv2) then maxv2 = 24d
 			unit2 = ' [h]'
@@ -5348,8 +5394,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 end
 ;---------------------------------------------------------------------------------------------
 pro bring_to_same_grid_and_unit,data,bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file2		, $
-				algo1,algo2,unit1,unit2,level=level,all1=all1,all2=all2,mean1=mean1	, $
-				mean2=mean2,minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2		, $
+				algo1,algo2,unit1,unit2,level=level,minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2		, $
 				lon,lat,grid_res_out,verbose = verbose
 
 	alg1 = strlowcase(algo1[0])
@@ -5362,9 +5407,8 @@ pro bring_to_same_grid_and_unit,data,bild1,bild2,fillvalue1,fillvalue2,file1=fil
 	bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file2		, $
 			lon,lat,grid_res_out,verbose = verbose,algo1=algo1,algo2=algo2,level=level
 
-	bring_to_same_unit,data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1,unit2		, $
-			level=level,verbose = verbose,all1=all1,all2=all2,mean1=mean1		, $
-			mean2=mean2,minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2
+	bring_to_same_unit,data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1,unit2	, $
+			level=level,verbose=verbose,minv1=minv1,minv2=minv2,maxv1=maxv1,maxv2=maxv2
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
@@ -6087,25 +6131,25 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 	endif
 
 	if stregex(data,'cot',/fold,/bool) then begin
-		bin_border = '0,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15,23,41,60,80,100'
+		bin_border = '0,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15,23,41,60,80,100,1000'
 		hist_name  = 'Cloud Optical Thickness'
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: COT. Nothing done so far for COLL?')
 	end
 	if stregex(data,'cwp',/fold,/bool) then begin
-		bin_border = '0,5,10,20,35,50,75,100,150,200,300,500,1000,2000,10^5'
+		bin_border = '0,5,10,20,35,50,75,100,150,200,300,500,1000,2000,100000'
 		hist_name  = 'Cloud Water Path'
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: CWP. Nothing done so far for COLL?')
 	end
 	if stregex(data,'ref',/fold,/bool) or stregex(data,'cer',/fold,/bool) then begin
-		bin_border = '0,10,20,30,40,50,60,70,80,90,100'
+		bin_border = '0,3,6,9,12,15,20,25,30,40,60,80'
 		hist_name  = 'Cloud Effective Radius'
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: REF. Nothing done so far for '+algo)
 	end
-	if stregex(data,'cloud_albedo1',/fold,/bool) then begin
+	if stregex(data,'cla_vis006',/fold,/bool) then begin
 		bin_border = '0.00,0.10,0.20,0.30,0.40,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.90,1.00'
 		hist_name  = 'Cloud Albedo Channel1'
 	end
-	if stregex(data,'cloud_albedo2',/fold,/bool) then begin
+	if stregex(data,'cla_vis008',/fold,/bool) then begin
 		bin_border = '0.00,0.10,0.20,0.30,0.40,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.90,1.00'
 		hist_name  = 'Cloud Albedo Channel2'
 	end
@@ -6136,13 +6180,18 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		if idx_cnt gt 0 then bild[idx] = -999.
 		ytitle ='Relative Occurrence [%]'
 	endelse
-	if stregex(data,'ref',/fold,/bool) and total(strlowcase(algo) eq ['claas','clara2']) then begin
+	if (stregex(data,'ref',/fold,/bool) or stregex(data,'cer',/fold,/bool)) and total(strlowcase(algo) eq ['claas','clara2']) then begin
 		if xtickname[0] then begin
 			xtickname = [0.,xtickname]
 			bin_val   = [1.5,bin_val]
 			bild      = [0.,bild]
 		endif
 	endif
+
+	form = stregex(data,'cla_vis',/fold,/bool) ?  '(f20.2)' : '(f20.1)'
+	idx = where(xtickname ge 10000.,idxcnt)
+	xtickname = strcompress(string(xtickname,f=form),/rem)
+	if idxcnt gt 0 then xtickname[idx] = strcompress(string(xtickname[idx],f='(G20.1)'),/rem)
 
 	return, bild
 

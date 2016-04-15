@@ -2,7 +2,7 @@ pro legend,labels,pos=pos,linestyle=linestyle,psym=psym,clrbox=clrbox,$
            color=color,thick=thick,fg_color=fg_color,bg_color=bg_color,$
            box=box,numsym=numsym,ystretch=ystretch,silent=silent,$
            center=center,fill=fill,right=right,norm=norm,spos=spos, $
-           lenfac=lenfac,charsize=charsize,charthick=charthick
+           lenfac=lenfac,charsize=charsize,charthick=charthick,symsize=symsize
 ;+
 ; ROUTINE: legend
 ;
@@ -292,6 +292,7 @@ pro legend,labels,pos=pos,linestyle=linestyle,psym=psym,clrbox=clrbox,$
 on_error,2
 
 n=n_elements(labels)
+
 if n eq 0 then begin & xhelp,'legend' & return & end
 if n eq 1 then labls=str_sep(labels,'\') else labls=labels
 n=n_elements(labls)
@@ -303,7 +304,7 @@ case 1 of
   keyword_set(fill):  djust='f'
   else:               djust='l'
 end
-if nblnks gt 0 then labls(jblnks)='.'+djust+' '
+if nblnks gt 0 then labls[jblnks]='.'+djust+' '
 if keyword_set(silent) eq 0 then silent=0
 ;
 nls=n_elements(linestyle)
@@ -324,16 +325,16 @@ just=strarr(n)
 
 nlbls=0
 for i=0,n-1 do begin
-  ss=labls(i)
+  ss=labls[i]
   if strmid(ss,0,1) eq '.' then begin
-    just(i)=strmid(ss,1,1)
+    just[i]=strmid(ss,1,1)
     tlen=strlen(ss)-2
     ttt=strmid(ss,2,tlen)
-    if ttt eq '' then titles(i)=' ' else titles(i)=ttt
+    if ttt eq '' then titles[i]=' ' else titles[i]=ttt
   endif else begin
     if nolines or ss eq '' then begin
-      just(i)=djust
-      if ss eq '' then titles(i)=' ' else titles(i)=ss
+      just[i]=djust
+      if ss eq '' then titles[i]=' ' else titles[i]=ss
     endif else begin
       nlbls=nlbls+1
     endelse
@@ -488,7 +489,7 @@ endif else begin
   chrsz=ycharsize
 endelse
 
-symsize=chrsz
+symsize=keyword_set(symsize) ? symsize : replicate(chrsz,n)
 dx=chrsz*cnvrtx
 dy=1.1*cnvrty*(y1-y0)/ysize ; dy=1.1*chrsz*cnvrty
 
@@ -513,10 +514,11 @@ for i=0,n-1 do begin
   if titles(i) eq '' then begin
 
     clr=color(jlbl)
+    sys=symsize(jlbl)
     if clr eq -1 then clr=!p.color
     ls=linestyle(jlbl)
-    ps=psym(jlbl)
-    
+    ps=cgsymcat(psym[jlbl])
+
     if (size(ps))(1) eq 7 then begin
        usersymbol,ps
       ps=8
@@ -533,16 +535,16 @@ for i=0,n-1 do begin
         ycbox=1.3*[-1,-1,1,1,-1]
       endelse
       usersym,xcbox,ycbox,/fill,color=clr
-      plots,xbar,ybar,psym=8,linestyle=ls,color=clr,/norm,symsize=symsize
+      plots,xbar,ybar,psym=8,linestyle=ls,color=clr,/norm,symsize=sys
       usersym,xcbox,ycbox
-      plots,xbar,ybar,psym=8,linestyle=ls,/norm,symsize=symsize,thick=thk
+      plots,xbar,ybar,psym=8,linestyle=ls,/norm,symsize=sys,thick=thk
     endif else begin
       if drawline then begin
         plots,xbar,ybar,psym=ps,linestyle=ls,color=clr,/norm,$
-            symsize=symsize,thick=thk
+            symsize=sys,thick=thk
       endif else begin
         if ps ne 0 then plots,max(xbar),max(ybar),psym=ps,color=clr,/norm,$
-            symsize=symsize,thick=thk
+            symsize=sys,thick=thk
       endelse
     endelse
 
@@ -577,6 +579,8 @@ for i=0,n-1 do begin
   yy=yy-dy
 endfor
 
+;reset usersym 8 to filled circle; default
+aa = findgen(17) * (!PI*2/16.) & usersym, cos(aa), sin(aa),/fill
 return
 end
   

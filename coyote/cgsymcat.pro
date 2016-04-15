@@ -90,6 +90,7 @@
 ;         44  : Filled right half circle.          FILLEDRIGHTHALFCIRCLE
 ;         45  : Star.                              STAR
 ;         46  : Filled star.                       FILLEDSTAR
+;         47  : Minus sign.                        MINUSSIGN
 ;       
 ; :Keywords:
 ;     color: in, optional, type=varies
@@ -202,7 +203,8 @@ FUNCTION cgSymCat, theInSymbol, COLOR=color, NAMES=names, THICK=thick
          'Right Half Circle', $
          'Filled Right Half Circle', $
          'Star', $
-         'Filled Star' ]
+         'Filled Star', $
+         'Minus Sign']
        
        RETURN, names
    ENDIF
@@ -275,15 +277,22 @@ FUNCTION cgSymCat, theInSymbol, COLOR=color, NAMES=names, THICK=thick
          'FILLEDRIGHTHALFCIRCLE':    theSymbol = 44
          'STAR':                     theSymbol = 45
          'FILLEDSTAR':               theSymbol = 46
+         'MINUSSIGN':                theSymbol = 47
          ELSE: Message, 'Symbol not defined.'
       ENDCASE
             
-   ENDIF ELSE theSymbol = theInSymbol[0]
+   ENDIF ELSE BEGIN
+
+        theSymbol = theInSymbol[0]
+        ; Is the first character a minus sign?
+        IF theInSymbol lt 0 THEN aMinusString = 1
+
+   ENDELSE
 
    ; Error checking.
    IF N_Elements(theSymbol) EQ 0 THEN RETURN, 0
    IF N_Elements(thick) EQ 0 THEN thick = (!P.Thick EQ 0) ? 1 : !P.Thick
-   IF (Abs(theSymbol) LT 0) OR (Abs(theSymbol) GT 46) THEN Message, 'Symbol number out of defined range.'
+   IF (Abs(theSymbol) LT 0) OR (Abs(theSymbol) GT 47) THEN Message, 'Symbol number out of defined range.'
    theFinalSymbol = Fix(Abs(theSymbol))
    
    ; Do you have a color?
@@ -313,7 +322,7 @@ FUNCTION cgSymCat, theInSymbol, COLOR=color, NAMES=names, THICK=thick
        7  : result = 7                                                                               ; X.
        8  :                                                                                          ; User defined with USERSYM.
        9  : UserSym, cos(phi), sin(phi), THICK=thick, COLOR=thisColor                                    ; Open circle.
-      10  : result = 10                                                                              ; Histogram type plot.
+      10  : result = 0;10                                                                              ; Histogram type plot.
       11  : UserSYm, [ -1, 0, 1, -1 ], [ 1, -1, 1, 1 ], THICK=thick, COLOR=thisColor                     ; Open downward facing triangle
       12  : UserSym, [ -1, 1, -1, -1 ], [1, 0, -1, 1 ], THICK=thick, COLOR=thisColor                     ; Open rightfacing triangle.
       13  : UserSym, [ 1, -1, 1, 1 ], [1, 0, -1, 1 ], THICK=thick, COLOR=thisColor                       ; Open leftfacing triangle.
@@ -364,13 +373,14 @@ FUNCTION cgSymCat, theInSymbol, COLOR=color, NAMES=names, THICK=thick
                      [ 0, .33, 1,.33,0,-.33,-1,-.33, 0], THICK=thick, COLOR=thisColor                                          ; Star.
       46  : UserSym, [-1,-.33, 0,.33,1, .33, 0,-.33,-1], $
                      [ 0, .33, 1,.33,0,-.33,-1,-.33, 0], /Fill, THICK=thick, COLOR=thisColor                                   ; Filled star.
+      47  : Usersym, [-1., 1], [0, 0], THICK=thick, COLOR=thisColor                                                          ; Minus Sign
       ELSE: Message, 'Cannot resolve the symbol. Please specify an integer between 0 and 46.'
    ENDCASE
 
    ; If this is a minus string, we have to modify the result and fix the input.
    IF Keyword_Set(aMinusString) THEN BEGIN
       result = -result
-      theInSymbol[0] = '-' + theInSymbol
+      if (size(theInSymbol[0],/type) eq 7) then theInSymbol[0] = '-' + theInSymbol
    ENDIF
    
    RETURN, result

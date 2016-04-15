@@ -335,7 +335,7 @@ PRO cgTaylorDiagram, stddev, correlation, $
   IF N_Elements(position) EQ 0 && (Total(!P.Multi) LE 0) && (Total(!P.Position) EQ 0.0) THEN BEGIN
      position = [0.125, 0.125, 0.9, 0.9]
   ENDIF
-   
+
   ; Initial plot in window.
 ;   cgDisplay, 680, 640
 ;   cgPlot, x, y, /NoData, XTITLE='Standard Deviation', YTITLE='Standard Deviation', $
@@ -356,7 +356,7 @@ PRO cgTaylorDiagram, stddev, correlation, $
 
   ; Multiple RMS circles
 	multi_cir = 1000          	;number of points of each RMS circle
-	ratio = 0.25    		;ratios for each circle: i.e. in increments of this value
+	ratio = 0.25 			;ratios for each circle: i.e. in increments of this value
 	number_cirs = stddev_max * 4 	;Number of RMS circles
 
   FOR i=0, number_cirs-1 DO BEGIN
@@ -368,7 +368,7 @@ PRO cgTaylorDiagram, stddev, correlation, $
     multi_circlesy = SQRT(ratio^2 - (multi_circlesx-ref_stddev)^2)
 
     cgPlotS, 0 > multi_circlesx < stddev_max, multi_circlesy, COLOR=c_stddev, LINESTYLE=1
-    number = String(ratio,f='(f4.2)')
+    number = i eq 0 ? 'RMS '+String(ratio,f='(f4.2)') : String(ratio,f='(f4.2)')
     IF (multi_circlesx[i+50] GT 0) AND (multi_circlesx[i+50] LT 1.5) THEN BEGIN
         cgText, multi_circlesx[i+50], multi_circlesy[i+50], number, $
            CHARSIZE=cgDefCharsize()*0.8, ALIGNMENT=1, /DATA, CLIP=0, COLOR=c_stddev

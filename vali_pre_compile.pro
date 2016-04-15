@@ -3,6 +3,10 @@
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
 @/cmsaf/nfshome/sstapelb/idl/file_name_info.pro
 @/cmsaf/nfshome/sstapelb/idl/win.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/coyote/cgsymcat.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/coyote/cgtaylordiagram.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/xmessage.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/curbox.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/lenstr.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/legend.pro
 @/cmsaf/nfshome/sstapelb/idl/max/is_win.pro

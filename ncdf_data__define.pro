@@ -2158,10 +2158,12 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 			if stregex(filen,'L3S',/bool,/fold) then level = 'l3s'
 		endif
 	endif
+
 	if where(tag_names(theglobattr) eq 'SENSOR') ge 0 then begin
 		tcd = (theglobattr).sensor
 		if verb then print,'SENSOR: ',tcd
 		if tcd eq 'MERISAATSR' then satname = 'aatme'
+		if tcd eq 'MERIS-AATSR' then satname = 'aatme'
 		if tcd eq 'AATSR' then satname = 'aatsr'
 		if tcd eq 'AVHRR_MERGED' then begin & satname = 'avhrrs' &  level = 'l3s' & end
 		if tcd eq 'MODIS_MERGED' then begin & satname = 'modises' &  level = 'l3s' & end
@@ -3254,15 +3256,17 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','MSG']; EASE-grid  = equal angle 'Lambert' ??
 	      self.projlist = Widget_combobox(bla, Value=[proj_list],UVALUE=[proj_list],Scr_XSize=85,Scr_YSize=28,UNAME='PLOTS_PROJLIST')
 
-	    label = Widget_Label(row, Value='  Add Text      Bin/ZDim Rot/Qu  P0lon  P0lat ', SCR_XSIZE=270)
-	    bla = Widget_Base(row, Column=5,Frame=0, Scr_XSize=270)
-	      self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=89,/Editable)
+	    label = Widget_Label(row, Value='  Add Text  Bin/Z  Rot/Qu  Magn.  P0lon  P0lat ', SCR_XSIZE=270)
+	    bla = Widget_Base(row, Column=6,Frame=0, Scr_XSize=270)
+	      self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 	      self.zkompID   = Widget_combobox(bla,VALUE=strcompress(indgen(12),/rem),UVALUE=strcompress(indgen(12),/rem),Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_ZLIST')
 ; 	      rotlist        = string(indgen(8),f='(i1)')
               rotlist        = string(indgen(20)/2.,f='(f3.1)')
 	      self.rotateID  = Widget_combobox(bla, Value=[rotlist],UVALUE=[rotlist],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_ROTATELIST') 
+              maglist        = string(indgen(10),f='(i1)')
+	      self.magniID   = Widget_combobox(bla,VALUE=maglist,UVALUE=maglist,Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_MAGNIFYLIST')
 	      self.p0lonID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
-	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
+	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=35,/Editable)
 
 	    label = Widget_Label(row,Value='ISCCP-CT  Color Tables                    ', SCR_XSIZE=270)
 	    bla = Widget_Base(row, Column=2,Frame=0, Scr_XSize=270)
@@ -3444,6 +3448,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	endif else begin
 		widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
 	endelse
+	;magnify defaults
+	self.magnify = 1
 	;set defaults for comboboxes
 	self.varname_plotID = varName
 	; 3rd dimension
@@ -3496,6 +3502,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ; 		Widget_Control, self.zkompID   , Set_Value=''
 		Widget_Control, self.zkompID   , SET_COMBOBOX_SELECT=0
 ; 		Widget_Control, self.rotateID  , Set_Value=''
+		Widget_Control, self.magniID   , SET_COMBOBOX_SELECT=1
 		Widget_Control, self.rotateID  , SET_COMBOBOX_SELECT=0
 ;  		Widget_Control, self.pmultID   , Set_Value=''
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
@@ -3503,7 +3510,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ; 		Widget_Control, self.histct    , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.selftxt   , Set_Value=''
-
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
 		Widget_Control, self.p0lonID   , Set_Value=''
@@ -3766,7 +3772,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
-		dim3=dim3,rot=rot,addtext=addtext,found=found
+		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify
 
 	found=1
 ; 	varName=self.varname_plotID
@@ -3830,6 +3836,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	if month eq '--' then month = ''
 	if day   eq '--' then day   = ''
 	dim3 = self.dim3
+	magnify = self.magnify
 	dtyp=self.leveltype
 
 	widget_control,self.orbID,get_value=orbit
@@ -4130,7 +4137,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant, $
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
 				mls,tro,mln,arc,pm7,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
@@ -4252,7 +4259,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3
+				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				return
 			endif
@@ -4272,7 +4279,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3
+				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcdts and pcsing then begin
@@ -4282,7 +4289,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
-				error=error,log=log,dim3=dim3
+				error=error,log=log,dim3=dim3,magnify=magnify
 				if show_values then show_pixel_value, out.bild, out.lon, out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcmat then begin
@@ -4299,7 +4306,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				verbose = verbose, other = oth, ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, $
 				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),rot=rot
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),rot=rot,magnify=magnify
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pczm and pcsing then begin
@@ -4309,7 +4316,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab,/zonal_only, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,log=log,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,magnify=magnify
 			endif
 			if pczm and pcmult then begin
 				if verbose then print,'Zonal Average Multi Time Step'
@@ -4318,7 +4325,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
 				robinson=robinson,show_values = show_values,nobar=nobar, stereographic = stereographic, ztext = ztext,log=log, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),magnify=magnify
 			endif
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
@@ -4327,25 +4334,24 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
 				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext
-				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID
+				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID,magnify=magnify
 			endif
 			if pcvar and pcmult then begin
 				if verbose then print,'Map2d Multi Time Step'
 				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/mean_2d, verbose = verbose,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
-				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,$
-				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log
+				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
+				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log,$
+				show_values = show_values
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcmatts then begin
-				; hier kommt Bias/bc-rmse rein
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram, year, month, day, file1=file, sat=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
 				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,time_series=pcmult
 			endif
 			if pcms and pcmult then begin
-; 				unset use oplot change to something new
-; 				if verbose then print,'Multi-Sat Time Series'
+ 				if verbose then print,'Currently Unset'
 			endif
 			if pchov then begin
 				if ptr_valid(self.out_hovmoeller) then begin
@@ -4354,7 +4360,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Hovmoeller Time Series'
 				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
 				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit
-				if show_values then show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
+				if show_values then begin
+					if ~keyword_set(nobar) then begin
+						print,'Set "No Bar" to get Pixel Values'
+					endif else show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
+				endif
 ; 				self.out_hovmoeller = ptr_new(out.bild)
 				self.out_hovmoeller = ptr_new(out)
 				if ~found then opl = 0 > (self.oplotnr -=1 )
@@ -4387,7 +4397,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls, $
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
 				tro,mln,arc,pm7,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year	, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
@@ -4485,7 +4495,7 @@ if sel then sat  = self.satname
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide	, $
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,log=log	, $
 				other=oth,ctable=ctab, level=level,nobar=nobar, stereographic = stereographic		, $
-				/all_parameter,dim3=dim3,coverage=cov,rot=rot
+				/all_parameter,dim3=dim3,coverage=cov,rot=rot,magnify=magnify
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if is_jch(varname) and total(strlowcase(hct[0]) eq ['1d','1d_cot','1d_ctp','max']) then begin
 				satn1  = sat_name(algo,sat)
@@ -4529,7 +4539,7 @@ if sel then sat  = self.satname
 					limit=limit,zoom=zoom,globe=globe,p0lon=p0lon, stereographic = stereographic,msg_proj=msg, $
 					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,log=log		, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
-					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar,cov=cov
+					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar,cov=cov,magnify=magnify
 					; file2
 					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname,mini=mini,maxi=maxi,sat=satn, $
 					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
@@ -4537,7 +4547,7 @@ if sel then sat  = self.satname
 					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,msg_proj=msg, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0],log=log, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f2str,nobar=nobar	, $
-					stereographic = stereographic,cov=cov
+					stereographic = stereographic,cov=cov,magnify=magnify
 					if show_values and ~pchist and ~pczm and ~pcmts then show_pixel_value, bild, lon,lat	, $
 					data = varname, unit = unit, wtext = self.showpvalID
 				endelse
@@ -4562,7 +4572,7 @@ if sel then sat  = self.satname
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson	,log=log, $
 				diff_only=pcdts,hist_only=pchist,maps_only=pcvar,other=oth,ctable=ctab,zonal_only=pczm	, $
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
-				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot
+				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
@@ -4578,7 +4588,7 @@ if sel then sat  = self.satname
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls	, $
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify	, $
 				tro,mln,arc,pm7,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year	, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
@@ -4629,6 +4639,7 @@ if sel then sat  = self.satname
 					file  = ''
 					found = 1
 					datum = ''
+					level   = self.level
 				endif else if sel and none then begin
 					file    = self.directory+'/'+self.filename
 					year    = self.year
@@ -4668,7 +4679,11 @@ if sel then sat  = self.satname
 				endif
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,$
 				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc
-				if show_values and is_defined(out) then show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
+				if show_values and is_defined(out) then begin
+					if ~keyword_set(nobar) then begin
+						print,'Set "No Bar" to get Pixel Values'
+					endif else show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
+				endif
 ; 				if is_defined(out) then self.out_hovmoeller = ptr_new(out.bild)
 				if is_defined(out) then self.out_hovmoeller = ptr_new(out)
 				if ~found then opl = 0 > (self.oplotnr -=1 )
@@ -4697,7 +4712,7 @@ if sel then sat  = self.satname
 				endif
 				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,algo=algo	,$
 				timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0]			,$
-				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
+				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcms and pcmult then begin
 				; Unset change to something new!
@@ -4713,7 +4728,8 @@ if sel then sat  = self.satname
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],obj_out=obj_out,addtext = addtext[0]
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],obj_out=obj_out,addtext = addtext[0],$
+				magnify=magnify
 
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
@@ -4750,6 +4766,8 @@ if sel then sat  = self.satname
 	theName = Widget_Info(event.id, /UNAME)
 	if theName eq 'PLOTS_PROJLIST' then begin
 		self.proj = list[event.index]
+	endif else if theName eq 'PLOTS_MAGNIFYLIST' then begin
+		self.magnify=list[event.index]
 	endif else if theName eq 'PLOTS_CTLIST' then begin
 		self.ctab=list[event.index]
 	endif else if theName eq 'PLOTS_YEARLIST' then begin
@@ -5750,6 +5768,8 @@ PRO NCDF_DATA__DEFINE, class
              orbID:'',                 $
              zkompID:'',               $
              dim3:0L,                  $
+             magniID:'',               $
+             magnify:0,                $
              rotateID:'',              $
              rot:0.,                   $
              histct:'',                $
