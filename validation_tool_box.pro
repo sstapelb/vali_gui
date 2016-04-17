@@ -679,6 +679,68 @@ function low_pass_filtering,array,no_data_value=no_data_value,fill_index=fill_in
 
 end
 ;------------------------------------------------------------------------------------------
+function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
+			complement = complement, antarctic = antarctic, arctic = arctic			, $ 
+			index = index, count= count, found = found
+
+	found = 1
+	count = 0
+	index =-1
+	lim = keyword_set(limit) ? limit   : [-90.0,-180., 90.0,180.]
+	if keyword_set(antarctic) then lim = [-90.0,-180.,-60.0,180.]
+	if keyword_set(arctic)    then lim = [ 60.0,-180., 90.0,180.]
+
+	if keyword_set(coverage) then begin
+		cov = strlowcase(coverage)
+		if cov eq 'sea' then begin
+			sea  = 1
+			land = 0
+			cov  = 'full'
+		endif else if cov eq 'land' then begin
+			sea  = 0
+			land = 1
+			cov  = 'full'
+		endif else if stregex(cov,'_land',/bool) then begin
+			sea  = 0
+			land = 1
+			cov  = strreplace(cov,'_land','')
+		endif else if stregex(cov,'_sea',/bool) then begin
+			sea  = 1
+			land = 0
+			cov = strreplace(cov,'_sea','')
+		endif
+		case cov of
+			''			: lim = [-90.0,-180.0, 90.0,180.0]
+			'full'			: lim = [-90.0,-180.0, 90.0,180.0]
+			'antarctica'		: lim = [-90.0,-180.0,-60.0,180.0]
+			'midlat_south'		: lim = [-60.0,-180.0,-30.0,180.0]
+			'tropic'		: lim = [-30.0,-180.0, 30.0,180.0]
+			'midlat_north'		: lim = [ 30.0,-180.0, 60.0,180.0]
+			'arctic'		: lim = [ 60.0,-180.0, 90.0,180.0]
+			'midlat_trop'		: lim = [-60.0,-180.0, 60.0,180.0]
+			'northern_hemisphere'	: lim = [  0.0,-180.0, 90.0,180.0]
+			'southern_hemisphere'	: lim = [-90.0,-180.0,  0.0,180.0]
+			else			: begin & print,'coverage not defined!' & return,-1 & found = 0 & end
+		endcase
+	endif
+
+	result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+	if keyword_set(land) then begin
+		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+		result = (result eq 1) and (ddem ne 0)
+	endif else if keyword_set(sea) then begin
+		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+		result = (result eq 1) and (ddem eq 0)
+	endif
+
+	if keyword_set(complement) then result = (result eq 0)
+
+	index = where(result eq 1,count)
+
+	return, result
+
+end
+;------------------------------------------------------------------------------------------
 function is_the_same,algo,reference,satellite=satellite
 
 	alg = strlowcase(algo[0])
@@ -1073,6 +1135,26 @@ function percentile,in_data,value, niter = niter, no_data_value=no_data_value
 	sidx = sort(temp)
 	fact = (value[0] - rnd(value[0],/down,cc))/cc
 	return,temp[sidx[round(fact * count) < (count -1)]]
+end
+;-------------------------------------------------------------------------------------------------------------------------
+function get_perc_from_hist, histo, value, mini, maxi, bin, data = data
+
+	bin_center_value = (vector(mini,maxi,n_elements(histo))+bin/2.) < maxi
+	count  = total(histo)
+	sums   = fltarr(n_elements(histo))
+	for i = 0,n_elements(histo) -1 do begin
+		sums[i] = total(histo[0:i])
+		data = i eq 0 ? replicate(bin_center_value[i],histo[i]) : [data,replicate(bin_center_value[i],histo[i])]
+	endfor
+	result = fltarr(n_elements(value))
+
+	for i = 0,n_elements(value) -1 do begin
+		aim   = count * value[i]
+		idx   = where(abs(sums-aim) eq min(abs(sums-aim)),idx_cnt)
+		result[i] = idx_cnt gt 0 ? bin_center_value[idx[0]] : -1
+	endfor
+
+	return, result
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function pgrid,range,interval
@@ -5962,9 +6044,6 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		return,-1.
 	endif
 
-	ls = keyword_set(land) or keyword_set(sea)
-	if keyword_set(antarctic) then limit = [-90.0,-180,-60.0,180]
-	if keyword_set(arctic) then limit = [ 60.0,-180, 90.0,180]
 	alg = ref2algo(algoname)
 	dum  = array
 	si   = size(dum,/dim)
@@ -5975,32 +6054,10 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		return, -1.
 	endif
 
-	bild = fltarr(si[2:3])
-	lidx_cnt = 0
-	lidx = !NULL
-	if ls or keyword_set(limit) then begin
-		if keyword_set(limit) then begin
-			if ~keyword_set(lon) or ~keyword_set(lat) then make_geo,lon,lat,grid=get_grid_res(dum[*,*,0,0])
-			dumidx = where(between(lon,limit[1],limit[3]) and $
-			between(lat,limit[0],limit[2]),complement=lidx,ncomplement=lidx_cnt)
-		endif
-		if ls then begin
-			if keyword_set(dem) then begin
-				found_dem = 1
-			endif else begin
-				dem = get_dem(grid=(360./float(si[0])),found=found_dem)
-			endelse
-			if lidx_cnt gt 0 and found_dem then dem[lidx] = 9999.
-			if keyword_set(land) and found_dem then dumidx = where(dem ne 0 and dem ne 9999.,complement=lidx,ncomplement=lidx_cnt)
-			if keyword_set(sea)  and found_dem then dumidx = where(dem eq 0,complement=lidx,ncomplement=lidx_cnt)
-		endif
-		if lidx_cnt eq 0 then begin
-			print,'Get_2d_rel_hist_from_jch: Found no valid data points. Area too small?'
-			found = 0
-			return,-1
-		endif
-	endif
+	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, $
+				antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt)
 
+	bild = fltarr(si[2:3])
 	for i = 0,si[2] -1 do begin & $
 		for j = 0,si[3] -1 do begin & $
 			; Ab sofort werden auch 4dim colls in read_hdf4 rotiert
@@ -6056,9 +6113,8 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 					xtickname=xtickname, bin_val=bin_val, ytitle = ytitle, hist_name=hist_name, found=found, $
 					var_dim_names=var_dim_names, file=file
 
-	bild  = array
 	found = 1.
-	si    = size(bild,/dim)
+	si    = size(array,/dim)
 
 	if n_elements(si) ne 3 then begin
 		if ~(n_elements(si) eq 4 and stregex(data,'ratio',/bool,/fold)) then begin
@@ -6067,43 +6123,18 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 			return,-1l
 		endif
 	endif
+; 
+	make_geo,lon,lat,grid=get_grid_res(array[*,*,0,0]),file = file
 
-	ls = keyword_set(land) or keyword_set(sea)
-	if ls then dem = get_dem(grid=get_grid_res(array[*,*,0]))
+	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, $
+				antarctic = antarctic, arctic = arctic, index = lidx, count = lidx_cnt)
 
-	if keyword_set(limit)     then dumlimit = limit
-	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
-	if keyword_set(arctic)    then dumlimit = [ 60.0,-180, 90.0,180]
-	if keyword_set(dumlimit)  then begin
-		make_geo,lon,lat,grid=get_grid_res(bild[*,*,0,0]),file = file
-		qw  = where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),qw_cnt)
-		if qw_cnt eq 0 then begin
-			found = 0.
-			return,-1
-		endif
-		ind2d = array_indices(lat,qw)
-		mimax = minmax(ind2d[0,*])
-		mimay = minmax(ind2d[1,*])
-		bild = bild[mimax[0]:mimax[1],mimay[0]:mimay[1],*,*]
-		if ls then dem = dem[mimax[0]:mimax[1],mimay[0]:mimay[1]]
-	endif
-
-	if ls then begin
-		dum    = bild * 0
-		ddem   = keyword_set(land) ? (dem ne 0) : (dem eq 0)
-		dd_idx = where(ddem eq 1,dd_cnt)
-		si     = [si,1]
-		if dd_cnt gt 0 then begin
-			for j=0,si[3]-1 do begin & $
-				for i=0,si[2]-1 do begin & $
-					dum[*,*,i,j] = reform(bild[*,*,i,j]) * ddem & $
-				endfor & $
-			endfor
-		endif
-		bild = dum
-	endif
-
-	bild = total(total(bild>0,1),1)
+	dum    = array * 0
+	si     = [si,1]
+	for j=0,si[3]-1 do begin
+		for i=0,si[2]-1 do dum[*,*,i,j] = reform(array[*,*,i,j]) * area
+	endfor
+	bild = total(total(dum>0,1),1)
 
 	; works for esacci and clara2
 	if stregex(data,'ctp',/fold,/bool) then begin

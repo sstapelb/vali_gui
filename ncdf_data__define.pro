@@ -3286,15 +3286,19 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.orbID     = Widget_Text(bla,Value='1',SCR_XSIZE=45,/Editable,UNAME='ORBITS_TEXT')
 	      level_list     = ['L3C','L3S','L3U','L3DM','L3PM','L3DH','L2B_SUM','L2','L1']
 	      self.levelID   = Widget_combobox(bla,VALUE=['??',level_list],UVALUE=['??',level_list],Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_DAYTYPELIST')
-	    bla = Widget_Base(row, row=3, /Exclusive,Frame=1, XSize=270)
-	      self.allpixID  = Widget_Button(bla, Value='All  ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.antarcID  = Widget_Button(bla, Value='Antarctica   ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.midlatsID = Widget_Button(bla, Value='MidLat South ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.seapixID  = Widget_Button(bla, Value='Sea  ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.tropicID  = Widget_Button(bla, Value='Tropics      ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.midlatnID = Widget_Button(bla, Value='MidLat North ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.landpixID = Widget_Button(bla, Value='Land ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.arcticID  = Widget_Button(bla, Value='Arctic       ', UVALUE='SET_PLOT_DEFAULTS')
+	    bla = Widget_Base(row, col=3, /Exclusive,Frame=1, XSize=270)
+	      self.allpixID  = Widget_Button(bla, Value='All Surfaces  ', UVALUE='SET_PLOT_DEFAULTS')
+	      self.landpixID = Widget_Button(bla, Value='Land Only ', UVALUE='SET_PLOT_DEFAULTS')
+	      self.seapixID  = Widget_Button(bla, Value='Sea Only    ', UVALUE='SET_PLOT_DEFAULTS')
+	    bla = Widget_Base(row, row=2, /Exclusive,Frame=1, XSize=270)
+	      self.globalID  = Widget_Button(bla, Value='Global', UVALUE='SET_PLOT_DEFAULTS')
+	      self.arcticID  = Widget_Button(bla, Value='Arctic', UVALUE='SET_PLOT_DEFAULTS')
+	      self.midlatnID = Widget_Button(bla, Value='MidLN', UVALUE='SET_PLOT_DEFAULTS')
+	      self.northhmID = Widget_Button(bla, Value='NH', UVALUE='SET_PLOT_DEFAULTS')
+	      self.southhmID = Widget_Button(bla, Value='SH', UVALUE='SET_PLOT_DEFAULTS')
+	      self.tropicID  = Widget_Button(bla, Value='Tropic', UVALUE='SET_PLOT_DEFAULTS')
+	      self.antarcID  = Widget_Button(bla, Value='AntArc', UVALUE='SET_PLOT_DEFAULTS')
+	      self.midlatsID = Widget_Button(bla, Value='MidLS', UVALUE='SET_PLOT_DEFAULTS')
 	      self.pm70ID    = Widget_Button(bla, Value=''+string(177b)+'60'+string(176b)+' Lat     ', UVALUE='SET_PLOT_DEFAULTS')
 	    self.sat_base = Widget_Base(row, Column=5, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
 ; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05' , UVALUE='SET_PLOT_DEFAULTS')
@@ -3460,11 +3464,14 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.proj = 'Default'
 	; day,month,year
 	yy_idx = where(self.year eq yy_list,yy_cnt)
-	self.yy = ([yy_list,''])[yy_idx]
+; 	self.yy = ([yy_list,''])[yy_idx]; does not work with IDL versions below 8
+	self.yy = yy_cnt gt 0 = yy_list[yy_idx]
 	mm_idx = where(self.month eq mm_list,mm_cnt)
-	self.mm = ([mm_list,''])[mm_idx]
+; 	self.mm = ([mm_list,''])[mm_idx]; does not work with IDL versions below 8
+	self.mm = mm_cnt gt 0 = mm_list[mm_idx]
 	dd_idx = where(self.day eq dd_list,dd_cnt)
-	self.dd = ([dd_list,'--'])[dd_idx]
+; 	self.dd = ([dd_list,'--'])[dd_idx] ; does not work with IDL versions below 8
+	self.dd = dd_cnt gt 0 ? dd_list[dd_idx] : '--'
 	if yy_cnt gt 0 then yy_idx++
 	if mm_cnt gt 0 then mm_idx++
 	if dd_cnt gt 0 then dd_idx++
@@ -3520,9 +3527,12 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.pixvalID  , Set_Button=0
 		Widget_Control, self.verbID    , Set_Button=0
 		Widget_Control, self.allpixID  , Set_Button=1
-; 		Widget_Control, self.invID     , Set_Button=0
 		Widget_Control, self.landpixID , Set_Button=0
 		Widget_Control, self.seapixID  , Set_Button=0
+; 		Widget_Control, self.invID     , Set_Button=0
+		Widget_Control, self.globalID  , Set_Button=1
+		Widget_Control, self.northhmID , Set_Button=0
+		Widget_Control, self.southhmID , Set_Button=0
 		Widget_Control, self.antarcID  , Set_Button=0
 		Widget_Control, self.midlatsID , Set_Button=0
 		Widget_Control, self.tropicID  , Set_Button=0
@@ -3767,7 +3777,7 @@ END ;---------------------------------------------------------------------------
 
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
-		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7		, $
+		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
 		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year,month,day	, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
@@ -3865,6 +3875,9 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	mln         = Widget_Info(self.midlatnID, /BUTTON_SET)
 	arc         = Widget_Info(self.arcticID, /BUTTON_SET)
 	pm7         = Widget_Info(self.pm70ID, /BUTTON_SET)
+	glo         = Widget_Info(self.globalID, /BUTTON_SET)
+	nhm         = Widget_Info(self.northhmID, /BUTTON_SET)
+	shm         = Widget_Info(self.southhmID, /BUTTON_SET)
 
 ; 	load        = Widget_Info(self.loaded, /BUTTON_SET)
 	gac         = Widget_Info(self.refgac, /BUTTON_SET)
@@ -3937,9 +3950,13 @@ l1g = 0
 			globe = 1 
 			p0lat = 90
 		endelse
-	end 
+	end
 	if pm7 then limit = [-60.0,-180, 60.0,180]
+	if nhm then limit = [  0.0,-180, 90.0,180]
+	if shm then limit = [-90.0,-180,  0.0,180]
 
+	if keyword_set(p0lon) and keyword_set(limit) then limit = limit+[0,p0lon,0,p0lon]
+	
 	case strlowcase(self.proj) of 
  		'stereo'	: stereographic = 1
 		'mollweide'	: mollweide = 1
@@ -3985,10 +4002,12 @@ l1g = 0
 	blabal = where(setlist eq 1,bla_cnt)
 	sat = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
 
-	if total([land,sea,ant,mls,tro,mln,arc,pm7]) then begin
-		cov = ['land','sea','antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop']
-		cov = cov[where([land,sea,ant,mls,tro,mln,arc,pm7] eq 1)]
+	if total([ant,mls,tro,mln,arc,pm7,shm,nhm]) then begin
+		cov = ['antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop','southern_hemisphere','northern_hemisphere']
+		cov = cov[where([ant,mls,tro,mln,arc,pm7,shm,nhm] eq 1)]
 	endif else cov = ''
+	if land then cov = cov+'_land'
+	if sea  then cov = cov+'_sea'
 
 	if not keyword_set(maxi) then free,maxi
 	if not keyword_set(mini) then free,mini
@@ -4138,7 +4157,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
+				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
@@ -4398,7 +4417,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year	, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
@@ -4588,8 +4607,8 @@ if sel then sat  = self.satname
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify	, $
-				tro,mln,arc,pm7,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year	, $
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
@@ -5785,6 +5804,9 @@ PRO NCDF_DATA__DEFINE, class
              invID:0L,                 $
              enablelim:0l,             $
              enablemima:0l,            $
+             globalID:0L,              $
+             northhmID:0L,             $
+             southhmID:0L,             $
              allpixID:0L,              $
              seapixID:0L,              $
              landpixID:0L,             $
