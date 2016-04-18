@@ -662,22 +662,22 @@ function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=
 
 end
 ;------------------------------------------------------------------------------------------
-function low_pass_filtering,array,no_data_value=no_data_value,fill_index=fill_index
-
-	ndv = keyword_set(no_data_value) ? no_data_value[0] : -999.
-
-	kernel = gaussian_function([1,1], width=5, maximum=max(array))
-
-	image = convol(array,kernel,invalid=ndv,missing=ndv,/edge_truncate,/normalize)
-
-	if keyword_set(fill_index) then begin
-		dum = array
-		dum[fill_index] = image[fill_index]
-		image = temporary(dum)
-	endif
-	return,image
-
-end
+; function low_pass_filtering,array,no_data_value=no_data_value,fill_index=fill_index
+; 
+; 	ndv = keyword_set(no_data_value) ? no_data_value[0] : -999.
+; 
+; 	kernel = gaussian_function([1,1], width=5, maximum=max(array))
+; 
+; 	image = convol(array,kernel,invalid=ndv,missing=ndv,/edge_truncate,/normalize)
+; 
+; 	if keyword_set(fill_index) then begin
+; 		dum = array
+; 		dum[fill_index] = image[fill_index]
+; 		image = temporary(dum)
+; 	endif
+; 	return,image
+; 
+; end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
 			complement = complement, antarctic = antarctic, arctic = arctic			, $ 
@@ -1252,61 +1252,79 @@ function cci_name, sat, algoname_only = algoname_only
 	return, names
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-function patmos_sats,year,month, ampm=ampm	,$ ; ampm := 0  am,1 pm, 2 ampm
-				 node=node	,$ ; node of the specified sat (asc,des)
-				which=which	   ; which file from database
-
+function noaa_primes,year,month, ampm=ampm		,$ ; ampm := 0  am,1 pm, 2 ampm
+				 node=node		,$ ; node of the specified sat (asc,des)
+				 which=which		,$ ; which file from database
+				 patmos=patmos
+				
 	ampm = adv_keyword_set(ampm) ? ampm : 2 ; default ist am+pm
-
+	pmx  = keyword_set(patmos)
+	mm   = fix(month)
+	
 	; from ncdf_gewex__define.pro
 	case fix(year) of
-		1981:  sats = ['nn','07']
+		1981:  sats = ['nn',(mm le 9 ? 'nn':'07')]
 		1982:  sats = ['nn','07']
 		1983:  sats = ['nn','07']
 		1984:  sats = ['nn','07']
-		1985:  sats = ['nn',(fix(month) le 2 ? 'nn':'09')]
+		1985:  sats = pmx ? ['nn',(mm le 2 ? 'nn':'09')] : ['nn',(mm le 2 ? '07':'09')]
 		1986:  sats = ['nn','09']
 		1987:  sats = ['10','09']
-		1988:  sats = ['10',(fix(month) le 10 ? '09':'nn')]
+		1988:  sats = ['10',(mm le 10 ? '09':'nn')]
 		1989:  sats = ['10','11']
 		1990:  sats = ['10','11']
 		1991:  sats = ['10','11']
 		1992:  sats = ['12','11']
 		1993:  sats = ['12','11']
-		1994:  sats = ['12',(fix(month) le 9 ? '11':'nn')]
-		1995:  sats = ['12',(fix(month) ge 7 ? '14':'nn')]
+		1994:  sats = ['12',(mm le 9 ? '11':'nn')]
+		1995:  sats = ['12',(mm ge 7 ? '14':'nn')]
 		1996:  sats = ['12','14']
 		1997:  sats = ['12','14']
-		1998:  sats = [(fix(month) ge 10 ? '15':'nn'),'14']  ; 15 die letzten tage
+		1998:  sats = [(mm ge 10 ? '15':'nn'),'14']  ; 15 die letzten tage
 		1999:  sats = ['15','14']  ; 14 only odd days
 		2000:  sats = ['15','14']
 		2001:  sats = ['15','16']
-		2002:  sats = ['15','16']
-		2003:  sats = ['15','16']
-		2004:  sats = ['15','16']
-		2005:  sats = ['15','16']
-		2006:  sats = ['15','18']
-		2007:  sats = ['15','18']
-		2008:  sats = ['15','18']
-		2009:  sats = ['15','18'] ; launch noaa19 Feb/2009 
+		2002:  sats = pmx ? ['15','16'] : [(mm le 6 ? '15':'17'),'16']
+		2003:  sats = pmx ? ['15','16'] : ['17','16']
+		2004:  sats = pmx ? ['15','16'] : ['17','16']
+		2005:  sats = pmx ? ['15','16'] : ['17',(mm le 4 ? '16':'18')]
+		2006:  sats = pmx ? ['15','18'] : [(mm le 10 ? '17':'MA'),'18']
+		2007:  sats = pmx ? ['15','18'] : ['MA','18']
+		2008:  sats = pmx ? ['15','18'] : ['MA','18']
+		2009:  sats = pmx ? ['15','18'] : ['17','19']; launch noaa19 Feb/2009 
+		2010:  sats = pmx ? ['nn','nn'] : ['17','19'] 
+		2011:  sats = pmx ? ['nn','nn'] : ['17','19'] 
+		2012:  sats = pmx ? ['nn','nn'] : ['MA','19'] 
+		2013:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
+		2014:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
+		2015:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
+		2016:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
 		else:  sats = ['nn','nn']
 	endcase
 
 	if ampm eq 0 then begin ; am
-		sats  = sats[0]
 		which = 'AM'
+		sats  = sats[0]
 	endif else if ampm eq 1 then begin ; pm
-		sats = sats[1]
 		which = 'PM'
+		sats  = sats[1]
 	endif else if ampm eq 2 then begin
-		sats = sats[where(sats ne 'nn',/null)]
 		which = 'AMPM'
+		idx  = where(sats ne 'nn',idxcnt)
+		if idxcnt gt 0 then sats = sats[idx] else return,'Not Present'
+		for i = 0, idxcnt -1 do begin
+			sats[i] = strmid(sats[i],0,1) eq 'M' ? 'METOP-'+strmid(sats[i],1,1) : 'NOAA-'+sats[i]
+		endfor
+		return, strjoin(sats,',')
 	endif else begin
 		which = 'UNKNOWN'
 		return,-1
 	endelse
-	
-	return, (sats[0] eq 'nn'? 'Not Present' : 'NOAA-'+strjoin(sats,','))
+
+	if sats[0] eq 'nn' then return, 'Not Present'
+	if sats[0] eq 'MA' then return, 'METOP-A'
+	if sats[0] eq 'MB' then return, 'METOP-B'
+	return, 'NOAA-'+sats[0]
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
@@ -1317,35 +1335,37 @@ function noaa_ampm, satellite, ampm = ampm
 	ampm = 2
 
 	case sat of
-		'tirosn'		: result = 'pm'
+		'noaaam'	: result = 'am'
+		'noaapm'	: result = 'pm'
+		'tirosn'	: result = 'pm'
 		'noaa5'		: result = 'pm'
-		'noaa05'		: result = 'pm'
+		'noaa05'	: result = 'pm'
 		'noaa6'		: result = 'am'
-		'noaa06'		: result = 'am'
+		'noaa06'	: result = 'am'
 		'noaa7'		: result = 'pm'
-		'noaa07'		: result = 'pm'
+		'noaa07'	: result = 'pm'
 		'noaa8'		: result = 'am'
-		'noaa08'		: result = 'am'
+		'noaa08'	: result = 'am'
 		'noaa9'		: result = 'pm'
-		'noaa09'		: result = 'pm'
-		'noaa10'		: result = 'am'
-		'noaa11'		: result = 'pm'
-		'noaa12'		: result = 'am'
-		'noaa14'		: result = 'pm'
-		'noaa15'		: result = 'am'
-		'noaa16'		: result = 'pm'
-		'noaa17'		: result = 'am'
-		'noaa18'		: result = 'pm'
-		'noaa19'		: result = 'pm'
-		'metopa'		: result = 'am'
-		'metopb'		: result = 'am'
+		'noaa09'	: result = 'pm'
+		'noaa10'	: result = 'am'
+		'noaa11'	: result = 'pm'
+		'noaa12'	: result = 'am'
+		'noaa14'	: result = 'pm'
+		'noaa15'	: result = 'am'
+		'noaa16'	: result = 'pm'
+		'noaa17'	: result = 'am'
+		'noaa18'	: result = 'pm'
+		'noaa19'	: result = 'pm'
+		'metopa'	: result = 'am'
+		'metopb'	: result = 'am'
 		'metop01'	: result = 'am'
 		'metop02'	: result = 'am'
-		'metop1'		: result = 'am'
-		'metop2'		: result = 'am'
+		'metop1'	: result = 'am'
+		'metop2'	: result = 'am'
 		'npp'		: result = 'pm'
-		'allsat'		: result = 'ampm'
-		'avhrrs'		: result = 'ampm'
+		'allsat'	: result = 'ampm'
+		'avhrrs'	: result = 'ampm'
 		'modises'	: result = 'ampm'
 		'aqua'		: result = 'pm'
 		'terra'		: result = 'am'
@@ -1387,7 +1407,7 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		'pmx'	: begin
 				algon = 'PATMOS-X'
 				if lev eq 'l3c' then $
-				satn  = keyword_set(year) and keyword_set(month) ? patmos_sats(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : ''
+				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which,/patmos) : ''
 			  end
 		else	: algon = strupcase(algo)
 	endcase
@@ -3107,6 +3127,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		'AVHRR' : begin
 				case alg of
 					'ESACCI': begin
+
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strupcase(lev)+'/'+yyyy+'/'+mm+'/'+dd+'/'
 							if lev eq 'l2' then begin 
 								sat = strjoin(strsplit(sat,/ext,'-'))
@@ -3198,8 +3219,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						end
 					'PATMOS': begin
 							if lev eq 'l3c' then begin
-								satpat = patmos_sats(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which)
-								if strreplace(satpat[0],['-','0'],['','']) eq strreplace(sat[0],['-','0'],['','']) then begin
+								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos)
+								if strreplace(satpat[0],['-','0'],['','']) eq strreplace(sat[0],['-','0'],['','']) or $
+									sat[0] eq 'NOAA-AM' or sat[0] eq 'NOAA-PM' then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
 									if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end

@@ -3319,8 +3319,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.noaa19    = Widget_Button(self.sat_base, Value='N19', UVALUE='SET_PLOT_DEFAULTS')
 	      self.metopa    = Widget_Button(self.sat_base, Value='MA', UVALUE='SET_PLOT_DEFAULTS')
 	      self.metopb    = Widget_Button(self.sat_base, Value='MB', UVALUE='SET_PLOT_DEFAULTS')
-	      self.AMsat     = Widget_Button(self.sat_base, Value='AM', UVALUE='SET_PLOT_DEFAULTS')
-	      self.PMsat     = Widget_Button(self.sat_base, Value='PM', UVALUE='SET_PLOT_DEFAULTS')
+	      self.noaaAM     = Widget_Button(self.sat_base, Value='AM', UVALUE='SET_PLOT_DEFAULTS')
+	      self.noaaPM     = Widget_Button(self.sat_base, Value='PM', UVALUE='SET_PLOT_DEFAULTS')
 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
 	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
 	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
@@ -3571,8 +3571,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.terra     , Set_Button=(self.satname eq 'terra'  ? 1:0)
 		Widget_Control, self.avhrrs    , Set_Button=(self.satname eq 'avhrrs' ? 1:0)
 		Widget_Control, self.modises   , Set_Button=(self.satname eq 'modises'? 1:0)
-		Widget_Control, self.AMsat     , Set_Button=(self.satname eq 'amsat' ? 1:0)
-		Widget_Control, self.PMsat     , Set_Button=(self.satname eq 'pmsat' ? 1:0)
+		Widget_Control, self.noaaAM    , Set_Button=(self.satname eq 'noaaam' ? 1:0)
+		Widget_Control, self.noaaPM    , Set_Button=(self.satname eq 'noaapm' ? 1:0)
 		Widget_Control, self.allsat    , Set_Button=(self.satname eq 'allsat' ? 1:0)
 		Widget_Control, self.lalgID    , SET_COMBOBOX_SELECT=0,sensitive=0
 		Widget_Control, self.refself   , Set_Button=1
@@ -4000,12 +4000,12 @@ l1g = 0
 				self.allsat,	$
 				self.aatsr,	$
 				self.aatme,	$
-				self.amsat,	$
-				self.pmsat	$
+				self.noaaam,	$
+				self.noaapm	$
 				],/button_set)
 ; 	satlist = ['noaa'+strcompress([7,5,6,8,9,10,11,12,14,15,16,17,18,19],/rem),$
-; 		   'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','amsat','pmsat']
- 	satlist = ['noaa'+strcompress([7,8,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','amsat','pmsat']
+; 		   'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','noaaam','noaapm']
+ 	satlist = ['noaa'+strcompress([7,8,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','noaaam','noaapm']
 	blabal = where(setlist eq 1,bla_cnt)
 	sat = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
 
@@ -4050,6 +4050,7 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 		found=1
 		return,self.directory+'/'+self.filename
 	endif
+
 ; 	check   = (( Widget_Info(self.refself, /BUTTON_SET)))
 	if keyword_set(check) then begin & dirname = self.directory & filename = self.filename & version = self.version & end
 	file =  get_filename(year, month, day, data=varname, sat=sat, algo = algo, level=level, found = found, $
@@ -4143,8 +4144,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				Widget_Control, self.avhrrs    , Set_Button=(self.satname eq 'avhrrs' ? 1:0)
 				Widget_Control, self.modises   , Set_Button=(self.satname eq 'modises'? 1:0)
 				Widget_Control, self.allsat    , Set_Button=(self.satname eq 'allsat' ? 1:0)
-				Widget_Control, self.amsat     , Set_Button=(self.satname eq 'amsat'  ? 1:0)
-				Widget_Control, self.pmsat     , Set_Button=(self.satname eq 'pmsat'  ? 1:0)
+				Widget_Control, self.noaaAM    , Set_Button=(self.satname eq 'noaaam'  ? 1:0)
+				Widget_Control, self.noaaPM    , Set_Button=(self.satname eq 'noaapm'  ? 1:0)
 			endif else begin
 				Widget_Control, self.yearID  ,sensitive=( hide ? 0:1 )
 				Widget_Control, self.monthID ,sensitive=( hide ? 0:1 )
@@ -5865,8 +5866,8 @@ PRO NCDF_DATA__DEFINE, class
              aqua:0L,                  $
              aatsr:0L,                 $
              aatme:0L,                 $
-             amsat:0L,                 $
-             pmsat:0L,                 $
+             noaaAM:0L,                $
+             noaaPM:0L,                $
              terra:0L,                 $
              avhrrs:0L,                $
              modises:0L,               $
