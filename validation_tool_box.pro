@@ -1144,7 +1144,8 @@ function get_perc_from_hist, histo, value, mini, maxi, bin, data = data
 	sums   = fltarr(n_elements(histo))
 	for i = 0,n_elements(histo) -1 do begin
 		sums[i] = total(histo[0:i])
-		data = i eq 0 ? replicate(bin_center_value[i],histo[i]) : [data,replicate(bin_center_value[i],histo[i])]
+		if histo[i] eq 0 then continue
+		data = is_defined(data) ? [data,replicate(bin_center_value[i],histo[i])] : replicate(bin_center_value[i],histo[i])
 	endfor
 	result = fltarr(n_elements(value))
 
