@@ -3324,7 +3324,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
 	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
 	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aatsr     = Widget_Button(self.sat_base, Value='ENV', UVALUE='SET_PLOT_DEFAULTS')
+	      self.aatsr     = Widget_Button(self.sat_base, Value='AAT', UVALUE='SET_PLOT_DEFAULTS')
 	      self.aatme     = Widget_Button(self.sat_base, Value='A/M', UVALUE='SET_PLOT_DEFAULTS')
 	      self.avhrrs    = Widget_Button(self.sat_base, Value='AVs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.modises   = Widget_Button(self.sat_base, Value='MOs', UVALUE='SET_PLOT_DEFAULTS')

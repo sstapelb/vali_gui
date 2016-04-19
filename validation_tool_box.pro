@@ -741,6 +741,50 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 
 end
 ;------------------------------------------------------------------------------------------
+function short_cov_name, coverage
+
+	short_name = ''
+	if keyword_set(coverage) then begin
+		case strlowcase(coverage) of
+			''				: short_name = ''
+			'full'				: short_name = ''
+			'antarctica'			: short_name = 'ANT'
+			'midlat_south'			: short_name = 'MLS'
+			'tropic'			: short_name = 'TRO'
+			'midlat_north'			: short_name = 'MLN'
+			'arctic'			: short_name = 'ARC'
+			'midlat_trop'			: short_name = 'P60'
+			'northern_hemisphere'		: short_name = 'NH'
+			'southern_hemisphere'		: short_name = 'SH'
+			'land'				: short_name = 'LAND'
+			'full_land'			: short_name = 'LAND'
+			'antarctica_land'		: short_name = 'ANT-L'
+			'midlat_south_land'		: short_name = 'MLS-L'
+			'tropic_land'			: short_name = 'TRO-L'
+			'midlat_north_land'		: short_name = 'MLN-L'
+			'arctic_land'			: short_name = 'ARC-L'
+			'midlat_trop_land'		: short_name = 'P60-L'
+			'northern_hemisphere_land'	: short_name = 'NH-L'
+			'southern_hemisphere_land'	: short_name = 'SH-L'
+			'sea'				: short_name = 'SEA'
+			'full_sea'			: short_name = 'SEA'
+			'antarctica_sea'		: short_name = 'ANT-S'
+			'midlat_south_sea'		: short_name = 'MLS-S'
+			'tropic_sea'			: short_name = 'TRO-S'
+			'midlat_north_sea'		: short_name = 'MLN-S'
+			'arctic_sea'			: short_name = 'ARC-S'
+			'midlat_trop_sea'		: short_name = 'P60-S'
+			'northern_hemisphere_sea'	: short_name = 'NH-S'
+			'southern_hemisphere_sea'	: short_name = 'SH-S'
+			else				: short_name = Coverage
+		endcase
+	endif
+
+	return, short_name
+
+end
+
+;------------------------------------------------------------------------------------------
 function is_the_same,algo,reference,satellite=satellite
 
 	alg = strlowcase(algo[0])
@@ -1252,54 +1296,56 @@ function cci_name, sat, algoname_only = algoname_only
 	return, names
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-function noaa_primes,year,month, ampm=ampm		,$ ; ampm := 0  am,1 pm, 2 ampm
-				 node=node		,$ ; node of the specified sat (asc,des)
-				 which=which		,$ ; which file from database
-				 patmos=patmos
-				
-	ampm = adv_keyword_set(ampm) ? ampm : 2 ; default ist am+pm
-	pmx  = keyword_set(patmos)
-	mm   = fix(month)
-	
-	; from ncdf_gewex__define.pro
+function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
+				 node=node		, $ ; node of the specified sat (asc,des)
+				 which=which		, $ ; which file from database
+				 patmos=patmos		, $ ; Patmos (l3c, gewex, old) with different definition taken from ncdf_gewex__define.pro
+				 no_zero=no_zero	, $ ; No leading zero in Noaa number, e.g NOAA-7 not NOAA-07
+				 found = found
+
+	found = 1
+	ampm  = adv_keyword_set(ampm) ? ampm : 2 ; default ist am+pm
+	pmx   = keyword_set(patmos)
+	mm    = fix(month)
+
 	case fix(year) of
-		1981:  sats = ['nn',(mm le 9 ? 'nn':'07')]
-		1982:  sats = ['nn','07']
-		1983:  sats = ['nn','07']
-		1984:  sats = ['nn','07']
-		1985:  sats = pmx ? ['nn',(mm le 2 ? 'nn':'09')] : ['nn',(mm le 2 ? '07':'09')]
-		1986:  sats = ['nn','09']
-		1987:  sats = ['10','09']
-		1988:  sats = ['10',(mm le 10 ? '09':'nn')]
-		1989:  sats = ['10','11']
-		1990:  sats = ['10','11']
-		1991:  sats = ['10','11']
-		1992:  sats = ['12','11']
-		1993:  sats = ['12','11']
-		1994:  sats = ['12',(mm le 9 ? '11':'nn')]
-		1995:  sats = ['12',(mm ge 7 ? '14':'nn')]
-		1996:  sats = ['12','14']
-		1997:  sats = ['12','14']
-		1998:  sats = [(mm ge 10 ? '15':'nn'),'14']  ; 15 die letzten tage
-		1999:  sats = ['15','14']  ; 14 only odd days
-		2000:  sats = ['15','14']
-		2001:  sats = ['15','16']
-		2002:  sats = pmx ? ['15','16'] : [(mm le 6 ? '15':'17'),'16']
-		2003:  sats = pmx ? ['15','16'] : ['17','16']
-		2004:  sats = pmx ? ['15','16'] : ['17','16']
-		2005:  sats = pmx ? ['15','16'] : ['17',(mm le 4 ? '16':'18')]
-		2006:  sats = pmx ? ['15','18'] : [(mm le 10 ? '17':'MA'),'18']
-		2007:  sats = pmx ? ['15','18'] : ['MA','18']
-		2008:  sats = pmx ? ['15','18'] : ['MA','18']
-		2009:  sats = pmx ? ['15','18'] : ['17','19']; launch noaa19 Feb/2009 
-		2010:  sats = pmx ? ['nn','nn'] : ['17','19'] 
-		2011:  sats = pmx ? ['nn','nn'] : ['17','19'] 
-		2012:  sats = pmx ? ['nn','nn'] : ['MA','19'] 
-		2013:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
-		2014:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
-		2015:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
-		2016:  sats = pmx ? ['nn','nn'] : ['MB','19'] 
-		else:  sats = ['nn','nn']
+		1981: sats = pmx ? ['nn','nn']			: ['nn',(mm le  7 ? 'nn':'07')]
+		1982: sats = pmx ? ['nn','07']			: ['nn','07']
+		1983: sats = pmx ? ['nn','07']			: ['nn','07']
+		1984: sats = pmx ? ['nn','07']			: ['nn','07']
+		1985: sats = pmx ? ['nn',(mm le  2 ? 'nn':'09')]: ['nn',(mm le  1 ? '07':'09')]
+		1986: sats = pmx ? ['nn','09']			: ['nn','09']
+		1987: sats = pmx ? ['10','09']			: ['10','09']
+		1988: sats = pmx ? ['10',(mm le 10 ? '09':'nn')]: ['10',(mm le 10 ? '09':'11')]
+		1989: sats = pmx ? ['10','11']			: ['10','11']
+		1990: sats = pmx ? ['10','11']			: ['10','11']
+		1991: sats = pmx ? ['10','11']			: [(mm le  9 ? '10':'12'),'11']
+		1992: sats = pmx ? ['12','11']			: ['12','11']
+		1993: sats = pmx ? ['12','11']			: ['12','11']
+		1994: sats = pmx ? ['12',(mm le  9 ? '11':'nn')]: ['12',(mm le  9 ? '11':'nn')]
+		1995: sats = pmx ? ['12',(mm le  6 ? 'nn':'14')]: ['12',(mm le  1 ? 'nn':'14')]
+		1996: sats = pmx ? ['12','14']			: ['12','14']
+		1997: sats = pmx ? ['12','14']			: ['12','14']
+		1998: sats = pmx ? [(mm le  9 ? 'nn':'15'),'14']: ['12','14']
+		1999: sats = pmx ? ['15','14']			: ['15','14']
+		2000: sats = pmx ? ['15','14']			: ['15','14']
+		2001: sats = pmx ? ['15','16']			: ['15',(mm le  3 ? '14':'16')]
+		2002: sats = pmx ? ['15','16']			: [(mm le 10 ? '15':'17'),'16']
+		2003: sats = pmx ? ['15','16']			: ['17','16']
+		2004: sats = pmx ? ['15','16']			: ['17','16']
+		2005: sats = pmx ? ['15','16']			: ['17',(mm le  8 ? '16':'18')]
+		2006: sats = pmx ? ['15','18']			: ['17','18']
+		2007: sats = pmx ? ['15','18']			: [(mm le  5 ? '17':'MA'),'18']
+		2008: sats = pmx ? ['15','18']			: ['MA','18']
+		2009: sats = pmx ? ['15','18']			: ['17',(mm le  5 ? '18':'19')]
+		2010: sats = pmx ? ['nn','nn']			: ['17','19']
+		2011: sats = pmx ? ['nn','nn']			: ['17','19'] 
+		2012: sats = pmx ? ['nn','nn']			: ['MA','19'] 
+		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 ? 'MA':'MB'),'19'] 
+		2014: sats = pmx ? ['nn','nn']			: ['MB','19'] 
+		2015: sats = pmx ? ['nn','nn']			: ['MB','19'] 
+		2016: sats = pmx ? ['nn','nn']			: ['MB','19'] 
+		else: sats = ['nn','nn']
 	endcase
 
 	if ampm eq 0 then begin ; am
@@ -1311,9 +1357,12 @@ function noaa_primes,year,month, ampm=ampm		,$ ; ampm := 0  am,1 pm, 2 ampm
 	endif else if ampm eq 2 then begin
 		which = 'AMPM'
 		idx  = where(sats ne 'nn',idxcnt)
-		if idxcnt gt 0 then sats = sats[idx] else return,'Not Present'
+		if idxcnt gt 0 then sats = sats[idx] else begin
+			found = 0
+			return,'No NOAA Sats Available'
+		endelse
 		for i = 0, idxcnt -1 do begin
-			sats[i] = strmid(sats[i],0,1) eq 'M' ? 'METOP-'+strmid(sats[i],1,1) : 'NOAA-'+sats[i]
+			sats[i] = strmid(sats[i],0,1) eq 'M' ? 'METOP'+strmid(sats[i],1,1) : 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats[i]),/rem) : sats[i])
 		endfor
 		return, strjoin(sats,',')
 	endif else begin
@@ -1321,10 +1370,11 @@ function noaa_primes,year,month, ampm=ampm		,$ ; ampm := 0  am,1 pm, 2 ampm
 		return,-1
 	endelse
 
-	if sats[0] eq 'nn' then return, 'Not Present'
-	if sats[0] eq 'MA' then return, 'METOP-A'
-	if sats[0] eq 'MB' then return, 'METOP-B'
-	return, 'NOAA-'+sats[0]
+	if sats[0] eq 'nn' then return, 'No NOAA '+which+' Sat Available'
+	if sats[0] eq 'MA' then return, 'METOPA'
+	if sats[0] eq 'MB' then return, 'METOPB'
+
+	return, 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats),/rem) : sats[0])
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
@@ -3127,7 +3177,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		'AVHRR' : begin
 				case alg of
 					'ESACCI': begin
-
+							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+; 								if found_prime then satellite = sat
+							endif
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strupcase(lev)+'/'+yyyy+'/'+mm+'/'+dd+'/'
 							if lev eq 'l2' then begin 
 								sat = strjoin(strsplit(sat,/ext,'-'))
@@ -3151,6 +3204,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-fv1.0.nc'
 						  end
 					'CLARA' : begin
+							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+; 								if found_prime then satellite = sat
+							endif
 							if lev eq 'l2' then begin
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 								sat = strjoin(strsplit(sat,/ext,'-'))
@@ -3177,6 +3234,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endelse
 						  end
 					'CLARA2': begin
+							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+; 								if found_prime then satellite = sat
+							endif
 							dumdat = dat
 							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
 							if dat eq '' and ~sil then begin & print,'Clara2 needs a productname to find filename!'& found =0 & return,1 & end
@@ -5154,23 +5215,6 @@ function get_all_avail_data, year, month, day, orbit = orbit, data = data, level
 		set_algolist,alle
 	endelse
 
-	if keyword_set(antarctic) then coverage = 'antarctica'
-	if keyword_set(arctic) then coverage = 'arctic'
-	if keyword_set(coverage) then begin
-	 	case strlowcase(coverage) of
-			'land'		: land  = 1
-			'sea'		: sea   = 1
-			'antarctica'	: limit = [-90.0,-180.,-65.5,180.]
-			'midlat_south'	: limit = [-65.5,-180.,-23.5,180.]
-			'tropic'	: limit = [-23.5,-180., 23.5,180.]
-			'midlat_north'	: limit = [ 23.5,-180., 65.5,180.]
-			'arctic'	: limit = [ 65.5,-180., 90.0,180.]
-			'midlat_trop'	: limit = [-60.0,-180., 60.0,180.]
-			else:
-		endcase
-	endif
-	ls    = keyword_set(land) or keyword_set(sea)
-
 	count = 1
 	if ~keyword_set(mean) and ~keyword_set(median) and keyword_set(global_grid) then mean = 1
 
@@ -5185,20 +5229,10 @@ function get_all_avail_data, year, month, day, orbit = orbit, data = data, level
 					make_compareable=make_compareable,global_grid=global_grid	, $
 					median=median,verbose=verbose)
 			if found then begin
-				if keyword_set(limit) or keyword_set(zonal_mean) then begin
-					make_geo,lon,lat,grid=get_grid_res(dum[*,*,0,0,0,0]),found=found, algo=alle[i]
-					if ~found then continue
-				endif
-				if ls then begin
-					dem = get_dem(grid=get_grid_res(dum[*,*,0,0,0,0]))
-					sidx = where(dem eq 0,complement=lidx)
-					if keyword_set(land) then dum[sidx] = ndv
-					if keyword_set(sea)  then dum[lidx] = ndv
-				endif
-				if keyword_set(limit) then begin
-					qw  = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),complement=ndqw,ncomplement=ndqw_cnt,qw_cnt)
-					if ndqw_cnt gt 0 then dum[ndqw] = ndv
-				endif
+				make_geo,lon,lat,grid=get_grid_res(dum[*,*,0,0,0,0]),found=found, algo=alle[i]
+				area = 	get_coverage( lon, lat, coverage = coverage,limit = limit, found = found, $
+					antarctic=antarctic,arctic=arctic,land=land,sea=sea,index=ndidx,count=ndidx_cnt,/complement)
+				if ndidx_cnt gt 0 then dum[ndidx] = ndv
 				algoname = sat_name(alle[i],strmid(alle[i],0,3) eq 'gac' and $
 					(strlowcase(satellite) eq 'aatme' or strlowcase(satellite) eq 'aatsr')?'noaa17':satellite)
 				define_oplots, count, cols, spos, linestyle, psym, ystretch

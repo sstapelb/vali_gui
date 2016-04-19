@@ -148,7 +148,8 @@ PRO cgTaylorDiagram, stddev, correlation, $
     SYMBOL=symbol, $
     SYMSIZE=symsize, $
     WINDOW=window, $
-    observation=observation
+    observation=observation,$
+    xrange=xrange,yrange=yrange
 
   Compile_Opt idl2
 
@@ -341,7 +342,7 @@ PRO cgTaylorDiagram, stddev, correlation, $
 ;   cgPlot, x, y, /NoData, XTITLE='Standard Deviation', YTITLE='Standard Deviation', $
 ;       XSTYLE=9, YSTYLE=9, POSITION=position, BACKGROUND='black'
    cgPlot, x, y, /NoData, XTITLE='Standard Deviation (Normalized)', YTITLE='Standard Deviation (Normalized)', $
-      XSTYLE=9, YSTYLE=9, POSITION=position,BACKGROUND=background_color,charsize=3.,charthick=2
+      XSTYLE=9, YSTYLE=9, POSITION=position,BACKGROUND=background_color,charsize=3.,charthick=2,xr=xrange,yr=yrange
 
   ; PART II: Building ticks: Long and Short ticks
   ; Long Ticks
