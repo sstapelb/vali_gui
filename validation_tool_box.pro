@@ -1366,11 +1366,15 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		endfor
 		return, strjoin(sats,',')
 	endif else begin
+		found = 0
 		which = 'UNKNOWN'
 		return,-1
 	endelse
 
-	if sats[0] eq 'nn' then return, 'No NOAA '+which+' Sat Available'
+	if sats[0] eq 'nn' then begin
+		found = 0
+		return, 'No NOAA '+which+' Sat Available'
+	endif
 	if sats[0] eq 'MA' then return, 'METOPA'
 	if sats[0] eq 'MB' then return, 'METOPB'
 
@@ -1435,7 +1439,7 @@ end
 function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,version=version,level=level
 
 	; e.g. convert noaa18 -> CC4CL-NOAA-18
-	satn  = keyword_set(sat)       ? strlowcase(sat)    : ''
+	satn  = keyword_set(sat)       ? strlowcase(sat)   : ''
 	lev   = keyword_set(level)     ? strlowcase(level) : ''
 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
 
@@ -1464,7 +1468,6 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
  
 	if strmid(algon,0,6) eq 'Fame-C' then return, algon
 
-; 	dumsat = stregex(satn,'noaa',/bool,/fold) ? strjoin(strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,90]),'-') : satn
 	if stregex(satn,'noaa',/bool,/fold) then begin
 		dum = strmid(strjoin(strsplit(satn,'-',/ext)),[0,4],[4,90])
 		if n_elements(dum) gt 1 then begin
@@ -1472,6 +1475,11 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		endif
 		dumsat = strjoin(dum,'-')
 	endif else dumsat = satn
+
+	if total(dumsat eq ['noaa-am','noaa-pm']) then begin
+		if keyword_set(year) and keyword_set(month) and algo ne 'pmx' then $
+		dumsat = noaa_primes(year,month,ampm=noaa_ampm(dumsat,/ampm),which=which)
+	endif
 
 	if keyword_set(only_sat) then return, strupcase(dumsat)
 	return,algon+(keyword_set(dumsat) and keyword_set(algon) ? '-':'')+strupcase(dumsat)
@@ -3280,9 +3288,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						end
 					'PATMOS': begin
 							if lev eq 'l3c' then begin
-								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos)
-								if strreplace(satpat[0],['-','0'],['','']) eq strreplace(sat[0],['-','0'],['','']) or $
-									sat[0] eq 'NOAA-AM' or sat[0] eq 'NOAA-PM' then begin
+								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos,found=found)
+								if found then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
 									if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end

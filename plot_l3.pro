@@ -4889,10 +4889,10 @@ pro do_create_all_compare_time_series
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		    'metopa','metopb','allsat','noaaam','noaapm'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['gac2','pmx','gac','myd2','mod2'];,'myd','mod'];'cci'
+	ref      = ['gac2'];,'pmx'];,'gac','myd2','mod2'];,'myd','mod'];'cci'
 	data     = ['cfc','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph']
 ; 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18']
-	sat      = ['noaaam','noaapm']
+	sat      = ['noaa14','noaa15','noaa16','noaa17'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
 
 	for i= 0,n_elements(sat)-1 do begin
 		for k=0,n_elements(ref)-1 do begin
@@ -4938,7 +4938,7 @@ pro do_create_all_single_time_series
 
 	; combine all you need
 ; 	algon_list = [cci_list,gac2_list,pmx_list,gac_list,coll6_list,coll5_list]
-	algon_list = ['cci-noaaam','cci-noaapm','gac2-noaapm','gac2-noaaam','pmx-noaaam','pmx-noaapm']
+	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17','pmx-noaaam','pmx-noaapm','gac-noaapm','gac-noaaam']
 
 	for i= 0,n_elements(algon_list)-1 do begin
 		for l=0,n_elements(data)-1 do begin
@@ -4971,8 +4971,8 @@ pro do_hist_cloud_type_time_series
  	coll5_list = ['myd-','mod-']
 
 	; combine all you need
-	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
-	algon_list = ['cci-noaaam','cci-noaapm','gac2-noaapm','gac2-noaaam','pmx-noaaam','pmx-noaapm']
+; 	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
+	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -5052,7 +5052,7 @@ pro do_1d_hist_time_series
 	; coll5
 	coll5_list = ['myd-','mod-']
 
-	algon_list = ['cci-noaaam','cci-noaapm','gac2-noaapm','gac2-noaaam']
+	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17']
 	prod_list  = ['cwp','cot','ctp','ctt','cer']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
@@ -5134,7 +5134,10 @@ pro do_create_hovmoeller
 
 	; combine all you need
 ; 	algon_list = [gac2_list,pmx_list,coll6_list,coll5_list,gac_list]
-	algon_list = [cci_list]
+; 	algon_list = [cci_list]
+
+; 	algon_list = ['pmx-noaaam','pmx-noaapm','gac-noaaam','gac-noaapm']
+	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')
@@ -5192,8 +5195,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_all_time_series
 
-	do_create_all_compare_time_series
-	do_create_all_single_time_series
+; 	do_create_all_compare_time_series
+; 	do_create_all_single_time_series
 	do_hist_cloud_type_time_series
 	do_1d_hist_time_series
 	do_create_hovmoeller

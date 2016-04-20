@@ -1,5 +1,6 @@
 pro check_availability_of_time_series,print_missing_files=print_missing_files
 
+	plot_l3
 	print_it = keyword_set(print_missing_files)
 	satellites = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa14','noaa15','noaa16','noaa18','noaaam','noaapm']
 
@@ -21,12 +22,13 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 					if covd[j] eq 'full' then cov = '' & $
 					if covd[j] eq 'full_land' then cov = 'land_' & $
 					if covd[j] eq 'full_sea' then cov = 'sea_' & $
-					if total(data[l] eq ['cfc_low','cfc_mid','cfc_high','cer']) and ref[k] eq 'gac' then do_it = 0 & $
-					if total(data[l] eq ['cfc_day','cfc_night','cth','cwp','cph','cer']) and ref[k] eq 'pmx' then do_it = 0 & $
+					if total(data[l] eq ['cfc_low','cfc_mid','cfc_high','cer','cfc_twl']) and ref[k] eq 'gac' then do_it = 0 & $
+					if total(data[l] eq ['cfc_twl']) and ref[k] eq 'gac2' then do_it = 0 & $
+					if total(data[l] eq ['cfc_day','cfc_night','cth','cwp','cph','cer','cfc_twl']) and ref[k] eq 'pmx' then do_it = 0 & $
 					if ref[k] eq 'pmx' and sat[i] eq 'noaa17' then do_it = 0 & $ ; kein n17 in patmos 
-					if total(data[l] eq ['cot','lwp','iwp']) and ref[k] eq 'pmx' and total(sat[i] eq ['noaa12','noaa15']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
-					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high']) and strmid(ref[k],0,3) eq 'myd' then do_it = 0 & $
-					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high']) and strmid(ref[k],0,3) eq 'mod' then do_it = 0 & $
+					if total(data[l] eq ['cot','lwp','iwp']) and ref[k] eq 'pmx' and total(sat[i] eq ['noaa12','noaa15','noaaam']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
+					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high','cfc_twl']) and strmid(ref[k],0,3) eq 'myd' then do_it = 0 & $
+					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high','cfc_twl']) and strmid(ref[k],0,3) eq 'mod' then do_it = 0 & $
 					if strmid(ref[k],0,3) eq 'myd' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12','noaa14']) then do_it = 0 & $
 					if strmid(ref[k],0,3) eq 'mod' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12']) then do_it = 0 & $
 					if do_it then begin & $
@@ -50,7 +52,6 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 	ref  = ['gac2','pmx','gac','myd2','mod2','cci']
 	data = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph']
 	satd = satellites
-
 	count = 0l
 	count_ok = 0l
 	for j=0,n_elements(covd) -1 do begin & $
@@ -63,12 +64,13 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 					if covd[j] eq 'full_land' then cov = 'land_' & $
 					if covd[j] eq 'full_sea' then cov = 'sea_' & $
 					if total(ref[k] eq ['myd','mod','myd2','mod2']) then sat = '' else sat = satd[i] & $
-					if total(data[l] eq ['cfc_low','cfc_mid','cfc_high','cer']) and ref[k] eq 'gac' then do_it = 0 & $
-					if total(data[l] eq ['cfc_day','cfc_night','cth','cwp','cph','cer']) and ref[k] eq 'pmx' then do_it = 0 & $
+					if total(data[l] eq ['cfc_low','cfc_mid','cfc_high','cer','cfc_twl']) and ref[k] eq 'gac' then do_it = 0 & $
+					if total(data[l] eq ['cfc_twl']) and ref[k] eq 'gac2' then do_it = 0 & $
+					if total(data[l] eq ['cfc_day','cfc_night','cth','cwp','cph','cer','cfc_twl']) and ref[k] eq 'pmx' then do_it = 0 & $
 					if ref[k] eq 'pmx' and sat eq 'noaa17' then do_it = 0 & $ ; kein n17 in patmos 
-					if total(data[l] eq ['cot','lwp','iwp']) and ref[k] eq 'pmx' and total(sat eq ['noaa12','noaa15']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
-					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high']) and strmid(ref[k],0,3) eq 'myd' then do_it = 0 & $
-					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high']) and strmid(ref[k],0,3) eq 'mod' then do_it = 0 & $
+					if total(data[l] eq ['cot','lwp','iwp']) and ref[k] eq 'pmx' and total(sat eq ['noaa12','noaa15','noaaam']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
+					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high','cfc_twl']) and strmid(ref[k],0,3) eq 'myd' then do_it = 0 & $
+					if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high','cfc_twl']) and strmid(ref[k],0,3) eq 'mod' then do_it = 0 & $
 					if do_it then begin & $
 						dum_file = 'plot_'+data[l]+'_'+ref[k]+'_time_series_'+sat+'_'+cov+'1978-2016.sav' & $
 						ff = file_search(!SAVS_DIR + 'time_series/plot/' + dum_file,count = found) & $
@@ -97,9 +99,10 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 				do_it = 1 & $
 				if total(ref[k] eq ['myd','mod','myd2','mod2']) then sat = '' else sat = satd[i] & $
 				if total(data[l] eq ['cfc_low','cfc_mid','cfc_high','cer','cfc_twl']) and ref[k] eq 'gac' then do_it = 0 & $
+				if total(data[l] eq ['cfc_twl']) and ref[k] eq 'gac2' then do_it = 0 & $
 				if total(data[l] eq ['cfc_day','cfc_night','cth','cwp','cph','cer','cfc_twl']) and ref[k] eq 'pmx' then do_it = 0 & $
 				if ref[k] eq 'pmx' and sat eq 'noaa17' then do_it = 0 & $ ; kein n17 in patmos 
-				if total(data[l] eq ['cot','lwp','iwp']) and ref[k] eq 'pmx' and total(sat eq ['noaa12','noaa15']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
+				if total(data[l] eq ['cot','lwp','iwp']) and ref[k] eq 'pmx' and total(sat eq ['noaa12','noaa15','noaaam']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
 				if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high','cfc_twl']) and strmid(ref[k],0,3) eq 'myd' then do_it = 0 & $
 				if total(data[l] eq ['cth','cfc_low','cfc_mid','cfc_high','cfc_twl']) and strmid(ref[k],0,3) eq 'mod' then do_it = 0 & $
 				if do_it then begin & $
@@ -155,7 +158,8 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 			for l=0,n_elements(data)-1 do begin & $
 				do_it = 1 & $
 				if total(ref[k] eq ['myd','mod','myd2','mod2']) then sat = '' else sat = satd[i] & $
-				if ref[k] eq 'pmx' and total(sat eq ['noaa12','noaa15','noaa17']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
+				if ref[k] eq 'pmx' and total(sat eq ['noaa12','noaa15','noaa17','noaaam']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
+				if ref[k] eq 'pmx' and total(data[l] eq ['hist2d_cot_ctp_liq','hist2d_cot_ctp_ice']) then do_it = 0 & $ ; nur PM sats haben microphysic in patmos
 				if do_it then begin & $
 					dum_file = data[l]+'_1978-2016_'+ref[k]+'_'+sat+'.sav' & $
 					ff = file_search(!SAVS_DIR + 'time_series/hist2d/' + dum_file,count = found) & $
@@ -177,12 +181,12 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 	print,'# 1D Histogram TS : Found '+string(count_ok_h1d,f='(i7)')    +' Files, '+string(count_h1d,f='(i7)')+' files are Missing!'
 	print,'# 2D Histogram TS : Found '+string(count_ok_h2d,f='(i7)')    +' Files, '+string(count_h2d,f='(i7)')+' files are Missing!'
 
-	print,'Number of L3C files with lt 100 Orbits: '
-
-	ff = file_search('/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C','*.nc',count=nff)
-	for ii = 0, nff -1 do begin & $
-		num = get_ncdf_data_by_name(ff[ii],'number_of_processed_orbits',/global)  & $
-		if num lt 100 then print,string(num)+' '+ff[ii]  & $
-	endfor
+; 	print,'Number of L3C files with lt 100 Orbits: '
+; 
+; 	ff = file_search('/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C','*.nc',count=nff)
+; 	for ii = 0, nff -1 do begin & $
+; 		num = get_ncdf_data_by_name(ff[ii],'number_of_processed_orbits',/global)  & $
+; 		if num lt 100 then print,string(num)+' '+ff[ii]  & $
+; 	endfor
 
 end
