@@ -3489,6 +3489,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	mat_sm = transpose(d.SEASONAL_MEAN.(struc_idx))
 	datum  = d.period
 	unit   = d.unit
+	ori_period = fix(strsplit(d.period,'-',/ext))
 
 	if keyword_set(ref) then begin
 		d = get_available_time_series( ref, dat, sat, period = datum, /hovmoeller, found = found)
@@ -3511,8 +3512,10 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	if keyword_set(mini) and keyword_set(maxi) then begin
 		mini = float(strsplit(mini[0],',',/ext))
 		maxi = float(strsplit(maxi[0],',',/ext))
-		if n_elements(maxi) gt 1 then dum[1] = fix(maxi[1])-1
-		if n_elements(mini) gt 1 then dum[0] = fix(mini[1])
+		if n_elements(maxi) gt 1 then dum[1] = (1970 > (fix(maxi[1])-1) < 2050 )
+		if n_elements(mini) gt 1 then dum[0] = (2050 < (fix(mini[1])-0) > 1970 )
+		if dum[1] le dum[0] then dum[1] = ori_period[1]
+		if dum[0] ge dum[1] then dum[0] = ori_period[0]
 	endif
 
 	jumps=0
@@ -3540,7 +3543,6 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	endelse
 
 	xtickname = strcompress(vector(dum[0],dum[1]+1,(2>(num_of_yy/divi_yy+1))),/rem)
-	ori_period = fix(strsplit(d.period,'-',/ext))
 	if dum[0] lt ori_period[0] then begin
 		cnts = (ori_period[0] - dum[0]) *12
 		mat_dummy = fltarr(cnts,(size(matrix,/dim))[1]) + no_data_val
@@ -3993,9 +3995,10 @@ pro plot_simple_timeseries, year,month, varname, satellite, algo, cov, reference
 		mini = float(strsplit(mini[0],',',/ext))
 		maxi = float(strsplit(maxi[0],',',/ext))
 		yrange =   [mini[0],maxi[0]]
-		if n_elements(maxi) gt 1 then dum[1] = ((fix(maxi[1])-1) )
-		if n_elements(mini) gt 1 then dum[0] = (fix(mini[1]) > 1970 )
+		if n_elements(maxi) gt 1 then dum[1] = (1970 > (fix(maxi[1])-1) < 2050 )
+		if n_elements(mini) gt 1 then dum[0] = (2050 < (fix(mini[1])-0) > 1970 )
 		if dum[1] le dum[0] then dum[1] = ori_period[1]
+		if dum[0] ge dum[1] then dum[0] = ori_period[0]
 	endif
 	lines = pgrid(yrange)
 
