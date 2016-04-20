@@ -160,10 +160,14 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 			 other=other,antarctic=antarctic,arctic=arctic,time_series=time_series
 
 	datum = keyword_set(time_series) ? 'time_series' : string(year,f='(i4.4)')+string(month,f='(i2.2)')+string(day,f='(i2.2)')
+	ts    = keyword_set(time_series)
+
+	algon1 = sat_name(algo,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
+	algon2 = sat_name(reference,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin
-			save_as = !SAVE_DIR + datum+'_'+strupcase(varname)+'_taylor_diagram_'+sat_name(algo,sat)+'_vs_'+sat_name(reference,sat) + '.eps'
+			save_as = !SAVE_DIR + datum+'_'+strupcase(varname)+'_taylor_diagram_'+algon1+'_vs_'+algon2+ '.eps'
 		endif
 	endif
 
@@ -171,7 +175,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 	ncov     = n_elements(coverage)
 	apx      = ''
 
-	if keyword_set(time_series) then begin
+	if ts then begin
 		period       = '1978-2016'
 		corr_arr     = fltarr(ncov) -999.
 		bias_arr     = fltarr(ncov) -999.
@@ -284,10 +288,10 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 ; yrange=[0.5,1.5]
 
 	start_save,save_as
-		cgTaylorDiagram, stddev, corr_arr,  REF_STDDEV=1,LABELS=labels,observation=sat_name(reference,sat) + apx,xrange=xrange,yrange=yrange, $
+		cgTaylorDiagram, stddev, corr_arr,  REF_STDDEV=1,LABELS=labels,observation=algon2+ apx,xrange=xrange,yrange=yrange, $
 		STDDEV_MAX=(1.3 > rnd(max(stddev),/up,0.5)),c_symbol=c_symbol,symsize=symsize,symbol=psym,output=ouput;,cgcharsize=3.
 
-		labels=[strupcase(varname)+' '+unit,'  ',sat_name(algo,sat),'  ',$
+		labels=[strupcase(varname)+' '+unit,'  ',algon1,'  ',$
 		'G: Global','A: Antarctica','B: MidLat-S','T: Tropics','N: MidLAt-N','C: Arctic',textoidl('P: \pm60\circ Latitude'),'L: Land','S: Sea']
 		legend,labels,thick=replicate(2,13),psym=[0,0,28,0,replicate(16,9)],numsym=1,color=[-1,-1,-1,-1,cgcolor(c_symbol)], $
 		charsize=(keyword_set(save_as) ? 2.5:1.5),pos=[0.8,0.7,1.1,1.05]
@@ -331,7 +335,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		print,"Tell me what data to compare, e.g. ['cfc','cot','cph','iwp','lwp','ctp','ctt','cth']"
 		return
 	endif
-
+	ts         = keyword_set(timeseries)
 	limit_test = keyword_set(limit)
 	if limit_test then limit_bck = limit
 	cov      = keyword_set(coverage)  ? strlowcase(coverage)  : 'full'
@@ -370,8 +374,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		else	: begin & ok = dialog_message('compare_cci : Unknown reference algoname "'+ref+'"') & return & end
 	endcase
 	algo2     = ref2algo(ref)
-	algon_cci = sat_name(algo1,sat, year=year, month=month,version=version)
-	algon_gac = sat_name(algo2,satgac, year=year, month=month,version=version)
+	algon_cci = sat_name(algo1,sat, year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
+	algon_gac = sat_name(algo2,satgac, year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
 
 	if strmatch(algon_cci,algon_gac) then begin
 		algon_cci = 'File1__'+algon_cci
@@ -437,7 +441,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif
 	; hier können die anderen exception auch noch rein
 	;-------------
-	if ~keyword_set(timeseries) then begin
+	if ~ts then begin
 		ccifile = keyword_set(ccifile) ? ccifile : get_filename(yyyy,mm,dd,sat=sat,algo=algo1,level=level,data=dat)
 		if ~file_test(ccifile) then begin
 			print,'No file found'
@@ -467,7 +471,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if keyword_set(save_dir) then !p.multi = 0
 
-	if is_h1d(dat) and keyword_set(timeseries) then begin
+	if is_h1d(dat) and ts then begin
 		datum  = '1978-2016'
 		struc1 = get_histo_time_series(algo1, dat, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found)
 		if not found then begin
@@ -825,13 +829,13 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
  		xcharsize = (savbg ? 1.7:1.2), ycharsize= (savbg ? 1.7:1.2), $
 		xmargin=[7,3]+(savbg ? [7,0]:0),ymargin=[4,2]+(savbg ? [3,1]:0)
 
-		str_pholder = strjoin(replicate(' ',max([strlen(sat_name(algo1,sat)),strlen(algon_gac)])))
+		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
 		print,'-----------'+dat+'-'+cov+'--------------'
 		if stregex(dat,'npoints',/fold,/bool) then begin
-			print,'Total         '+sat_name(algo1,sat)+' :',string(total(bild_cci[idx]),f='(f15.1)')
-			print,'Total         '+algon_gac          +' :',string(total(bild_gac[idx]),f='(f15.1)')
+			print,'Total         '+algon_cci    +' :',string(total(bild_cci[idx]),f='(f15.1)')
+			print,'Total         '+algon_gac    +' :',string(total(bild_gac[idx]),f='(f15.1)')
 		endif
-		print,'Glob. Mean (F1) '+sat_name(algo1,sat)+' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. Mean (F1) '+algon_cci          +' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
 		print,'Glob. Mean (F2) '+algon_gac          +' : ',string(gmean(bild_gac[idx],lat[idx]),f='(f11.4)')
 		print,'Glob. BIAS      '+str_pholder        +' : ',string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
 		print,'Glob. RMSE      '+str_pholder        +' : ',string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
@@ -889,6 +893,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	starttime = systime(1)
 ; 	plot_l3
 	if keyword_set(save_as) then !p.multi= 0
+	ts = keyword_set(timeseries)
 	opl  = keyword_set(oplots) ? fix(oplots) : 0
 	; ---defaults-------------------------------------------------------------------------
 	limit_test = keyword_set(limit)
@@ -923,13 +928,13 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	histo2d  = is_jch(dat)
 	histo1d  = is_h1d(dat)
 
-	datum    = keyword_set(timeseries) ? '200801-200812' : keyword_set(datum) ? datum : ''
+	datum    = ts ? '200801-200812' : keyword_set(datum) ? datum : ''
 	; ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
 
-	algon = sat_name(algo,sat, year=year, month=month,level=level)
+	algon = sat_name(algo,sat, year=(ts ? 0 :year), month=(ts ? 0:month),level=level)
 
-	if ~keyword_set(timeseries) then begin
+	if ~ts then begin
 		if not keyword_set(file) then begin
 			file = get_filename(year,month,day,data=dat,sat=sat,found=found,algo=algo,level=level,orbit=orbit)
 			if not found then return
@@ -944,7 +949,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		return
 	endif
 
-	if keyword_set(timeseries) then begin
+	if ts then begin
 		if histo1d or histo2d then begin
 			datum = '1978-2016'
 			struc = get_histo_time_series(algo, dat, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found)
@@ -1051,7 +1056,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			limit_string = '_limit_'+strjoin(strcompress(string(limit,f='(f6.1)'),/rem),'_')
 		endif
 		if strcompress(save_as,/rem) eq '1' then begin
-			save_dum = save_dir+prefix+datum+'_'+sat_name(algo,sat)			+ $
+			save_dum = save_dir+prefix+datum+'_'+algon			+ $
 			file_basename(file[fidx],is_hdf(file[fidx]) ? '.hdf':'.nc')+'_'+dat	+ $
 			(keyword_set(hist_cloud_type) ? '_'+strupcase(hct) : '')		+ $
 			(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')		+ $
@@ -1564,11 +1569,11 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	mem_cur   = memory(/current)
 	starttime = systime(1)
 	win_nr    = adv_keyword_set(win_nr) ? win_nr : 1
-
-	dat1   = get_product_name(data1,algo=algo1)
-	dat2   = keyword_set(data2) ? get_product_name(data2,algo=algo2) : get_product_name(data1,algo=algo2)
-	satn1  = sat_name(algo1,sat1, year=year, month=month)
-	satn2  = sat_name(algo2,sat2, year=year, month=month)
+	ts        = keyword_set(timeseries)
+	dat1      = get_product_name(data1,algo=algo1)
+	dat2      = keyword_set(data2) ? get_product_name(data2,algo=algo2) : get_product_name(data1,algo=algo2)
+	satn1     = sat_name(algo1,sat1, year=(ts ? 0:year), month=(ts ? 0:month),level=level)
+	satn2     = sat_name(algo2,sat2, year=(ts ? 0:year), month=(ts ? 0:month),level=level)
 	if adv_keyword_set(mini) then mini = strsplit(mini,',',/ext)
 	if adv_keyword_set(maxi) then maxi = strsplit(maxi,',',/ext)
 	histo1d  = is_h1d(dat1) or is_h1d(dat2)
@@ -1623,7 +1628,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	endif
 	ls = ( keyword_set(land) or keyword_set(sea))
 
-	if keyword_set(timeseries) then begin
+	if ts then begin
 		;hier kommt man nie hin, glaub ich
 		if keyword_set(land) then cov = 'land'
 		if keyword_set(sea)  then cov = 'sea'
@@ -2474,6 +2479,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl,coverage=coverage		, $
 		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum,mean_2d=mean_2d
 
+	pinatubu = 0
 	sav     = keyword_set(save_as)
 	sig     = keyword_set(single_var)
 	zoo     = keyword_set(zonal_only)
@@ -2486,6 +2492,9 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	tsi     = d.TS_INDICES
 	unit    = d.unit
 	dtn = ''
+	dec1 = ''
+	dec2 = ''
+	dec3 = ''
 
 	if stregex(dat,'_day',/fold,/bool)   then dtn = ' - DAY'
 	if stregex(dat,'_night',/fold,/bool) then dtn = ' - NIGHT'
@@ -2582,14 +2591,15 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		endif
 
 		start_save, save_as3, thick = thick, size = [32,20]
+			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
+			if idx_cnt eq 0 then return 
 			if ~opl then begin
 				anz=anz-0.5
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],xs=3,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=9,$
 				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(wbg ? 6:0)]:0),ymargin=[5,2]+(sav or wbg ? [2,1]:0),$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
-;polyfill pinatubu year
-; polyfill,[160.,162.,162.,160.],[(!y.crange)[0],!y.crange,(!y.crange)[1]],col=cgcolor('wheat')
+				if keyword_set(pinatubu) then polyfill,[160.,162.,162.,160.],[(!y.crange)[0],!y.crange,(!y.crange)[1]],col=cgcolor('wheat')
 				div = ((anz[1]-anz[0]) le 12 ? 4. : 12.)
 				for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],!y.crange,linestyle=2
 				for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
@@ -2602,13 +2612,32 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 				legend,ref+dtn,psym=-8,thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 			endif
-			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
-			if idx_cnt eq 0 then return 
 			polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error
 			polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue')
 			oplot,ts_data[tsi.gm1,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
 			oplot,ts_data[tsi.gm2,*],psym=-8,thick=thick,symsize=symsize
 			oplot,ts_data[tsi.bcr,*]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
+			if keyword_set(show_values) then begin
+				res1=linfit(idx,ts_data[tsi.gm1,idx],yfit=yfit1)
+				res2=linfit(idx,ts_data[tsi.gm2,idx],yfit=yfit2)
+				res3=linfit(idx,ts_data[tsi.bcr,idx],yfit=yfit3)
+; 				dec1 = ' '+strcompress(string((res1[1]/float(idx_cnt)*120.)*100.,f='(f8.3)'),/rem)+' % / decade'
+; 				dec2 = ' '+strcompress(string((res2[1]/float(idx_cnt)*120.)*100.,f='(f8.3)'),/rem)+' % / decade'
+; 				dec3 = ' '+strcompress(string((res3[1]/float(idx_cnt)*120.)*100.,f='(f8.3)'),/rem)+' % / decade'
+				dec1 = ' '+string(((yfit1[idx_cnt-1]-yfit1[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
+				dec2 = ' '+string(((yfit2[idx_cnt-1]-yfit2[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
+				dec3 = ' '+string(((yfit3[idx_cnt-1]-yfit3[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
+				oplot,idx,yfit1,col=cgColor("Red")
+				oplot,idx,yfit2
+				oplot,idx,yfit3*qu,col=cgColor("Slate Gray")
+; 				xyouts,(reverse(idx))[0]+1,yfit1[idx_cnt-1],dec1,color=cgcolor('Red')
+; 				xyouts,(reverse(idx))[0]+1,yfit2[idx_cnt-1],dec2
+; 				xyouts,(reverse(idx))[0]+1,yfit3[idx_cnt-1],dec3,col=cgColor("Slate Gray")
+				str_pholder = strjoin(replicate(' ',max([strlen(algon1),strlen(ref)])))
+				print,'ALG1                          : '+dec1
+				print,'ALG2                          : '+dec2
+				print,'RMSD                          : '+dec3
+			endif
 			if opl ne 0 then begin
 				legend,algon1+dtn+' ('+datum+')',psym=-8,thick=thick,color=[cgColor("Red")],spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
@@ -2635,8 +2664,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				ytitle= title+' '+unit,xminor=xminor,ylog=log,$
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=[5,2]+(sav or wbg ? [2,1]:0),$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
-; ;polyfill pinatubu year
-; polyfill,[160.,162.,162.,160.],[(!y.crange)[0],!y.crange,(!y.crange)[1]],col=cgcolor('wheat')
+				if keyword_set(pinatubu) then polyfill,[160.,162.,162.,160.],[(!y.crange)[0],!y.crange,(!y.crange)[1]],col=cgcolor('wheat')
 				div = ((anz[1]-anz[0]) le 12 ? 4. : 12.)
 				for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],!y.crange,linestyle=2
 				for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
@@ -2672,7 +2700,9 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	if keyword_set(sea) then coverage = 'sea'
 	datum = '1978-2016' ; start dummy
 
-	algon = sat_name(ref,sat)
+	algon1 = sat_name(alg,sat)
+	algon2 = sat_name(ref,sat)
+
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
 
 	if keyword_set(single_var) then begin
@@ -2689,7 +2719,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	datum = d.actual_date
 
 	if keyword_set(save_as) then begin 
-		save_as = !SAVE_DIR +'timeseries'+'/'+cci_name(sat)+'_vs_'+algon+'_time_series_'+$
+		save_as = !SAVE_DIR +'timeseries'+'/'+algon1+'_vs_'+algon2+'_time_series_'+$
 		(keyword_set(diff) ? 'difference_':'')+$
 		(keyword_set(mean_2d) ? '2d_mean_':'')+(keyword_set(single_var)? single_var:'multi_var')+'_L3C_'+datum+ $
 		(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
@@ -2706,7 +2736,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	if keyword_set(diff) then begin
 		start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
 			dumdata = d.mean - d.mean2 & minv = -20. & maxv = 20.
-			ititle = datum+' '+longname & btitle = 'Diff '+sat_name(alg,sat)+' - '+algon+' '+strupcase(single)+unit
+			ititle = datum+' '+longname & btitle = 'Diff '+algon1+' - '+algon2+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(d.mean eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv), $
 				countries=countries,magnify = magnify, figure_title = ititle, title= btitle, g_eq=g_eq, l_eq=l_eq	, $
@@ -2738,7 +2768,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
 			!p.multi= [0,2,2]
 			dumdata = d.mean & minv = 0. & maxv = 100.
-			ititle = datum+' '+longname & btitle = sat_name(alg,sat)+' '+strupcase(single)+unit
+			ititle = datum+' '+longname & btitle = algon1+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,magnify = magnify, figure_title = ititle, title= btitle, $
@@ -2753,7 +2783,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				limit = limit,debug=verbose)
 			obj_destroy,m
 			dumdata = d.mean2 & minv = 0. & maxv = 100.
-			ititle = datum+' '+longname & btitle = algon+' '+strupcase(single)+unit
+			ititle = datum+' '+longname & btitle = algon2+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,magnify = magnify, figure_title = ititle, title= btitle		, $
@@ -2798,7 +2828,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	datum = keyword_set(datum) ? datum : stregex(file_basename(ccifile),'[0-9]+',/ext)
 	year  = strmid(datum,0,4)
 	month = strmid(datum,4,2)
-
+	ts    = keyword_set(timeseries)
 	data  = keyword_set(varname) ? strlowcase(varname) : 'hist2d_cot_ctp'
 	; the limits needs later to be freed otherwise map_image will have an error
 	if keyword_set(antarctic) then limit = [-90.0,-180,-65.5,180]
@@ -2806,29 +2836,15 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 
 	ls    = ( keyword_set(land) or keyword_set(sea) ) ? 1:0
 	hct   = keyword_set(hist_cloud_type) ? hist_cloud_type : 'cu'
-	ref   = keyword_set(reference) ? strlowcase(reference) : 'gac'
+	algo2 = keyword_set(reference) ? ref2algo(reference) : ''
+
 	if (hct eq 'hist2d' or hct eq 'hist_2d' or hct eq 'max') and is_jch(varname,/rat) then begin
 		ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: '+hct+' not possible with hist2d_ratio!')
 		return
 	endif
 
-	case ref of 
-		'cci'	  : begin & algo = 'esacci' & algon = sat_name(algo,sat) & end
-		'cci_old' : begin & algo = 'esacci_old' & algon = sat_name(algo,sat) & end
-		'gac'	  : begin & algo = 'clara'  & algon = sat_name(algo,sat) & end
-		'gac2'	  : begin & algo = 'clara2' & algon = sat_name(algo,sat) & end
-		'myd'	  : begin & algo = 'coll5'  & algon = 'Coll5-AQUA' & end
-		'mod'	  : begin & algo = 'coll5'  & algon = 'Coll5-TERRA' & end
-		'myd2'	  : begin & algo = 'coll6'  & algon = 'Coll6-AQUA' & end
-		'mod2'	  : begin & algo = 'coll6'  & algon = 'Coll6-TERRA' & end
-		'gwx'	  : begin & algo = 'gewex'  & algon = sat_name(algo,sat) & end
-		'cal'	  : begin & algo = 'calipso' & algon = sat_name(algo,sat) & end
-		'isp'	  : begin & algo = 'isccp'  & algon = sat_name(algo,sat) & end
-		'pmx'	  : begin & algo = 'patmos' & algon = sat_name(algo,sat) & end
-		'cla'	  : begin & algo = 'claas'  & algon = sat_name(algo,sat) & end
-		'self'	  : begin & ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Choose Reference Dataset') & return & end
-		else	  :
-	endcase
+	algon1 = sat_name(algo1,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
+	algon2 = sat_name(algo2,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
 
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
 
@@ -2836,18 +2852,18 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	win_nr    = adv_keyword_set(win_nr) ? win_nr : 1
 	sav = keyword_set(save_as)
 
-	if keyword_set(timeseries) then begin
+	if ts then begin
 		datum = '1978-2016'
 		struc = get_histo_time_series(algo1, data, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found)
 		if not found then begin
-			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: No time_series "sav" file found for '+sat_name(algo1,sat))
+			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: No time_series "sav" file found for '+algon1)
 			return
 		endif
 		cci = struc.bild
 		adc = struc.actual_date
-		struc = get_histo_time_series(ref, data, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found)
+		struc = get_histo_time_series(algo2, data, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found)
 		if not found then begin
-			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: No time_series "sav" file found for '+sat_name(ref,sat))
+			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: No time_series "sav" file found for '+algon2)
 			return
 		endif
 		gac = struc.bild
@@ -2861,7 +2877,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: File does not contain wanted data.')
 			return
 		endif
-		gac = get_data(file=gacfile,year,month,sat=sat,algo=ref,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,print_filename=2)
+		gac = get_data(file=gacfile,year,month,sat=sat,algo=algo2,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,print_filename=2)
 		if not found then begin
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Reference file does not contain wanted data.')
 			return
@@ -2892,9 +2908,9 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 						land=land, sea=sea,found=found1)
 			cci_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
 					ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
-			liq = get_1d_hist_from_jch(gac[*,*,*,*,0],algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
+			liq = get_1d_hist_from_jch(gac[*,*,*,*,0],algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
 						land=land, sea=sea,found=found2)
-			ice = get_1d_hist_from_jch(gac[*,*,*,*,1],algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
+			ice = get_1d_hist_from_jch(gac[*,*,*,*,1],algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
 						land=land, sea=sea,found=found2)
 			gac_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
 					ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
@@ -2902,7 +2918,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		endif else begin
 			cci_histos = get_1d_hist_from_jch(cci,algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
 						land=land, sea=sea,found=found1)
-			gac_histos = get_1d_hist_from_jch(gac,algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
+			gac_histos = get_1d_hist_from_jch(gac,algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
 						land=land, sea=sea,found=found2)
 			cci_histos = {	cot:cci_histos.cot/total(cci_histos.cot)*100.,$
 					ctp:cci_histos.ctp/total(cci_histos.ctp)*100.}
@@ -2914,27 +2930,27 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			apx = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
 			; CTP
 			if hct eq '1d' or hct eq '1d_ctp' then begin
-				if keyword_set(save_as) then start_save, save_dum+'_'+sat_name(algo1,sat)+'_-_'+algon+'_CTP.eps', thick = thick else thick = 2
+				if keyword_set(save_as) then start_save, save_dum+'_'+algon1+'_-_'+algon2+'_CTP.eps', thick = thick else thick = 2
 					plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=xtickname.ctp, $
 					xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
 					charthick = (keyword_set(save_as) ? 2. : 1)
 					oplot,cci_histos.ctp,thick=thick,col=cgcolor('Red'),psym=-8
 					oplot,gac_histos.ctp,thick=thick,psym=-8
-					legend,[sat_name(algo1,sat),algon],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
+					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
 					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? 2.5:1.5)
-				if keyword_set(save_as) then end_save, save_dum+'_'+sat_name(algo1,sat)+'_-_'+algon+'_CTP.eps'
+				if keyword_set(save_as) then end_save, save_dum+'_'+algon1+'_-_'+algon2+'_CTP.eps'
 			endif
 			; COT
 			if hct eq '1d' or hct eq '1d_cot' then begin
-				if keyword_set(save_as) then start_save, save_dum+'_'+sat_name(algo1,sat)+'_-_'+algon+'_COT.eps', thick = thick else thick = 2
+				if keyword_set(save_as) then start_save, save_dum+'_'+algon1+'_-_'+algon2+'_COT.eps', thick = thick else thick = 2
 					plot,[0,0],[1,1],yr=yrange,xr=[0,5],xticks=6,xtickname=xtickname.cot, $
 					xtitle=apx+'Cloud optical Thickness',ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
 						charthick = (keyword_set(save_as) ? 2. : 1)
 					oplot,cci_histos.cot,thick=thick,col=cgcolor('Red'),psym=-8
 					oplot,gac_histos.cot,thick=thick,psym=-8
-					legend,[sat_name(algo1,sat),algon],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
+					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
 					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? 2.5:1.5)
-				if keyword_set(save_as) then end_save, save_dum+'_'+sat_name(algo1,sat)+'_-_'+algon+'_COT.eps'
+				if keyword_set(save_as) then end_save, save_dum+'_'+algon1+'_-_'+algon2+'_COT.eps'
 			endif
 		endif
 		return
@@ -2981,10 +2997,10 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	make_geo,file=gacfile,lon,lat,grid=gac_grid
 	if hct eq 'max' then begin
 		; -------maxtype
-		gac = get_hct_maxtype( gac, algo, grid_res = out_grid,lon=lon,lat=lat,fillvalue=fillvalue, htypes=htypes)
+		gac = get_hct_maxtype( gac, algo2, grid_res = out_grid,lon=lon,lat=lat,fillvalue=fillvalue, htypes=htypes)
 		; -------
 	endif else if hct eq 'hist2d' or hct eq 'hist_2d' then begin
-		gac = get_2d_rel_hist_from_jch( gac, algo, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
+		gac = get_2d_rel_hist_from_jch( gac, algo2, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
 						lon = lon, lat = lat, fillvalue = fillvalue, found = found)
 		if not found then return
 		if keyword_set(save_as) then begin
@@ -2996,17 +3012,17 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			if win_nr ne -1 then win, win_nr,title=data
 ; 			if ~keyword_set(difference) then !p.multi=[0,2,1]
 		endelse
-		plot_2d_rel_hist, cci, sat_name(algo1,sat), bild2=gac, name2=algon, col_tab=col_tab, brewer=brewer, $
+		plot_2d_rel_hist, cci, algon1, bild2=gac, name2=algon2, col_tab=col_tab, brewer=brewer, $
 		mini=mini, maxi=maxi, save_as=save_dum, difference = difference
 		return
 	endif else begin
 		if is_jch(varname,/rat) then begin
-			liq = get_hct_data(hct,gac[*,*,*,*,0],algo,sdum=sdum,found=found,grid=out_grid)
-			ice = get_hct_data(hct,gac[*,*,*,*,1],algo,sdum=sdum,found=found,grid=out_grid)
+			liq = get_hct_data(hct,gac[*,*,*,*,0],algo2,sdum=sdum,found=found,grid=out_grid)
+			ice = get_hct_data(hct,gac[*,*,*,*,1],algo2,sdum=sdum,found=found,grid=out_grid)
 			gac = reform(float(liq)/float((liq>0)+(ice>0)>1)) *100.
 			bar_title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 		endif else begin
-			gac = get_hct_data(hct,gac,algo,/relative,found=found,sdum=sdum,grid=out_grid)
+			gac = get_hct_data(hct,gac,algo2,/relative,found=found,sdum=sdum,grid=out_grid)
 			ratio_gac = get_hct_ratio(gac,sdum,limit=limit,antarctic=antarctic,arctic=arctic,$
 						lon=lon_g,lat=lat_g,dem=dem_g,land=land,sea=sea,/relative)
 		endelse
@@ -3036,8 +3052,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	max_cci = max(cci)
 	max_gac = max(gac)
 	if hct ne 'max' and ~is_jch(varname,/rat) then begin
-		print,strupcase(hct)+'/all Ratio '+sat_name(algo1,sat)+' : '+ratio_cci;rat_cci+'%'
-		print,strupcase(hct)+'/all Ratio '+algon+' : '+ratio_gac;rat_gac+'%'
+		print,strupcase(hct)+'/all Ratio '+algon1+' : '+ratio_cci;rat_cci+'%'
+		print,strupcase(hct)+'/all Ratio '+algon2+' : '+ratio_gac;rat_gac+'%'
 	endif
 	minvalue = 0
 	maxvalue = 1
@@ -3087,11 +3103,11 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert
 
 	if hct eq 'max' then begin
-		if keyword_set(save_as) then save_as = save_dum+'_CCI_'+strupcase(sat)+'_max_type.eps'
+		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_max_type.eps'
 		start_save, save_as, thick = thick,size=[32,20]
 			m = obj_new("map_image",cci,lat_c,lon_c,void_index=void_index1,box_axes=box_axes,n_lev=9, $
 				magnify=magnify,  min=0,max=9,ctable = 13,discrete=findgen(10),$
-				figure_title = sat_name(algo1,sat)+' max type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
+				figure_title = algon1+' max type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizon=horizon, $
 				format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), $
@@ -3100,11 +3116,11 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				globe = globe, limit = limit,countries=countries,debug=verbose)
 			obj_destroy,m
 		end_save, save_as
-		if keyword_set(save_as) then save_as = save_dum+'_'+algon+'_max_type.eps'
+		if keyword_set(save_as) then save_as = save_dum+'_'+algon2+'_max_type.eps'
 		start_save, save_as, thick = thick,size=[32,20]
 			m = obj_new("map_image",gac,lat_g,lon_g,void_index=void_index2,box_axes=box_axes,n_lev=9, $
 				magnify=magnify, min=0,max=9,ctable = 13,discrete=findgen(10),$
-				figure_title = algon+' max type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
+				figure_title = algon2+' max type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizon=horizon, $
 				format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), $
@@ -3118,11 +3134,11 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		end_save, save_as
 	endif else begin
 		if ~keyword_set(difference) then begin
-			if keyword_set(save_as) then save_as = save_dum+'_CCI_'+strupcase(sat)+'_Ratio_'+strcompress(rat_cci,/rem)+'.eps'
+			if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_Ratio_'+strcompress(rat_cci,/rem)+'.eps'
 			start_save, save_as, thick = thick,size=[20,16]
 				m = obj_new("map_image",cci,lat_c,lon_c,void_index=void_index1,box_axes=box_axes,n_lev=5, $
 					max=adv_keyword_set(maxi) ? maxi:maxvalue, min=adv_keyword_set(mini) ? mini:minvalue, magnify=magnify, $
-					figure_title = sat_name(algo1,sat)+' '+lname, charthick = keyword_set(save_as) ? 2. : 1.5	, $
+					figure_title = algon1+' '+lname, charthick = keyword_set(save_as) ? 2. : 1.5	, $
 					title= keyword_set(bar_title) ? bar_title : 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]' : ''),$
 					limit = limit,countries=countries,$
 					format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), logarithmic=logarithmic, $
@@ -3133,11 +3149,11 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				obj_destroy,m
 			end_save, save_as
 
-			if keyword_set(save_as) then save_as = save_dum+'_'+algon+'_Ratio_'+strcompress(rat_gac,/rem)+'.eps'
+			if keyword_set(save_as) then save_as = save_dum+'_'+algon2+'_Ratio_'+strcompress(rat_gac,/rem)+'.eps'
 			start_save, save_as, thick = thick,size=[20,16]
 				m = obj_new("map_image",gac,lat_g,lon_g,void_index=void_index2,box_axes=box_axes,n_lev=5, $
 					max=adv_keyword_set(maxi) ? maxi:maxvalue, min=adv_keyword_set(mini) ? mini:minvalue, magnify=magnify, $
-					figure_title = algon+' '+lname, charthick = keyword_set(save_as) ? 2. : 1.5	, $
+					figure_title = algon2+' '+lname, charthick = keyword_set(save_as) ? 2. : 1.5	, $
 					title= keyword_set(bar_title) ? bar_title :'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]' : ''),$
 					format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), logarithmic=logarithmic, $
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
@@ -3149,20 +3165,20 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			end_save, save_as
 
 			; 2d histogram
-			if keyword_set(save_as) then save_as = save_dum+'_CCI_'+strupcase(sat)+'_'+algon+'_2dHist.eps'
+			if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_'+algon2+'_2dHist.eps'
 			start_save, save_as, thick = thick,size=[20,16]
 				dum = h2d_cnt gt 0 ? hist_2d(cci[idx_h2d],gac[idx_h2d],bin1=1,bin2=1,min1=0,max1=100,min2=0,max2=100) : intarr(101,101)
 				if h2d_cnt eq 0 then dum[0]=1
 				view2d,dum,no_data_val=0,/log,xticks=5,xtickname=['0','20','40','60','80','100'],$
 				yticks=5,ytickname=['0','20','40','60','80','100'],bar_format='(i)',bar_title='# of occur.',$
-				xtitle=sat_name(algo1,sat),ytitle=algon
+				xtitle=algon1,ytitle=algon2
 				regr = linfit(cci[idx_h2d],gac[idx_h2d], YFIT=yfit)
 				oplot,!x.crange,[regr[1]*!x.crange+regr[0]],linestyle=2
 				oplot,!x.crange,!y.crange
 			end_save, save_as
 		endif
 		;difference
-		if keyword_set(save_as) then save_as = save_dum+'_CCI_'+strupcase(sat)+'-'+algon+'_Diff.eps'
+		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'-'+algon2+'_Diff.eps'
 		start_save, save_as, thick = thick,size=[20,16]
 			if vd1_cnt gt 0 and vd2_cnt gt 0 then void_index=[void_index1,void_index2]
 			if vd1_cnt gt 0 and vd2_cnt eq 0 then void_index=[void_index1]
@@ -3170,7 +3186,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			if vd1_cnt eq 0 and vd2_cnt eq 0 then void_index=-1
 			m = obj_new("map_image",(cci-gac),lat_g,lon_g,void_index=void_index,box_axes=box_axes,n_lev=5, $
 				max=(keyword_set(difference) ? maxi : 50), min=(keyword_set(difference) ? mini : -50), magnify=magnify, $
-				figure_title = 'Diff. '+sat_name(algo1,sat)+' - '+algon+' '+lname, charthick = keyword_set(save_as) ? 2. : 1.5	, $
+				figure_title = 'Diff. '+algon1+' - '+algon2+' '+lname, charthick = keyword_set(save_as) ? 2. : 1.5	, $
 				title= keyword_set(bar_title) ? bar_title:'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]' : ''),$
 				format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), logarithmic=logarithmic, $
 				bwr = (keyword_set(difference) ? bwr:1 ), elevation = elevation, extended_rainbow = extended_rainbow, flip_colours = flip_colours,$
@@ -3186,7 +3202,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	endelse
 
 	if keyword_set(zoom) then begin
-		vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile,  mini = mini, maxi = maxi, limit=zoom,algo = algo, sat=sat,$
+		vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile,  mini = mini, maxi = maxi, limit=zoom,algo1 = algo1, sat=sat,$
 			win_nr = win_nr,save_as= save_as,land = land, sea = sea,hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, $
 			reference = reference,timeseries=timeseries,ctable=ctable,other=other, difference = difference
 	endif
@@ -3237,14 +3253,19 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		time_series = time_series,sat2=sat2, save_as = save_as,mini=mini,maxi=maxi,verbose=verbose,file1=file1,file2=file2,$
 		datum1=datum1,datum2=datum2
 
-	sat1 = keyword_set(satellite) ? strlowcase(satellite) : 'noaa18'
-	ref  = keyword_set(reference) ? strlowcase(reference) : 'gac'
-	cov  = keyword_set(coverage)  ? strlowcase(coverage)  : 'full'
-
+	sat1 = keyword_set(satellite) ? strlowcase(satellite) : ''
+	ref  = keyword_set(reference) ? strlowcase(reference) : ''
+	cov  = keyword_set(coverage)  ? strlowcase(coverage)  : ''
+	ts   = keyword_set(time_series)
+	if ~keyword_set(ref) then begin
+		ok=dialog_message('Choose reference data!')
+		return
+	endif
 	make_geo, lon,lat, grid=1
-	dem = get_dem(lon,lat,grid=1)
+; 	dem  = get_dem(lon,lat,grid=1)
+	dem  = get_coverage(lon,lat,coverage = coverage)
+	dem = [[dem,dem,dem],[dem,dem,dem],[dem,dem,dem]]
 
-;---------
 	if keyword_set(file2) then begin
 		if keyword_set(addtext) then begin
 			at = strsplit(addtext,',',/ext)
@@ -3282,21 +3303,7 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		f1str  = ''
 		f2str  = ''
 	endelse
-;---------
-	case cov of
-		'full'		: dem = dem *0. + 9999.
-		'land'		: dem[where(dem ne 0)] = 9999.
-		'sea'		: dem[where(dem eq 0)] = 9999.
-		'antarctica'	: dem[where(between(lat,-90.0,-60.0))] = 9999.
-		'midlat_south'	: dem[where(between(lat,-60.0,-30.0))] = 9999.
-		'tropic'	: dem[where(between(lat,-30.0, 30.0))] = 9999.
-		'midlat_north'	: dem[where(between(lat, 30.0, 60.0))] = 9999.
-		'arctic'	: dem[where(between(lat, 60.0, 90.0))] = 9999.
-		'midlat_trop'	: dem[where(between(lat,-60.0, 60.0))] = 9999.
-		else: begin print,'coverage not defined!' & return & end
-	endcase
-	dem = [[dem,dem,dem],[dem,dem,dem],[dem,dem,dem]]
-	if ~keyword_set(ref) then return
+
 	case strmid(ref,0,3) of
 		'gac'	: sat2 = (total(sat1 eq ['msg','aqua','terra','modises','allsat','avhrrs']) ? 'allsat' : sat1)
 		'myd'	: sat2 = 'aqua'
@@ -3312,12 +3319,12 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 	endcase
 
 	algo1   = algo2ref(algo,sat=sat1)
-	algon1  = sat_name(algo,sat1)
+	algon1  = sat_name(algo,sat1,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
 	algo2   = ref
-	algon2  = sat_name(ref,sat2)
+	algon2  = sat_name(ref,sat2,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
 	dummy   = fltarr(360,180) -999.
 
-	if keyword_set(time_series) then begin
+	if ts then begin
 		dum = restore_var(!SAVS_DIR + 'time_series/overview_matrix/two_dim_overview_matrix_200701-200912_'+algo1+'_'+sat1+'.sav',found=found)
 		if found then gesamt_cci = dum.mean else begin
 			ok = dialog_message('make_2d_overview: Time Series Sav not found for '+algo1+' '+sat1)
@@ -3329,52 +3336,42 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 			return
 		endelse
 	endif else begin
-
 		; read in cci parameter
-		ctt     = get_data(file=file1,year,month,data='ctt',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
- 		if ~found then ctt = dummy; else begin
-; 			idx = where(ctt eq no_data_value[0],idx_cnt)
-; 			ctt = ctt - 150
-; 			if idx_cnt gt 0 then ctt[idx] = no_data_value[0]
-; 		endelse
-		ctp     = get_data(file=file1,year,month,data='ctp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		ctt     = get_data(year,month,data='ctt',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		if ~found then ctt = dummy
+		ctp     = get_data(year,month,data='ctp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then ctp = dummy
-		cfc     = get_data(file=file1,year,month,data='cfc',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		cfc     = get_data(year,month,data='cfc',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then cfc = dummy
-		cot     = get_data(file=file1,year,month,data='cot',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		cot     = get_data(year,month,data='cot',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then cot = dummy
-		cph     = get_data(file=file1,year,month,data='cph',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		cph     = get_data(year,month,data='cph',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then cph = dummy
-		ref     = get_data(file=file1,year,month,data='ref',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		ref     = get_data(year,month,data='cer',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then ref = dummy
-		lwp     = get_data(file=file1,year,month,data='lwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		lwp     = get_data(year,month,data='lwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then lwp = dummy
-		iwp     = get_data(file=file1,year,month,data='iwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		iwp     = get_data(year,month,data='iwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then iwp = dummy
-		cwp     = get_data(file=file1,year,month,data='cwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
+		cwp     = get_data(year,month,data='cwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
 		if ~found then cwp = dummy
-
-		ctt_ref = get_data(file=file2,year,month,data='ctt',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
- 		if ~found then ctt_ref = dummy ;else begin
-; 			idx = where(ctt_ref eq no_data_value[0],idx_cnt)
-; 			ctt_ref = ctt_ref - 150
-; 			if idx_cnt gt 0 then ctt_ref[idx] = no_data_value[0]
-; 		endelse
-		ctp_ref = get_data(file=file2,year,month,data='ctp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		ctt_ref = get_data(year,month,data='ctt',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		if ~found then ctt_ref = dummy
+		ctp_ref = get_data(year,month,data='ctp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then ctp_ref = dummy
-		cfc_ref = get_data(file=file2,year,month,data='cfc',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		cfc_ref = get_data(year,month,data='cfc',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then cfc_ref = dummy
-		cot_ref = get_data(file=file2,year,month,data='cot',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		cot_ref = get_data(year,month,data='cot',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then cot_ref = dummy
-		cph_ref = get_data(file=file2,year,month,data='cph',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		cph_ref = get_data(year,month,data='cph',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then cph_ref = dummy
-		ref_ref = get_data(file=file2,year,month,data='ref',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		ref_ref = get_data(year,month,data='cer',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then ref_ref = dummy
-		lwp_ref = get_data(file=file2,year,month,data='lwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		lwp_ref = get_data(year,month,data='lwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then lwp_ref = dummy
-		iwp_ref = get_data(file=file2,year,month,data='iwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		iwp_ref = get_data(year,month,data='iwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then iwp_ref = dummy
-		cwp_ref = get_data(file=file2,year,month,data='cwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
+		cwp_ref = get_data(year,month,data='cwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
 		if ~found then cwp_ref = dummy
 
 		min_ctt = (minmax([ctt,ctt_ref],no=-999))[0]
@@ -3404,7 +3401,7 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 ; 		out = (gesamt_cci-gesamt_ref)/(gesamt_cci+gesamt_ref) 	; werte maximal 1 : Ref = 0 und CCI != 0, minimal -1 : CCI = 0 und Ref !=0, 0 ist perfekt.
 		out = 100*((gesamt_cci-gesamt_ref)/(gesamt_ref))		; relative differenz in %
 		view2d, out,min=adv_keyword_set(mini) ? float(mini[0]):-100.,max=adv_keyword_set(maxi)? float(maxi[0]) : 100.,$
-		col_tab=4,no_data_idx=where(gesamt_ref le 0. or gesamt_cci le 0. or dem ne 9999.),charsize=1.5,xmargin=[8,9],ymargin=[3,3],$;xmargin=[8,8]$
+		col_tab=4,no_data_idx=where(gesamt_ref le 0. or gesamt_cci le 0. or dem ne 1),charsize=1.5,xmargin=[8,9],ymargin=[3,3],$;xmargin=[8,8]$
 		xticks=6,xtickname=[' ','LWP',' ','IWP', ' ','CWP',' '],yticks=6,ytickname=[' ','LWP',' ','COT', ' ','CTT',' '],$
 		bar_title='Rel. Difference [%] '+f1str+algon1+' - '+f2str+algon2,bar_nlev=6
 		axis,xaxis=1,xticks=6,xtickname=[' ','CTT',' ','CTP', ' ','CFC',' '],charsize=1.5
@@ -3475,12 +3472,6 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		sea  = 0
 	endif
 	set_colors,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
-
-; 	if keyword_set(save_as) then begin
-; 		save_as = !SAVE_DIR +'hovmoeller/'+(keyword_set(ref) ? 'Diff_'+algon+'_-_'+ref_name:algon)+'_'+dat+'_hovmoeller_L3C_'++' $
-; 				    +(keyword_set(land)?'_land':'')+(keyword_set(sea)?'_sea':'')+(anomalies?'_anomalies':'')+'.eps'
-; 		!p.multi=0
-; 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200
 
 	d = get_available_time_series( algo, dat, sat, period = datum, /hovmoeller, found = found)
 	if ~float(found) then begin
@@ -3666,6 +3657,8 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	sav   = keyword_set(save_as)
 	wbg   = keyword_set(white_bg)
 	ts    = keyword_set(timeseries)
+	algon1= sat_name(algo,sat,year=(ts ? 0:year),month=(ts ? 0:month),level=lev)
+	if keyword_set(ref) then algon2 = sat_name(reference,sat,year=(ts ? 0:year),month=(ts ? 0:month),level=lev)
 
 	if ts then begin
 		datum = '1978-2016' ; use this as first guess
@@ -3802,17 +3795,17 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			if ts then date=''
 			if is_defined(hh2) then begin
 				oplot,xx,hh2/total(hh2)*100.,color = cgcolor('Red'),thick=thick
-				legend,[date+sat_name(algo,sat,year=year,month=month)+hct,date+sat_name(reference,sat,year=year,month=month)+hct],thick=[thick,thick],$
+				legend,[date+algon1+hct,date+algon2+hct],thick=[thick,thick],$
 				color=[-1,cgcolor('Red')],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
 			endif else begin
-				legend,date+sat_name(algo,sat,year=year,month=month)+dtn+hct,thick=thick,spos=(keyword_set(change_side) ? 'bot':'top'),$
+				legend,date+algon1+dtn+hct,thick=thick,spos=(keyword_set(change_side) ? 'bot':'top'),$
 				charsize=lcharsize,charthick = charthick,color =-1
 			endelse
 		endif else begin
 			if ts then date=''
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error
 			oplot,xx,hh/total(hh)*100.,thick=thick,col=cgcolor(cols),linestyle=linestyle,psym=psym,symsize=symsize
-			legend,date+sat_name(algo,sat,year=year,month=month)+dtn+hct,thick=thick,color=cgcolor(cols), $
+			legend,date+algon1+dtn+hct,thick=thick,color=cgcolor(cols), $
 			spos=spos,ystretch=ystretch+0.5,charsize=lcharsize,charthick = charthick,linestyle = linestyle,psym=psym
 		endelse
 	end_save,save_as
@@ -3824,13 +3817,13 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts,simulator=simulator,dirname=dirname
 
 	opl   = keyword_set(oplots) ? fix(oplots) : 0
-	satn  = sat_name(algo,satellite, year=year, month=month)
 	hct   = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
 	date  = keyword_set(datum) ? datum+' ' : ''
 	sav   = keyword_set(save_as) 
 	wbg   = keyword_set(white_bg)
 	sim   = keyword_set(simulator)
 	ts    = keyword_set(timeseries)
+	satn  = sat_name(algo,satellite, year=(ts ? 0:year), month=(ts ? 0:month),level=level)
 
 ; 	datum = string(year[0],f='(i4.4)')+string(month[0],f='(i2.2)')
 
@@ -3941,7 +3934,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = reference, mini=mini, maxi=maxi,$
+pro plot_simple_timeseries, year,month, varname, satellite, algo, cov, reference = reference, mini=mini, maxi=maxi,$
 			    sav_file = sav_file, verbose=verbose, oplots=oplots, found=found, structure = structure,$
 			    addtext = addtext,error=error,save_as=save_as, win_nr=win_nr,white_bg=white_bg, $
 			    logarithmic=logarithmic,version=version,correct=correct,zonal_only=zonal_only	, $
@@ -3952,6 +3945,7 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 	opl        = keyword_set(oplots)     ? fix(oplots) : 0
 	no_compare = ~keyword_set(reference)
 	dat        = strlowcase(varname)
+	sat        = strlowcase(strjoin(strsplit(satellite,'-',/ex)))
 	anomalies  = stregex(varname,'_anomalies',/bool)
 	if anomalies then dat = strreplace(dat,'_anomalies','')
 
@@ -3967,14 +3961,16 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 
 ; 	ts_data  = anomalies ? (d.stats_non_weighted-d.stats_sm_non_weighted) : d.stats ; stats = stats_non_weighted = not weighted
 	ts_data  = anomalies ? (d.stats-d.stats_sm) : d.stats ; stats = global mean (latitude weighted)
+
 	zeitraum = d.period
 	ori_period = fix(strsplit(d.period,'-',/ext))
 	longname = d.longname
 	coverage = (stregex(d.coverage,'midlat_trop',/fold,/bool) ? string(177b)+'60'+string(176b)+' Lat' : d.coverage)
-	dumyear  = minmax(where(finite(d.stats[0,*])))/12 + fix((strsplit(d.period,/ext,'-'))[0])
-	dummonth = minmax(where(finite(d.stats[0,*]))) mod 12
-	algon    = sat_name(algo,sat,year=dumyear[0],month=dummonth[0],version=version)
-	ref      = sat_name((keyword_set(reference) ? reference:algo),sat,year=dumyear[0],month=dummonth[0],version=version)
+; 	dumyear  = total(sat eq ['noaaam','noaapm']) ? 0 :minmax(where(finite(d.stats[0,*])))/12 + fix((strsplit(d.period,/ext,'-'))[0])
+; 	dummonth = total(sat eq ['noaaam','noaapm']) ? 0 :(minmax(where(finite(d.stats[0,*]))) mod 12) +1
+
+	algon    = sat_name(algo,sat);,year=dumyear[0],month=dummonth[0],version=version)
+	ref      = sat_name((keyword_set(reference) ? reference:algo),sat);,year=dumyear[0],month=dummonth[0],version=version)
 	datum    = strcompress(d.actual_date,/rem)
 	; temporär cfc zeitreihen ect korrektur
 ; 	if keyword_set(correct) and (dat eq 'cfc' or dat eq 'ctp') and total(sat eq ['noaa7','noaa9','noaa11','noaa14','noaa16','noaa18','noaa19']) then begin
@@ -3998,7 +3994,8 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 		maxi = float(strsplit(maxi[0],',',/ext))
 		yrange =   [mini[0],maxi[0]]
 		if n_elements(maxi) gt 1 then dum[1] = ((fix(maxi[1])-1) )
-		if n_elements(mini) gt 1 then dum[0] = (fix(mini[1]) )
+		if n_elements(mini) gt 1 then dum[0] = (fix(mini[1]) > 1970 )
+		if dum[1] le dum[0] then dum[1] = ori_period[1]
 	endif
 	lines = pgrid(yrange)
 
@@ -4039,6 +4036,7 @@ pro plot_simple_timeseries, year,month, varname, sat, algo, cov, reference = ref
 	endif
 
 	anz = ( dum[1]-dum[0] + 1 ) *12.
+
 	if anz lt n_elements(ts_data[0,*]) then begin
 		anf = ((dum[0]-ori_period[0])*12)
 		eef = ((dum[1]-ori_period[0]+1)*12)
@@ -4133,7 +4131,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 			if cci_info.mtime gt ref_info.mtime then begin & apx1 = ' (new)' & apx2 = ' (old)' & new = 0 & end
 		endif else new = -1
 
-		name  = [sat_name(algo,sat)+apx1,sat_name(reference,sat)+apx2]
+		name  = [sat_name(algo,sat,year=year,month=month,level=level)+apx1,sat_name(reference,sat,year=year,month=month,level=level)+apx2]
 		array = [[temporary(cci)],[temporary(ref)]]
 
 		; see what else we have
@@ -4223,6 +4221,9 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 	apx    = keyword_set(liquid) ? 'Liquid ': (keyword_set(ice) ? 'Ice ' : '')
 	level  = 'l3c' ; this needs to be changed once l3s has histos too
 
+	algon1 = sat_name(algo1,sat,year=year,month=month,level=level)
+	algon2 = sat_name(algo2,sat,year=year,month=month,level=level)
+
 	if keyword_set(save_as) then begin
 		if save_as eq '1' then begin 
 			save_dum = !SAVE_DIR +'diffs/Diff_'+file_basename(file,is_hdf(file) ? '.hdf':'.nc')+'_-_'+$
@@ -4248,7 +4249,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 			if found then begin
 				cot_array  = dum.cot
 				ctp_array  = dum.ctp
-				name_arr   = pref+sat_name(algo1,sat)
+				name_arr   = pref+algon1
 				cci1_color = is_new eq 1 ? 'Red' : (keyword_set(save_as) ? 'Black':'White')
 				col_arr    = cci1_color
 				lspos      = 'top'
@@ -4267,7 +4268,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,satellite=satellite, 
 			if found then begin
 				cot_array  = is_defined(cot_array) ? [[cot_array],[dum.cot]] : dum.cot
 				ctp_array  = is_defined(ctp_array) ? [[ctp_array],[dum.ctp]] : dum.ctp
-				name_arr   = is_defined(name_arr)  ? [name_arr,pref2+sat_name(algo2,sat)] : pref2+sat_name(algo2,sat)
+				name_arr   = is_defined(name_arr)  ? [name_arr,pref2+algon2] : pref2+algon2
 				cci2_color = is_new ne 1 ? 'Red' : (keyword_set(save_as) ? 'Black':'White')
 				col_arr    = is_defined(col_arr)   ? [col_arr,cci2_color] : cci2_color
 				lspos      = is_defined(lspos)     ? [lspos,'top'] : 'top'
@@ -4696,7 +4697,7 @@ pro create_time_series,data,algon,coverage
 	dum    = strsplit(strlowcase(algon[0]),'-',/ext)
 	cli    = algo2ref(dum[0])
 	sat    = n_elements(dum) eq 2 ? dum[1] : ''
-	algon  = sat_name(cli,sat)
+	algon1 = sat_name(cli,sat)
 
 	grid = 1.0
 	if cli eq 'gac'  then grid = 0.25
@@ -4775,7 +4776,7 @@ pro create_time_series,data,algon,coverage
 			endif
 		endif
 		if (found) then begin
-			print, sat_name(cli,sat)+': '+get_product_name(dat,algo=cli)+' '+yyyy+'/'+mmmm+' (File: '+temporary(dum_file)+')'
+			print, algon1+': '+get_product_name(dat,algo=cli)+' '+yyyy+'/'+mmmm+' (File: '+temporary(dum_file)+')'
 			unc = get_data(	yyyy,mmmm,data=dat+'_unc',algo=cli,sat=sat,level=lev,found=found_unc,no_data_val=fv_unc,/silent,$
 					/make_compare,dirname=dirname,/no_recursive)
 
@@ -4859,7 +4860,7 @@ pro create_time_series,data,algon,coverage
 		if cov[ii] eq 'full'      then str_cov = '' 
 		if cov[ii] eq 'full_land' then str_cov = 'land_'
 		if cov[ii] eq 'full_sea'  then str_cov = 'sea_'
-		out_struc = {algoname:algon,varname:dat,longname:vollername,unit:unit,coverage:coverage[ii],stats:reform(gstats[*,*,ii]),$
+		out_struc = {algoname:algon1,varname:dat,longname:vollername,unit:unit,coverage:coverage[ii],stats:reform(gstats[*,*,ii]),$
 				stats_non_weighted:reform(stats[*,*,ii]),mean:temporary(cci),unc:temporary(unce)}
 		out_struc = create_struct(out_struc,'histogram',hist)
 		out_struc = create_struct(out_struc,'Overall_Stats',all)
@@ -4889,11 +4890,11 @@ pro do_create_all_compare_time_series
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		    'metopa','metopb','allsat','noaaam','noaapm'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['gac2'];,'pmx'];,'gac','myd2','mod2'];,'myd','mod'];'cci'
+	ref      = ['gac2','pmx','gac','myd2','mod2'];,'myd','mod'];'cci'
 	data     = ['cfc','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph']
 ; 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18']
-	sat      = ['noaa14','noaa15','noaa16','noaa17'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
-
+	sat      = ['noaaam','noaapm'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
+ref='pmx'
 	for i= 0,n_elements(sat)-1 do begin
 		for k=0,n_elements(ref)-1 do begin
 			for l=0,n_elements(data)-1 do begin

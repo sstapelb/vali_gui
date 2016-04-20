@@ -1465,7 +1465,7 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 			  end
 		else	: algon = strupcase(algo)
 	endcase
- 
+
 	if strmid(algon,0,6) eq 'Fame-C' then return, algon
 
 	if stregex(satn,'noaa',/bool,/fold) then begin
@@ -4989,6 +4989,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endif
 		endif
 		if is_stdd then datd = datd + '_std'
+		iidx = where(outdata eq no_data_value,iidxcnt)
+		no_data_value = -999.
+		if iidxcnt gt 0 then begin 
+			outdata = float(outdata)
+			outdata[iidx] = -999.
+		endif
 	endif
 
 	if keyword_set(global_grid) then begin
@@ -5240,12 +5246,10 @@ function get_all_avail_data, year, month, day, orbit = orbit, data = data, level
 				area = 	get_coverage( lon, lat, coverage = coverage,limit = limit, found = found, $
 					antarctic=antarctic,arctic=arctic,land=land,sea=sea,index=ndidx,count=ndidx_cnt,/complement)
 				if ndidx_cnt gt 0 then dum[ndidx] = ndv
-				algoname = sat_name(alle[i],strmid(alle[i],0,3) eq 'gac' and $
-					(strlowcase(satellite) eq 'aatme' or strlowcase(satellite) eq 'aatsr')?'noaa17':satellite)
+				algoname = sat_name(alle[i],strmid(alle[i],0,3) eq 'gac' and (strlowcase(satellite) eq 'aatme' or $
+					   strlowcase(satellite) eq 'aatsr')?'noaa17':satellite,year=year,month=month,level=level)
 				define_oplots, count, cols, spos, linestyle, psym, ystretch
-				sub   = {algoname : sat_name(alle[i],strmid(alle[i],0,3) eq 'gac' and $
-					(strlowcase(satellite) eq 'aatme' or strlowcase(satellite) eq 'aatsr')?'noaa17':satellite), $
-					 data : dum , no_data_value : ndv, minvalue:minv, $
+				sub   = {algoname : algoname,  data : dum , no_data_value : ndv, minvalue:minv, $
 					 maxvalue:maxv,longname:lname,unit:unit}
 				num   = alle[i] eq 'mod' ? 'modi' : alle[i] ; mod wird als tagname nicht akzeptiert! 
 				struc = ~is_defined(struc) ? create_struct(num,sub) : create_struct(struc,num,sub)
