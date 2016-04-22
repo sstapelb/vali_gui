@@ -62,6 +62,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	if total(alg eq ['gac2','clara2']) then begin
 		if keyword_set(path) then begin
+; !achtung alles in case statement umwandeln
 			; Martins Calipso Jahresmittel
 			if dat eq 'cfc_cloudsgt03'	then dat = 'cfc'
 			if dat eq 'cfc_cloudsgt02'	then dat = 'cfc'
@@ -96,10 +97,10 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'cwp_desc'  then dat = 'cwp'
 			if strmid(dat,0,3) eq 'lwp' then dat = 'lwp'
 			if strmid(dat,0,3) eq 'iwp' then dat = 'iwp'
- 			if dat eq 'cwp' then dat = 'iwp'
-			if dat eq 'cwp_unc' then dat = 'iwp'
- 			if dat eq 'cwp_error' then dat = 'iwp'
-			if dat eq 'cwp_allsky' then dat = 'cfc'
+ 			if dat eq 'cwp' and total(lev eq ['l3c','l3s']) then dat = 'iwp'
+			if dat eq 'cwp_unc' and total(lev eq ['l3c','l3s']) then dat = 'iwp'
+ 			if dat eq 'cwp_error' and total(lev eq ['l3c','l3s']) then dat = 'iwp'
+			if dat eq 'cwp_allsky' and total(lev eq ['l3c','l3s']) then dat = 'cfc'
 			if total(strmid(dat,0,6) eq ['solzen','sunzen','satzen','relazi','sungli','glint_','scanli','time_a','time_d']) then dat = 'caa'
 			if total(strmid(dat,0,3) eq ['ctp','ctt','cth']) then dat = 'cto'
 			if total(strmid(dat,0,10) eq ['hist1d_ctp','hist1d_ctt','nobs','nobs_asc','nobs_desc']) then dat = 'cto'
@@ -362,11 +363,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'ctt'		: dat = 'a_ct'
 			else		: 
 		endcase
-; 		case strmid(dat,0,3) of 
-; 			'ctp'	: dat = 'a_cp'
-; 			'ctt'	: dat = 'a_ct'
-; 			else	:
-; 		endcase
 	endif
 	if alg eq 'era-i' or alg eq 'era' then begin
 		case dat of
@@ -376,7 +372,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cwp_liq'	: dat = 'lwp'
 			'78'		: dat = 'lwp'
 			'var78'		: dat = 'lwp'
- 			'cc_total'	: dat = 'cfc'
+;  			'cc_total'	: dat = 'cfc'
 			'tcc'		: dat = 'cfc'
 			'164'		: dat = 'cfc'
 			'var164'	: dat = 'cfc'
@@ -1220,7 +1216,8 @@ function pgrid,range,interval
 	return,vector(d[0],d[1],abs((d[1]-d[0])/(float(interval)) + 1))
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_grid_res, data, found = found
+function get_grid_res, data, found = found, cci_l3u_eu = cci_l3u_eu
+	cci_l3u_eu=0.
 	if n_elements(data) gt 0 then begin
 		found=1.
 		dumdata = data
@@ -1230,9 +1227,12 @@ function get_grid_res, data, found = found
 			if scnt eq 1 then dumdata = indgen(si[sidx])
 		endif
 		if size(dumdata,/n_dim) eq 2 then begin
-			dum = [360.,180.]/size(dumdata,/dim)
+			dum = [360.,180.]/float(size(dumdata,/dim))
 			if dum[0] eq dum[1] then begin ; regular grid?
-				if total(dum[0] eq [0.05,0.10,0.25,0.50,1.00,2.00,2.50,5.00]) then return,dum[0] ; CCI vali standards
+				if total(dum[0] eq [0.02,0.05,0.10,0.25,0.50,1.00,2.00,2.50,5.00]) then return,dum[0] ; CCI vali standards
+			endif else if long(total(double(dum))*1000000d) eq 210000l then begin ; not nice but nessacary ;)
+				;CCI Europe L3U MODIS files
+				cci_l3u_eu = 1.
 			endif
 		endif
 	endif
@@ -1337,9 +1337,9 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		2006: sats = pmx ? ['15','18']			: ['17','18']
 		2007: sats = pmx ? ['15','18']			: [(mm le  5 ? '17':'MA'),'18']
 		2008: sats = pmx ? ['15','18']			: ['MA','18']
-		2009: sats = pmx ? ['15','18']			: ['17',(mm le  5 ? '18':'19')]
-		2010: sats = pmx ? ['nn','nn']			: ['17','19']
-		2011: sats = pmx ? ['nn','nn']			: ['17','19'] 
+		2009: sats = pmx ? ['15','18']			: ['MA',(mm le  5 ? '18':'19')]
+		2010: sats = pmx ? ['nn','nn']			: ['MA','19']
+		2011: sats = pmx ? ['nn','nn']			: ['MA','19'] 
 		2012: sats = pmx ? ['nn','nn']			: ['MA','19'] 
 		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 ? 'MA':'MB'),'19'] 
 		2014: sats = pmx ? ['nn','nn']			: ['MB','19'] 
@@ -2092,10 +2092,10 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		found = 1
 	endif else begin
 		if keyword_set(nise) then begin
-			lon_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_nhk.sav')
-			lat_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_nhk.sav')
-			lon_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lon_shk.sav')
-			lat_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/NISE_lat_shk.sav')
+			lon_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_nhk.sav')
+			lat_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_nhk.sav')
+			lon_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_shk.sav')
+			lat_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_shk.sav')
 			lon_dum = [[[lon_nhk]],[[lon_shk]]]
 			lat_dum = [[[lat_nhk]],[[lat_shk]]]
 			found =1
@@ -3189,8 +3189,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
 ; 								if found_prime then satellite = sat
 							endif
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strupcase(lev)+'/'+yyyy+'/'+mm+'/'+dd+'/'
-							if lev eq 'l2' then begin 
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strupcase(lev)+'/'+yyyy+'/'+mm+'/'
+							if lev eq 'l2' then begin
 								sat = strjoin(strsplit(sat,/ext,'-'))
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
 								orbdum = strlen(orb) eq 4 ? orb : '' 
@@ -3261,7 +3261,6 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 
 							if ( (dat eq 'JCH' or is_h1d(dumdat)) and apx eq 'mm' ) then apx = 'mh'
 ; 							if  dat eq 'JCH' and apx eq 'dm' then apx = 'dh'
-
 							c2_ende = keyword_set(filename) ? strmid(file_basename(filename),strlen(file_basename(filename))-5,2) : 'GL'
 
 							case strmid(sat,0,4) of
@@ -3612,6 +3611,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'cfc' 		: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover' 		& end
 		'cfc_day' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Day'	& end
 		'cfc_night' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Night'	& end
+		'cfc_twl' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover Twilight'	& end
 		'cfc_low' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Low Cloud Fractional Cover'	& end
 		'cfc_mid' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Mid Cloud Fractional Cover'	& end
 		'cfc_high' 	: begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'High Cloud Fractional Cover'	& end
@@ -3789,7 +3789,7 @@ function map_ecmwf_to_orbit, orb_date, orb_lon, orb_lat, parameter, found = foun
 	endif
 
 	if keyword_set(grid) then begin
-		sav_file = !SAVS_DIR + 'ECMWF_dimension_'+lon_dim1+'_'+lat_dim1+'_collocation_index_to_global_grid_'+string(grid,f='(f4.2)')+'.sav'
+		sav_file = !SAVS_DIR + '/ecmwf/ECMWF_dimension_'+lon_dim1+'_'+lat_dim1+'_collocation_index_to_global_grid_'+string(grid,f='(f4.2)')+'.sav'
 		index = restore_var(sav_file,found=found_idx)
 		if ~found_idx then begin
 			save_sav  = 1
@@ -3887,7 +3887,7 @@ function map_nise_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = gr
 	endif
 
 	if keyword_set(grid) then begin
-		index = restore_var(!SAVS_DIR + 'NISE_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav',found=found_idx)
+		index = restore_var(!SAVS_DIR + '/nise/NISE_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav',found=found_idx)
 		if ~found_idx then begin
 			save_sav  = 1
 			free,index
@@ -3926,7 +3926,7 @@ function map_nise_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = gr
 	read_hdf4,nise_file,'2',south,algo='nise'
 	data = [[temporary(north)],[temporary(south)]]
 
-	if save_sav then save_var, index, !SAVS_DIR + 'NISE_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav'
+	if save_sav then save_var, index, !SAVS_DIR + '/nise/NISE_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav'
 
 	return, reform((temporary(data))[index],size(orb_lon,/dim))
 
@@ -3967,7 +3967,7 @@ function map_osisaf_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = 
 	endif
 
 	if keyword_set(grid) then begin
-		index = restore_var(!SAVS_DIR + 'OSISAF_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav',found=found_idx)
+		index = restore_var(!SAVS_DIR + '/osisaf/OSISAF_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav',found=found_idx)
 		if ~found_idx then begin
 			save_sav  = 1
 			free,index
@@ -3998,7 +3998,7 @@ function map_osisaf_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = 
 
 	data = [reform(north,n_elements(north)),reform(south,n_elements(south))]
 
-	if save_sav then save_var, index, !SAVS_DIR + 'OSISAF_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav'
+	if save_sav then save_var, index, !SAVS_DIR + '/osisaf/OSISAF_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav'
 
 	data = reform((data)[index],size(orb_lon,/dim))
 	idx = where(data le 0,idxcnt)
@@ -4037,7 +4037,7 @@ function map_nsidc_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = g
 	endif
 
 	if keyword_set(grid) then begin
-		index = restore_var(!SAVS_DIR + 'NSIDC_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav',found=found_idx)
+		index = restore_var(!SAVS_DIR + '/nsidc/NSIDC_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav',found=found_idx)
 		if ~found_idx then begin
 			save_sav  = 1
 			free,index
@@ -4070,7 +4070,7 @@ function map_nsidc_to_orbit, orb_date, orb_lon, orb_lat, found = found, grid = g
 
 	data = [reform(north,n_elements(north)),reform(south,n_elements(south))]
 
-	if save_sav then save_var, index, !SAVS_DIR + 'NSIDC_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav'
+	if save_sav then save_var, index, !SAVS_DIR + '/nsidc/NSIDC_collocation_index_global_grid_'+string(grid,f='(f4.2)')+'.sav'
 
 	data = reform((data)[index],size(orb_lon,/dim))
 	idx = where(data le 0,idxcnt)
@@ -4507,7 +4507,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if ~sil then print,''
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
-		marble_file = !SAVS_DIR + 'blue_marble_0.10.sav'
+		marble_file = !SAVS_DIR + '/blue_marble/blue_marble_0.10.sav'
 		outdata = restore_var(marble_file)
 		if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(marble_file[0],/rem)
 		no_data_value = -999.

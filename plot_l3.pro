@@ -1168,7 +1168,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			bild = rotate(bild,fix(rot))
 		endif
 	endif
-
 	ls = ( keyword_set(land) or keyword_set(sea) and ndims ne 1)
 	if ls then begin
 		found_ls = 0
@@ -1176,8 +1175,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,no_data_value=fillvalue,level=level,dim3=dim3, $
 			minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found_ls,verbose=verbose)
 		endif
-; 		if found_ls eq 0 then dem = get_dem(lon,lat,res=0.01,grid_res=get_grid_res(bild[*,*,0,0,0]),found=found_dem)
-		if found_ls eq 0 then dem = get_dem(lon,lat,grid_res=get_grid_res(bild[*,*,0,0,0]),found=found_dem)
+ 		if found_ls eq 0 then dem = get_dem(lon,lat,res=0.01,grid_res=get_grid_res(bild[*,*,0,0,0]),found=found_dem)
 	endif
 	if (~found_geo and ~histo2d) then begin
 		if ndims gt 3 then return
@@ -5141,7 +5139,7 @@ pro do_create_hovmoeller
 ; 	algon_list = [cci_list]
 
 ; 	algon_list = ['pmx-noaaam','pmx-noaapm','gac-noaaam','gac-noaapm']
-	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17']
+	algon_list = ['cci-noaapm','cci-noaaam','cci-noaa7','cci-noaa9','cci-noaa15']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')
@@ -5174,8 +5172,16 @@ pro do_create_hovmoeller
 			for yy=0,nyears-1 do begin
 				print,'Create Hovmoeller: '+years[yy]+' '+data[dd]+' '+ref+' '+sat
 				for mm=0,nmonths-1 do begin
-					dum = 	get_data(years[yy],months[mm],data=data[dd],sat=sat,algo=ref,found=found,no_data_value=no_data_value,$
+					dum = 	get_data(years[yy],months[mm],file=dum_file,data=data[dd],sat=sat,algo=ref,found=found,no_data_value=no_data_value,$
 						dirname=dirname,/make_compare,/silent,/print_file,/no_recursive)
+					if ref eq 'cci' and found then begin
+						num = get_ncdf_data_by_name(dum_file,'number_of_processed_orbits',/global)
+						if num lt 100 then begin
+							print,'File has only '+string(num)+' Orbits, and will be skipped! ',dum_file
+							found = 0
+						endif
+					endif
+					free,dum_file
 					if found then begin
 						matrix_all[*,counti]  = zonal_average(dum,lat,fillvalue=no_data_value,/mean,lat_res=lat_res)
 						matrix_land[*,counti] = zonal_average(dum[idx_land],lat[idx_land],fillvalue=no_data_value,/mean,lat_res=lat_res)
