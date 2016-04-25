@@ -1,4 +1,4 @@
-@/cmsaf/nfshome/sstapelb/idl/bright_m.pro
+@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/bright_m.pro
 
 FUNCTION MODIS_BRIGHT,platform_name,RAD, BAND, UNITS
 
