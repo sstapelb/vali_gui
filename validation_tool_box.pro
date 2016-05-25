@@ -363,7 +363,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'ctt'		: dat = 'a_ct'
 			'cph'		: dat = 'a_cawr'
 			'cph_day'	: dat = 'a_cawdr'
-			'cfc_day'	: dat = 'a_cad'
+			'cth'		: dat = 'a_cz'
+			'cee'		: dat = 'a_cem'
 			else		: 
 		endcase
 	endif
@@ -379,6 +380,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'tcc'		: dat = 'cfc'
 			'164'		: dat = 'cfc'
 			'var164'	: dat = 'cfc'
+			'cfc'		: dat = 'cc_total'
 			else		: 
 		endcase
 	endif
