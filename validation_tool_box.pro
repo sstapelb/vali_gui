@@ -15,7 +15,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 
 	if total(alg eq ['cal','calipso']) then begin
 	       case dat of
-			'cfc'		: dat = 'cfc_allclouds'
+; 			'cfc'		: dat = 'cfc_allclouds'
 			'cfc_day'	: dat = 'cfc_allclouds_day'
 			'cfc_night'	: dat = 'cfc_allclouds_night'
 			'ctp'		: dat = 'ctp_mean_all'
@@ -3158,8 +3158,12 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		'CALIPSO': begin
 				if alg eq 'CALIPSO' then begin
 					if lev eq 'l3c' then begin
-						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/mstengel/data/Calipso/CLIM/'+yyyy+'/'
-						filen = dir+'CALIPSO_CTPCFC_climatology_deg2.0_'+yyyy+mm+'.nc'
+						if dat eq 'cfc' or dat eq 'cfc_std' then begin
+							filen = !SAVS_DIR + 'calipso_l3c_2degree/'+yyyy+mm+'_CALIPSO_CFC_COD_gt_01.sav'
+						endif else begin
+							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/mstengel/data/Calipso/CLIM/'+yyyy+'/'
+							filen = dir+'CALIPSO_CTPCFC_climatology_deg2.0_'+yyyy+mm+'.nc'
+						endelse
 					endif
 				endif
 			   end
@@ -4455,9 +4459,21 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 
 	if arg_present(finfo) then finfo = file_info(filename[0])
 	; create additional products
+
 	if alg eq 'l1modis' then begin
 		outdata = read_modis_l1b(filename[0], sat, dat, found = found, index = dim3, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit)
+	endif else if (alg eq 'calipso' and (dat eq 'cfc' or dat eq 'cfc_std') ) then begin
+		tmp = restore_var(filename[0],found=found)
+		if found then begin
+			outdata = dat eq 'cfc_std' ? tmp.stddev : tmp.mean
+			no_data_value = -999.
+			unit = ''
+			minvalue=0
+			maxvalue=1
+			longname = 'Cloud Fraction' + dat eq 'cfc_std' ? ' standard deviation' : ''
+			free,tmp
+		endif else return,-1
 	endif else if ( dat eq 'rgb' and lev eq 'l3u') then begin
 		found = file_test(filename[0])
 		if found then begin
