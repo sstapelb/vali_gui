@@ -420,7 +420,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'cer'		: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius' & end
 		'cer_liq'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Liquid' & end
 		'cer_ice'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Ice' & end
-		'cld_typ'	: begin & histv = [1.,2.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cld_typ'	: begin & histv = [1.,1.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cty_asc'	: begin & histv = [1.,1.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cty_des'	: begin & histv = [1.,1.,8.]     & vollername = 'Pavolonis Cloud Type' & end
  		else		: begin 
 					histv = adv_keyword_set(maxi) and adv_keyword_set(mini) ? $
 						[(10.^(strlen(strcompress(string(maxi,f='(i)'),/rem)))/1000.) < 10.,mini,maxi] : [1,0,100.]
@@ -496,6 +498,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		free, struc2
 	endif else begin 
 		; cci l3u files
+
 		if level eq 'l3u' and ref eq 'gac' and (strmid(algo1,0,6) eq 'esacci' or algo1 eq 'patmos') then join_nodes = 1
 		bild_cci = get_data(yyyy,mm,dd,file=ccifile[0], data = dat,sat=sat, no_data_value = fillvalue1, longname = longname, unit = unit, found = found,$
 		verbose = verbose, level=level, algo = algo1,join_nodes=join_nodes,error=error,dim3=dim3,var_dim_names=var_dim_names_cci,/print_filename)

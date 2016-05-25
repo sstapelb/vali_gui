@@ -141,7 +141,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'ref_liq_unc' and total(lev eq ['l3c','l3s']) then datd = 'lwp'
 			if dat eq 'cer_ice_unc' and total(lev eq ['l3c','l3s']) then datd = 'iwp'
 			if dat eq 'cer_liq_unc' and total(lev eq ['l3c','l3s']) then datd = 'lwp'
-			if strmid(dat,0,8) eq 'cld_type' then datd = 'cph
+			if strmid(dat,0,8) eq 'cld_type' or strmid(dat,0,10) eq 'cloud_type' or strmid(dat,0,3) eq 'cty' then datd = 'cph
 			if strmid(dat,0,3) eq 'cph' then datd = 'cph'
 			return, keyword_set(upper_case) ? strupcase(datd) : strlowcase(datd)
 		endif else begin
@@ -171,6 +171,10 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'npoints_l2b_asc'	: dat = 'nobs_asc'
 				'npoints_l2b_desc'	: dat = 'nobs_desc'
 				'jch_ice'		: dat = 'hist2d_cot_ctp_ice'
+				'cloud_type_asc'	: dat = 'cph_extended_asc'
+				'cloud_type_desc'	: dat = 'cph_extended_desc'
+				'cty_asc'		: dat = 'cph_extended_asc'
+				'cty_desc'		: dat = 'cph_extended_desc'
 				'cld_type_asc'		: dat = 'cph_extended_asc'
 				'cld_type_desc'		: dat = 'cph_extended_desc'
 				'cld_type'		: dat = 'cph_extended'
