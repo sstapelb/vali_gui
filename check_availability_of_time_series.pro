@@ -96,7 +96,7 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 
 	;hovmoeller
 	ref  = ['gac2','pmx','gac','myd2','mod2','myd','mod','cci']
-	data = ['cfc','cfc_day','cfc_night','cfc_low','cfc_twl','cfc_mid','cfc_high','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph']
+	data = ['cfc','cfc_day','cfc_night','cfc_low','cfc_twl','cfc_mid','cfc_high','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph','sal']
 	satd = satellites
 	count = 0l
 	count_ok = 0l
@@ -108,6 +108,7 @@ pro check_availability_of_time_series,print_missing_files=print_missing_files
 					sat = ''
 					if i ne 0 then do_it = 0 & $
 				endif else sat = satd[i] & $
+				if data[l] eq 'sal' and (strmid(ref[k],0,3) ne 'gac' or sat ne 'allsat') then do_it = 0 & $
 				if total(data[l] eq ['cfc_low','cfc_mid','cfc_high','cer','cfc_twl']) and ref[k] eq 'gac' then do_it = 0 & $
 				if total(data[l] eq ['cfc_twl']) and ref[k] eq 'gac2' then do_it = 0 & $
 				if total(data[l] eq ['cfc_day','cfc_night','cth','cwp','cph','cer','cfc_twl']) and ref[k] eq 'pmx' then do_it = 0 & $

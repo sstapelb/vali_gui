@@ -6,7 +6,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	alg = strlowcase(algo[0])
 	lev = keyword_set(level) ? strlowcase(level) : ''
 	if keyword_set(level) then begin
-		if alg eq 'patmos' and (lev eq 'l3c' or lev eq 'l3s') then alg = 'gewex'
+		if (strmid(alg,0,6) eq 'patmos' or strmid(alg,0,3) eq 'pmx') and (lev eq 'l3c' or lev eq 'l3s') then alg = 'gewex'
 	endif
 	dat = strlowcase(data[0])
 
@@ -226,6 +226,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cc_total_night'	: dat = 'cfc_night'
 				'cot_ctp_hist2d'	: dat = 'jch'
 				'h_cod_cp'		: dat = 'jch'
+				'h_codw_cp'		: dat = 'jch_liq'
+				'h_codi_cp'		: dat = 'jch_ice'
 				'hist2d_cot_ctp'	: dat = 'jch'
 				'cot_ctp_hist2d_liq'	: dat = 'jch_liq'
 				'hist2d_cot_ctp_liq'	: dat = 'jch_liq'
@@ -328,6 +330,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 		case dat of
 			'cot_ctp_hist2d': dat = 'h_cod_cp'
 			'hist2d_cot_ctp': dat = 'h_cod_cp'
+			'hist2d_cot_ctp_liq': dat = 'h_codw_cp'
+			'hist2d_cot_ctp_ice': dat = 'h_codi_cp'
 			'jch'		: dat = 'h_cod_cp'
 			'cfc'		: dat = 'a_ca'
 			'cfc_cloudsgt03': dat = 'a_ca'
@@ -357,6 +361,9 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cer_ice'	: dat = 'a_crei'
 			'ctp'		: dat = 'a_cp'
 			'ctt'		: dat = 'a_ct'
+			'cph'		: dat = 'a_cawr'
+			'cph_day'	: dat = 'a_cawdr'
+			'cfc_day'	: dat = 'a_cad'
 			else		: 
 		endcase
 	endif
@@ -375,7 +382,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			else		: 
 		endcase
 	endif
-	if alg eq 'patmos' or alg eq 'pmx' then begin
+	if alg eq 'patmos' or alg eq 'pmx' or alg eq 'patmos_old' or alg eq 'pmx_old' then begin
 		if lev eq 'l2' then begin
 			case dat of 
 				'phase'		: dat = 'cty'      
@@ -716,7 +723,12 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		endcase
 	endif
 
-	result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+	if ~keyword_set(lon) or ~keyword_set(lat) then begin
+		ok = dialog_message('get_coverage: Need Lon / Lat info:')
+		found = 0.
+		return,-1
+	endif else result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+
 	if keyword_set(land) then begin
 		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
 		result = (result eq 1) and (ddem ne 0)
@@ -791,6 +803,7 @@ function is_the_same,algo,reference,satellite=satellite
 		'gac'	: result = alg eq 'clara' 
 		'myd'	: result = alg eq 'coll5' and sat eq 'aqua' 
 		'mod'	: result = alg eq 'coll5' and sat eq 'terra' 
+		'pmx_old'	: result = alg eq 'patmos_old' 
 		'pmx'	: result = alg eq 'patmos' 
 		'cla'	: result = alg eq 'claas' 
 		'gwx'	: result = alg eq 'gewex' 
@@ -806,6 +819,7 @@ function is_the_same,algo,reference,satellite=satellite
 		'clara'	: result = alg eq 'gac' 
 		'coll5'	: result = alg eq 'myd' or alg eq 'mod' 
 		'patmos': result = alg eq 'pmx' 
+		'patmos_old': result = alg eq 'pmx_old' 
 		'claas'	: result = alg eq 'cla' 
 		'gewex'	: result = alg eq 'gwx' 
 		'calipso': result = alg eq 'cal'
@@ -843,6 +857,8 @@ function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = 
 		'gewex'		: alg = 'gewex'
 		'pmx'		: alg = 'patmos'
 		'patmos'	: alg = 'patmos'
+		'pmx_old'	: alg = 'patmos_old'
+		'patmos_old'	: alg = 'patmos_old'
 		'cla'		: alg = 'claas'
 		'claas'		: alg = 'claas'
 		'isp'		: alg = 'isccp'
@@ -897,8 +913,11 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'gewex'		: ref = 'gwx'
 		'cci-gewex'	: ref = 'gwx'
 		'pmx'		: ref = 'pmx'
-		'patmos'		: ref = 'pmx'
+		'patmos'	: ref = 'pmx'
 		'patmos-x'	: ref = 'pmx'
+		'patmos_old'	: ref = 'pmx_old'
+		'patmos-x_old'	: ref = 'pmx_old'
+		'pmx_old'	: ref = 'pmx_old'
 		'cla'		: ref = 'cla'
 		'claas'		: ref = 'cla'
 		'isp'		: ref = 'isp'
@@ -968,14 +987,27 @@ function sat_node,lon,diff=diff,vector=vector
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function gmean,data,latitude
+function gmean,data,latitude,no_data_value=no_data_value
+
+	ndv = keyword_set(no_data_value) ? no_data_value : -999.
+	dat = data
+	lat = latitude
+	idx = where(dat ne ndv[0],cnt)
+
+	if cnt eq 0 then begin
+		print,'No valid data found!'
+		return,-999.
+	endif
+
+	lat=lat[idx]
+	dat=dat[idx]
 ; 	returns global mean weighted with latitude
 	if n_params() ne 2 then begin
 		print,'% GMEAN: At least one input Variable is undefined: data , latitude'
 		return,-1
 	endif
-	weight = cosd(float(latitude))
-	return, total(float(data) * weight) / total(weight)
+	weight = cosd(float(lat))
+	return, total(float(dat) * weight) / total(weight)
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function gstddev,data,latitude
@@ -1092,7 +1124,7 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error, timeseries=timeseries
 	if keyword_set(error) then spos = ("tl"+strcompress(indgen(12)+1,/rem))[(opl-1) mod 12] else $
-	cb_tables = "CG"+strcompress([2,5,9,4,6,1,8,7,3,10,11,12],/rem)
+	cb_tables = "CG"+strcompress([9,5,2,4,6,1,8,7,3,10,11,12],/rem)
 	spos      = (['tl1','tr1','tl2','tr2','tl3','tr3','tl4','tr4','tl5','tr5','tl6','tr6'])[(opl-1) mod 12]	
 	even      = opl/2 eq opl/2.
 	gt12      = ((opl-1) / 12)
@@ -1456,6 +1488,11 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		'cla'	: return,'CLAAS'
 		'pmx'	: begin
 				algon = 'PATMOS-X'
+				if lev eq 'l3c' then $
+				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : ''
+			  end
+		'pmx_old': begin
+				algon = 'PATMOS-X (old)'
 				if lev eq 'l3c' then $
 				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which,/patmos) : ''
 			  end
@@ -1852,9 +1889,13 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 	endif
 
 	if adv_keyword_set(maxvalue) then begin
-		form_len = strlen(strcompress(floor(float(maxvalue[0])),/rem))
-		plus = form_len eq 1 ? 1 : 0
-		bar_format = '(f'+strcompress(form_len+3+plus,/rem)+'.'+string(1+plus,f='(i1)')+')'
+		if float(maxvalue[0]) lt 0.1 then begin
+			bar_format = '(G6.1)'
+		endif else begin
+			form_len = strlen(strcompress(floor(float(maxvalue[0])),/rem))
+			plus = form_len eq 1 ? 1 : 0
+			bar_format = '(f'+strcompress(form_len+3+plus,/rem)+'.'+string(1+plus,f='(i1)')+')'
+		endelse
 	endif
 	if keyword_set(nobar) then no_color_bar = 1
 
@@ -2023,7 +2064,8 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 		if do_it then view[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 	endif
 
-	return, { sum : sum, mean: avg,mean_lat: alat,mean_lon: alon, median:med, random_sample : sam, null_sample : nul, stddev: sdv, variance: var, count: nnn, lon: glon, lat: glat, nearest_nadir:view }
+	return, { sum : sum, mean: avg,mean_lat: alat,mean_lon: alon, median:med, random_sample : sam, null_sample : nul, $
+	stddev: sdv, variance: var, count: nnn, lon: glon, lat: glat, nearest_nadir:view ,s:s,min_x:min_x,xxx:xxx}
 end
 ;------------------------------------------------------------------------------------------
 function read_modis_obj_val, stringname, group, value = value,found=found
@@ -2230,7 +2272,7 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	raw_fill_value = found_attr ? _fill_value : 'not_defined'
 
 	; this seems to compensate a bug in the patmos effective radius data !!
-	if total(strlowcase(data) eq ['a_crei','a_crew']) then _fill_value = 0.
+; 	if total(strlowcase(data) eq ['a_crei','a_crew']) then _fill_value = 0.
 
 	if found_attr then begin 
 		idx_miss  = where(bild_raw EQ _fill_value[0], n_miss)
@@ -2471,12 +2513,12 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 ; 			;coll5/6 1d_histogramme ctp und ctt nicht! getrennt für ice+liquid
 			'HIST1D_CTT'		: hdf_var = h1d_ctt
 			'HIST1D_CTP'		: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
-			'HIST1D_COT_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_Liquid_Histogram_Counts'
-			'HIST1D_COT_ICE'		: hdf_var = 'Cloud_Optical_Thickness_Ice_Histogram_Counts'
-			'HIST1D_REF_LIQ'		: hdf_var = 'Cloud_Effective_Radius_Liquid_Histogram_Counts'
-			'HIST1D_REF_ICE'		: hdf_var = 'Cloud_Effective_Radius_Ice_Histogram_Counts'
-			'HIST1D_CWP_LIQ'		: hdf_var = 'Cloud_Water_Path_Liquid_Histogram_Counts'
-			'HIST1D_CWP_ICE'		: hdf_var = 'Cloud_Water_Path_Ice_Histogram_Counts'
+			'HIST1D_COT_LIQ'	: hdf_var = 'Cloud_Optical_Thickness_Liquid_Histogram_Counts'
+			'HIST1D_COT_ICE'	: hdf_var = 'Cloud_Optical_Thickness_Ice_Histogram_Counts'
+			'HIST1D_REF_LIQ'	: hdf_var = 'Cloud_Effective_Radius_Liquid_Histogram_Counts'
+			'HIST1D_REF_ICE'	: hdf_var = 'Cloud_Effective_Radius_Ice_Histogram_Counts'
+			'HIST1D_CWP_LIQ'	: hdf_var = 'Cloud_Water_Path_Liquid_Histogram_Counts'
+			'HIST1D_CWP_ICE'	: hdf_var = 'Cloud_Water_Path_Ice_Histogram_Counts'
 			;coll5 only
 			'HIST2D_CTT_CPH_DAY'	: hdf_var = 'Cloud_Phase_Infrared_Day_Joint_Histogram_vs_Temperature'
 			'HIST2D_CTT_CPH_NIGHT'	: hdf_var = 'Cloud_Phase_Infrared_Night_Joint_Histogram_vs_Temperature'
@@ -3058,7 +3100,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					 algo = algo, found = found, level = level, node = node , $
 					 silent = silent, orbit = orbit, dirname = dirname	, $
 					 filename = filename, version = version, $
-					 no_recursive_search = no_recursive_search
+					 no_recursive_search = no_recursive_search,$
+					 gewex_style = gewex_style ; gewex_style = [0130PM,0130AM,0730PM,0730AM,AM,PM,AMPM]
 
 	filen = '-1'
 	addon = ''
@@ -3093,6 +3136,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		if stregex(sat,'CALIPSO',/bool) then inst = 'CALIPSO'
 		if stregex(sat,'NOAA',/bool)    then inst = 'AVHRR'
 		if stregex(sat,'AVHRRS',/bool)  then inst = 'AVHRR'
+		if stregex(sat,'ALLSAT',/bool) and alg eq 'ISCCP'  then inst = 'AVHRR'
 		if stregex(sat,'ALLSAT',/bool) and strmid(alg,0,5) eq 'CLARA'  then inst = 'AVHRR'
 		if stregex(sat,'ALLSAT',/bool) and strmid(alg,0,6) eq 'ESACCI' then inst = 'ALL'
 		if stregex(sat,'METOP',/bool)   then inst = 'AVHRR'
@@ -3281,8 +3325,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
 							endelse
 						end
-					'PATMOS': begin
-							if lev eq 'l3c' then begin
+					'PATMOS_OLD': begin
+							if lev eq 'l3c' or lev eq 'l3s' then begin
 								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos,found=found)
 								if found then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
@@ -3300,10 +3344,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								satd  = sat eq 'METOPA' ? 'metop-02' : strlowcase(sat)
 								if stregex(satd,'noaa',/bool) then begin
 									dum = strsplit(satd,/ext,'-')
-									satd = dum[0]+'-'+string(dum[1],f='(i2.2)')
+									satd = dum[0]+'-'+(is_number(dum[1]) ? string(dum[1],f='(i2.2)') : dum[1])
 								endif
-								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/cmcld/data/PATMOSX/level2b/'+yyyy+'/'
-; 								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/mstengel/Patmos-X/V6ncdc/'+yyyy+'/level2b_daily/'
+								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/mstengel/Patmos-X/V6ncdc/'+yyyy+'/level2b_daily/'
 								filen = dir+'patmosx_'+satd+'_'+strmid(node,0,3)+'_'+yyyy+'_'+doy+'.level2b.hdf'
 							endif else if lev eq 'l2' then begin
 								sat   = strjoin(strsplit(sat,/ext,'-'))
@@ -3314,14 +3357,40 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								filen = dir+'RR_AVHRR_L2_cp_'+satd+'_'+yyyy+mm+dd+'_'+orbdum+'_v0_*_WISC.nc'
 							endif
 						 end
+					'PATMOS': begin
+							if lev eq 'l3c' or lev eq 'l3s' then begin
+								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,found=found)
+								if found then begin
+									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
+									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+									if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
+									if dat eq 'COD_CP' then dat = 'CODW_CP'
+									filen = dir+dat+'_PATMOS4CLARA2_NOAA_'+which+'_'+yyyy+'.nc'
+								endif else begin
+									addon = ' - Choose right Satellite!'
+								endelse
+							endif else if lev eq 'l3u' then begin
+								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
+								node  = node eq 'asc' or node eq 'des' ? node : '*'
+								doy   = string(doy(yyyy,mm,dd eq '' ? 1:(dd eq '??' ? dom(yyyy,mm):dd)),f='(i3.3)')
+								satd  = sat eq 'METOPA' ? 'metop-02' : strlowcase(sat)
+								if stregex(satd,'noaa',/bool) then begin
+									dum = strsplit(satd,/ext,'-')
+									satd = dum[0]+'-'+(is_number(dum[1]) ? string(dum[1],f='(i2.2)') : dum[1])
+								endif
+								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/cmcld/data/PATMOSX/level2b/'+yyyy+'/'
+								filen = dir+'patmosx_'+satd+'_'+strmid(node,0,3)+'_'+yyyy+'_'+doy+'.level2b.hdf'
+							endif
+						 end
 					'GEWEX': begin
-							if lev ne 'l3c' then goto, ende
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/gewex/'+yyyy+'/'
+							if ~total(lev eq ['l3c','l3s']) then goto, ende
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
-							filen = dir+dat+'_ESACCI_NOAA_*_'+yyyy+'.nc*'
+							style = keyword_set(gewex_style) ? strupcase(gewex_style) : strupcase(noaa_ampm(sat))
+							filen = dir+dat+'_ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
 						 end
 					'ISCCP': begin
-							if lev ne 'l3c' then goto, ende
+							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld4/ISCCP_mjerg/complete_clouds/'
 							filen = dir+'ISCCP.*'+yyyy+'.'+mm+'*.hdf'
 						end
@@ -3356,6 +3425,12 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif else orbdum = ''
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-MODIS*'+(lev eq 'l3s' ? '':sat)+'-fv1.0.nc'
 						  end
+					'GEWEX': begin
+							if ~total(lev eq ['l3c','l3s']) then goto, ende
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
+							dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+							filen = dir+dat+'_ESACCI_'+strupcase(sat)+'_'+strupcase(noaa_ampm(sat))+'_'+yyyy+'.nc'
+						 end
 					'COLL5' : begin
 							doy   = string(doy(yyyy,mm,dd eq '' ? 1:dd),f='(i3.3)')
 							teaq  = sat eq 'TERRA' ? 'MOD' : 'MYD'
@@ -3591,6 +3666,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3,gm2:4,gm2_std:5,unc2:6,unc2_std:7,bias:8,rmse:9,bcr:10,corr:11}
 	endif else begin
 		cli   = algo2ref(algo,sat=sat)
+		if cli eq 'cal' then sat = 'calipso'
 		pref  = '/plot/plot_'
 		dumalgo = cli
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3}
@@ -3620,6 +3696,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'ctp' 		: begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure'		& end
 		'ctt' 		: begin & unit = ' [K]'			& minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature'		& end
 		'cth' 		: begin & unit = ' [km]'		& minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height'			& end
+		'sal' 		: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = 'Surface Albedo'			& end
 		else  :
 	endcase
 
@@ -4353,7 +4430,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	if alg eq 'clara' and ( sat eq 'aatme' or sat eq 'aatsr') then sat = 'noaa17'
 	lev = keyword_set(level) ? strlowcase(level) : 'l3c'
 
-	pmxgwx = (total(lev eq ['l3c','l3s']) and alg eq 'patmos')
+	pmxgwx = (total(lev eq ['l3c','l3s']) and strmid(alg,0,6) eq 'patmos')
 
 	if not keyword_set(filename) then begin
 		if n_params() eq 0 then begin
@@ -4363,6 +4440,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif
 		filename = get_filename(year,month,day,data=data,satellite=sat,level=lev,algo=alg,found=found,instrument=instrument,$
 					orbit=orbit,silent=silent,dirname=dirname,node=node,no_recursive_search=no_recursive_search)
+		if found gt 1 then print,'Found more than one file!'
 	endif
 
 	dat = keyword_set(keep_data_name) ? strlowcase(data) : get_product_name(data,algo=alg,level=lev)
@@ -4370,7 +4448,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	found = file_test(filename[0])
 	if ~found and ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus']) then return,-1
 
-	if keyword_set(print_filename) and file_test(filename) and ~total(dat eq ['blue_marble','marble','usgs_dem','usgs_lus']) then $
+	if keyword_set(print_filename) and file_test(filename[0]) and ~total(dat eq ['blue_marble','marble','usgs_dem','usgs_lus']) then $
 	print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
 
 	if arg_present(finfo) then finfo = file_info(filename[0])
@@ -4633,8 +4711,31 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if is_jch(dat,/ratio) then begin
 			si = size(ice,/dim)
 			outdata = fltarr([si,2])
-			outdata[*,*,*,0] = liq
-			outdata[*,*,*,1] = ice
+			outdata[*,*,*,*,0] = liq
+			outdata[*,*,*,*,1] = ice
+		endif else begin
+			idx  = where(ice eq no_data_value[0] and liq eq no_data_value1[0],idx_cnt)
+			outdata = (temporary(ice)>0)+(temporary(liq)>0)
+			if idx_cnt gt 0 then outdata[idx]=no_data_value[0]
+		endelse
+		longname = 'Joint cloud property Histogram of ice and water clouds'
+	endif else if (total(alg eq ['patmos']) and (is_jch(dat,/combined) or is_jch(dat,/ratio)) ) then begin
+		if ~sil then print,'Combine '+dat+' for '+alg
+		liq_file = get_filename(year,month,day,data='h_codw_cp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'liq_file: h_codw_cp: ',liq_file
+		read_data, liq_file[0] , 'h_codw_cp', liq, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		if not found then return,-1
+		ice_file = get_filename(year,month,day,data='h_codi_cp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'ice_file: h_codi_cp: ',ice_file
+		read_data, ice_file[0] , 'h_codi_cp', ice, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		if not found then return,-1
+		if is_jch(dat,/ratio) then begin
+			si = size(ice,/dim)
+			outdata = fltarr([si,2])
+			outdata[*,*,*,*,*,0] = liq
+			outdata[*,*,*,*,*,1] = ice
 		endif else begin
 			idx  = where(ice eq no_data_value[0] and liq eq no_data_value1[0],idx_cnt)
 			outdata = (temporary(ice)>0)+(temporary(liq)>0)
@@ -4797,12 +4898,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			outdata = -1
 		endelse
 		if found then longname = longname+' liquid fraction'
-	endif else if ((alg eq 'esacci' or alg eq 'patmos') and keyword_set(join_nodes) and lev eq 'l3u') then begin
+	endif else if ((alg eq 'esacci' or strmid(alg,0,6) eq 'patmos') and keyword_set(join_nodes) and lev eq 'l3u') then begin
 		files  = filename
 		dumdat = alg eq 'esacci' and stregex(dat,'cc_total',/bool,/fold) ? 'cc_mask' : dat
 		dumdat = strreplace(dumdat,'_asc','')
 		dumdat = strreplace(dumdat,'_desc','')
-		if alg eq 'patmos' then begin
+		if strmid(alg,0,6) eq 'patmos' then begin
 			if n_elements(filename) ne 2 then begin
 				files = stregex(files[0],'asc',/bool,/fold) ? [files[0],strreplace(filename[0],'asc','des')] : [files[0],strreplace(filename[0],'des','asc')]
 			endif
@@ -4897,6 +4998,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			3	: outdata = reform(outdata[*,*,fix(month)-1])
 			4	: outdata = reform(outdata[*,*,*,fix(month)-1])
 			5	: outdata = reform(outdata[*,*,*,*,fix(month)-1])
+			6	: outdata = reform(outdata[*,*,*,*,fix(month)-1,*]) ; patmos cod_cp_ratio last bin = phase
 			else	: 
 		endcase
 
@@ -4910,7 +5012,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if is_stdd then datd = strreplace(datd,'_std','')
 		if is_unce then datd = strreplace(datd,'_unc','')
 		if is_erro then datd = strreplace(datd,'_error','')
-		if alg eq 'patmos' and lev eq 'l3u' then begin
+		if strmid(alg,0,6) eq 'patmos' and lev eq 'l3u' then begin
 			if get_product_name(datd,algo='patmos') eq 'cloud_mask' then begin
 				outdata = float(outdata)
 				ndidx   = where(outdata eq no_data_value,ndidxcnt)
@@ -4943,8 +5045,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				maxvalue = 1.
 				unit = ' '
 			endif
-		endif else if total(datd eq ['cph','cph_day']) and total(lev eq ['l3c','l3s']) then begin
-			if total(alg eq ['clara2','clara','claas','isccp']) then begin
+		endif else if total(datd eq ['cph','cph_day','a_cawr','a_cawdr']) and total(lev eq ['l3c','l3s']) then begin
+			if total(alg eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old']) then begin
 				outdata = float(outdata)
 				outdata[where(outdata ne no_data_value,/null)] /= 100.
 				minvalue = 0.
@@ -4998,7 +5100,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		chk1 = fix(  si/([360.,180.]*float(global_grid)))
 		chk2 = float(si/([360.,180.]*float(global_grid)))
 		if chk2[0] ge 1. and chk2[1] ge 1. and total(chk1) eq total(chk2) and (keyword_set(mean) or keyword_set(random_sample) or keyword_set(median)) then begin
-			outdata = total(chk1) eq 2 ? outdata : grid_down_globe(outdata, global_grid, no_data_value = no_data_value, $
+			outdata = grid_down_globe(outdata, global_grid, no_data_value = no_data_value, $
 			found = found, nan_fillv = nan_fillv, sample = (keyword_set(random_sample) or keyword_set(median)))
 		endif else begin
 			make_geo,file = filename,lon_dum,lat_dum
@@ -5433,23 +5535,39 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 	lev  = keyword_set(level) ? strlowcase(level) : 'l3c'
 
 ; 	alle = ['esacci','patmos','coll5','coll6','clara','clara2','gewex','claas','isccp','era-i']
-	if (alg1 eq 'patmos' or alg2 eq 'patmos') and lev eq 'l3u' and get_product_name(dat,algo='patmos') eq 'cloud_mask' then begin
+	if (strmid(alg1,0,6) eq 'patmos' or strmid(alg2,0,6) eq 'patmos') and lev eq 'l3u' and get_product_name(dat,algo='patmos') eq 'cloud_mask' then begin
 		if verb then print,'Reset Patmos l3u cloud mask (clear+prob. clear)->clear, (cloudy+prob. cloudy) -> cloudy!'
 		if ~is_the_same(alg1,alg2) then begin
-			if alg1 eq 'patmos' then begin
+			if strmid(alg1,0,6) eq 'patmos' then begin
 				ndidx = where(bild1 eq fillvalue1,ndidxcnt)
 				bild1 = float(bild1 gt 1)
 				if ndidxcnt gt 0 then bild1[ndidx] = fillvalue1
 			endif 
-			if alg2 eq 'patmos' then begin
+			if alg2 eq strmid('patmos',0,6) then begin
 				ndidx = where(bild2 eq fillvalue2,ndidxcnt)
 				bild2 = float(bild2 gt 1)
 				if ndidxcnt gt 0 then bild2[ndidx] = fillvalue2
 			endif
 		endif
+	endif else if total(dat eq ['cph','cph_day']) then begin
+		if total(alg1 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old']) then begin
+			bild1 = float(bild1)
+			bild1[where(bild1 ne fillvalue1,/null)] /= 100.
+			if keyword_set(minv1) then minv1 /= 100.
+			if keyword_set(maxv1) then maxv1 /= 100.
+			unit1 = ' '
+			if verb then print,'Divide now '+dat+' of '+alg1+' by 100.'
+		endif
+		if total(alg2 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old']) then begin
+			bild2 = float(bild2)
+			bild2[where(bild2 ne fillvalue2,/null)] /= 100.
+			if keyword_set(minv2) then minv2 /= 100.
+			if keyword_set(maxv2) then maxv2 /= 100.
+			unit2 = ' '
+			if verb then print,'Divide now '+dat+' of '+alg2+' by 100.'
+		endif
 	endif else if total(dat eq ['cloud_fraction','a_ca']) or strmid(dat,0,8) eq 'cc_total' $
-				or strmid(dat,0,3) eq 'cfc' or dat eq 'cph' or dat eq 'cph_day' then begin
-
+				or strmid(dat,0,3) eq 'cfc'  then begin
 		if total(alg1 eq ['clara2','clara','claas','isccp']) then begin
 			bild1 = float(bild1)
 			bild1[where(bild1 ne fillvalue1,/null)] /= 100.
@@ -5804,6 +5922,28 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 					else	: idxse = [0,2,5,6] ; 'cu'
 				endcase
 			  end
+		'patmos_old'	: begin
+				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
+				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
+				case strlowcase(hist_cloud_type) of
+					; low
+					'cu'	: idxse = [0,2,5,6]
+					'sc'	: idxse = [3,4,5,6]
+					'st'	: idxse = [5,6,5,6]
+					'low'	: idxse = [0,6,5,6]
+					; mid level
+					'ac'	: idxse = [0,2,3,4]
+					'as'	: idxse = [3,4,3,4]
+					'ns'	: idxse = [5,6,3,4]
+					'mid'	: idxse = [0,6,3,4]
+					; high
+					'ci'	: idxse = [0,2,0,2]
+					'cs'	: idxse = [3,4,0,2]
+					'cb'	: idxse = [5,6,0,2]
+					'high'	: idxse = [0,6,0,2]
+					else	: idxse = [0,2,5,6] ; 'cu'
+				endcase
+			  end
 		'patmos'	: begin
 				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
 				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
@@ -6069,7 +6209,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 		;Ziel:	tau_isccp  = ['0.3','1.3','3.6','9.4','23','60','100']
 		;	tau_cci  = [0.3,1.3,3.6,9.4,23.,60.,100.]
 		;	tau_coll5_gewex_patmos  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
-		if alg eq 'coll5' or alg eq 'gewex' or alg eq 'patmos' then begin
+		if alg eq 'coll5' or alg eq 'gewex' or strmid(alg,0,6) eq 'patmos' then begin
 			cci_hist_cot[1]+=cci_hist_cot[0]
 			cci_hist_cot=cci_hist_cot[1:*]
 		endif
@@ -6098,7 +6238,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea = sea, limit = limit	, $
-				   lon = lon, lat = lat, fillvalue = fillvalue, found = found		, $
+				   longitude = longitude, latitude = latitude, fillvalue = fillvalue, found = found		, $
 				   antarctic = antarctic, arctic = arctic
 
 	found = 1.
@@ -6111,13 +6251,19 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 	alg = ref2algo(algoname)
 	dum  = array
 	si   = size(dum,/dim)
-
 	if n_elements(si) ne 4 then begin
 		print, 'Get_2d_rel_hist_from_jch: array must have 4 dimensions (lon,lat,cotbin,ctpbin)'
 		found = 0.
 		return, -1.
 	endif
 
+	if ~keyword_set(latitude) or ~keyword_set(longitude) then begin
+		make_geo ,lon,lat,grid=get_grid_res(array[*,*,0,0])
+	endif else begin
+		lon = longitude
+		lat = latitude
+	endelse
+	
 	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, $
 				antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt)
 
@@ -6150,7 +6296,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 			for i = 1,6 do qwe[*,i] = bild[*,(2*i)+1] + bild[*,(2*i)+2]
 		endif else for i = 0,6 do qwe[*,i] = bild[*,2*i] + bild[*,(2*i)+1]
 		bild = temporary(qwe)
-	endif else if alg eq 'coll5' or alg eq 'gewex' or alg eq 'patmos' then begin
+	endif else if alg eq 'coll5' or alg eq 'gewex' or strmid(alg,0,6) eq 'patmos' then begin
 		; plev = reverse([0.,180.,310.,440.,560.,680.,800.,1100.])
 		; tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
 		bild = rotate(bild,7)

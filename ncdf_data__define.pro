@@ -1972,6 +1972,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		month    = stregex(strmid(filen,strpos(filen,year)+4),'[0-9]{2}',/ext)
 		datum    = year+month
 	endif
+
 	if stregex(filen,'patmosx',/fold,/bool) then begin
 		algoname = 'PATMOS'
 		level    = stregex(pathn,'gewex',/fold,/bool) ? 'l3c' : ''
@@ -2140,6 +2141,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	if where(tag_names(theglobattr) eq 'PLATFORM') ge 0 then begin
 		tcd = (theglobattr).platform
 		if verb then print,'PLATFORM: ',tcd
+
 		satname  = strjoin(strlowcase(strjoin(strsplit((strsplit(tcd,'_',/ext))[0],'-',/ext))),',')
 		if algoname eq 'CLARA2' then begin
 			dumsatn = strcompress((strsplit(satname,'>',/ext))[0],/rem)
@@ -2175,6 +2177,14 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		if verb then print,'PRODUCT_LEVEL: ',tcd
 		level = strlowcase(tcd)
 	endif
+	if where(tag_names(theglobattr) eq 'CLIMATOLOGY') ge 0 then begin
+		tcd = (theglobattr).CLIMATOLOGY
+		if verb then print,'CLIMATOLOGY: ',tcd
+		if stregex(tcd,'patmosx',/bool,/fold) then begin
+			algoname = 'PATMOS'
+			level    = 'l3c'
+		endif
+	endif
 	; patmos l3c has misspelled global attribute!!!
 	if where(tag_names(theglobattr) eq 'CLIMATOLOY') ge 0 then begin
 		tcd = (theglobattr).CLIMATOLOY
@@ -2184,6 +2194,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 			level    = 'l3c'
 		endif
 	endif
+
 	if where(tag_names(theglobattr) eq 'PROCESSOR') ge 0 then begin
 		tcd = (theglobattr).PROCESSOR
 		if verb then print,'PROCESSOR: ',tcd
@@ -3354,29 +3365,30 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	         self.refself  = Widget_Button(bla1, Value='Load:', UVALUE='SET_PLOT_DEFAULTS')
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
-			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','PATMOS-X','CALIPSO','ESACCI-PT','ESACCI','SELECT FILE']
+			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','PATMOS-X','PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','SELECT FILE']
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 ; 	      self.refself  = Widget_Button(bla, Value='Loaded: '+self.datum+' '+sat_name(self.algoname,self.satname)+' '+self.level, UVALUE='SET_PLOT_DEFAULTS')
 	    bla = Widget_Base(row, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
 	    bla = Widget_Base(row, row=5, Scr_XSize=270, /Exclusive,Frame=1)
-	      self.refgac    = Widget_Button(bla, Value='CLARA-A1'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmyd    = Widget_Button(bla, Value='Coll5-AQUA' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmod    = Widget_Button(bla, Value='Coll5-TERRA', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refgac2   = Widget_Button(bla, Value='CLARA-A2'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmyd2   = Widget_Button(bla, Value='Coll6-AQUA' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmod2   = Widget_Button(bla, Value='Coll6-TERRA', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcla    = Widget_Button(bla, Value='CLAAS   '   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refisp    = Widget_Button(bla, Value='ISCCP     ' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refera    = Widget_Button(bla, Value='ERA-INTERIM', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refpmx    = Widget_Button(bla, Value='PATMOS-X'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcal    = Widget_Button(bla, Value='CALIPSO   ' , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.refgwx    = Widget_Button(bla, Value='CCI-GEWEX ' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci    = Widget_Button(bla, Value='ESACCI-PT  ', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci2   = Widget_Button(bla, Value='ESACCI  '   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refselect = Widget_Button(bla, Value='Select    ' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refnone   = Widget_Button(bla, Value='Loaded     ', UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'     , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refgac    = Widget_Button(bla, Value='CLARA1'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmyd    = Widget_Button(bla, Value='C5-AQUA' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmod    = Widget_Button(bla, Value='C5-TERRA', UVALUE='SET_PLOT_DEFAULTS')
+	      self.refisp    = Widget_Button(bla, Value='ISCCP'   , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refgac2   = Widget_Button(bla, Value='CLARA2'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmyd2   = Widget_Button(bla, Value='C6-AQUA' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA', UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcla    = Widget_Button(bla, Value='CLAAS'   , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refpmx    = Widget_Button(bla, Value='PATMOS'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refpmx2   = Widget_Button(bla, Value='PATMOS2'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refera    = Widget_Button(bla, Value='ERA-Interim'   , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcci2   = Widget_Button(bla, Value='ESACCI'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcci    = Widget_Button(bla, Value='ESACCI-v1.0', UVALUE='SET_PLOT_DEFAULTS')
+	      self.refgwx    = Widget_Button(bla, Value='ESACCI-GEWEX' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcal    = Widget_Button(bla, Value='CALIPSO' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refselect = Widget_Button(bla, Value='Select File', UVALUE='SET_PLOT_DEFAULTS')
+;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
 ; 	      self.refself   = Widget_Button(bla, Value='Loaded: '+sat_name(self.algoname,self.satname), UVALUE='SET_PLOT_DEFAULTS')
 	  buttonrow = Widget_Base(tlb2, ROW=3,/base_align_center)
 	    bla = Widget_Base(buttonrow,row=1,/NonExclusive,Frame=0)
@@ -3599,11 +3611,12 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.refmyd2   , Set_Button=0
 		Widget_Control, self.refmod2   , Set_Button=0
   		Widget_Control, self.refcal    , Set_Button=0
-;   		Widget_Control, self.refgwx    , Set_Button=0
+   		Widget_Control, self.refgwx    , Set_Button=0
 		Widget_Control, self.refisp    , Set_Button=0
 		Widget_Control, self.refcci2   , Set_Button=0
 		Widget_Control, self.refcci    , Set_Button=0
 		Widget_Control, self.refpmx    , Set_Button=0
+		Widget_Control, self.refpmx2   , Set_Button=0
 ; 		Widget_Control, self.refl1gac  , Set_Button=0
 		Widget_Control, self.refcla    , Set_Button=0
 		Widget_Control, self.refera    , Set_Button=0
@@ -3783,7 +3796,7 @@ END ;---------------------------------------------------------------------------
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
-		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year,month,day	, $
+		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year,month,day	, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
@@ -3892,12 +3905,13 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	modi2       = Widget_Info(self.refmod2, /BUTTON_SET)
 	myd2        = Widget_Info(self.refmyd2, /BUTTON_SET)
 	syn         = Widget_Info(self.refcal, /BUTTON_SET)
-; 	syn         = Widget_Info(self.refgwx, /BUTTON_SET)
+ 	ccigwx      = Widget_Info(self.refgwx, /BUTTON_SET)
 	isp         = Widget_Info(self.refisp, /BUTTON_SET)
 	cci2        = Widget_Info(self.refcci2, /BUTTON_SET)
 	cci         = Widget_Info(self.refcci, /BUTTON_SET) ; prototype
 	era         = Widget_Info(self.refera, /BUTTON_SET)
 	pmx         = Widget_Info(self.refpmx, /BUTTON_SET)
+	pmx2        = Widget_Info(self.refpmx2, /BUTTON_SET)
 ; 	l1g         = Widget_Info(self.refl1gac, /BUTTON_SET)
 l1g = 0
 	cla         = Widget_Info(self.refcla, /BUTTON_SET)
@@ -4025,7 +4039,7 @@ l1g = 0
 
 end
 
-function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varname, level = level, dirname = dirname, found = found
+function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varname, level = level, dirname = dirname, gewex_style=gewex_style, found = found
 
 	scol = total(Widget_Info([self.avhrrs,self.modises,self.allsat],/button_set))
 	if strlowcase(self.leveltype) eq 'l3s' and ~scol then begin
@@ -4054,7 +4068,7 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 ; 	check   = (( Widget_Info(self.refself, /BUTTON_SET)))
 	if keyword_set(check) then begin & dirname = self.directory & filename = self.filename & version = self.version & end
 	file =  get_filename(year, month, day, data=varname, sat=sat, algo = algo, level=level, found = found, $
-	orbit = orbit[0], silent= check, dirname = dirname, filename = filename, version = version, node=node)
+	orbit = orbit[0], silent= check, dirname = dirname, filename = filename, version = version, node=node, gewex_style=gewex_style)
 
 	if found eq 0. and keyword_set(check) then begin
 		if (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit or level ne self.level) then begin
@@ -4171,7 +4185,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
+				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
@@ -4244,21 +4258,22 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endelse
 			if ~found then return
 
-			if modi  then ref = 'mod'
-			if modi2 then ref = 'mod2'
-			if myd   then ref = 'myd'
-			if myd2  then ref = 'myd2'
-			if era   then ref = 'era'
-			if gac   then ref = 'gac'
-			if gac2  then ref = 'gac2'
-			if pmx   then ref = 'pmx'
-			if l1g   then ref = 'l1gac'
-			if cla   then ref = 'cla'
-			if cci   then ref = 'cci_old'
-			if cci2  then ref = 'cci'
-; 			if syn   then ref = 'gwx'
-			if syn   then ref = 'cal'
-			if isp   then ref = 'isp'
+			if modi   then ref = 'mod'
+			if modi2  then ref = 'mod2'
+			if myd    then ref = 'myd'
+			if myd2   then ref = 'myd2'
+			if era    then ref = 'era'
+			if gac    then ref = 'gac'
+			if gac2   then ref = 'gac2'
+			if pmx    then ref = 'pmx_old'
+			if pmx2   then ref = 'pmx'
+			if l1g    then ref = 'l1gac'
+			if cla    then ref = 'cla'
+			if cci    then ref = 'cci_old'
+			if cci2   then ref = 'cci'
+			if ccigwx then ref = 'gwx'
+			if syn    then ref = 'cal'
+			if isp    then ref = 'isp'
 
 			if not keyword_set(maxi) then free,maxi
 			if not keyword_set(mini) then free,mini
@@ -4317,6 +4332,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcdts and pcsing then begin
 				if verbose then print,'Diff2D Single Time Step'
+				if (histo1d and strlowcase(hct[0]) eq '1d') then begin
+					ok = dialog_message('Diff2D not possible for this combi!')
+					return
+				endif
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, level = level,$
 				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as,land=land, orbit = orbit,$
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
@@ -4431,7 +4450,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
@@ -4485,21 +4504,22 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				satn   = ok.satname  eq '' ? '' : ok.satname
 				datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 			endif else begin
-				if modi  then begin & algo2 = 'coll5'  & satn = 'terra' & end
-				if modi2 then begin & algo2 = 'coll6'  & satn = 'terra' & end
-				if myd   then begin & algo2 = 'coll5'  & satn = 'aqua' & end
-				if myd2  then begin & algo2 = 'coll6'  & satn = 'aqua' & end
-				if era   then begin & algo2 = 'era-i'  & satn = '' & end
-				if gac   then begin & algo2 = 'clara'  & satn = sat & end
-				if gac2  then begin & algo2 = 'clara2' & satn = sat & end
-; 				if syn   then begin & algo2 = 'gewex'  & satn = 'noaa18' & end ; so far only noaa18 for gewex
-				if syn   then begin & algo2 = 'calipso' & satn = 'calipso' & end
-				if isp   then begin & algo2 = 'isccp'  & satn = sat & end
-				if cci   then begin & algo2 = 'esacci_old' & satn = sat & end
-				if cci2  then begin & algo2 = 'esacci' & satn = sat & end
-				if pmx   then begin & algo2 = 'patmos' & satn = sat & end
-				if l1g   then begin & algo2 = 'l1gac'  & satn = sat & end
-				if cla   then begin & algo2 = 'claas'  & satn = 'msg' & end
+				if modi   then begin & algo2 = 'coll5'      & satn = 'terra' & end
+				if modi2  then begin & algo2 = 'coll6'      & satn = 'terra' & end
+				if myd    then begin & algo2 = 'coll5'      & satn = 'aqua' & end
+				if myd2   then begin & algo2 = 'coll6'      & satn = 'aqua' & end
+				if era    then begin & algo2 = 'era-i'      & satn = '' & end
+				if gac    then begin & algo2 = 'clara'      & satn = sat & end
+				if gac2   then begin & algo2 = 'clara2'     & satn = sat & end
+				if ccigwx then begin & algo2 = 'gewex'      & satn = sat & end
+				if syn    then begin & algo2 = 'calipso'    & satn = 'calipso' & end
+				if isp    then begin & algo2 = 'isccp'      & satn = sat & end
+				if cci    then begin & algo2 = 'esacci_old' & satn = sat & end
+				if cci2   then begin & algo2 = 'esacci'     & satn = sat & end
+				if pmx    then begin & algo2 = 'patmos_old' & satn = sat & end
+				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
+				if l1g    then begin & algo2 = 'l1gac'      & satn = sat & end
+				if cla    then begin & algo2 = 'claas'      & satn = 'msg' & end
 				self.file2 = (get_filename(year, month, day, data=varname, sat=satn, algo=algo2, level=level, found = found, orbit=orbit))[0]
 				if not found then begin
 					self.file2 = self.directory+'/'+self.filename
@@ -4622,7 +4642,7 @@ if sel then sat  = self.satname
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,isp,cci,cci2,era,pmx,l1g,cla,sel,pcms,win_nr,year, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
@@ -4633,22 +4653,23 @@ if sel then sat  = self.satname
 				ok = dialog_message('This combi is currently not set! Try "Compare" oder "Multi Time Steps" instead!')
 				return
 			endif
-			if none  then begin & algo = self.algoname & ref = self.reference & end
-			if modi  then begin & algo = 'coll5'       & sat = 'terra'   & ref = 'mod'  & end
-			if modi2 then begin & algo = 'coll6'       & sat = 'terra'   & ref = 'mod2' & end
-			if myd   then begin & algo = 'coll5'       & sat = 'aqua'    & ref = 'myd'  & end
-			if myd2  then begin & algo = 'coll6'       & sat = 'aqua'    & ref = 'myd2' & end
-			if era   then begin & algo = 'era-i'       & ref = 'era'     & end
-			if gac   then begin & algo = 'clara'       & ref = 'gac'     & end
-			if gac2  then begin & algo = 'clara2'      & ref = 'gac2'    & end
-; 			if syn   then begin & algo = 'gewex'       & ref = 'gwx'     & end
-			if syn   then begin & algo = 'calipso'     & ref = 'cal'     & end
-			if isp   then begin & algo = 'isccp'       & ref = 'isp'     & end
-			if cci   then begin & algo = 'esacci_old'  & ref = 'cci_old' & end
-			if cci2  then begin & algo = 'esacci'      & ref = 'cci'     & end
-			if pmx   then begin & algo = 'patmos'      & ref = 'pmx'     & end
-			if l1g   then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
-			if cla   then begin & algo = 'claas'       & ref = 'cla'     & end
+			if none   then begin & algo = self.algoname & ref = self.reference & end
+			if modi   then begin & algo = 'coll5'       & sat = 'terra'   & ref = 'mod'  & end
+			if modi2  then begin & algo = 'coll6'       & sat = 'terra'   & ref = 'mod2' & end
+			if myd    then begin & algo = 'coll5'       & sat = 'aqua'    & ref = 'myd'  & end
+			if myd2   then begin & algo = 'coll6'       & sat = 'aqua'    & ref = 'myd2' & end
+			if era    then begin & algo = 'era-i'       & ref = 'era'     & end
+			if gac    then begin & algo = 'clara'       & ref = 'gac'     & end
+			if gac2   then begin & algo = 'clara2'      & ref = 'gac2'    & end
+			if ccigwx then begin & algo = 'gewex'       & ref = 'gwx'     & end
+			if syn    then begin & algo = 'calipso'     & ref = 'cal'     & end
+			if isp    then begin & algo = 'isccp'       & ref = 'isp'     & end
+			if cci    then begin & algo = 'esacci_old'  & ref = 'cci_old' & end
+			if cci2   then begin & algo = 'esacci'      & ref = 'cci'     & end
+			if pmx    then begin & algo = 'patmos_old'  & ref = 'pmx_old' & end
+			if pmx2   then begin & algo = 'patmos'      & ref = 'pmx'     & end
+			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
+			if cla    then begin & algo = 'claas'       & ref = 'cla'     & end
 
 			if select then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
@@ -4683,8 +4704,12 @@ if sel then sat  = self.satname
 					datum   = self.datum
 					version = self.version
 				endif else begin
+					if none and algo eq 'GEWEX' and algo eq self.algoname then begin
+						gewex_style = (strsplit(self.filename,'_',/ext))[3]
+						help,gewex_style
+					endif
 					file  = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, found = found, level=level, $
-									 dirname = (none ? self.directory:0))
+									 dirname = (none ? self.directory:0),gewex_style=gewex_style)
 					datum = strjoin([year,month,day,orbit])
  				endelse
 			endelse
@@ -5884,6 +5909,7 @@ PRO NCDF_DATA__DEFINE, class
              loaded:0l,                $
              refera:0l,                $
              refpmx:0L,                $
+             refpmx2:0L,               $
              refl1gac:0L,              $
              refcla:0L,                $
              refself:0L,               $
