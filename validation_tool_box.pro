@@ -418,6 +418,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cc_mask'	: dat = 'cloud_mask'
 				'cmask'		: dat = 'cloud_mask'
 				'cph'		: dat = 'cloud_phase'
+				'cty'		: dat = 'cloud_type'
 				else		: 
 			endcase
 		endelse
@@ -6673,6 +6674,144 @@ pro mach_zeitreihe,start_year,n_months,data=data
 	view2d,avg
 	x = findgen(n_elements(hist)) * bin +mini
 	plot,x,100.*hist/total(hist),/xs
+
+end
+
+;-----------------------------------------------------------------------------------------------------------------
+;copied from map_image
+;-----------------------------------------------------------------------------------------------------------------
+pro map_image_colors, $
+             rainbow = rainbow, $
+             extended_rainbow = extended_rainbow, $
+             greyscale = greyscale, $
+             elevation = elevation, $
+             bwr = bwr, $
+             ctable = ctable, $
+             discrete = discrete, $
+             red = red, green = green, blue = blue, $
+             revert_background = revert_background, $
+             flip_colours = flip_colours, $
+             brewer = brewer, $
+             ctp = ctp, $
+             cth = cth, $
+             void_color = void_color,ncolors=ncolors,bottom=bottom,mini=mini,maxi=maxi
+
+	if keyword_set(brewer) then begin
+		ctable = keyword_set(ctable) ? ctable : 4
+		if ctable lt 0 then begin & ctable = abs(ctable) & flip_colours = 1 & end
+		file = !BREWER_CT_FILE
+	endif
+
+	if keyword_set(rainbow) then begin
+		r = interpol([  0,   0,   0,   0,    0,  200, 255, 255, 255, 180, 100], indgen(11), findgen(254) / 253 * 10)
+		g = interpol([  0,   0, 125, 255, 255,  255, 255, 125,   0,   0,    0], indgen(11), findgen(254) / 253 * 10)
+		b = interpol([125, 255, 255, 255,    0,    0,  0,   0,   0,   0,    0], indgen(11), findgen(254) / 253 * 10)
+		r = [0, r, 255] & g = [0, g, 255] & b = [0, b, 255]
+		color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+	endif
+
+	if keyword_set(extended_rainbow) then begin
+		r = interpol([152, 217, 105,   0,   0,   7, 109, 210, 250, 250, 250, 221, 156, 100, 80], indgen(15), findgen(254) / 253 * 14)
+		g = interpol([  0,   0,   0, 125, 250, 245, 224, 250, 216, 159, 101,  46,   0,   0, 34], indgen(15), findgen(254) / 253 * 14)
+		b = interpol([ 91, 230, 244, 250, 250, 140,  31,   0,   0,   0,   0,  46,   0,   0, 40], indgen(15), findgen(254) / 253 * 14)
+		r = [0, r, 255] & g = [0, g, 255] & b = [0, b, 255]
+		color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+	endif
+
+	if keyword_set(elevation) then begin
+		r = bytarr(256) + 255b
+		g = bytarr(256) + 255b
+		b = bytarr(256) + 255b
+		r[2] = 0 & g[2] = 0 & b[2] = 150
+		r[3:20] = 0 & g[3:20] = bindgen(18) * (190.-120.) / 17. + 120 & b[3:20] = 0
+		r[21:40] = bindgen(20) * (220.) / 19. & g[21:40] = 190 & b[21:40] = 0
+		r[41:60] = 220 - bindgen(20) * (30) / 19. & g[41:60] = 190 - bindgen(20) * (80) / 19. & b[41:60] = 0
+		r[61:80] = bindgen(20) * 65 / 19. + 190
+		g[61:80] = bindgen(20) * 145 / 19. + 110
+		b[61:80] = bindgen(20) * 255 / 19.
+		r[81:*]  = 255b & g[81:*] = 255b & b[81:*] = 255b
+		color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+	endif
+
+	if keyword_set(bwr) then begin
+		saturation = fltarr(ncolors)
+		value = intarr(ncolors) + 1
+		hue = intarr(ncolors)
+		white_index = round((ncolors * (-1. *  mini ) / (maxi - mini))>0)
+		hue       [0 : white_index] = 240
+		saturation[0 : white_index] = (1. - findgen(white_index+1) / white_index) * ncolors / 253.
+		saturation[white_index + 1 : ncolors - 1] = findgen(ncolors-white_index-1) / (ncolors-white_index-2) * ncolors / 253.
+		color_convert, hue, saturation, value, r, g, b, /hsv_rgb
+		rr = intarr(254) & gg = intarr(254) & bb = intarr(254)
+		rr[bottom-1] = r
+		gg[bottom-1] = g
+		bb[bottom-1] = b
+		r = [0, rr, 255] & g = [0, gg, 255] & b = [0, bb, 255]
+		color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+	endif
+
+	if keyword_set(ctable) then begin
+		if ctable lt 0 then begin & ctable = abs(ctable) & flip_colours = 1 & end
+		loadct, ctable, file = file, /silent
+	endif
+
+	if keyword_set(greyscale) then begin
+		loadct, 0, /silent
+	endif
+
+	if keyword_set(discrete) then begin
+		mini  = min(discrete, max = maxi)
+		n_lev = n_elements(discrete) - 1
+		nnn   = n_elements(discrete) - 1
+
+		; Setting number of colors such that colorbar shows the steps at the correct position
+		ncolors = floor(float(ncolors) / nnn) * nnn + 1
+		ddd = bytscl([mini, discrete, maxi], $
+			min = mini, $
+			max = maxi, $
+			top = ncolors - 1, /nan) + bottom
+		ddd = ddd[1:nnn+1]
+		idx = intarr(256) - 1
+		for i = 0, nnn-1 do if ddd[i] lt ddd[i+1] then idx[ddd[i]:ddd[i+1]] = i
+		;Pick the colours from within the chosen intervals
+		tvlct, red, green, blue, /get
+		index = round(findgen(nnn) / (nnn - 1.) * (ncolors - 1) + bottom)
+		red   = red  [index]
+		green = green[index]
+		blue  = blue [index]
+
+		r = red[idx>0] & g = green[idx>0] & b = blue[idx>0]
+		bad = where(idx eq -1)
+		if bad[0] ne -1 then begin
+			r[bad] = void_color
+			g[bad] = void_color
+			b[bad] = void_color
+		endif
+		color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+	endif
+
+	if keyword_set(flip_colours) then begin
+		tvlct, r, g, b, /get
+		color_save = !p.color & tvlct, reverse(r), reverse(g), reverse(b) & !p.color = color_save
+	endif
+
+	;Set white, black and void-color:
+	tvlct, r, g, b, /get
+	r[0] = 0 & g[0] = 0 & b[0] = 0
+	r[255] = 255 & g[255] = 255 & b[255] = 255
+	r[1] = void_color & g[1] = void_color & b[1] = void_color
+	color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+
+	if keyword_set(revert_background) then begin
+		if strupcase(!d.name) eq 'PS' then begin
+			print, "[map_image::colors]:Don't revert colours when using postscript"
+		endif else begin
+			background = !p.background
+			color = !p.color
+			!p.background = color
+			!p.color = background
+		endelse
+	endif
 
 end
 

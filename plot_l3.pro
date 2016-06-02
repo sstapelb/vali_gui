@@ -7,17 +7,9 @@ pro plot_l3
 end
 ;------------------------------------------------------------------------------------------
 pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, horizon=horizon,ctable = ctable, other = other, $
-			bar_format = bar_format, save_as = save_as, discrete = discrete
-
-	if keyword_set(discrete) then begin
-		names = strupcase(discrete)
-		bar_tickname= [names]
-		discreter=findgen(n_elements(names)+1)
-		n_lev = n_elements(names)
-		mini = 0
-		maxi = n_elements(names)+1
-		maxvalue = n_elements(names)+1
-	endif
+			bar_format = bar_format, save_as = save_as, discrete = discrete, $
+			n_lev=n_lev,g_eq=g_eq,l_eq =l_eq, flip_colours = flip_colours,rainbow = rainbow, bar_tickname=bar_tickname, $
+			bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, brewer = brewer, greyscale = greyscale
 
 	case strlowcase(strmid(data,0,3)) of
 		'cot'	: title = 'Cloud Optical Thickness'
@@ -30,19 +22,30 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 		'cfc'	: title = 'Cloud Fraction'
 		'cc_'	: title = 'Cloud Fraction'
 		'cph'	: title = 'Liquid Cloud Fraction'
+		'cty'	: title = 'Cloud Type'
 		else	: title = strupcase(data)
 	endcase
 
-	mini  = keyword_set(logarithmic) ? alog10(minvalue[0]) : float(minvalue[0])
-	maxi  = keyword_set(logarithmic) ? alog10(maxvalue[0]) : float(maxvalue[0])
+	ncolors= 253
+	bottom = 2
+	void_color = 150
+	oob_factor = 0.5
+	oob_low    = 2
+	oob_high   = 254
+
+	leq  = keyword_set(l_eq) 	? l_eq : 0
+	geq  = keyword_set(g_eq) 	? g_eq : 0
+	disc = keyword_set(discrete)	? discrete :0
+	bart = keyword_set(bar_tickname)? bar_tickname : 0
+	mini = keyword_set(logarithmic) ? alog10(minvalue[0]) : float(minvalue[0])
+	maxi = keyword_set(logarithmic) ? alog10(maxvalue[0]) : float(maxvalue[0])
 
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab
-; farben noch anpassen copy aus map_image!!
-	r = interpol([  0,   0,   0,   0,    0,  200, 255, 255, 255, 180, 100], indgen(11), findgen(254) / 253 * 10)
-	g = interpol([  0,   0, 125, 255, 255,  255, 255, 125,   0,   0,    0], indgen(11), findgen(254) / 253 * 10)
-	b = interpol([125, 255, 255, 255,    0,    0,  0,   0,   0,   0,    0], indgen(11), findgen(254) / 253 * 10)
-	r = [0, r, 255] & g = [0, g, 255] & b = [0, b, 255]
-	color_save = !p.color & tvlct, r, g, b & !p.color = color_save
+	map_image_colors, rainbow = rainbow, extended_rainbow = extended_rainbow, greyscale = greyscale, elevation = elevation, bwr = bwr, ctable = ctable, $
+			discrete = disc, flip_colours = flip_colours, brewer = brewer, void_color = void_color,ncolors=ncolors,bottom=bottom,mini=mini,maxi=maxi
+
+
+	extra = {title:title,format:bar_format,l_eq:leq,g_eq:geq,discrete:disc,bar_tickname:bart}
 
 	if keyword_set(save_as) then begin
 		save_dum = (keyword_set(horizon) ? 'horizontal_':'vertical_')+strcompress(data,/rem)+$
@@ -50,22 +53,24 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 		save_as  = !SAVE_DIR + 	strreplace(save_dum,[' ',':',';',',','(',')','.','[',']','/','\','!'],['_','','','','','','','','','','',''],/noregex)+'.eps'
 	endif
 
-	plot, [0,0], [1,1], /nodata, xstyle=4, ystyle = 4
+	plot, [mini,mini], [maxi,maxi], /nodata, xstyle=4, ystyle = 4
 
 	if keyword_set(horizon) then begin
 		start_save,save_as,size=[32,4]
-			df_colorbar,minrange=mini,maxrange=maxi,divisions=6,bot=2,ncolors=253,$
-			_extra={title:title,rainbow:rainbow,bwr:bwr,extended_rainbow:extended_rainbow,greyscale:greyscale,$
-			elevation:elevation,flip_colours:flip_colours,format:bar_format}, $
- 			POSITION=[0.1, 0.3, 0.9, 0.6],$
-			charsize = 2.5,logarithmic=logarithmic,/no_noerase
+			df_colorbar,minrange=mini,maxrange=maxi,divisions=n_lev,bot=bottom,ncolors=ncolors,$
+			_extra=extra, $
+			POSITION=[0.1, 0.3, 0.9, 0.6],$
+			charsize = 2.5,$
+ 			logarithmic=logarithmic,/no_noerase,$
+ 			oob_factor=oob_factor,oob_low=oob_low,oob_high=oob_high
 		end_save,save_as
 	endif else begin
 		start_save,save_as,size=[6,20]
-			df_colorbar,minrange=mini,maxrange=maxi,divisions=6,bot=2,ncolors=253,/vertical , $
-			_extra={title:title,format:bar_format}, $
+			df_colorbar,minrange=mini,maxrange=maxi,divisions=n_lev,bot=bottom,ncolors=ncolors,/vertical , $
+			_extra=extra,$
  			POSITION=[0.6, 0.1, 0.85, 0.9],$
-			charsize = 2.5,logarithmic=logarithmic,/no_noerase,/left
+			charsize = 2.5,logarithmic=logarithmic,/no_noerase,/left,$
+			oob_factor=oob_factor,oob_low=oob_low,oob_high=oob_high
 		end_save,save_as
 	endelse
 
@@ -420,9 +425,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'cer'		: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius' & end
 		'cer_liq'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Liquid' & end
 		'cer_ice'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Ice' & end
-		'cld_typ'	: begin & histv = [1.,1.,8.]     & vollername = 'Pavolonis Cloud Type' & end
-		'cty_asc'	: begin & histv = [1.,1.,8.]     & vollername = 'Pavolonis Cloud Type' & end
-		'cty_des'	: begin & histv = [1.,1.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cld_typ'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cty_asc'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cty_des'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & end
  		else		: begin 
 					histv = adv_keyword_set(maxi) and adv_keyword_set(mini) ? $
 						[(10.^(strlen(strcompress(string(maxi,f='(i)'),/rem)))/1000.) < 10.,mini,maxi] : [1,0,100.]
@@ -1427,7 +1432,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	if strupcase(hct) eq 'HCB' or strupcase(hct) eq 'VCB' then begin
 		plot_only_color_bar,(adv_keyword_set(mini) ? mini[0]:minvalue),$
 		(adv_keyword_set(maxi) ? maxi[0]:maxvalue), dat, unit, logarithmic=logarithmic, $
-			horizon = (strupcase(hct) eq 'HCB'), ctable = ctable, other = other, save_as = save_as,bar_format=bar_format
+			horizon = (strupcase(hct) eq 'HCB'), ctable = ctable, other = other, save_as = save_as,bar_format=bar_format,$
+			n_lev=n_lev,g_eq=g_eq,l_eq =l_eq, flip_colours = flip_colours,rainbow = rainbow,discrete =discrete, bar_tickname=bar_tickname,$
+			bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, brewer = brewer, greyscale = greyscale
 		return
 	endif
 
@@ -1442,7 +1449,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	figure_title = prefix + datum+' '+algon+' '+longname
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
 			~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0
-
 	if opl le 1 or ~obj_valid(obj_out) then begin 
 		if opl eq 0 then start_save, save_dum, thick = thick
 			m = obj_new("map_image",bild, lat, lon, void_index=void_index,n_lev=n_lev	, $
@@ -1506,7 +1512,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 				limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 							[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
-				if do_it then m -> project,limit=limit,p0lon=p0lon,p0lat=p0lat
+				if do_it then m -> project,limit=limit,p0lon=p0lon,p0lat=p0lat, void_index=void_index
 			endif
 		endwhile
 		obj_destroy, m
