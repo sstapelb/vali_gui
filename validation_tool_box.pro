@@ -3349,6 +3349,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									addon = ' - Choose right Satellite!'
 								endelse
 							endif else if lev eq 'l3u' then begin
+								if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+									sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,/patmos,found=found_prime)
+								endif
 								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
 								node  = node eq 'asc' or node eq 'des' ? node : '*'
 								doy   = string(doy(yyyy,mm,dd eq '' ? 1:(dd eq '??' ? dom(yyyy,mm):dd)),f='(i3.3)')
@@ -3381,6 +3384,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									addon = ' - Choose right Satellite!'
 								endelse
 							endif else if lev eq 'l3u' then begin
+								if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+									sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+								endif
 								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
 								node  = node eq 'asc' or node eq 'des' ? node : '*'
 								doy   = string(doy(yyyy,mm,dd eq '' ? 1:(dd eq '??' ? dom(yyyy,mm):dd)),f='(i3.3)')

@@ -394,7 +394,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif
 
 	if ~keyword_set(level) then level = keyword_set(day) ? 'l3u' : 'l3c'
-
+	bar_discontinous = 0
 	case strmid(dat,0,7) of
 		'cot'		: begin & histv = [0.1,0.,50.]   & vollername = 'Cloud Optical Thickness' & end
 		'cot_liq'	: begin & histv = [0.1,0.,50.]   & vollername = 'Cloud Optical Thickness Liquid' & end
@@ -412,22 +412,22 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'ctt_cor'	: begin & histv = [1.,150.,320.] & vollername = 'Cloud Top Temperature' & end
 		'cth_cor'	: begin & histv = [0.1,0.,16.]   & vollername = 'Cloud Top Height' & end
 		'cfc'		: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Fraction' & end
-		'cc_mask'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
-		'cmask_a'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
-		'cmask_d'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & end
+		'cc_mask'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & bar_discontinous = 1 & end
+		'cmask_a'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & bar_discontinous = 1 & end
+		'cmask_d'	: begin & histv = [1.,0.,1.]     & vollername = 'Cloud Mask' & bar_discontinous = 1 & end
 		'cc_tota'	: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Fraction' & end
 		'cph'		: begin & histv = [0.01,0.,1.]   & vollername = 'Cloud Phase' & end
-		'cph_asc'	: begin & histv = [1.,1.,2.]     & vollername = 'Cloud Phase Ascending' & end
-		'cph_des'	: begin & histv = [1.,1.,2.]     & vollername = 'Cloud Phase Descending' & end
+		'cph_asc'	: begin & histv = [1.,1.,2.]     & vollername = 'Cloud Phase Ascending' & bar_discontinous = 1 & end
+		'cph_des'	: begin & histv = [1.,1.,2.]     & vollername = 'Cloud Phase Descending' & bar_discontinous = 1 & end
 		'ref'		: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius' & end
 		'ref_liq'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Liquid' & end
 		'ref_ice'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Ice' & end
 		'cer'		: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius' & end
 		'cer_liq'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Liquid' & end
 		'cer_ice'	: begin & histv = [1.,0.,100.]   & vollername = 'Effective Radius Ice' & end
-		'cld_typ'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & end
-		'cty_asc'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & end
-		'cty_des'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & end
+		'cld_typ'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & bar_discontinous = 1 & end
+		'cty_asc'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & bar_discontinous = 1 & end
+		'cty_des'	: begin & histv = [1.,0.,8.]     & vollername = 'Pavolonis Cloud Type' & bar_discontinous = 1 & end
  		else		: begin 
 					histv = adv_keyword_set(maxi) and adv_keyword_set(mini) ? $
 						[(10.^(strlen(strcompress(string(maxi,f='(i)'),/rem)))/1000.) < 10.,mini,maxi] : [1,0,100.]
@@ -795,13 +795,15 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		endif
 
 		start_save, save_as3, thick = thick, size = [32, 20]
-			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1 
+			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1
+			if bar_discontinous then bar_tickname = string(aa[sort(aa)],f=bar_format)
 			view2d,aa,no_data_val=0,xtitle=algon_cci+' '+get_product_name(dat,algo=algo1,level=level,/upper),ytitle=algon_gac+' '+$
-			get_product_name(dat,algo=algo2,level=level,/upper),bar_title=bar_title, $
+			get_product_name(dat,algo=algo2,level=level,/upper),bar_title=bar_title, bar_discontinous = bar_discontinous, $
 			xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_format=bar_format,$
-			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 3, $
-			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,/log,charthick = 1.2, xcharsize = 1.2,ycharsize = 1.2
+			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 4, $
+			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,log=~bar_discontinous,charthick = 1.2, xcharsize = 1.2,ycharsize = 1.2,$
+			bar_tickname = bar_tickname
 			if chk_idx gt 0 and total(size(aa,/dim)) gt 4 then begin
 				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2
 				oplot,!x.crange,!y.crange
@@ -843,11 +845,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
 		print,'-----------'+dat+'-'+cov+'--------------'
 		if stregex(dat,'npoints',/fold,/bool) then begin
-			print,'Total         '+algon_cci    +' :',string(total(bild_cci[idx]),f='(f15.1)')
-			print,'Total         '+algon_gac    +' :',string(total(bild_gac[idx]),f='(f15.1)')
+			print,'Total         '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_cci[idx]),f='(f15.1)')
+			print,'Total         '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_gac[idx]),f='(f15.1)')
 		endif
-		print,'Glob. Mean (F1) '+algon_cci          +' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. Mean (F2) '+algon_gac          +' : ',string(gmean(bild_gac[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. Mean (F1) '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. Mean (F2) '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_gac[idx],lat[idx]),f='(f11.4)')
 		print,'Glob. BIAS      '+str_pholder        +' : ',string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
 		print,'Glob. RMSE      '+str_pholder        +' : ',string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
 		print,'Glob. BC-RMSE   '+str_pholder        +' : ',string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - $
@@ -856,13 +858,13 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 								   strcompress(string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx])^2.,f='(f11.4)'),/rem)+')'
 		print,'----------------------------------'
 		thick = savbg ? thick + 2 : thick
-		oplot,lat1dc,medi_c,thick=thick,col=cgColor("Red")
-		oplot,lat1dg,medi_g,thick=thick
+		oplot,lat1dc,medi_c,thick=thick
+		oplot,lat1dg,medi_g,thick=thick,col=cgColor("Red")
 		if keyword_set(show_values) then begin
-			legend,[algon_gac,algon_cci],thick=replicate(thick,2),spos='bot',charsize=(savbg ? 2.5:1.5), $
+			legend,[algon_cci,algon_gac],thick=replicate(thick,2),spos='bot',charsize=(savbg ? 2.5:1.5), $
 			color=[-1,cgColor("Red")]
 		endif else begin
-			legend,[algon_gac,algon_cci],thick=replicate(thick,2),spos='top',charsize=(savbg ? 2.5:1.5), $
+			legend,[algon_cci,algon_gac],thick=replicate(thick,2),spos='top',charsize=(savbg ? 2.5:1.5), $
 			color=[-1,cgColor("Red")]
 		endelse
 	end_save, save_as4
@@ -1907,11 +1909,11 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	str_pholder = strjoin(replicate(' ',max([strlen(f1str+satn1),strlen(f2str+satn2)])))
 	print,'-----------'+dat+'--------------'
 	if stregex(dat,'npoints',/fold,/bool) then begin
-		print,'Total         '+f1str+satn1+' :',string(total(bild1[idx]),f='(f15.1)')
-		print,'Total         '+f2str+satn2+' :',string(total(bild2[idx]),f='(f15.1)')
+		print,'Total         '+string(f1str+satn1,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild1[idx]),f='(f15.1)')
+		print,'Total         '+string(f2str+satn2,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild2[idx]),f='(f15.1)')
 	endif
-	print,'Glob. Mean      '+f1str+satn1+' :',string(gmean(bild1[idx],lat[idx]),f='(f11.4)')
-	print,'Glob. Mean      '+f2str+satn2+' :',string(gmean(bild2[idx],lat[idx]),f='(f11.4)')
+	print,'Glob. Mean      '+string(f1str+satn1,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(gmean(bild1[idx],lat[idx]),f='(f11.4)')
+	print,'Glob. Mean      '+string(f2str+satn2,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(gmean(bild2[idx],lat[idx]),f='(f11.4)')
 	print,'Glob. BIAS      '+str_pholder+' :',string(bias,f='(f11.4)')
 	print,'Glob. RMSE      '+str_pholder+' :',string(rmse,f='(f11.4)')
 	print,'Glob. BC-RMSE   '+str_pholder+' :',string(stdd,f='(f11.4)')
@@ -4071,9 +4073,9 @@ pro plot_simple_timeseries, year,month, varname, satellite, algo, cov, reference
 	str_pholder = strjoin(replicate(' ',max([strlen(algon),strlen(ref)])))
 
 	print,'-------'+dat+'--------'
-	print,'Glob. Mean    '+algon+': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE,f='(f11.4)')
+	print,'Glob. Mean    '+string(algon,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE,f='(f11.4)')
 	if keyword_set(reference) then begin
-		print,'Glob. Mean    '+ref                +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE2,f='(f11.4)')
+		print,'Glob. Mean    '+string(ref,f='(A'+strcompress(strlen(str_pholder),/rem)+')')                 +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE2,f='(f11.4)')
 		print,'Glob. BIAS    '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.BIAS,f='(f11.4)')
 		print,'Glob. RMSE    '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.RMSE,f='(f11.4)')
 		print,'Glob. BC-RMSE '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.BC_RMSE,f='(f11.4)')
