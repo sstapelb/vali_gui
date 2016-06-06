@@ -503,7 +503,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		free, struc2
 	endif else begin 
 		; cci l3u files
-
 		if level eq 'l3u' and ref eq 'gac' and (strmid(algo1,0,6) eq 'esacci' or algo1 eq 'patmos') then join_nodes = 1
 		bild_cci = get_data(yyyy,mm,dd,file=ccifile[0], data = dat,sat=sat, no_data_value = fillvalue1, longname = longname, unit = unit, found = found,$
 		verbose = verbose, level=level, algo = algo1,join_nodes=join_nodes,error=error,dim3=dim3,var_dim_names=var_dim_names_cci,/print_filename)
@@ -2459,36 +2458,39 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 	endfor
 end
 ;------------------------------------------------------------------------------------------
-pro polyfill_ts_error,ts_data,ts_unce,error=error,color=color
-
+pro polyfill_ts_error,ts_data,ts_unce,error=error,color=color, fill = fill
 	idx     = where(finite(ts_data),nc_cnt)
 	idx_unc = where(finite(ts_unce),nc_unc_cnt)
 	col     = keyword_set(color) ? color : cgColor("Tan6")
 
 	if keyword_set(error) and nc_unc_cnt ne 0 then begin
-		split = where((idx[1:*]-idx[0:*]) ne 1,count)
-		if count ge 1 then begin
-			polyfill,[idx[0:split[0]],reverse(idx[0:split[0]])],[reform(ts_data[idx[0:split[0]]]+ts_unce[idx[0:split[0]]]), $
-			reverse(reform(ts_data[idx[0:split[0]]]-ts_unce[idx[0:split[0]]]))],col=col
-			if count gt 1 then begin
-				for i=1,count-1 do begin
-					polyfill,[idx[(split[i-1]+1):split[i]],reverse(idx[(split[i-1]+1):split[i]])],$
-					[reform(ts_data[idx[(split[i-1]+1):split[i]]]+ts_unce[idx[(split[i-1]+1):split[i]]]), $
-					reverse(reform(ts_data[idx[(split[i-1]+1):split[i]]]-ts_unce[idx[(split[i-1]+1):split[i]]]))],col=col
-				endfor
-			endif
-			polyfill,[idx[split[count-1]+1:*],reverse(idx[split[count-1]+1:*])],$
-			[reform(ts_data[idx[split[count-1]+1:*]]+ts_unce[idx[split[count-1]+1:*]]),$
-			reverse(reform(ts_data[idx[split[count-1]+1:*]]-ts_unce[idx[split[count-1]+1:*]]))],col=col
+		if ~keyword_set(fill) then begin
+			ERRPLOT, ts_data - ts_unce, ts_data + ts_unce, color=col
 		endif else begin
-			polyfill,[idx,reverse(idx)],[reform(ts_data[idx]+ts_unce[idx]),reverse(reform(ts_data[idx]-ts_unce[idx]))],col=col
+			split = where((idx[1:*]-idx[0:*]) ne 1,count)
+			if count ge 1 then begin
+				polyfill,[idx[0:split[0]],reverse(idx[0:split[0]])],[reform(ts_data[idx[0:split[0]]]+ts_unce[idx[0:split[0]]]), $
+				reverse(reform(ts_data[idx[0:split[0]]]-ts_unce[idx[0:split[0]]]))],col=col
+				if count gt 1 then begin
+					for i=1,count-1 do begin
+						polyfill,[idx[(split[i-1]+1):split[i]],reverse(idx[(split[i-1]+1):split[i]])],$
+						[reform(ts_data[idx[(split[i-1]+1):split[i]]]+ts_unce[idx[(split[i-1]+1):split[i]]]), $
+						reverse(reform(ts_data[idx[(split[i-1]+1):split[i]]]-ts_unce[idx[(split[i-1]+1):split[i]]]))],col=col
+					endfor
+				endif
+				polyfill,[idx[split[count-1]+1:*],reverse(idx[split[count-1]+1:*])],$
+				[reform(ts_data[idx[split[count-1]+1:*]]+ts_unce[idx[split[count-1]+1:*]]),$
+				reverse(reform(ts_data[idx[split[count-1]+1:*]]-ts_unce[idx[split[count-1]+1:*]]))],col=col
+			endif else begin
+				polyfill,[idx,reverse(idx)],[reform(ts_data[idx]+ts_unce[idx]),reverse(reform(ts_data[idx]-ts_unce[idx]))],col=col
+			endelse
 		endelse
 	endif
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anomalies=anomalies,	$
+pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anomalies=anomalies		, $
 		 log=log,save_as=save_as,single_var=single_var,error=error,show_values = show_values	, $
-		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl,coverage=coverage		, $
+		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl,coverage=coverage	, $
 		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum,mean_2d=mean_2d
 
 	pinatubu = 0
@@ -2497,8 +2499,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	zoo     = keyword_set(zonal_only)
 	m2d     = keyword_set(mean_2d)
 	wbg     = keyword_set(white_bg)
-	symsize = n_elements(xtickname) le 5 ? 2.5 : 2.
-	symsize = (sav or wbg ? symsize : 0.5+symsize)
+	symsize = n_elements(xtickname) le 5 ? 2.5 : 1.5
+	symsize = (sav or wbg ? 0.5+symsize : symsize)
 	datum   = keyword_set(datum) ? datum : ''
 	d       = struc
 	tsi     = d.TS_INDICES
@@ -2621,48 +2623,44 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				if keyword_set(coverage) then begin
 					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 				endif
-				legend,algon1+dtn+' ('+datum+')',psym=-8,thick=thick,color=[cgColor("Red")],spos='tl',$
+				legend,algon1+dtn+' ('+datum+')',psym=-8,thick=thick,color=-1,spos='tl',$
 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-				legend,ref+dtn,psym=-8,thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-; 				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray")
-; 				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue')
-				oplot,ts_data[tsi.gm2,*],psym=-8,thick=thick,symsize=symsize
-				oplot,ts_data[tsi.gm1,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
+				legend,ref+dtn,psym=-8,thick=thick,color=[cgColor("Red")],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
+				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray"),fill=fill
+				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue'),fill=fill
+				oplot,ts_data[tsi.gm1,*],psym=-8,thick=thick,symsize=symsize
+				oplot,ts_data[tsi.gm2,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
 			endif
 			if ~keyword_set(error) then oplot,ts_data[tsi.bcr,*]*qu,psym=-8,col=cgColor("Slate Gray"),thick=thick,symsize=symsize
 			if keyword_set(show_values) then begin
+				define_oplots, opl, cols, spos, linestyle, psym, ystretch,/timeseries
 				res1=linfit(idx,ts_data[tsi.gm1,idx],yfit=yfit1)
 				res2=linfit(idx,ts_data[tsi.gm2,idx],yfit=yfit2)
 				res3=linfit(idx,ts_data[tsi.bcr,idx],yfit=yfit3)
-; 				dec1 = ' '+strcompress(string((res1[1]/float(idx_cnt)*120.)*100.,f='(f8.3)'),/rem)+' % / decade'
-; 				dec2 = ' '+strcompress(string((res2[1]/float(idx_cnt)*120.)*100.,f='(f8.3)'),/rem)+' % / decade'
-; 				dec3 = ' '+strcompress(string((res3[1]/float(idx_cnt)*120.)*100.,f='(f8.3)'),/rem)+' % / decade'
 				dec1 = ' '+string(((yfit1[idx_cnt-1]-yfit1[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				dec2 = ' '+string(((yfit2[idx_cnt-1]-yfit2[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				dec3 = ' '+string(((yfit3[idx_cnt-1]-yfit3[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				oplot,idx,yfit1
-				oplot,idx,yfit2,col=cgColor("Red")
-				oplot,idx,yfit3*qu,col=cgColor("Slate Gray")
-; 				xyouts,(reverse(idx))[0]+1,yfit1[idx_cnt-1],dec1,color=cgcolor('Red')
-; 				xyouts,(reverse(idx))[0]+1,yfit2[idx_cnt-1],dec2
-; 				xyouts,(reverse(idx))[0]+1,yfit3[idx_cnt-1],dec3,col=cgColor("Slate Gray")
+				oplot,idx,yfit2,col=opl eq 0 ? cgColor("Red") : cgcolor(cols)
+				oplot,idx,yfit3*qu,col=cgColor("Gray")
 				str_pholder = strjoin(replicate(' ',max([strlen(algon1),strlen(ref)])))
-				print,'ALG1                          : '+dec1
-				print,'ALG2                          : '+dec2
-				print,'RMSD                          : '+dec3
+				print,'Trend (ALG1)  '+str_pholder+' : '+dec1
+				print,'Trend (ALG2)  '+str_pholder+' : '+dec2
+				print,'RMSD          '+str_pholder+' : '+dec3
 			endif
 			if opl ne 0 then begin
+
 				define_oplots, opl, cols, spos, linestyle, psym, ystretch,/timeseries
 				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray")
 				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue')
+				oplot,ts_data[tsi.gm1,*],psym=-8,thick=thick,symsize=symsize
 				oplot,ts_data[tsi.gm2,*],psym=-8,thick=thick,col=cgcolor(cols),symsize=symsize
-				oplot,ts_data[tsi.gm1,*],psym=-8,col=cgColor("Red"),thick=thick,symsize=symsize
-; 				legend,algon1+dtn+' ('+datum+')',psym=-8,thick=thick,color=cgcolor(cols),spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
-; 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
-; 				legend,ref+dtn,psym=-8,thick=thick,color=[cgColor("Red")],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
-; 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
-				legend,ref+dtn,psym=-8,thick=thick,color=[cgColor(cols)],spos=spos,charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
-				ystretch=((ystretch+1)*1.1)+0.5,linestyle = linestyle
+				legend,algon1+dtn+' ('+datum+')',psym=-8,thick=thick,color=-1,spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
+				legend,ref+dtn,psym=-8,thick=thick,color=[cgColor(cols)],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
+if 1 eq 2 then 			legend,ref+dtn,psym=-8,thick=thick,color=[cgColor(cols)],spos=spos,charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+ 				ystretch=((ystretch+1)*1.1)+0.5,linestyle = linestyle
 			endif
 		end_save,save_as3
 	endif
@@ -4073,13 +4071,13 @@ pro plot_simple_timeseries, year,month, varname, satellite, algo, cov, reference
 	str_pholder = strjoin(replicate(' ',max([strlen(algon),strlen(ref)])))
 
 	print,'-------'+dat+'--------'
-	print,'Glob. Mean    '+string(algon,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE,f='(f11.4)')
+	print,'Glob. Mean    '+string(algon,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE,f='(f11.4)')
 	if keyword_set(reference) then begin
-		print,'Glob. Mean    '+string(ref,f='(A'+strcompress(strlen(str_pholder),/rem)+')')                 +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE2,f='(f11.4)')
-		print,'Glob. BIAS    '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.BIAS,f='(f11.4)')
-		print,'Glob. RMSE    '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.RMSE,f='(f11.4)')
-		print,'Glob. BC-RMSE '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.BC_RMSE,f='(f11.4)')
-		print,'Correlation   '+str_pholder        +': ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.CORRELATION,f='(f11.4)')
+		print,'Glob. Mean    '+string(ref,f='(A'+strcompress(strlen(str_pholder),/rem)+')')                 +' : ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE2,f='(f11.4)')
+		print,'Glob. BIAS    '+str_pholder        +' : ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.BIAS,f='(f11.4)')
+		print,'Glob. RMSE    '+str_pholder        +' : ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.RMSE,f='(f11.4)')
+		print,'Glob. BC-RMSE '+str_pholder        +' : ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.BC_RMSE,f='(f11.4)')
+		print,'Correlation   '+str_pholder        +' : ',string(d.OVERALL_STATS.LATITUDE_WEIGHTED.CORRELATION,f='(f11.4)')
 	endif
 
 	gac_ts_plots,d,ts_data,strupcase(dat),algon,yrange,lines,anz,xtickname,qu,ref		, $
@@ -4961,10 +4959,7 @@ pro do_create_all_compare_time_series
 	data     = ['cfc','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctp','ctt','cot','cer','cth','lwp','iwp','cwp','cph']
 ; 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18']
 	sat      = ['noaaam','noaapm'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
-cli = 'gac2'
-ref = ['cal']
-data = 'cfc'
-sat = ['noaa18','noaa19','noaapm']
+	sat  = ['noaa17']
 
 	for i= 0,n_elements(sat)-1 do begin
 		for k=0,n_elements(ref)-1 do begin
@@ -5009,10 +5004,8 @@ pro do_create_all_single_time_series
 	coll5_list = ['myd-','mod-']
 
 	; combine all you need
-; 	algon_list = [cci_list,gac2_list,pmx_list,gac_list,coll6_list,coll5_list]
+	algon_list = ['cci-noaa17']
 
-	algon_list = ['cal-calipso']
-data = 'cfc'
 	for i= 0,n_elements(algon_list)-1 do begin
 		for l=0,n_elements(data)-1 do begin
 			do_it = 1
@@ -5044,8 +5037,7 @@ pro do_hist_cloud_type_time_series
  	coll5_list = ['myd-','mod-']
 
 	; combine all you need
-; 	algon_list = [gac2_list,gac_list,pmx_list,coll6_list,coll5_list]
-	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17']
+	algon_list = ['cci-noaa17']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -5125,7 +5117,7 @@ pro do_1d_hist_time_series
 	; coll5
 	coll5_list = ['myd-','mod-']
 
-	algon_list = ['gac2-noaapm','gac2-noaaam','gac2-allsat','gac2-noaa14','gac2-noaa15','gac2-noaa16','gac2-noaa17']
+	algon_list = ['cci-noaa17']
 	prod_list  = ['cwp','cot','ctp','ctt','cer']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
@@ -5207,9 +5199,9 @@ pro do_create_hovmoeller
 
 	; combine all you need
 ; 	algon_list = [gac2_list,pmx_list,coll6_list,coll5_list,gac_list]
-	algon_list = ['cal-calipso']
+	algon_list = ['cci-noaa17']
 
-	data='cfc'
+; 	data='cfc'
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')
@@ -5283,8 +5275,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_all_time_series
 
-; 	do_create_all_compare_time_series
-; 	do_create_all_single_time_series
+	do_create_all_compare_time_series
+	do_create_all_single_time_series
 	do_hist_cloud_type_time_series
 	do_1d_hist_time_series
 	do_create_hovmoeller

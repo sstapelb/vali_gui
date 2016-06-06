@@ -384,7 +384,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'tcc'		: dat = 'cfc'
 			'164'		: dat = 'cfc'
 			'var164'	: dat = 'cfc'
-			'cfc'		: dat = 'cc_total'
+; 			'cfc'		: dat = 'cc_total'
 			else		: 
 		endcase
 	endif
@@ -1983,7 +1983,7 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 
 	idx = where(lon gt 180,idxcnt)
 	if idxcnt gt 0 then begin
-		print,'sat2global: Warning! Max Longitude is gt 180. Now assuming that lon input is from 0-360°W.'
+		print,'sat2global: Warning! Max Longitude is gt 180. Will go on, assuming that lon input is from 0-360°W.'
 		lon[idx] -= 360
 	endif
 
@@ -3787,6 +3787,10 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 			struc = create_struct(struc,{period:datum,longname:longname,unit:unit,minv:minv,maxv:maxv,dist:dist})
 		endif else begin
 			struc.coverage = cov
+			if algo eq 'cci' and dat eq 'cfc' then struc.stats[tsi.unc1,*] /= 100.
+			if keyword_set(reference) then begin
+				if ref eq 'cci' and dat eq 'cfc' then struc.stats[tsi.unc2,*] /= 100.
+			endif
 			anz_mm      = n_elements(struc.stats[0,*])
 			stats_sm    = struc.stats * 0. + !values.f_nan
 			stats_sm_nw = struc.stats_non_weighted * 0. + !values.f_nan

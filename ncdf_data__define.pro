@@ -4500,8 +4500,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					endif
 				endif
 				ok     = self -> get_file_infos(infile=self.file2)
-				algo2  = ok.algoname eq '' ? self.algoname : ok.algoname
-				satn   = ok.satname  eq '' ? '' : ok.satname
+				algo2  = ok.algoname
+				satn   = ok.satname
 				datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 			endif else begin
 				if modi   then begin & algo2 = 'coll5'      & satn = 'terra' & end
@@ -4541,7 +4541,7 @@ if sel then sat  = self.satname
 				ok = dialog_message("This combination will create PDF's for the Feedbackloop!",/cancel)
 				if ok eq 'Cancel' then return
 				!p.multi = 0
-				compare_l2_save_serie,file1,self.file2,data1=varname,data2 = data2,mini=mini,maxi=maxi	, $
+				compare_l2_save_serie,file1,self.file2,data1=varname,data2 = varname,mini=mini,maxi=maxi	, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
 				bild=bild,unit=unit,sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
@@ -4617,7 +4617,7 @@ if sel then sat  = self.satname
 				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif else begin
-				compare_l2,file1,self.file2,data1=varname,data2 = data2,mini=mini,maxi=maxi,level=level	, $
+				compare_l2,file1,self.file2,data1=varname,data2=varname,mini=mini,maxi=maxi,level=level	, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,out=out		, $
 				sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, htypes = hct[0],verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
