@@ -1370,7 +1370,7 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		2004: sats = pmx ? ['15','16']			: ['17','16']
 		2005: sats = pmx ? ['15','16']			: ['17',(mm le  8 ? '16':'18')]
 		2006: sats = pmx ? ['15','18']			: ['17','18']
-		2007: sats = pmx ? ['15','18']			: [(mm le  5 ? '17':'MA'),'18']
+		2007: sats = pmx ? ['15','18']			: [(mm le  6 ? '17':'MA'),'18']
 		2008: sats = pmx ? ['15','18']			: ['MA','18']
 		2009: sats = pmx ? ['15','18']			: ['MA',(mm le  5 ? '18':'19')]
 		2010: sats = pmx ? ['nn','nn']			: ['MA','19']

@@ -3726,10 +3726,11 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			make_geo,grid_res = get_grid_res(bild),lon,lat
 			area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found)
 			bild  = (area * bild + (area eq 0) * fillvalue1)
-
-			make_geo,grid_res = get_grid_res(bild2),lon,lat
-			area2 = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found)
-			bild2 = (area2 * bild2 + (area2 eq 0) * fillvalue2)
+			if keyword_set(bild2) then begin
+				make_geo,grid_res = get_grid_res(bild2),lon,lat
+				area2 = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found)
+				bild2 = (area2 * bild2 + (area2 eq 0) * fillvalue2)
+			endif
 		endif
 	endelse
 
