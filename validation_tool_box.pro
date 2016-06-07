@@ -1251,29 +1251,6 @@ function pgrid,range,interval
 	return,vector(d[0],d[1],abs((d[1]-d[0])/(float(interval)) + 1))
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_grid_res, data, found = found, cci_l3u_eu = cci_l3u_eu
-	cci_l3u_eu=0.
-	if n_elements(data) gt 0 then begin
-		found=1.
-		dumdata = data
-		if size(dumdata,/n_dim) eq 3 then begin
-			si  = size(dumdata,/dim)
-			dum = where(si eq 3,scnt,complement=sidx)
-			if scnt eq 1 then dumdata = indgen(si[sidx])
-		endif
-		if size(dumdata,/n_dim) eq 2 then begin
-			dum = [360.,180.]/float(size(dumdata,/dim))
-			if dum[0] eq dum[1] then begin ; regular grid?
-				if total(dum[0] eq [0.02,0.05,0.10,0.25,0.50,1.00,2.00,2.50,5.00]) then return,dum[0] ; CCI vali standards
-			endif else if long(total(double(dum))*1000000d) eq 210000l then begin ; not nice but nessacary ;)
-				;CCI Europe L3U MODIS files
-				cci_l3u_eu = 1.
-			endif
-		endif
-	endif
-	found=0.
-end
-;-------------------------------------------------------------------------------------------------------------------------
 function zonal_average, bild, latitude, fillvalue = fillvalue, lat_res = lat_res, mean = mean, median = median,lat_zon=lat_zon,nan=nan,found=found
 
 	found=1
@@ -6415,7 +6392,7 @@ function get_1d_rel_hist_from_1d_hist, array, data, algo=algo, limit=limit, land
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: CWP. Nothing done so far for COLL?')
 	end
 	if stregex(data,'ref',/fold,/bool) or stregex(data,'cer',/fold,/bool) then begin
-		bin_border = '0,3,6,9,12,15,20,25,30,40,60,80'
+		bin_border = total(strlowcase(algo) eq ['claas','clara2']) ? '3,6,9,12,15,20,25,30,40,60,80' : '0,3,6,9,12,15,20,25,30,40,60,80'
 		hist_name  = 'Cloud Effective Radius'
 		if total(strlowcase(algo) eq ['coll5','coll6']) then ok = dialog_message('get_1d_rel_hist_from_1d_hist: REF. Nothing done so far for '+algo)
 	end

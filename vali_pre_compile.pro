@@ -1,5 +1,6 @@
 @mean.pro
 @stddev.pro
+@/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
 @/cmsaf/nfshome/sstapelb/idl/file_name_info.pro
 @/cmsaf/nfshome/sstapelb/idl/win.pro
@@ -68,7 +69,6 @@
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_L1.pro
 @/cmsaf/nfshome/sstapelb/idl/read_h5_structure_encoded_para_obj_geo.pro
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
-; @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/modis_bright.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/read_modis_l1b.pro
 @validation_tool_box.pro
 

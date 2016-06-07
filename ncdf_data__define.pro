@@ -4830,7 +4830,6 @@ if sel then sat  = self.satname
 		self.ctab=list[event.index]
 	endif else if theName eq 'PLOTS_YEARLIST' then begin
 		self.yy=list[event.index]
-stop
 		ndays = ['--', (self.yy ne '--' and self.mm ne '--' ? dom(self.yy,self.mm) : string(indgen(31)+1,f='(i2.2)'))]
 		widget_control,self.dayID, set_uvalue = ndays, set_value=ndays,Scr_XSize=47,Scr_YSize=28
 		widget_Control,self.dayID, SET_COMBOBOX_SELECT=where(self.dd eq ndays)

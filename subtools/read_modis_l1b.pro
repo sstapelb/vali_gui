@@ -1,4 +1,3 @@
-; @/cmsaf/nfshome/sstapelb/idl/vali_gui/validation_tool_box.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/modis_bright.pro
 
 function read_modis_l1b, filename, satellite, channel,radiance=radiance, found = found, index = index, $
