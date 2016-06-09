@@ -2270,6 +2270,12 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	if level eq 'l3c' or level eq 'l3s' then begin & day = '' & orbit = '' & end
 	if total(level eq ['l3u','l2b_sum','l3pm','l3dm','l3dh']) then orbit = ''
 
+	if level eq 'l3u' and algoname eq 'ESACCI' and total(satname eq ['terra','aqua']) then begin
+		; Esacci high resolution l3u data for europe and modis only  
+		if (theglobattr).geospatial_lat_min eq  35.0100 and (theglobattr).geospatial_lat_max eq 74.9900 and $
+		   (theglobattr).geospatial_lon_min eq -14.9900 and (theglobattr).geospatial_lon_max eq 44.9900 then level = 'l3ue'
+	endif
+	
 	if stregex(satname[0],'meteosat',/bool,/fold) then satname = 'msg'
 
 	; workaround for l2 aatsr files , hopefully not necassary in future
@@ -3295,7 +3301,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      dd_list        = keyword_set(self.year) and keyword_set(self.month) ? dom(self.year,self.month) : string(indgen(31)+1,f='(i2.2)')
 	      self.dayID     = Widget_combobox(bla,VALUE=['--',dd_list],UVALUE=['--',dd_list],Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_DAYLIST')
 	      self.orbID     = Widget_Text(bla,Value='1',SCR_XSIZE=45,/Editable,UNAME='ORBITS_TEXT')
-	      level_list     = ['L3C','L3S','L3U','L3DM','L3PM','L3DH','L2B_SUM','L2','L1']
+	      level_list     = ['L3C','L3S','L3U','L3UE','L3DM','L3PM','L3DH','L2B_SUM','L2','L1']
 	      self.levelID   = Widget_combobox(bla,VALUE=['??',level_list],UVALUE=['??',level_list],Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_DAYTYPELIST')
 	    bla = Widget_Base(row, col=3, /Exclusive,Frame=1, XSize=270)
 	      self.allpixID  = Widget_Button(bla, Value='All Surfaces  ', UVALUE='SET_PLOT_DEFAULTS')
@@ -4307,7 +4313,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify
+				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				return
 			endif
@@ -4327,7 +4334,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify
+				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcdts and pcsing then begin
@@ -4726,6 +4734,12 @@ if sel then sat  = self.satname
 
 			hist2d = is_jch(varname)
 
+			hist1d = is_h1d(varname)
+			if hist1d and ~pcvar then begin
+				ok=dialog_message('For hist1d choose plot style "Map2D"')
+				return
+			endif
+			
 			if pchov then begin
 				; hovmoeller
 				if hist2d then begin 
