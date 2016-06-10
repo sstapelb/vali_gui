@@ -327,7 +327,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ztext = ztext, algo1=algo1,zonal_only=zonal_only, nobar=nobar		, $
 			stereographic = stereographic, out=out, hist_cloud_type=hist_cloud_type	, $
 			logarithmic = logarithmic,timeseries=timeseries,dim3=dim3		, $
-			white_bg=white_bg,dirname2=dirname2,magnify=magnify,oplots=oplots
+			white_bg=white_bg,dirname2=dirname2,magnify=magnify,oplots=oplots,wtext = wtext
 
 	if n_params() lt 1 then begin
 		print,"Syntax: compare_cci_with_clara, year, month, day, /data, /sat, /mini, /maxi, /zoom, /stop, /limit, /win_nr, /save_as"
@@ -744,6 +744,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if ~keyword_set(zonal_only) then begin
 		start_save, save_as2, thick = thick, size = [32, 20]
+
+			rotate_globe = 	keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and $
+					keyword_set(wtext) and ~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and keyword_set(difference)
+	
+
 			m = obj_new("map_image",bild_gac,lat,lon,void_index=void_index2,box_axes=box_axes,n_lev=4	, $
 						min=(float(size(mini,/type)) ? mini : minvalue)				, $
 						max=(float(size(maxi,/type)) ? maxi : maxvalue)				, $
@@ -765,8 +770,54 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				if win_nr ne -1 then win, win_nr
 				if ~keyword_set(difference) then !p.multi = [2,2,2]
 			endif
+		if ~rotate_globe then begin
 			obj_destroy, m
-		end_save, save_as2
+			end_save, save_as2
+		endif
+
+		if rotate_globe then begin
+
+			xyouts,0.32,0.95,figure_title2,/norm,charsize=2
+
+			!mouse.button = 1
+			bitset = total(dat[0] eq ['QCFLAG']) ? 1 : 0
+			value = '                                   '
+			bild_dum = size(bild_gac,/type) eq 1 ? fix(bild_gac) : bild_gac
+			si = size(bild_dum,/dim)
+			while (!mouse.button ne 4) do begin
+				cursor, x, y, /change,/device
+				cursor, lo, la, /change,/data
+
+				if (total(finite([lo,la])) eq 2) then begin
+					qw = where(between(lon,lo-1.,lo+1.) and between(lat,la-1.,la+1.),count)
+						if count gt 0 then begin
+							idx=qw[where((abs(lon[qw]-lo)+abs(lat[qw] -la)) eq min(abs(lon[qw]-lo)+abs(lat[qw] -la))) ]
+							dum_string = '['+strjoin(string([lo,la],f='(f6.1)'),',')+'] '
+							werte      = bitset ? '['+strjoin(strcompress( where( (byte(bild_dum[idx[0]]) and 2^(indgen(9))) ne 0),/rem ),',')+']' : $
+							strcompress(bild_dum[idx[0]],/rem)
+							widget_control,wtext,set_value='[lon,lat] '+dum_string+' '+werte
+						endif else widget_control,wtext,set_value=value
+				endif
+				if !mouse.button eq 1 then begin
+					inf = (total(finite([lo,la])) eq 0.)
+					x_r = x/float(!d.x_vsize)
+					y_r = y/float(!d.y_vsize)
+					do_it = 1
+					if between(x_r,.00,.25) and between(y_r,.25,.75) and inf then p0lon = (round(p0lon -30) mod 360)	else $
+					if between(x_r,.75,1.0) and between(y_r,.25,.75) and inf then p0lon = (round(p0lon +30) mod 360 )	else $
+					if between(x_r,.25,.75) and between(y_r,.75,1.0) and inf then p0lat = ( 90 < round(p0lat +30) > (-90) )	else $
+					if between(x_r,.25,.75) and between(y_r,.00,.25) and inf then p0lat = ( 90 < round(p0lat -30) > (-90) )	else do_it = 0
+
+					limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
+								[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+					if do_it then m -> project,limit=limit,p0lon=p0lon,p0lat=p0lat, void_index=void_index
+					xyouts,0.32,0.95,figure_title2,/norm,charsize=2
+				endif
+			endwhile
+			obj_destroy, m
+			widget_control,wtext,set_value='             Pixel Values'
+		endif
+
 	endif
 	;-----------------------------------------------------------------------------------------------------------------------------
 
@@ -1601,7 +1652,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		diff_only=diff_only,hist_only=hist_only,level=level,maps_only=maps_only	, $
 		ctable = ctable, other = other,zonal_only = zonal_only, stereographic = stereographic			, $
 		box_only = box_only, coverage = coverage, nobar = nobar, ztext = ztext	, $
-		msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3,addtext=addtext,rot=rot,magnify=magnify
+		msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3	, $
+		addtext=addtext,rot=rot,magnify=magnify,wtext=wtext
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -2229,6 +2281,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild2[where(bild2 ne fillvalue2[0])]*1000.))/1000.) then g_eq = 1
 		if adv_keyword_set(mini) then if min(bild2[where(bild2 ne fillvalue2[0])]) lt float(mini[0]) then l_eq = 1
 
+		rotate_globe = 	keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
+				~keyword_set(antarctic) and ~keyword_set(arctic) and keyword_set(diff_only)
+
 		m = obj_new("map_image",bild2,lat,lon,void_index=void_index, $
 			box_axes=box_axes,n_lev=4, max=adv_keyword_set(maxi) ? maxi : max(bild2[idx]),min=adv_keyword_set(mini) ? mini[0]: min(bild2[idx]), $
 			countries=countries,magnify = magnify,figure_title=figure_title,title=title,charthick = keyword_set(save_as) ? 2. : 1.5, $
@@ -2244,28 +2299,70 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			get_new_corners = 1
 			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete
 			if win_nr ne -1 then win, win_nr
-; 			!p.multi = [2,2,2]
 		endif
-		obj_destroy,m
+
 		if keyword_set(globe) and (keyword_set(diff_only) or keyword_set(maps_only)) then $
 		xyouts,(keyword_set(maps_only) ? 0.63:0.25 ),(keyword_set(maps_only) ? 0.9:0.95 ),figure_title,/norm,charsize=2
 
+		if ~rotate_globe then obj_destroy, m
+
 		if keyword_set(zoom) then begin
-			compare_l2, file1, file2, data1=data1, data2=data2,mini=mini,maxi=maxi, bin=bin	, $ 
-			save_as=save_as, win_nr=win_nr, check_quality=check_quality,g_eq=g_eq,l_eq =l_eq, $
-			verbose=verbose, stop=stop,land=land,sea=sea, show_values=show_values,limit=get_new_corners,$
-			sat1=sat1,sat2=sat2,algo2=algo2,algo1=algo1,hist_only=hist_only,diff_only=diff_only, $
-			maps_only = maps_only,datum1 = datum1, datum2=datum2;, htypes = htypes	, $
-; 			year = year,month = month, day = day, orbit = orbit			, $
-; 			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
-; 			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
-; 			robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
-; 			diff_only=diff_only,hist_only=hist_only,level=level,maps_only=maps_only	, $
-; 			ctable = ctable, other = other,zonal_only = zonal_only, stereographic = stereographic			, $
-; 			box_only = box_only, coverage = coverage, nobar = nobar, ztext = ztext	, $
-; 			msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3
+			compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bin=bin	, $
+					save_as=save_as, win_nr=win_nr, check_quality=check_quality, g_eq=g_eq	, $
+					l_eq=l_eq, verbose=verbose, stop=stop, land=land,sea=sea, sat2=sat2	, $
+					limit=get_new_corners, show_values=show_values, out = out, sat1=sat1	, $
+					algo2=algo2, algo1=algo1, year = year	, htypes = htypes		, $
+					month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
+					p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+					mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
+					robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
+					diff_only=diff_only,hist_only=hist_only,level=level,maps_only=maps_only	, $
+					ctable = ctable, other = other,zonal_only = zonal_only			, $
+					box_only = box_only, coverage = coverage, nobar = nobar, ztext = ztext	, $
+					msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3	, $
+					addtext=addtext,rot=rot,magnify=magnify, stereographic = stereographic
 		endif
 
+		if rotate_globe then begin
+
+			!mouse.button = 1
+			bitset = total(dat[0] eq ['QCFLAG']) ? 1 : 0
+			value = '                                   '
+			bild_dum = size(bild2,/type) eq 1 ? fix(bild2) : bild2
+			si = size(bild_dum,/dim)
+			while (!mouse.button ne 4) do begin
+				cursor, x, y, /change,/device
+				cursor, lo, la, /change,/data
+
+				if (total(finite([lo,la])) eq 2) then begin
+					qw = where(between(lon,lo-1.,lo+1.) and between(lat,la-1.,la+1.),count)
+						if count gt 0 then begin
+							idx=qw[where((abs(lon[qw]-lo)+abs(lat[qw] -la)) eq min(abs(lon[qw]-lo)+abs(lat[qw] -la))) ]
+							dum_string = '['+strjoin(string([lo,la],f='(f6.1)'),',')+'] '
+							werte      = bitset ? '['+strjoin(strcompress( where( (byte(bild_dum[idx[0]]) and 2^(indgen(9))) ne 0),/rem ),',')+']' : $
+							strcompress(bild_dum[idx[0]],/rem)
+							widget_control,wtext,set_value='[lon,lat] '+dum_string+' '+werte
+						endif else widget_control,wtext,set_value=value
+				endif
+				if !mouse.button eq 1 then begin
+					inf = (total(finite([lo,la])) eq 0.)
+					x_r = x/float(!d.x_vsize)
+					y_r = y/float(!d.y_vsize)
+					do_it = 1
+					if between(x_r,.00,.25) and between(y_r,.25,.75) and inf then p0lon = (round(p0lon -30) mod 360)	else $
+					if between(x_r,.75,1.0) and between(y_r,.25,.75) and inf then p0lon = (round(p0lon +30) mod 360 )	else $
+					if between(x_r,.25,.75) and between(y_r,.75,1.0) and inf then p0lat = ( 90 < round(p0lat +30) > (-90) )	else $
+					if between(x_r,.25,.75) and between(y_r,.00,.25) and inf then p0lat = ( 90 < round(p0lat -30) > (-90) )	else do_it = 0
+
+					limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
+								[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+					if do_it then m -> project,limit=limit,p0lon=p0lon,p0lat=p0lat, void_index=void_index
+					xyouts,(keyword_set(maps_only) ? 0.63:0.25 ),(keyword_set(maps_only) ? 0.9:0.95 ),figure_title,/norm,charsize=2
+				endif
+			endwhile
+			obj_destroy, m
+			widget_control,wtext,set_value='             Pixel Values'
+		endif
 	endif
 
 	end_save, save_as
@@ -5305,8 +5402,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_all_time_series
 
-	do_hist_cloud_type_time_series
-	do_hist_cloud_type_time_series, /compare_to_cci
+; 	do_hist_cloud_type_time_series
+; 	do_hist_cloud_type_time_series, /compare_to_cci
 	do_create_hovmoeller
 	do_create_all_compare_time_series
 ; 	do_create_all_single_time_series

@@ -4349,7 +4349,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
-				error=error,log=log,dim3=dim3,magnify=magnify
+				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID
 				if show_values then show_pixel_value, out.bild, out.lon, out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcmat then begin
@@ -4633,7 +4633,8 @@ if sel then sat  = self.satname
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson	,log=log, $
 				diff_only=pcdts,hist_only=pchist,maps_only=pcvar,other=oth,ctable=ctab,zonal_only=pczm	, $
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
-				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify
+				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify	, $
+				wtext = self.showpvalID
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)

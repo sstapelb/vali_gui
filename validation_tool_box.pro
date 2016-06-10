@@ -685,6 +685,215 @@ end
 ; 
 ; end
 ;------------------------------------------------------------------------------------------
+function PlanckInv, input_platform, T 
+
+    Planck_C1 = 1.19104E-5 ; 2hc^2 in mW m-2 sr-1 (cm-1)-4
+    Planck_C2 = 1.43877 ; hc/k  in K (cm-1)-1
+
+   ; select approproate row of coefficient values
+	case strlowcase(input_platform) of
+		"noaa5"		: index = 0
+		"noaa6"		: index = 1
+		"noaa7"		: index = 2
+		"noaa8"		: index = 3
+		"noaa9"		: index = 4
+		"noaa10"	: index = 5
+		"noaa11"	: index = 6
+		"noaa12"	: index = 7
+		"noaa14"	: index = 8
+		"noaa15"	: index = 9
+		"noaa16"	: index = 10
+		"noaa17"	: index = 11
+		"noaa18"	: index = 12
+		"noaa19"	: index = 13
+		"metopb"	: index = 14
+		"metopa"	: index = 15
+		"npp"		: index = 16
+		"terra"		: index = 17
+		"aqua"		: index = 18
+		"env"		: index = 19
+		"msg2"		: index = 20
+		"default"	: index = 21
+		else		: begin
+					print, "Error: Platform name does not match local string in function PlanckInv"
+					print, "Input platform name = ", input_platform 
+					stop
+				  end
+	endcase
+
+    ;   v: wave number (cm-1)                                                           
+    ;   a: alpha parameter                                                                
+    ;   b: beta parameter   
+    ;   solcon: solar constant
+
+    ; Conversion from SADChan Planck coefficients to the ones here:
+    ; v = (B1 / Planck_C1)^(1/3) = B2 / Planck_C2
+    ; a = T2
+    ; b = T1
+    coefficients = reform( [ $
+    ;        v          a         b     solcon
+         2655.741,  0.997915,  1.64511, 4.957, $ ;noaa05, tirosn
+         2671.543,  0.997563,  1.76241, 5.010, $ ;noaa06
+         2684.523,  0.997083,  1.94314, 5.061, $ ;noaa07
+         2651.378,  0.997580,  1.77211, 4.939, $ ;noaa08
+         2690.045,  0.997111,  1.87782, 5.081, $ ;noaa09
+         2672.616,  0.997374,  1.79397, 5.017, $ ;noaa10
+         2680.050,  0.996657,  1.73316, 5.077, $ ;noaa11
+         2651.771,  0.996999,  1.89956, 4.948, $ ;noaa12
+         2654.250,  0.996176,  1.87812, 4.973, $ ;noaa14
+         2695.974,  0.998015,  1.62126, 5.088, $ ;noaa15
+         2681.254,  0.998271,  1.67456, 5.033, $ ;noaa16
+         2669.141,  0.997335,  1.69576, 5.008, $ ;noaa17
+         2660.647,  0.997145,  1.71735, 4.981, $ ;noaa18
+         2670.242,  0.997411,  1.68202, 5.010, $ ;noaa19
+         2664.338,  0.997016,  1.76585, 4.996, $ ;metop01,metopb
+         2687.039,  0.996570,  2.05823, 5.077, $ ;metop02,metopa
+         2707.560,  0.999085,  0.58063, 5.123, $ ;npp (viirs)
+         2641.775,  0.999341,  0.47705, 4.804, $ ;terra
+         2647.409,  0.999336,  0.48184, 4.822, $ ;aqua
+         2675.166,  0.996344,  1.72695, 5.030, $ ;env (aatsr),ers2
+         2568.832,  0.995400,  3.43800, 4.660, $ ;msg1, msg2
+         2670.000,  0.998000,  1.75000, 5.000  $ ;default
+         ], 4, 22 )
+
+    PlanckInv = Planck_C1 * coefficients[ 0 , index ]^3 / $
+         ( exp( Planck_C2 * coefficients[ 0 , index] / $
+         ( coefficients[ 1 , index ] * T $
+         + coefficients[ 2 , index ] ) ) - 1. )
+    solar_const = coefficients[ 3 , index ]
+
+    return, {PlanckInv:PlanckInv,solar_const:solar_const}
+
+end 
+;------------------------------------------------------------------------------------------
+function bt37_to_ref37, doy, bt37, bt11, solzen, platform, no_data_value = no_data_value,emis_ch3b=emis_ch3b,true_reflectance = true_reflectance
+
+	fillv = keyword_set(no_data_value) ? no_data_value[0] : -999.
+	idx = where( (bt37 eq fillv) or (bt11 eq fillv) or (~between(solzen,0.,80.)),idxcnt) 
+
+	; calculate ch3b emissivity and reflectance
+	PlanckInv_out  = PlanckInv( platform, bt37 )
+	rad_ch3b       = PlanckInv_out.PlanckInv
+	solcon_ch3b    = PlanckInv_out.solar_const
+	PlanckInv_out  = PlanckInv( platform, bt11 )
+	rad_ch3b_emis  = PlanckInv_out.PlanckInv
+	mu0 = cos ( solzen * !dtor ) 
+	esd = 1.0 - 0.0167 * cos( 2.0 * !pi * ( doy - 3 ) / 365.0 )
+	c_sun = 1. / esd^2
+	emis_ch3b = rad_ch3b / rad_ch3b_emis
+	ref_ch3b = ( rad_ch3b - rad_ch3b_emis ) / ( solcon_ch3b * c_sun * mu0 - rad_ch3b_emis )
+	if ~keyword_set(true_reflectance) then ref_ch3b *= mu0
+
+	if idxcnt gt 0 then begin
+		emis_ch3b[idx] = fillv
+		ref_ch3b[idx] = fillv
+	endif
+
+	return, ref_ch3b
+
+end
+;------------------------------------------------------------------------------------------
+function false_color_max, filter, ref06, ref08, bt37, bt11, bt12, solzen, longname=longname,$
+			no_hist_equal=no_hist_equal,no_byte_scale=no_byte_scale
+
+	description =	[	'00) ir108 [DAY/NIGHT - cold->white, warm->black]', $
+				'01) ir108-ir039 [NIGHT ONLY - fog->white, cirrus -> black]', $
+				'02) ir120-ir108/ir108-ir039/ir108 [NIGHT ONLY - fog,contr.->green, ground->pink, ice->red, thin c.->dark]', $
+				'03) vi006 [DAY ONLY - high reflectance->white, low reflectance->black]', $
+				'04) rgb [DAY ONLY - true clolor image]']	
+
+	longname = description[filter]
+	print,longname
+
+	mu0 = cos ( solzen * !dtor ) 
+
+	case filter of
+		0:begin
+			c1       = bt11
+			data_idx = where((c1 gt 0), data_anz)
+			data     = transpose([[[c1]],[[c1]],[[c1]]], [2, 0, 1])
+		end
+		1:begin
+			c1 = bt11
+			c2 = bt37
+			data_idx = where((c1 gt 0) and (c2 gt 0), data_anz)
+			c3 = -2 > c1 - c2 < 15
+			data = transpose([[[c3]],[[c3]],[[c3]]], [2, 0, 1])
+		end
+		2:begin
+			c1 = bt12
+			c2 = bt11
+			c3 = bt37
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0), data_anz)
+			data = transpose([[[c1 - c2]],[[(c2 - c3)]],[[c2]]], [2, 0, 1])
+		end
+		3:begin
+			c1 = ref06/mu0
+			data_idx = where((c1 ge 0) and (solzen ge 0), data_anz)
+			data = transpose([[[c1]],[[c1]],[[c1]]], [2, 0, 1])
+		end
+		4:begin
+			data_idx = where(bt11 ge 0)
+			data = calc_rgb(ref06, ref08, bt37, bt11, solzen,0)
+			data = byte(data*1.3 < 255.)
+; 			return,transpose(data,[1,2,0])
+		end
+	endcase
+
+	;min und max werte fuer jeden kanal berechnen
+	dum = reform(data[0, *, *])
+	min_r = (data_idx[0] ne -1) ? min(dum[data_idx]) : 0
+	max_r = (data_idx[0] ne -1) ? max(dum[data_idx]) : 0
+	dum = reform(data[1, *, *])
+	min_g = (data_idx[0] ne -1) ? min(dum[data_idx]) : 0
+	max_g = (data_idx[0] ne -1) ? max(dum[data_idx]) : 0
+	dum = reform(data[2, *, *])
+	min_b = (data_idx[0] ne -1) ? min(dum[data_idx]) : 0
+	max_b = (data_idx[0] ne -1) ? max(dum[data_idx]) : 0
+
+	;hist_equal
+	if ~keyword_set(no_hist_equal) then begin
+		dum = reform(data[0, *, *])
+		if min_r ne max_r then begin
+			dum[data_idx] = hist_equal(dum[data_idx])
+			data[0, *, *] = dum
+		endif
+		dum = reform(data[1, *, *])
+		if min_g ne max_g then begin
+			dum[data_idx] = hist_equal(dum[data_idx])
+			data[1, *, *] = dum
+		endif
+		dum = reform(data[2, *, *])
+		if min_b ne max_b then begin
+			dum[data_idx] = hist_equal(dum[data_idx])
+			data[2, *, *] = dum
+		endif
+	endif
+	if ~keyword_set(no_byte_scale) then begin
+		;bytescale
+		if min_r ne max_r then begin
+			dum_alt = reform(data[0, *, *])
+			dum_neu = dum_alt and 0
+			dum_neu[data_idx] = bytscl(dum_alt[data_idx])
+			data[0, *, *] = dum_neu
+		endif
+		if min_g ne max_g then begin
+			dum_alt = reform(data[1, *, *])
+			dum_neu = dum_alt and 0
+			dum_neu[data_idx] = bytscl(dum_alt[data_idx])
+			data[1, *, *] = dum_neu
+		endif
+		if min_b ne max_b then begin
+			dum_alt = reform(data[2, *, *])
+			dum_neu = dum_alt and 0
+			dum_neu[data_idx] = bytscl(dum_alt[data_idx])
+			data[2, *, *] = dum_neu
+		endif
+	endif
+
+	return,transpose(data,[1,2,0])
+end
+;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
 			complement = complement, antarctic = antarctic, arctic = arctic			, $ 
 			index = index, count= count, found = found
