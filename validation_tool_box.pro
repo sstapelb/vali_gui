@@ -3527,16 +3527,18 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						end
 					'PATMOS_OLD': begin
 							if lev eq 'l3c' or lev eq 'l3s' then begin
-								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos,found=found)
+								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos,/no_zero,found=found)
 								if found then begin
-									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
-									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
-									if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
-									if dat eq 'COD_CP' then dat = 'HIST2D_COD_CP'
-									filen = dir+dat+'_PATMOSX_NOAA_'+which+'_'+yyyy+'.nc' ; nur 0130PM
-								endif else begin
-									addon = ' - Choose right Satellite!'
-								endelse
+									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
+										dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+										if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
+										if dat eq 'COD_CP' then dat = 'HIST2D_COD_CP'
+										filen = dir+dat+'_PATMOSX_NOAA_'+which+'_'+yyyy+'.nc' ; nur 0130PM
+									endif else begin
+										addon = ' - Choose right Satellite!'
+									endelse
+								endif
 							endif else if lev eq 'l3u' then begin
 								if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 									sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,/patmos,found=found_prime)
@@ -3562,16 +3564,18 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'PATMOS': begin
 							if lev eq 'l3c' or lev eq 'l3s' then begin
-								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,found=found)
+								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 								if found then begin
-									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
-									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
-									if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
-									if dat eq 'COD_CP' then dat = 'CODW_CP'
-									filen = dir+dat+'_PATMOS4CLARA2_NOAA_'+which+'_'+yyyy+'.nc'
-								endif else begin
-									addon = ' - Choose right Satellite!'
-								endelse
+									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
+										dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+										if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
+										if dat eq 'COD_CP' then dat = 'CODW_CP'
+										filen = dir+dat+'_PATMOS4CLARA2_NOAA_'+which+'_'+yyyy+'.nc'
+									endif else begin
+										addon = ' - Choose right Satellite!'
+									endelse
+								endif
 							endif else if lev eq 'l3u' then begin
 								if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 									sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
@@ -5293,7 +5297,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				maxvalue = 1.
 				unit = ' '
 			endif
-		endif else if total(datd eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
+		endif else if total(datd eq ['cwp_asc','cwp_desc','cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
 			if total(alg eq ['clara2','clara','claas']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
@@ -5832,7 +5836,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit2 = ' '
 			if verb then print,'Divide now '+dat+' of '+alg2+' by 100.'
 		endif
-	endif else if total(dat eq ['cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
+	endif else if total(dat eq ['cwp_asc','cwp_desc','cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
 		if total(alg1 eq ['clara2','clara','claas']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)

@@ -1544,7 +1544,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, sinusoidal=sinusoidal,robinson=robinson,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
 				; Zoom does not work with discrete colors so far!
-				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext,discrete=discrete
+				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext,discrete=discrete,void_index=void_index
 			endif
 		if opl eq 0 then begin
 			if ~rotate_globe then begin
