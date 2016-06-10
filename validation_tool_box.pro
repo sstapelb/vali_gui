@@ -1565,8 +1565,8 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		2010: sats = pmx ? ['nn','nn']			: ['MA','19']
 		2011: sats = pmx ? ['nn','nn']			: ['MA','19'] 
 		2012: sats = pmx ? ['nn','nn']			: ['MA','19'] 
-		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 ? 'MA':'MB'),'19'] 
-		2014: sats = pmx ? ['nn','nn']			: ['MB','19'] 
+		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 ? 'MA':'MB'),'19']
+		2014: sats = pmx ? ['nn','nn']			: ['MB','19']
 		2015: sats = pmx ? ['nn','nn']			: ['MB','19'] 
 		2016: sats = pmx ? ['nn','nn']			: ['MB','19'] 
 		else: sats = ['nn','nn']
@@ -3564,6 +3564,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'PATMOS': begin
 							if lev eq 'l3c' or lev eq 'l3s' then begin
+								stop
 								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 								if found then begin
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
@@ -3583,7 +3584,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
 								node  = node eq 'asc' or node eq 'des' ? node : '*'
 								doy   = string(doy(yyyy,mm,dd eq '' ? 1:(dd eq '??' ? dom(yyyy,mm):dd)),f='(i3.3)')
-								satd  = sat eq 'METOPA' ? 'metop-02' : strlowcase(sat)
+								satd  = sat eq 'METOPA' ? 'metop-02' : (sat eq 'METOPB' ? 'metop-01' : strlowcase(sat))
 								if stregex(satd,'noaa',/bool) then begin
 									dum = strsplit(satd,/ext,'-')
 									satd = dum[0]+'-'+(is_number(dum[1]) ? string(dum[1],f='(i2.2)') : dum[1])
