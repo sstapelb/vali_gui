@@ -5402,8 +5402,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_all_time_series
 
-; 	do_hist_cloud_type_time_series
-; 	do_hist_cloud_type_time_series, /compare_to_cci
+	do_hist_cloud_type_time_series
+	do_hist_cloud_type_time_series, /compare_to_cci
 	do_create_hovmoeller
 	do_create_all_compare_time_series
 ; 	do_create_all_single_time_series

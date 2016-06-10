@@ -3594,10 +3594,17 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
-							dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
-							style = keyword_set(gewex_style) ? strupcase(gewex_style) : strupcase(noaa_ampm(sat))
-							filen = dir+dat+'_ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
+							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+							if found then begin
+								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
+									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
+									filen = dir+dat+'_ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
+								endif else begin
+									addon = ' - Choose right Satellite!'
+								endelse
+							endif
 						 end
 					'ISCCP': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
