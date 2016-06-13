@@ -3564,7 +3564,6 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'PATMOS': begin
 							if lev eq 'l3c' or lev eq 'l3s' then begin
-								stop
 								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 								if found then begin
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
