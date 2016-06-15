@@ -3,7 +3,8 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 						all_attributes = all_attributes, $
 						global_attribute = global_attribute, $
 						found = found, verbose = verbose, $
-						var_dim_names = var_dim_names
+						var_dim_names = var_dim_names, $
+						data_type = data_type
 
 	verb = keyword_set(verbose)
 
@@ -61,6 +62,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 		if strupcase(dum.name) eq strupcase(name) then begin
 			tag  = dum.name
 			dimi = dum.dim
+			data_type = dum.DATATYPE
 			break
 		endif
 	end

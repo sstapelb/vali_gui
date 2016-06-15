@@ -2518,7 +2518,7 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 			save_file1 = dir+satn1+'_'+lev+strupcase(dat)+'_fig4.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
 				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, stop=stop, land=land,sea=sea, zoom=zoom	, $
+				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
@@ -2532,7 +2532,7 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 			save_file2 = dir+satn1+'_'+lev+strupcase(dat)+'_fig3.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
 				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, stop=stop, land=land,sea=sea, zoom=zoom	, $
+				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
@@ -2545,7 +2545,7 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 			save_file3 = dir+satn1+'_'+lev+strupcase(dat)+'_fig1.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
 				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, stop=stop, land=land,sea=sea, zoom=zoom	, $
+				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
@@ -2558,7 +2558,7 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 			save_file4 = dir+satn1+'_'+lev+strupcase(dat)+'_fig2.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
 				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, stop=stop, land=land,sea=sea, zoom=zoom	, $
+				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
@@ -2571,7 +2571,7 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 			save_file5 = dir+satn1+'_'+lev+strupcase(dat)+'_fig5.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
 				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, stop=stop, land=land,sea=sea, zoom=zoom	, $
+				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $

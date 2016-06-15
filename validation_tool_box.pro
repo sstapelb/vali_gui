@@ -331,6 +331,13 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	; gilt auch für patmos l3c (=gewex)
 	if alg eq 'gewex' or alg eq 'gwx' then begin
+		if keyword_set(path) then begin
+			if total(dat eq ['cer','ref']) then dat = 'a_crew' 
+			if total(dat eq ['cwp']) then dat = 'a_clwp' 
+			if total(dat eq ['iwp_allsky']) then dat = 'a_ciwp'
+			if total(dat eq ['lwp_allsky']) then dat = 'a_clwp'
+			if total(dat eq ['cwp_allsky']) then dat = 'a_clwp'
+		endif
 		case dat of
 			'cot_ctp_hist2d': dat = 'h_cod_cp'
 			'hist2d_cot_ctp': dat = 'h_cod_cp'
@@ -351,6 +358,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cfc_middle'	: dat = 'a_cam'
 			'cfc_low'	: dat = 'a_cal'
 			'cloud_fraction': dat = 'a_ca'
+			'cfc_day'	: dat = 'a_cad'
 			'cot'		: dat = 'a_cod'
 			'cot_liq'	: dat = 'a_codw'
 			'cot_ice'	: dat = 'a_codi'
@@ -2436,11 +2444,13 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		bild, fillvalue, minvalue, maxvalue, longname, unit, raw=raw, attribute = attribute, var_dim_names = var_dim_names	;output
 
 	ff = nc_file[0]
-	bild_raw = get_ncdf_data_by_name(ff, data, found = found, verbose = verbose, var_dim_names = var_dim_names)
+
+	bild_raw = get_ncdf_data_by_name(ff, data, found = found, verbose = verbose, var_dim_names = var_dim_names, data_type=data_type)
 	if not found then begin
 		if keyword_set(verbose) then print, data+' not found!'
 		return
 	end
+
 	bild_raw  = reform(bild_raw)
 	raw = bild_raw
 	raw_type  = size(bild_raw,/type)
@@ -2451,37 +2461,87 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	endif
 	fillvalue = make_array(1,val=-999,type=raw_type)
 
+	patmos  = 0
+	title   = get_ncdf_data_by_name(ff,'title',/global_attr,verbose=verbose,found=found_title)
+	if found_title then begin
+		if stregex(title,'patmos',/fold,/bool) then patmos = 1
+	endif else begin
+		summary = get_ncdf_data_by_name(ff,'summary',/global_attr,verbose=verbose,found=found_summary)
+		if found_summary then begin
+			if stregex(summary,'patmos',/fold,/bool) then patmos = 1
+		endif
+	endelse
+
+	scaling_method = get_ncdf_data_by_name(ff,data,attr='scaled',verbose=verbose,found=found_scme)
+	scaling_method = found_scme ? scaling_method : -1
+
 	scale  = get_ncdf_data_by_name(ff,data,attr='scale_factor',verbose=verbose,found=found_scl) 
 	if not found_scl then scale  = get_ncdf_data_by_name(ff,data,attr='scale',verbose=verbose,found=found_scl) 
 	if not found_scl then scale  = get_ncdf_data_by_name(ff,data,attr='gain',verbose=verbose,found=found_scl) 
 	scale  = found_scl ? scale : make_array(1,val=1,type=raw_type)
+
 	offset = get_ncdf_data_by_name(ff,data,attr='add_offset',verbose=verbose,found=found_ofs)
 	if not found_ofs then offset = get_ncdf_data_by_name(ff,data,attr='offset',verbose=verbose,found=found_ofs)
 	if not found_ofs then offset = get_ncdf_data_by_name(ff,data,attr='intercept',verbose=verbose,found=found_ofs)
 	offset = found_ofs ? offset : make_array(1,val=0,type=raw_type)
 
 	; find fillvalue if not defined set attribute fillvalue to -999. 
-	_fill_value = get_ncdf_data_by_name(ff,data,attr='missing_value',verbose=verbose,found=found_attr)
-	if not found_attr then _fill_value  = get_ncdf_data_by_name(ff,data,attr='_fillvalue',verbose=verbose,found=found_attr)
-	if not found_attr then _fill_value  = get_ncdf_data_by_name(ff,data,attr='no_data',verbose=verbose,found=found_attr)
-	if not found_attr then _fill_value  = get_ncdf_data_by_name(ff,data,attr='missing_data',verbose=verbose,found=found_attr)
-	raw_fill_value = found_attr ? _fill_value : 'not_defined'
+	dum_fv  = get_ncdf_data_by_name(ff,data,attr='_fillvalue',verbose=verbose,found=found_fvattr)
+	if not found_fvattr then dum_fv  = get_ncdf_data_by_name(ff,data,attr='no_data',verbose=verbose,found=found_fvattr)
+	if not found_fvattr then dum_fv  = get_ncdf_data_by_name(ff,data,attr='missing_data',verbose=verbose,found=found_fvattr)
+	raw_fill_value = found_fvattr ? dum_fv : 'not_defined'
 
-	; this seems to compensate a bug in the patmos effective radius data !!
-; 	if total(strlowcase(data) eq ['a_crei','a_crew']) then _fill_value = 0.
-
-	if found_attr then begin 
-		idx_miss  = where(bild_raw EQ _fill_value[0], n_miss)
-		bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + offset[0]) : bild_raw
-		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=_fill_value[0],type=size(bild,/type))
-		IF n_miss GT 0 then bild[idx_miss] = fillvalue[0]
+	if found_fvattr then begin
+		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=raw_fill_value[0],type=size(bild,/type))
 	endif else begin
-		bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + offset[0]) : bild_raw
 		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=fillvalue[0],type=size(bild,/type))
-		n_miss    = 0
 	endelse
 
-	minvalue = min((n_miss gt 0 ? bild[where(bild_raw ne _fill_value[0])] : bild),max=maxvalue)
+	if patmos then begin
+		if strcompress(raw_fill_value[0],/rem) eq 'not_defined' then begin
+			raw_fillvalue = [0]
+			if (scaling_method[0] eq 1) then begin
+				if (data_type[0] eq 'BYTE')  then raw_fill_value = [-128]
+				if (data_type[0] eq 'INT') then raw_fill_value = [-32768]
+			endif
+		endif else begin
+			if (data_type[0] eq 'BYTE') then begin
+				fill_value_temp = long(raw_fill_value[0])
+				if (fill_value_temp ge 128) then fill_value_temp -= 256L
+				raw_fill_value = [fill_value_temp]
+			endif
+		endelse
+		if (data_type[0] eq 'BYTE') then begin
+			bild_raw = long(bild_raw)
+			index = where(bild_raw ge 128L,nindex)
+			if (nindex gt 0) then bild_raw[index] -= 256L
+		endif
+		;--- unscale data if necessary
+		if (scaling_method[0] eq 1) then begin
+			index = where(bild_raw eq raw_fill_value[0],n_miss)
+			bild = bild_raw * scale[0] + offset[0]
+			if (n_miss gt 0) then bild[index] = fillvalue[0]
+		endif
+		if (scaling_method[0] eq 0) then begin
+			dum_fv = get_ncdf_data_by_name(ff,data,attr='missing_value',verbose=verbose,found=found_miss)
+			missing_value = found_miss ? dum_fv[0] : raw_fill_value[0]
+			bild  = bild_raw
+			if missing_value[0] ne -888.0 then begin
+				index = where(bild_raw eq missing_value[0],n_miss)
+				if (n_miss gt 0) then bild[index] = fillvalue[0]
+			endif
+		endif
+	endif else begin
+		if found_fvattr then begin
+			idx_miss  = where(bild_raw EQ raw_fill_value[0], n_miss)
+			bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + offset[0]) : bild_raw
+			IF n_miss GT 0 then bild[idx_miss] = fillvalue[0]
+		endif else begin
+			bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + offset[0]) : bild_raw
+			n_miss    = 0
+		endelse
+	endelse
+	minvalue = min((n_miss gt 0 ? bild[where(bild ne fillvalue[0])] : bild),max=maxvalue)
 
 	longname     = string(get_ncdf_data_by_name(ff,data,attr='long_name',verbose=verbose,found=found_attr))
 	if not found_attr then longname = 'long_name unknown'
@@ -2868,6 +2928,13 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 
 	HDF_SD_GETDATA,varid,bild_raw
 	raw = bild_raw
+	raw_type  = size(bild_raw,/type)
+	if raw_type eq 1 then begin
+		; turn byte into integer for fillvalue
+		raw_type = 2
+		bild_raw = fix(bild_raw)
+	endif
+	fillvalue = make_array(1,val=-999,type=raw_type)
 
 	; attribute scale, offset, raw_fill_value, minvalue, maxvalue, unit, longname
 	scale          = 1
@@ -2924,8 +2991,8 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 		if strcompress(raw_fill_value[0],/rem) eq 'not_defined' then begin
 			raw_fill_value = [0L]
 			if (scaling_method[0] eq 1) then begin
-				if (data_type[0] eq 'DFNT_INT8')  then fill_value = [-128]
-				if (data_type[0] eq 'DFNT_INT16') then fill_value = [-32768]
+				if (data_type[0] eq 'DFNT_INT8')  then raw_fill_value = [-128]
+				if (data_type[0] eq 'DFNT_INT16') then raw_fill_value = [-32768]
 			endif
 		endif else begin
 			if (data_type[0] eq 'DFNT_INT8') then begin
@@ -3589,7 +3656,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									satd = dum[0]+'-'+(is_number(dum[1]) ? string(dum[1],f='(i2.2)') : dum[1])
 								endif
 								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/cmcld/data/PATMOSX/level2b/'+yyyy+'/'
-								filen = dir+'patmosx_'+satd+'_'+strmid(node,0,3)+'_'+yyyy+'_'+doy+'.level2b.hdf'
+								filen = dir+'patmosx_'+satd+'_'+strmid(node,0,3)+'_'+yyyy+'_'+doy+'.level2b.{hdf,nc}'
 							endif
 						 end
 					'GEWEX': begin
@@ -3598,7 +3665,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if found then begin
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
-									dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
 									filen = dir+dat+'_ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
@@ -3651,7 +3718,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
-							dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 							filen = dir+dat+'_ESACCI_'+strupcase(sat)+'_'+strupcase(noaa_ampm(sat))+'_'+yyyy+'.nc'
 						 end
 					'COLL5' : begin
@@ -4689,7 +4756,6 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 
 	if arg_present(finfo) then finfo = file_info(filename[0])
 	; create additional products
-
 	if alg eq 'l1modis' then begin
 		outdata = read_modis_l1b(filename[0], sat, dat, found = found, index = dim3, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit)
@@ -4719,7 +4785,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
-	endif else if ( (total(alg eq ['clara2','clara','claas']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
+	endif else if ( (total(alg eq ['clara2','clara','claas','gewex']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
 			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
@@ -4738,7 +4804,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		read_data, liq_file, dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
 		if not found then return,-1
 		; 3) cph
-		cph_file = get_filename(year,month,day,data='cph', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		cph_file = get_filename(year,month,day,data=(alg eq 'gewex' ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
@@ -4791,10 +4857,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if idxcnt gt 0 then cfc[idx] = -999.
 		endif else begin
 			dumdat = get_product_name('cfc_day',algo=alg,level=lev)
-			read_data, filename[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
+			cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+			read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
+			if (alg eq 'gewex' or pmxgwx) and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
 		endelse
 		if not found then return,-1
-		if ~sil and total(alg eq ['clara2','clara','claas']) then print,'cfc_file: ',dumdat,': ',filename
+		if ~sil and total(alg eq ['clara2','clara','claas','gewex']) then print,'cfc_file: ',dumdat,': ',cfc_file
 		; cwp_allsky=cwp*cfc_day
 		no_idx_ice = where(cfc eq no_data_valuei[0],cnt_il)
 		if total(alg eq ['clara2','clara','claas','isccp']) then cfc = cfc/100.
@@ -4802,22 +4870,32 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'All Sky '+longname
 		if ~sil then print,''
-	endif else if ( total(alg eq ['coll5','coll6']) and (dat eq 'iwp_allsky' or dat eq 'lwp_allsky' ) ) then begin
+	endif else if ( total(alg eq ['coll5','coll6','gewex']) and (dat eq 'iwp_allsky' or dat eq 'lwp_allsky' ) ) then begin
 		; 1) iwp oder lwp
 		dumdat = get_product_name(strmid(dat,0,3),algo=alg,level=lev)
 		read_data, filename[0], dumdat, cwp, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
 		if not found then return,-1
 		; 2) cloud fraction
 		dumdat = get_product_name('cfc_day',algo=alg,level=lev)
-		read_data, filename[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
+		cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
 		if not found then return,-1
 		; 3) cph
-		cph = get_data(year,month,day,file=filename[0],data='cph_day', satellite=sat, level=lev, verbose = verbose,$
+		if alg eq 'gewex' then begin
+			cph_file = get_filename(year,month,day,data='cph_day', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+			if not found then return,-1
+			dumdat = get_product_name('cph_day',algo=alg,level=lev)
+			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
+			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found
+		endif else begin
+			cph = get_data(year,month,day,file=filename[0],data='cph_day', satellite=sat, level=lev, verbose = verbose,$
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valuec,found=found)
+		endelse
 		if not found then return,-1
 		; lwp_allsky=lwp*cfc_day*cph_day
 		; iwp_allsky=iwp*cfc_day*(1.-cph_day)
 		no_idx_ice = where(cfc eq no_data_valuei[0] or cwp eq no_data_value[0] or cph eq no_data_valuec[0],cnt_il)
+		if total(alg eq ['gewex']) then cph = cph/100.
 		if dat eq 'iwp_allsky' then begin
 			if ~sil then print,'Calculating '+dat+' for '+alg+' with: iwp_allsky=iwp*cfc_day*(1.-cph_day)'
 			outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)) * (1- (temporary(cph))) )
@@ -4826,6 +4904,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if ~sil then print,'Calculating '+dat+' for '+alg+' with: lwp_allsky=lwp*cfc_day*cph_day'
 			outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)) * (   (temporary(cph))) )
 		endif
+
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if ~sil then print,''
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
@@ -4860,7 +4939,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		unit = ''
 		if ~sil then print,''
-	endif else if ( ((total(alg eq ['claas','clara2'])) and total(dat eq ['cot','ref','cot_error','ref_error']) ) or (alg eq 'coll6' and dat eq 'ref')) then begin
+	endif else if ( ( ((total(alg eq ['claas','clara2'])) and total(dat eq ['cot','ref','cot_error','ref_error']) ) or (alg eq 'coll6' and dat eq 'ref') $
+			  or (alg eq 'gewex' and total(dat eq ['cer','ref'])) ) and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: ice*(1.-cph_day)+liq*cph_day'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
 		; 1) iwp
@@ -4881,6 +4961,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if alg eq 'coll6' then begin
 			cph = 	get_data(year,month,day,file=filename[0],data='cph_day', satellite=sat, level=lev, verbose = verbose,$
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valuec,found=found)
+		endif else if alg eq 'gewex' then begin
+			cph_file = get_filename(year,month,day,data='cph_day', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+			if not found then return,-1
+			dumdat = get_product_name('cph_day',algo=alg,level=lev)
+			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
+			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found
 		endif else begin
 			cph_file = get_filename(year,month,day,data='cph', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			if not found then return,-1
@@ -4891,7 +4977,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		; cwp = lwp * cph + iwp* (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
-		if total(alg eq ['claas','clara2']) then cph = cph/100.
+		if total(alg eq ['claas','clara2','gewex']) then cph = cph/100.
 		outdata = ( (temporary(ice) > 0.) * (1. - (cph)) ) + ( (temporary(liq) > 0.) * (temporary(cph)) )
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if dat eq 'cot' then longname = 'monthly mean cloud optical thickness'
@@ -5248,7 +5334,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			4	: outdata = reform(outdata[*,*,*,fix(month)-1])
 			5	: outdata = reform(outdata[*,*,*,*,fix(month)-1])
 			6	: outdata = reform(outdata[*,*,*,*,fix(month)-1,*]) ; patmos cod_cp_ratio last bin = phase
-			else	: 
+			else	:
 		endcase
 
 	endif
