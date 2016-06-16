@@ -3477,7 +3477,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
 						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level3/'+pathdat+'/'+yyyy+'/'+mm+'/'
 						apx   = ( is_h1d(data) or is_jch(data) ) ? 'mh' : (dd ? 'dm' : 'mm')
-						filen = dir+strupcase(dat)+apx+yyyy+mm+dd+'*MH.nc'
+						filen = dir+strupcase(dat)+apx+yyyy+mm+dd+'*MA.nc'
 					endelse
 				endif
 				if alg eq 'PATMOS' then begin
@@ -3635,7 +3635,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								if found then begin
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
-										dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
+										dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 										if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
 										if dat eq 'COD_CP' then dat = 'CODW_CP'
 										filen = dir+dat+'_PATMOS4CLARA2_NOAA_'+which+'_'+yyyy+'.nc'
@@ -4785,7 +4785,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
-	endif else if ( (total(alg eq ['clara2','clara','claas','gewex']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
+	endif else if ( (total(alg eq ['clara2','clara','claas','gewex','patmos']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
 			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
@@ -4804,7 +4804,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		read_data, liq_file, dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
 		if not found then return,-1
 		; 3) cph
-		cph_file = get_filename(year,month,day,data=(alg eq 'gewex' ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
@@ -4842,7 +4842,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'monthly mean cloud water path'
 		if ~sil then print,''
-	endif else if (dat eq 'cwp_allsky' and alg ne 'era-i') then begin
+	endif else if (dat eq 'cwp_allsky' and alg ne 'era-i' and (lev eq 'l3c' or lev eq 'l3s') ) then begin
 		cwp = 	get_data(year,month,day,file=filename[0],data='cwp', satellite=sat, level=lev, verbose = verbose,$
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_value,found=found, longname=longname,unit=unit)
 		if not found then return,-1
@@ -4859,10 +4859,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			dumdat = get_product_name('cfc_day',algo=alg,level=lev)
 			cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
-			if (alg eq 'gewex' or pmxgwx) and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
+			if total(alg eq ['patmos','gewex']) and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
 		endelse
 		if not found then return,-1
-		if ~sil and total(alg eq ['clara2','clara','claas','gewex']) then print,'cfc_file: ',dumdat,': ',cfc_file
+		if ~sil and total(alg eq ['clara2','clara','claas','gewex','patmos']) then print,'cfc_file: ',dumdat,': ',cfc_file
 		; cwp_allsky=cwp*cfc_day
 		no_idx_ice = where(cfc eq no_data_valuei[0],cnt_il)
 		if total(alg eq ['clara2','clara','claas','isccp']) then cfc = cfc/100.
@@ -4870,7 +4870,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'All Sky '+longname
 		if ~sil then print,''
-	endif else if ( total(alg eq ['coll5','coll6','gewex']) and (dat eq 'iwp_allsky' or dat eq 'lwp_allsky' ) ) then begin
+	endif else if ( total(alg eq ['coll5','coll6','gewex','patmos']) and (dat eq 'iwp_allsky' or dat eq 'lwp_allsky' ) $ 
+			and (lev eq 'l3c' or lev eq 'l3s') ) then begin
 		; 1) iwp oder lwp
 		dumdat = get_product_name(strmid(dat,0,3),algo=alg,level=lev)
 		read_data, filename[0], dumdat, cwp, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
@@ -4881,7 +4882,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
 		if not found then return,-1
 		; 3) cph
-		if alg eq 'gewex' then begin
+		if total(alg eq ['patmos','gewex']) then begin
 			cph_file = get_filename(year,month,day,data='cph_day', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			if not found then return,-1
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
@@ -4894,8 +4895,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		; lwp_allsky=lwp*cfc_day*cph_day
 		; iwp_allsky=iwp*cfc_day*(1.-cph_day)
-		no_idx_ice = where(cfc eq no_data_valuei[0] or cwp eq no_data_value[0] or cph eq no_data_valuec[0],cnt_il)
-		if total(alg eq ['gewex']) then cph = cph/100.
+		no_idx_ice = where(cfc eq no_data_valuei[0] or cph eq no_data_valuec[0],cnt_il)
+		if total(alg eq ['patmos','gewex']) then cph = cph/100.
 		if dat eq 'iwp_allsky' then begin
 			if ~sil then print,'Calculating '+dat+' for '+alg+' with: iwp_allsky=iwp*cfc_day*(1.-cph_day)'
 			outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)) * (1- (temporary(cph))) )
@@ -4939,8 +4940,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		unit = ''
 		if ~sil then print,''
-	endif else if ( ( ((total(alg eq ['claas','clara2'])) and total(dat eq ['cot','ref','cot_error','ref_error']) ) or (alg eq 'coll6' and dat eq 'ref') $
-			  or (alg eq 'gewex' and total(dat eq ['cer','ref'])) ) and (lev eq 'l3c' or lev eq 'l3s')) then begin
+	endif else if ( ( ( total(alg eq ['claas','clara2']) and total(dat eq ['cot','ref','cot_error','ref_error']) ) or (alg eq 'coll6' and dat eq 'ref') $
+			  or ( total(alg eq ['patmos','gewex']) and total(dat eq ['cer','ref']) ) ) and (lev eq 'l3c' or lev eq 'l3s') ) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: ice*(1.-cph_day)+liq*cph_day'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
 		; 1) iwp
@@ -4961,14 +4962,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if alg eq 'coll6' then begin
 			cph = 	get_data(year,month,day,file=filename[0],data='cph_day', satellite=sat, level=lev, verbose = verbose,$
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valuec,found=found)
-		endif else if alg eq 'gewex' then begin
-			cph_file = get_filename(year,month,day,data='cph_day', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-			if not found then return,-1
-			dumdat = get_product_name('cph_day',algo=alg,level=lev)
-			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
-			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found
 		endif else begin
-			cph_file = get_filename(year,month,day,data='cph', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+			cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			if not found then return,-1
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
 			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
@@ -4977,7 +4972,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		; cwp = lwp * cph + iwp* (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
-		if total(alg eq ['claas','clara2','gewex']) then cph = cph/100.
+		if total(alg eq ['claas','clara2','gewex','patmos']) then cph = cph/100.
 		outdata = ( (temporary(ice) > 0.) * (1. - (cph)) ) + ( (temporary(liq) > 0.) * (temporary(cph)) )
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if dat eq 'cot' then longname = 'monthly mean cloud optical thickness'

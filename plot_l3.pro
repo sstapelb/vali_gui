@@ -446,11 +446,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		ok = dialog_message("compare_cci: 'COLL5' does not include 'CTH'!")
 		return
 	endif
-; !!bald obsolete???
-	if strmid(algo1,0,6) eq 'patmos' or strmid(algo2,0,6) eq 'patmos' and total(dat eq ['ref','cph_day'] and level eq 'l3c') then begin
-		ok = dialog_message("compare_cci: 'Patmos-X' L3 does not include '"+strupcase(dat)+"'")
-		return
-	endif
 	; hier können die anderen exception auch noch rein
 	;-------------
 	if ~ts then begin
