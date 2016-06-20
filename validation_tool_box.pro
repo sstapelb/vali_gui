@@ -1728,18 +1728,19 @@ function tag_name2num,struc,tag
 end
 ;--------------------------------------------------------------------------------------------------------------------------
 ;------------------------------------------------------------------------------------------
-; by M. Reuter
-function coast_line, lon, lat, border = border
+; by M. Reuter ; adapted to regular grids by stapel
+function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, usa = usa
 
 	; at the moment only regular grids
 	proz = 0.8
 	x_0  = 0 & x_1 = (size(lon,/dim)-1)[0]
 	y_0  = 0 & y_1 = (size(lon,/dim)-1)[1]
-	max_lon = max(lon)
-	max_lat = max(lat)
-	arr_dim = size(lon,/dim)
-	arr_res = abs(float(lon[0]-lon[1]))
-	scale = 1
+	scale   = 1
+
+	slon  = min(lon[where(lon ne -999.)],max=elon)
+	slat  = min(lat[where(lat ne -999.)],max=elat)
+	gridx = float(x_1)/float(abs(slon-elon))
+	gridy = float(y_1)/float(abs(slat-elat))
 
 	;filename bauen
 	path_map_high	= !dir + slash() + 'resource' + slash() + 'maps' + slash() + 'high' + slash()
@@ -1748,17 +1749,31 @@ function coast_line, lon, lat, border = border
 	b_dat_file_high	= path_map_high  + 'bhigh.dat'
 	p_ndx_file_high	= path_map_high  + 'phigh.ndx'
 	p_dat_file_high	= path_map_high  + 'phigh.dat'
+	c_ndx_file_high	= path_map_high  + 'chigh.ndx'
+	c_dat_file_high	= path_map_high  + 'chigh.dat'
+	r_ndx_file_high	= path_map_high  + 'rhigh.ndx'
+	r_dat_file_high	= path_map_high  + 'rhigh.dat'
 	b_ndx_file_low	= path_map_low   + 'blow.ndx'
 	b_dat_file_low	= path_map_low   + 'blow.dat'
 	p_ndx_file_low	= path_map_low   + 'plow.ndx'
 	p_dat_file_low	= path_map_low   + 'plow.dat'
-	if file_test(b_ndx_file_high) and file_test(b_ndx_file_high) and $
-	file_test(b_ndx_file_high) and file_test(b_ndx_file_high) then begin
-		filez_ndx = keyword_set(border) ? [b_ndx_file_high, p_ndx_file_high] : [p_ndx_file_high]
+	c_ndx_file_low	= path_map_low   + 'clow.ndx'
+	c_dat_file_low	= path_map_low   + 'clow.dat'
+	r_ndx_file_low	= path_map_low   + 'rlow.ndx'
+	r_dat_file_low	= path_map_low   + 'rlow.dat'
+	if file_test(b_ndx_file_high) and file_test(p_dat_file_high) 	and $
+	   file_test(r_ndx_file_high) and file_test(c_ndx_file_high)  	then begin
+		filez_ndx = [p_ndx_file_high]
+		if keyword_set(border) then filez_ndx = [b_ndx_file_high,filez_ndx]
+		if keyword_set(rivers) then filez_ndx = [r_ndx_file_high,filez_ndx]
+		if keyword_set(lakes)  then filez_ndx = [c_ndx_file_high,filez_ndx]
 	endif else begin
-		if file_test(b_ndx_file_low) and file_test(b_ndx_file_low) and $
-			file_test(b_ndx_file_low) and file_test(b_ndx_file_low) then begin
-			filez_ndx = keyword_set(border) ? [b_ndx_file_low, p_ndx_file_low] : [p_ndx_file_low]
+		if file_test(b_ndx_file_low) and file_test(p_ndx_file_low) and $
+		   file_test(r_ndx_file_low) and file_test(c_ndx_file_low) then begin
+			filez_ndx = [p_ndx_file_low]
+			if keyword_set(border) then filez_ndx = [b_ndx_file_low,filez_ndx]
+			if keyword_set(rivers) then filez_ndx = [r_ndx_file_low,filez_ndx]
+			if keyword_set(lakes)  then filez_ndx = [c_ndx_file_low,filez_ndx]
 		endif else begin
 			print, 'map information not found at: ' + path_map_high + ' or: ' +path_map_low
 			return, -1
@@ -1780,10 +1795,8 @@ function coast_line, lon, lat, border = border
 			point_lun, lun, ndx[j].fptr
 			xy	= fltarr(2, ndx[j].npts)
 			readu, lun, xy
-			y       = round((max_lat+reform(xy[0, *]))/arr_res)
-			x       = round((max_lon+reform(xy[1, *]))/arr_res)
-			dummy   = where(x lt 0, cnt)
-			if cnt gt 0 then x[dummy]=x[dummy]+arr_dim[0]
+			x= fix((reform(xy[1, *])+(-1.0)*slon)*gridx)
+			y= fix((reform(xy[0, *])+(-1.0)*slat)*gridy)
 			ok		= ((x ge x_0) and (y ge y_0) and (x le x_1) and (y le y_1))
 			ok_idx		= where(ok, ok_anz)
 			if ok_anz le 0 then continue
@@ -1819,17 +1832,18 @@ function coast_line, lon, lat, border = border
 	return, dum_vector
 end
 ;------------------------------------------------------------------------------------------
-; by M. Reuter
+; by M. Reuter ; adapted to regular grids by stapel
 function meridians, lon, lat, interval = interval
 
 	; at the moment only regular grids allowed
 	x_0 = 0 & x_1 = (size(lon,/dim)-1)[0]
 	y_0 = 0 & y_1 = (size(lon,/dim)-1)[1]
-	max_lon = max(lon)
-	max_lat = max(lat)
-	arr_dim = size(lon,/dim)
-	arr_res = [abs(float(lon[0]-lon[1])),abs(float(lat[0]-lat[1]))]
 	scale   = 1
+
+	slon  = min(lon[where(lon ne -999.)],max=elon)
+	slat  = min(lat[where(lat ne -999.)],max=elat)
+	gridx = float(x_1)/float(abs(slon-elon))
+	gridy = float(y_1)/float(abs(slat-elat))
 
 	dum_vector	= 0b
 	resolution	= 1000
@@ -1837,35 +1851,20 @@ function meridians, lon, lat, interval = interval
 	anz		= (180.*2) / interval + 1.
 	lo		= findgen(anz) / (anz - 1) * (2*180.) - (2*90.)
 	la		= findgen(anz) / (anz - 1) * (2*180.) - (2*90.)
-; 	anz		= (rnd(max(lon),/out,interval)-rnd(min(lon),/out,interval))/interval+1
-; 	lo		= vector(rnd(min(lon),/out,interval),rnd(max(lon),/out,interval),anz)
-; ; 	anz		= round((max(lat)-min(lat)) / interval + 1.)
-; 	la		= vector(rnd(min(lat),/out,interval),rnd(max(lat),/out,interval),anz)
-; stop
-; !!!! convert_coord angucken!!!!!
-
 
 	for i = 0l, n_elements(lo) - 1l do begin
 		;erstellen der meridiane
-		m_lo		= fltarr(2, resolution)
-		m_lo[1, *]	= la[i]
-; 		m_lo[0, *]	= findgen(resolution) / (resolution - 1) * (2*180.) - (2*90.)
-;		m_lo[0, *]	= vector(rnd(min(lat),/out,interval),rnd(max(lat),/out,interval),resolution)
-		m_lo[0, *]	= vector(min(lat),max(lat),resolution)
 		m_la		= fltarr(2, resolution)
-		m_la[0, *]	= lo[i]
-; 		m_la[1, *]	= findgen(resolution) / (resolution - 1) * (2*180.) - (2*90.)
-;		m_la[1, *]	= vector(rnd(min(lon),/out,interval),rnd(max(lon),/out,interval),resolution)
-		m_la[1, *]	= vector(min(lon),max(lon),resolution)
-; ; if i eq 31 then stop
-		y_lo       = round((max_lat+reform(m_lo[0, *]))/arr_res[1])
-		x_lo       = round((max_lon+reform(m_lo[1, *]))/arr_res[0])
-		dummy   = where(x_lo lt 0,cnt)
-		if cnt gt 0 then x_lo[dummy]=x_lo[dummy]+arr_dim[0]
-		y_la       = round((max_lat+reform(m_la[0, *]))/arr_res[1])
-		x_la       = round((max_lon+reform(m_la[1, *]))/arr_res[0])
-		dummy   = where(x_la lt 0,cnt)
-		if cnt gt 0 then x_la[dummy]=x_la[dummy]+arr_dim[0]
+		m_la[1, *]	= la[i]
+		m_la[0, *]	= vector(min(lat),max(lat),resolution)
+		m_lo		= fltarr(2, resolution)
+		m_lo[0, *]	= lo[i]
+		m_lo[1, *]	= vector(min(lon),max(lon),resolution)
+
+		x_lo= fix((reform(m_lo[1, *])+(-1.0)*slon)*gridx)
+		y_lo= fix((reform(m_lo[0, *])+(-1.0)*slat)*gridy)
+		x_la= fix((reform(m_la[1, *])+(-1.0)*slon)*gridx)
+		y_la= fix((reform(m_la[0, *])+(-1.0)*slat)*gridy)
 
 		x		= x_lo
 		y		= y_lo
@@ -1882,7 +1881,7 @@ function meridians, lon, lat, interval = interval
 				if n_elements(plot_idx) gt 2 then begin
 					dum_data	= $
 					{data:reform(transpose([[[x[plot_idx]]],[[y[plot_idx]]]])), $
-					type:'lat', ang:round(m_lo[1, 0] * 100.)/100.}
+					type:'lat', ang:round(m_la[1, 0] * 100.)/100.}
 					dum_vector	= is_eq(dum_vector, 0b) ? ptr_new(dum_data) : $
 					[dum_vector, ptr_new(dum_data)]
 				endif
@@ -1903,7 +1902,7 @@ function meridians, lon, lat, interval = interval
 				if n_elements(plot_idx) gt 2 then begin
 					dum_data	= $
 					{data:reform(transpose([[[x[plot_idx]]],[[y[plot_idx]]]])),$
-					type:'lon', ang:round(m_la[0, 0] * 100.)/100.}
+					type:'lon', ang:round(m_lo[0, 0] * 100.)/100.}
 					dum_vector	= is_eq(dum_vector, 0b) ? ptr_new(dum_data) :$
 					[dum_vector, ptr_new(dum_data)]
 				endif
@@ -4734,6 +4733,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	lev = keyword_set(level) ? strlowcase(level) : 'l3c'
 
 	pmxgwx = (total(lev eq ['l3c','l3s']) and strmid(alg,0,6) eq 'patmos')
+	dat = keyword_set(keep_data_name) ? strlowcase(data) : get_product_name(data,algo=alg,level=lev)
+
+	if ( total(dat eq ['blue_marble','marble']) ) and not keyword_set(filename) then filename='dum'
 
 	if not keyword_set(filename) then begin
 		if n_params() eq 0 then begin
@@ -4745,8 +4747,6 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 					orbit=orbit,silent=silent,dirname=dirname,node=node,no_recursive_search=no_recursive_search)
 		if found gt 1 then print,'Found more than one file!'
 	endif
-
-	dat = keyword_set(keep_data_name) ? strlowcase(data) : get_product_name(data,algo=alg,level=lev)
 
 	found = file_test(filename[0])
 	if ~found and ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus']) then return,-1
@@ -4910,7 +4910,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if ~sil then print,''
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
 		marble_file = !SAVS_DIR + '/blue_marble/blue_marble_0.10.sav'
-		outdata = restore_var(marble_file)
+		outdata = restore_var(marble_file,found=found)
 		if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(marble_file[0],/rem)
 		no_data_value = -999.
 		longname = 'Blue Marble 0.1 degree global grid'
