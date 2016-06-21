@@ -4785,6 +4785,20 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
+        endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
+		; die neuen patmos l2b haben kein cloud_phase mehr -> berechne alte cloud_phase definition aus cloud_type (auch für die alten l2b's)
+		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		outdata = cty * 0 + no_data_value[0]
+		outdata[where(between(cty,0,1))]=0 ; 0=clear,1=probably clear
+		outdata[where(between(cty,2,3))]=1 ; 2=fog,3=water
+		outdata[where(cty eq 4)]        =2 ; 4=supercooled water
+		outdata[where(cty eq 5)]        =3 ; 5=mixed
+		outdata[where(between(cty,6,9))]=4 ; 6=opaque_ice,7=cirrus,8=overlapping,9=overshooting
+		outdata[where(cty eq 10)]       =5 ; 10=unknown
+		longname = 'integer classification of the cloud phase including clear and aerosol type,0=clear,1=water,2=supercooled water,3=mixed,4=ice,5=unknown'
+		minvalue = 0
+		maxvalue = 5
+		unit = ''
 	endif else if ( (total(alg eq ['clara2','clara','claas','gewex','patmos']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
 			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'

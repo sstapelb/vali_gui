@@ -2674,7 +2674,7 @@ FUNCTION NCDF_DATA::ReadFile, theFile, SUCCESS=success
        ; Open the file.
        fileID = NCDF_Open(theFile)
        info = NCDF_Inquire(fileID)
-       
+
        ; Create the initial structure.
        struct = Create_Struct('_filename', self.filename)
        
@@ -2698,6 +2698,7 @@ FUNCTION NCDF_DATA::ReadFile, theFile, SUCCESS=success
           FOR j=0,info.nvars-1 DO BEGIN
              varInfo = NCDF_VarInq(fileID, j)
              NCDF_VarGet, fileID, j, data
+             varName = varInfo.name
              IF Size(data, /N_DIMENSIONS) GT 0 THEN data = REFORM(Temporary(data))
              varStruct = Create_Struct('data', Temporary(data))
              varStruct = Create_Struct(varStruct,'dataset_name', varName)
