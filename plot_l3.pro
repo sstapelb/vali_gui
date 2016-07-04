@@ -2986,7 +2986,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			difference = difference, show_values = show_values, out = out, p0lon = p0lon, p0lat = p0lat, $
 			antarctic = antarctic, arctic = arctic, mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg,$
 			robinson=robinson, hammer = hammer, goode = goode, globe = globe, verbose = verbose,nobar=nobar, $
-			stereographic = stereographic, logarithmic=logarithmic,datum=datum
+			stereographic = stereographic, logarithmic=logarithmic,datum=datum,magnify=magnify
 
 	datum = keyword_set(datum) ? datum : stregex(file_basename(ccifile),'[0-9]+',/ext)
 	year  = strmid(datum,0,4)

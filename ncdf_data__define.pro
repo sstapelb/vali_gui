@@ -4295,7 +4295,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				win_nr = win_nr, save_as= save_as,land = land, sea = sea,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$
 				globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
-				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum
+				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum,magnify=magnify
 				if show_values and pcdts and ~total(strlowcase(hct[0]) eq ['hist2d','hist_2d','max']) then $
 				show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 				if ~(pcdts and ~total(strlowcase(hct[0]) eq ['max','1d'])) then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
@@ -4394,8 +4394,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
-				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext
-				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID,magnify=magnify
+				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext,magnify=magnify
+				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID
 			endif
 			if pcvar and pcmult then begin
 				if verbose then print,'Map2d Multi Time Step'
