@@ -938,7 +938,7 @@ PRO NCDF_DATA::ParseFile
    Ptr_Free, self.theSwaths
    Ptr_Free, self.theVariables
    Ptr_Free, self.zeroDimensionID
-   
+ 
    ; Special processing if this is an HDF file. Otherwise, we believe it is a netCDF file.
    self.isHDF  = HDF_ISHDF(Filepath(ROOT_DIR=self.directory, self.filename))
    ; replaced by stapel in order to make hdf 5 work too, s. Parse_HDF_File; and ncdf4 seems to appear as hdf5 and ncdf
@@ -4480,7 +4480,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('This works with Monthly Means only!')
 				return
 			endif
-
 			algo   = self.algoname
 			level  = self.level
 			datum1 = self.datum
@@ -4494,7 +4493,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				!p.multi = fix(strsplit(strcompress(pmulti,/rem),'],[()',/ext))
 				self.pmulti_default = pmulti
 			endif
-
 ; 			if select or sel then begin
 			if select or none then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? file_dirname(file1):file_dirname(self.file2)),$

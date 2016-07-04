@@ -1540,12 +1540,34 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 	pmx   = keyword_set(patmos)
 	mm    = fix(month)
 
+	;patmos l2b
+	; ;PM
+	; noaa-05  1979_001 - 1980_030                                                                                                                 
+	; noaa-07  1981_236 - 1985_032                                                                                                                 
+	; noaa-09  1985_056 - 1988_311                                                                                                                 
+	; noaa-11  1988_313 - 1994_243                                                                                                                 
+	; noaa-14  1995_040 - 2002_206                                                                                                                 
+	; noaa-16  2001_079 - 2006_200                                                                                                                 
+	; noaa-18  2005_200 - 2014_260                                                                                                                 
+	; noaa-19  2009_109 - 2015_365
+	; ;AM
+	; noaa-06  1980_182 - 1982_215                                                                                                                 
+	; noaa-08  1983_124 - 1985_287                                                                                                                 
+	; noaa-10  1987_321 - 1990_259                                                                                                                 
+	; noaa-12  1991_259 - 1998_348                                                                                                                 
+	; noaa-15  1998_299 - 2014_260                                                                                                                 
+	; noaa-17  2002_236 - 2009_010                                                                                                                 
+	; metop-02 2007_179 - 2015_365
+	; metop-01 2013_001 - 2014_220
+
 	case fix(year) of
-		1981: sats = pmx ? ['nn','nn']			: ['nn',(mm le  7 ? 'nn':'07')]
-		1982: sats = pmx ? ['nn','07']			: ['nn','07']
-		1983: sats = pmx ? ['nn','07']			: ['nn','07']
-		1984: sats = pmx ? ['nn','07']			: ['nn','07']
-		1985: sats = pmx ? ['nn',(mm le  2 ? 'nn':'09')]: ['nn',(mm le  1 ? '07':'09')]
+		1979: sats = pmx ? ['nn','nn']			: ['nn','05']
+		1980: sats = pmx ? ['nn','nn']			: [(mm le  6 ? 'nn':'06'),(mm le  1 ? '05':'nn')]
+		1981: sats = pmx ? ['nn','nn']			: ['06',(mm le  7 ? 'nn':'07')]
+		1982: sats = pmx ? ['nn','07']			: [(mm le  7 ? '06':'nn'),'07']
+		1983: sats = pmx ? ['nn','07']			: [(mm le  4 ? 'nn':'08'),'07']
+		1984: sats = pmx ? ['nn','07']			: ['08','07']
+		1985: sats = pmx ? ['nn',(mm le  2 ? 'nn':'09')]: [(mm le 10 ? '08':'nn'),(mm le  1 ? '07':'09')]
 		1986: sats = pmx ? ['nn','09']			: ['nn','09']
 		1987: sats = pmx ? ['10','09']			: ['10','09']
 		1988: sats = pmx ? ['10',(mm le 10 ? '09':'nn')]: ['10',(mm le 10 ? '09':'11')]
@@ -1571,12 +1593,12 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		2008: sats = pmx ? ['15','18']			: ['MA','18']
 		2009: sats = pmx ? ['15','18']			: ['MA',(mm le  5 ? '18':'19')]
 		2010: sats = pmx ? ['nn','nn']			: ['MA','19']
-		2011: sats = pmx ? ['nn','nn']			: ['MA','19'] 
-		2012: sats = pmx ? ['nn','nn']			: ['MA','19'] 
+		2011: sats = pmx ? ['nn','nn']			: ['MA','19']
+		2012: sats = pmx ? ['nn','nn']			: ['MA','19']
 		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 ? 'MA':'MB'),'19']
 		2014: sats = pmx ? ['nn','nn']			: ['MB','19']
-		2015: sats = pmx ? ['nn','nn']			: ['MB','19'] 
-		2016: sats = pmx ? ['nn','nn']			: ['MB','19'] 
+		2015: sats = pmx ? ['nn','nn']			: ['MB','19']
+		2016: sats = pmx ? ['nn','nn']			: ['MB','19']
 		else: sats = ['nn','nn']
 	endcase
 
@@ -1727,192 +1749,6 @@ function tag_name2num,struc,tag
 	return, where(strlowcase(all_names) eq strlowcase(tag))
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-;------------------------------------------------------------------------------------------
-; by M. Reuter ; adapted to regular grids by stapel
-function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, usa = usa
-
-	; at the moment only regular grids
-	proz = 0.8
-	x_0  = 0 & x_1 = (size(lon,/dim)-1)[0]
-	y_0  = 0 & y_1 = (size(lon,/dim)-1)[1]
-	scale   = 1
-
-	slon  = min(lon[where(lon ne -999.)],max=elon)
-	slat  = min(lat[where(lat ne -999.)],max=elat)
-	gridx = float(x_1)/float(abs(slon-elon))
-	gridy = float(y_1)/float(abs(slat-elat))
-
-	;filename bauen
-	path_map_high	= !dir + slash() + 'resource' + slash() + 'maps' + slash() + 'high' + slash()
-	path_map_low	= !dir + slash() + 'resource' + slash() + 'maps' + slash() + 'low' + slash()
-	b_ndx_file_high	= path_map_high  + 'bhigh.ndx'
-	b_dat_file_high	= path_map_high  + 'bhigh.dat'
-	p_ndx_file_high	= path_map_high  + 'phigh.ndx'
-	p_dat_file_high	= path_map_high  + 'phigh.dat'
-	c_ndx_file_high	= path_map_high  + 'chigh.ndx'
-	c_dat_file_high	= path_map_high  + 'chigh.dat'
-	r_ndx_file_high	= path_map_high  + 'rhigh.ndx'
-	r_dat_file_high	= path_map_high  + 'rhigh.dat'
-	b_ndx_file_low	= path_map_low   + 'blow.ndx'
-	b_dat_file_low	= path_map_low   + 'blow.dat'
-	p_ndx_file_low	= path_map_low   + 'plow.ndx'
-	p_dat_file_low	= path_map_low   + 'plow.dat'
-	c_ndx_file_low	= path_map_low   + 'clow.ndx'
-	c_dat_file_low	= path_map_low   + 'clow.dat'
-	r_ndx_file_low	= path_map_low   + 'rlow.ndx'
-	r_dat_file_low	= path_map_low   + 'rlow.dat'
-	if file_test(b_ndx_file_high) and file_test(p_dat_file_high) 	and $
-	   file_test(r_ndx_file_high) and file_test(c_ndx_file_high)  	then begin
-		filez_ndx = [p_ndx_file_high]
-		if keyword_set(border) then filez_ndx = [b_ndx_file_high,filez_ndx]
-		if keyword_set(rivers) then filez_ndx = [r_ndx_file_high,filez_ndx]
-		if keyword_set(lakes)  then filez_ndx = [c_ndx_file_high,filez_ndx]
-	endif else begin
-		if file_test(b_ndx_file_low) and file_test(p_ndx_file_low) and $
-		   file_test(r_ndx_file_low) and file_test(c_ndx_file_low) then begin
-			filez_ndx = [p_ndx_file_low]
-			if keyword_set(border) then filez_ndx = [b_ndx_file_low,filez_ndx]
-			if keyword_set(rivers) then filez_ndx = [r_ndx_file_low,filez_ndx]
-			if keyword_set(lakes)  then filez_ndx = [c_ndx_file_low,filez_ndx]
-		endif else begin
-			print, 'map information not found at: ' + path_map_high + ' or: ' +path_map_low
-			return, -1
-		endelse
-	endelse
-	;einlesen
-	dum_vector	= 0b
-
-	for i = 0l, n_elements(filez_ndx) - 1l do begin
-		openr, lun, filez_ndx[i], /xdr, /get_lun
-		nsegs	= 0l
-		readu, lun, nsegs
-		ndx = replicate({fptr:0l, npts:0l, maxlat:0., minlat:0., maxlon:0., minlon:0.}, nsegs)
-		readu, lun, ndx
-		free_lun, lun,/force
-		file_dat	= file_name_info(filez_ndx[i], /path, /name) + '.dat'
-		openr, lun, file_dat, /xdr, /stream
-		for j = 01, n_elements(ndx) - 1l do begin
-			point_lun, lun, ndx[j].fptr
-			xy	= fltarr(2, ndx[j].npts)
-			readu, lun, xy
-			x= fix((reform(xy[1, *])+(-1.0)*slon)*gridx)
-			y= fix((reform(xy[0, *])+(-1.0)*slat)*gridy)
-			ok		= ((x ge x_0) and (y ge y_0) and (x le x_1) and (y le y_1))
-			ok_idx		= where(ok, ok_anz)
-			if ok_anz le 0 then continue
-			x[ok_idx]	= (x[ok_idx] - x_0) * scale
-			y[ok_idx]	= (y[ok_idx] - y_0) * scale
-
-			; zusatzliche split_idxe finden
-			ok_x = x[ok_idx]
-			ok_y = y[ok_idx]
-			n_x  = n_elements(ok_x)
-			dum = ok_x[1:n_x-1]-ok_x[0:n_x-2]
-			split_x =where(abs(dum) gt proz * x_1 ) ; ?? Prozent von max x, testweise
-			n_y =n_elements(ok_y)
-			dum = ok_y[1:n_y-1]-ok_y[0:n_y-2]
-			split_y =where(abs(dum) gt proz * y_1 )
-			split_idx = [-1l, split_x, split_y, uniq(ok_idx - lindgen(n_elements(ok_idx)))]
-			split_idx = split_idx[ree(split_idx,/sort)]
-
-			for k = 0l, n_elements(split_idx) - 2l do begin
-				von		= split_idx[k] + 1l
-				bis		= split_idx[k+1l]
-				plot_idx	= ok_idx[von:bis]
-				if n_elements(plot_idx) gt 2 then begin
-					dum_data   = reform(transpose([[[x[plot_idx]]],[[y[plot_idx]]]]))
-					dum_vector = is_eq(dum_vector, 0b) ? ptr_new(dum_data) : $
-					[dum_vector, ptr_new(dum_data)]
-				endif
-			endfor
-		endfor
-		free_lun, lun,/force
-	endfor
-	if is_eq(dum_vector, 0b) then return, -1
-	return, dum_vector
-end
-;------------------------------------------------------------------------------------------
-; by M. Reuter ; adapted to regular grids by stapel
-function meridians, lon, lat, interval = interval
-
-	; at the moment only regular grids allowed
-	x_0 = 0 & x_1 = (size(lon,/dim)-1)[0]
-	y_0 = 0 & y_1 = (size(lon,/dim)-1)[1]
-	scale   = 1
-
-	slon  = min(lon[where(lon ne -999.)],max=elon)
-	slat  = min(lat[where(lat ne -999.)],max=elat)
-	gridx = float(x_1)/float(abs(slon-elon))
-	gridy = float(y_1)/float(abs(slat-elat))
-
-	dum_vector	= 0b
-	resolution	= 1000
-	interval	= keyword_set(interval) ? interval : 10.
-	anz		= (180.*2) / interval + 1.
-	lo		= findgen(anz) / (anz - 1) * (2*180.) - (2*90.)
-	la		= findgen(anz) / (anz - 1) * (2*180.) - (2*90.)
-
-	for i = 0l, n_elements(lo) - 1l do begin
-		;erstellen der meridiane
-		m_la		= fltarr(2, resolution)
-		m_la[1, *]	= la[i]
-		m_la[0, *]	= vector(min(lat),max(lat),resolution)
-		m_lo		= fltarr(2, resolution)
-		m_lo[0, *]	= lo[i]
-		m_lo[1, *]	= vector(min(lon),max(lon),resolution)
-
-		x_lo= fix((reform(m_lo[1, *])+(-1.0)*slon)*gridx)
-		y_lo= fix((reform(m_lo[0, *])+(-1.0)*slat)*gridy)
-		x_la= fix((reform(m_la[1, *])+(-1.0)*slon)*gridx)
-		y_la= fix((reform(m_la[0, *])+(-1.0)*slat)*gridy)
-
-		x		= x_lo
-		y		= y_lo
-		ok		= ((x ge x_0) and (y ge y_0) and (x le x_1) and (y le y_1))
-		ok_idx		= where(ok, ok_anz)
-		if ok_anz gt 0 then begin
-			x[ok_idx]	= (x[ok_idx] - x_0) * scale
-			y[ok_idx]	= (y[ok_idx] - y_0) * scale
-			split_idx	= [-1l, uniq(ok_idx - lindgen(n_elements(ok_idx)))]
-			for k = 0l, n_elements(split_idx) - 2l do begin
-				von			= split_idx[k] + 1l
-				bis			= split_idx[k+1l]
-				plot_idx	= ok_idx[von:bis]
-				if n_elements(plot_idx) gt 2 then begin
-					dum_data	= $
-					{data:reform(transpose([[[x[plot_idx]]],[[y[plot_idx]]]])), $
-					type:'lat', ang:round(m_la[1, 0] * 100.)/100.}
-					dum_vector	= is_eq(dum_vector, 0b) ? ptr_new(dum_data) : $
-					[dum_vector, ptr_new(dum_data)]
-				endif
-			endfor
-		endif
-		x		= x_la
-		y		= y_la
-		ok		= ((x ge x_0) and (y ge y_0) and (x le x_1) and (y le y_1))
-		ok_idx		= where(ok, ok_anz)
-		if ok_anz gt 0 then begin
-			x[ok_idx]	= (x[ok_idx] - x_0) * scale
-			y[ok_idx]	= (y[ok_idx] - y_0) * scale
-			split_idx	= [-1l, uniq(ok_idx - lindgen(n_elements(ok_idx)))]
-			for k = 0l, n_elements(split_idx) - 2l do begin
-				von			= split_idx[k] + 1l
-				bis			= split_idx[k+1l]
-				plot_idx	= ok_idx[von:bis]
-				if n_elements(plot_idx) gt 2 then begin
-					dum_data	= $
-					{data:reform(transpose([[[x[plot_idx]]],[[y[plot_idx]]]])),$
-					type:'lon', ang:round(m_lo[0, 0] * 100.)/100.}
-					dum_vector	= is_eq(dum_vector, 0b) ? ptr_new(dum_data) :$
-					[dum_vector, ptr_new(dum_data)]
-				endif
-			endfor
-		endif
-	endfor
-	if is_eq(dum_vector, 0b) then return, -1
-	return, dum_vector
-end
-;------------------------------------------------------------------------------------------
 pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 
 	if ~keyword_set(bild) then return
@@ -2491,9 +2327,9 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	raw_fill_value = found_fvattr ? dum_fv : 'not_defined'
 
 	if found_fvattr then begin
-		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=raw_fill_value[0],type=size(bild,/type))
+		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=raw_fill_value[0],type=raw_type)
 	endif else begin
-		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=fillvalue[0],type=size(bild,/type))
+		fillvalue = keyword_set(set_fillvalue) ? set_fillvalue[0] : make_array(1,val=fillvalue[0],type=raw_type)
 	endelse
 
 	if patmos then begin
@@ -3339,7 +3175,7 @@ function read_cmsaf_seviri, file, cloud_data, fillvalue = fillvalue, longname = 
 
 end
 ;-----------------------------------------------------------------------------------------------------
-pro read_data, 	file, data, verbose = verbose, found = found,	algoname = algoname		, $	;input 
+pro read_data, 	file, data, verbose = verbose, found = found,	algoname = algoname, silent = silent		, $	;input 
 		bild, fillvalue, minvalue, maxvalue, longname, unit, raw=raw,attribute = attribute, var_dim_names = var_dim_names	;output
 	if keyword_set(verbose) then z=systime(1)
 	found = 0
@@ -3347,7 +3183,7 @@ pro read_data, 	file, data, verbose = verbose, found = found,	algoname = algonam
 					bild, fillvalue, minvalue, maxvalue, longname, unit, attribute = attribute else   $
 	if is_ncdf(file) then read_ncdf,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname	, $
 					bild, fillvalue, minvalue, maxvalue, longname, unit, attribute = attribute, var_dim_names = var_dim_names else   $
-	ok = dialog_message('The file '+file+' is neither a netcdf nor a hdf file. Note netcdf4 files are not supported in IDL versions below 8!')
+	if ~keyword_set(silent) then ok = dialog_message('The file '+file+' is neither a netcdf nor a hdf file. Note netcdf4 files are not supported in IDL versions below 8!')
 
 	if keyword_set(verbose) then print,'validation_tool_box: read_data ',systime(1)-z
 	if keyword_set(maxvalue) then begin
@@ -3652,7 +3488,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								satd  = sat eq 'METOPA' ? 'metop-02' : (sat eq 'METOPB' ? 'metop-01' : strlowcase(sat))
 								if stregex(satd,'noaa',/bool) then begin
 									dum = strsplit(satd,/ext,'-')
-									satd = dum[0]+'-'+(is_number(dum[1]) ? string(dum[1],f='(i2.2)') : dum[1])
+									satd = n_elements(dum) gt 1 ? (dum[0]+'-'+(is_number(dum[1]) ? string(dum[1],f='(i2.2)') : dum[1])) : dum[0]
 								endif
 								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/cmcld/data/PATMOSX/level2b/'+yyyy+'/'
 								filen = dir+'patmosx_'+satd+'_'+strmid(node,0,3)+'_'+yyyy+'_'+doy+'.level2b.{hdf,nc}'
@@ -3716,7 +3552,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						  end
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/MODIS/'+yyyy+'/'
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 							filen = dir+dat+'_ESACCI_'+strupcase(sat)+'_'+strupcase(noaa_ampm(sat))+'_'+yyyy+'.nc'
 						 end
@@ -3802,7 +3638,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/mstengel/ERA_Interim/ERA_simulator/MM2/'
+; 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/mstengel/ERA_Interim/ERA_simulator/MM2/'
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/2_results_basedon_mlev/time_series/v1.1_DWDscops_MaxRand_MixedPase/'+yyyy+'/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
 						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
@@ -3849,7 +3686,8 @@ function get_histo_time_series, algo, data, satellite, period = period, this_per
 	dat = (strlowcase(data))[0]
 	dat = stregex(dat,'hist1d_ref',/fold,/bool) ? strlowcase(strreplace(dat,'_ref','_cer',/fold)) : strlowcase(dat)
 	if alg eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
-	satdum = (total(strmid(alg,0,3) eq ['myd','mod','cla']) ? '':sat)
+	era = alg eq 'era' ? '1.1':''
+	satdum = (total(strmid(alg,0,3) eq ['myd','mod','cla','era']) ? '':sat)
 	found = 0.
 	phase = ''
 	try_again = keyword_set(period) and ~keyword_set(this_period_only)
@@ -3861,11 +3699,11 @@ function get_histo_time_series, algo, data, satellite, period = period, this_per
 	endif else vs = ''
 
 	if is_h1d(dat) then begin
-		sfile = !SAVS_DIR + 'time_series/hist1d/'+dat+'_'+per+'_'+alg+vs+'_'+satdum+'.sav'
+		sfile = !SAVS_DIR + 'time_series/hist1d/'+dat+'_'+per+'_'+alg+era+vs+'_'+satdum+'.sav'
 		sav_file = file_search( sfile ,count = found)
 		if found eq 0 and try_again then begin
 			if vs ne '' then print,'No compare sav_file found. Try again without compare!'
-			sfile = !SAVS_DIR + 'time_series/hist1d/'+dat+'_????-????_'+alg+'_'+satdum+'.sav'
+			sfile = !SAVS_DIR + 'time_series/hist1d/'+dat+'_????-????_'+alg+era+'_'+satdum+'.sav'
 			sav_file = file_search( sfile ,count = found)
 		endif
 		dum = strsplit(dat,'_',/ext)
@@ -3881,14 +3719,17 @@ function get_histo_time_series, algo, data, satellite, period = period, this_per
 		longname = '1D Histogram of '+phase+' '+longname
 		unit = ''
 	endif else if is_jch(dat) then begin
-		sfile = !SAVS_DIR + 'time_series/hist2d/'+get_product_name(dat,algo='gac2')+'_'+per+'_'+alg+vs+'_'+satdum+'.sav'
+		sfile = !SAVS_DIR + 'time_series/hist2d/'+get_product_name(dat,algo='gac2')+'_'+per+'_'+alg+era+vs+'_'+satdum+'.sav'
 		sav_file = file_search( sfile ,count = found)
 		if found eq 0 and try_again then begin
 			if vs ne '' then print,'No compare sav_file found. Try again without compare!'
-			sfile = !SAVS_DIR + 'time_series/hist2d/'+get_product_name(dat,algo='gac2')+'_????-????_'+alg+'_'+satdum+'.sav'
+			sfile = !SAVS_DIR + 'time_series/hist2d/'+get_product_name(dat,algo='gac2')+'_????-????_'+alg+era+'_'+satdum+'.sav'
 			sav_file = file_search( sfile ,count = found)
 		endif
 		longname = 'Joint cloud property Histogram of ice and water clouds'
+		if is_jch(dat,/liq) then longname = 'Joint cloud property Histogram of water clouds'
+		if is_jch(dat,/ice) then longname = 'Joint cloud property Histogram of ice clouds'
+		if is_jch(dat,/ratio) then longname = 'Joint cloud property Histogram fraction of liquid clouds'
 		unit = ''
 	endif
 
@@ -3954,7 +3795,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		ref   = algo2ref(reference,sat=sat)
 		cli   = algo2ref(algo,sat=sat)
 		pref  = '/compare/compare_'
-		dumalgo = cli+'_vs_'+ref
+		dumalgo = cli eq 'era' ? cli+'1.1_vs_'+ref : cli+'_vs_'+ref
 		;time series indices
 		; stats : [cci-gmean,cci-stdd,cci-unc-gmean,cci-unc-stdd,gac-gmean,gac-stdd,gac-unc-gmean,gac-unc-stdd,gbias,grmse,bc_rmse,correlate]
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3,gm2:4,gm2_std:5,unc2:6,unc2_std:7,bias:8,rmse:9,bcr:10,corr:11}
@@ -3962,7 +3803,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		cli   = algo2ref(algo,sat=sat)
 		if cli eq 'cal' then sat = 'calipso'
 		pref  = '/plot/plot_'
-		dumalgo = cli
+		dumalgo = cli eq 'era' ? cli+'1.1':cli
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3}
 	endelse
 
@@ -3984,7 +3825,11 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'lwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path'		& end
 		'iwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path'		& end
 		'cwp' 		: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path'			& end
+		'lwp_allsky' 	: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Liquid Water Path Allsky'	& end
+		'iwp_allsky'	: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 500 & dist = 10.  & longname = 'Cloud Ice Water Path Allsky'	& end
+		'cwp_allsky'	: begin & unit = textoidl(' [g/m^2]')	& minv = 0   & maxv = 800 & dist = 10.  & longname = 'Cloud Water Path Allsky'		& end
 		'cph' 		: begin & unit = ''			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction'		& end
+		'cph_day'	: begin & unit = ''			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Liquid Cloud Fraction Day'	& end
 		'cot' 		: begin & unit = '' 			& minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness'		& end
 		'cot_liq'	: begin & unit = '' 			& minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness liquid'	& end
 		'cot_ice'	: begin & unit = '' 			& minv = 0   & maxv = 100 & dist =  1.  & longname = 'Cloud optical thickness ice'	& end
@@ -4000,11 +3845,12 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 
 	if keyword_set(hovmoeller) then begin
 		dumsat = sat
-		if total(strmid(cli,0,3) eq ['myd','mod']) then dumsat = ''
-		sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+'_'+dumsat+'.sav'
+		era = cli eq 'era' ? '1.1':''
+		if total(strmid(cli,0,3) eq ['myd','mod','era']) then dumsat = ''
+		sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+era+'_'+dumsat+'.sav'
 		sfile    = file_search( sav_file ,count = found)
 		if found eq 0 and keyword_set(period) then begin
-			sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_????-????_'+cli+'_'+dumsat+'.sav'
+			sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_????-????_'+cli+era+'_'+dumsat+'.sav'
 			sfile    = file_search( sav_file ,count = found)
 		endif
 	endif else begin
@@ -4015,7 +3861,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)
 			endif
-			if found eq 0 and total(strmid(cli,0,3) eq ['myd','mod']) then begin
+			if found eq 0 and total(strmid(cli,0,3) eq ['myd','mod','era']) then begin
 				; for MODIS coll? try again without sat, cause ref is always the same for those!
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)
@@ -4087,7 +3933,6 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	
 			struc = create_struct(struc,'ts_indices',tsi)
 			if is_tag(struc,'unit') then unit = struc.unit
-			if is_tag(struc,'longname') then longname = struc.longname
 		endelse
 		print,'Sav File: ',sav_file
 		return,struc
@@ -4787,7 +4632,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else return,-1
         endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
 		; die neuen patmos l2b haben kein cloud_phase mehr -> berechne alte cloud_phase definition aus cloud_type (auch für die alten l2b's)
-		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		outdata = cty * 0 + no_data_value[0]
 		idx = where(between(cty,0,1),idxcnt)
 		if idxcnt gt 0 then outdata[idx]	=0 ; 0=clear,1=probably clear
@@ -4814,21 +4659,21 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		dumdat = get_product_name('iwp'+err,algo=alg,level=lev)
 		if ~sil then print,'ice_file: ',dumdat,'    : ',ice_file
-		read_data, ice_file[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, ice_file[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 2) lwp
 		liq_file = get_filename(year,month,day,data='lwp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		dumdat = get_product_name('lwp'+err,algo=alg,level=lev)
 		if ~sil then print,'liq_file: ',dumdat,'    : ',liq_file
-		read_data, liq_file, dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, liq_file, dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
 		cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
-		read_data, cph_file, dumdat, cph, no_data_valuec, verbose = verbose, found = found
+		read_data, cph_file, dumdat, cph, no_data_valuec, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; cwp = lwp * cph + iwp * (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
@@ -4840,11 +4685,11 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	endif else if (total(alg eq ['esacci','coll6']) and (dat eq 'cwp') and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		; 1) iwp
 		dumdat = get_product_name('iwp',algo=alg,level=lev)
-		read_data, filename[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, filename[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 2) lwp
 		dumdat = get_product_name('lwp',algo=alg,level=lev)
-		read_data, filename[0], dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, filename[0], dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
 		if alg eq 'coll6' then begin
@@ -4852,7 +4697,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valuec,found=found)
 		endif else begin
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
-			read_data, filename[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found
+			read_data, filename[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found, silent=silent
 		endelse
 		if not found then return,-1
 		; cwp = lwp * cph + iwp * (1-cph)
@@ -4870,15 +4715,15 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		; 2) cloud fraction day
 		if alg eq 'esacci' then begin
 			; this is the actual microphysical daytime cloud fraction of cc4cl based on same datset as lwp,iwp,cph_day
-			read_data, filename[0], 'nobs_clear_day'  , nclear, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
-			read_data, filename[0], 'nretr_cloudy_day', ncloudy, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
+			read_data, filename[0], 'nobs_clear_day'  , nclear, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found, silent=silent
+			read_data, filename[0], 'nretr_cloudy_day', ncloudy, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found, silent=silent
 			cfc = ncloudy/float((nclear+ncloudy)>1)
 			idx = where(((nclear>0)+(ncloudy>0)) eq 0,idxcnt)
 			if idxcnt gt 0 then cfc[idx] = -999.
 		endif else begin
 			dumdat = get_product_name('cfc_day',algo=alg,level=lev)
 			cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-			read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
+			read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found, silent=silent
 			if total(alg eq ['patmos','gewex']) and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
 		endelse
 		if not found then return,-1
@@ -4899,7 +4744,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		; 2) cloud fraction
 		dumdat = get_product_name('cfc_day',algo=alg,level=lev)
 		cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found
+		read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
 		if total(alg eq ['patmos','gewex']) then begin
@@ -4907,7 +4752,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if not found then return,-1
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
 			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
-			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found
+			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found, silent=silent
 		endif else begin
 			cph = get_data(year,month,day,file=filename[0],data='cph_day', satellite=sat, level=lev, verbose = verbose,$
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valuec,found=found)
@@ -4931,6 +4776,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
 		marble_file = !SAVS_DIR + '/blue_marble/blue_marble_0.10.sav'
 		outdata = restore_var(marble_file,found=found)
+		if found then outdata = fix(outdata)
 		if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(marble_file[0],/rem)
 		no_data_value = -999.
 		longname = 'Blue Marble 0.1 degree global grid'
@@ -4945,10 +4791,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		outdata = rotate(outdata,7)
 	endif else if ( (total(alg eq ['coll5','coll6']) and dat eq 'cph_day') ) then begin
 		dumdat = alg eq 'coll6' ? 'CLOUD_RETRIEVAL_FRACTION_37_ICE_PIXEL_COUNTS' : 'Cloud_Fraction_Ice_Pixel_Counts'
-		read_data, filename[0],dumdat,ice_cnt, verbose = verbose,found = found
+		read_data, filename[0],dumdat,ice_cnt, verbose = verbose,found = found, silent=silent
 		if not found then return,-1
 		dumdat = alg eq 'coll6' ? 'CLOUD_RETRIEVAL_FRACTION_37_LIQUID_PIXEL_COUNTS' : 'Cloud_Fraction_Liquid_Pixel_Counts'
-		read_data, filename[0],dumdat,liq_cnt, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose,found = found
+		read_data, filename[0],dumdat,liq_cnt, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose,found = found, silent=silent
 		if not found then return,-1
 		str = alg eq 'coll6' ? '37_' : ''
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cph_day= '+str+'Liquid_Pixel_Counts/('+str+'Ice_Pixel_Counts+'+str+'Liquid_Pixel_Counts)'
@@ -4969,14 +4815,14 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		ice_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		if ~sil then print,'ice_file: ',dumdat,': ',ice_file
-		read_data, ice_file[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, ice_file[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 2) lwp
 		dumdat = get_product_name(strmid(dat,0,3)+'_liq'+err,algo=alg,level=lev)
 		liq_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		if ~sil then print,'liq_file: ',dumdat,': ',liq_file
-		read_data, liq_file[0], dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found
+		read_data, liq_file[0], dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
 		if alg eq 'coll6' then begin
@@ -4987,7 +4833,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if not found then return,-1
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
 			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
-			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found
+			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found, silent=silent
 		endelse
 		if not found then return,-1
 		; cwp = lwp * cph + iwp* (1-cph)
@@ -5004,12 +4850,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	endif else if strmid(dat,0,8) eq 'tempdiff' and strmid(alg,0,6) eq 'esacci' and (lev eq 'l2' or lev eq 'l3u') then begin
 		; level2 only
 		node   = lev eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
-		read_data, filename[0],'stemp'+node, stemp, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0],'stemp'+node, stemp, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then begin
 			ok=dialog_message('get_data: Stemp not found! Make sure file is an ESA CCI Cloud l2 file.')
 			return,-1
 		endif
-		read_data, filename[0] , 'ctt'+node, ctt, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0] , 'ctt'+node, ctt, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		idx  = where(stemp eq no_data_value1[0] or ctt eq no_data_value[0],idx_cnt)
 		outdata = temporary(stemp)-temporary(ctt)
@@ -5024,19 +4870,19 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			return,-1
 		endif
 		dumdat = lev eq 'l3u' ? get_product_name('solzen_'+node,algo=alg) : 'solar_zenith_view_no1'
-		read_data, filename[0],dumdat, solza, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0],dumdat, solza, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Solar Zenith angle not found! Make sure file is an ESACCI l2/l3u (clara2[l2b]) file.')
 			return,-1
 		endif
 		dumdat = lev eq 'l3u' ? get_product_name('satzen_'+node,algo=alg) : 'satellite_zenith_view_no1'
-		read_data, filename[0],dumdat, satza, no_data_value2, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0],dumdat, satza, no_data_value2, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Sensor Zenith angle not found! Make sure file is an ESACCI l2/l3u (clara2[l2b]) file.')
 			return,-1
 		endif
 		dumdat = lev eq 'l3u' ? get_product_name('relazi_'+node,algo=alg) : 'rel_azimuth_view_no1'
-		read_data, filename[0],dumdat, relazi, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0],dumdat, relazi, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Relative Azimuth Angle not found! Make sure file is an ESACCI l2/l3u (clara2[l2b]) file.')
 			return,-1
@@ -5053,9 +4899,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		maxvalue = strmid(dat,0,8) eq 'sunglint' ? 1.: 180.
 		units    = strmid(dat,0,8) eq 'sunglint' ? '': 'degrees'
 	endif else if (total(alg eq ['clara']) and (is_jch(dat,/combined) or is_jch(dat,/ratio)) ) then begin
-		read_data, filename[0] , 'jch_liq', liq, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0] , 'jch_liq', liq, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then return,-1
-		read_data, filename[0] , 'jch_ice', ice, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, filename[0] , 'jch_ice', ice, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		if is_jch(dat,/ratio) then begin
 			si = size(ice,/dim)
@@ -5073,12 +4919,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		liq_file = get_filename(year,month,day,data='h_codw_cp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		if ~sil then print,'liq_file: h_codw_cp: ',liq_file
-		read_data, liq_file[0] , 'h_codw_cp', liq, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, liq_file[0] , 'h_codw_cp', liq, no_data_value1, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		ice_file = get_filename(year,month,day,data='h_codi_cp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		if ~sil then print,'ice_file: h_codi_cp: ',ice_file
-		read_data, ice_file[0] , 'h_codi_cp', ice, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+		read_data, ice_file[0] , 'h_codi_cp', ice, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		if is_jch(dat,/ratio) then begin
 			si = size(ice,/dim)
@@ -5092,7 +4938,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endelse
 		longname = 'Joint cloud property Histogram of ice and water clouds'
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
-		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose, var_dim_names=var_dim_names 
+		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, $
+		verbose = verbose, var_dim_names=var_dim_names , silent=silent
 		if not found then return,-1
 		; total ist "total" langsam ca. 0.95 sek im vergleich zu 0.15 sek!!!
 ;   		outdata  = total(outdata>0,5)
@@ -5102,33 +4949,38 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if idx_cnt gt 0 then outdata[idx] = no_data_value[0]
 		endif
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_jch(dat,/liquid)) then begin
-		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,0])
 		longname = longname+' liquid only'
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_jch(dat,/ice)) then begin
-		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,1])
 		longname = longname+' ice only'
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/combined)) then begin
-		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata = reform(outdata[*,*,*,*,0])
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/liquid)) then begin
-		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata = reform(outdata[*,*,*,*,1])
 		longname = longname+' liquid only'
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/ice)) then begin
-		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata = (reform(outdata[*,*,*,*,0] - outdata[*,*,*,*,1]))
 		longname = longname+' ice only'
 	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i']) and is_h1d(dat,/combined)) then begin
 		if total(alg eq ['coll5','coll6']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or stregex(dat,'cwp',/fold,/bool)) then begin
-			read_data, filename[0] , dat+'_liq', ice, no_data_valuei, minvalue, maxvalue, longname1, unit, found = found, verbose = verbose 
-			read_data, filename[0] , dat+'_ice', liq, no_data_value, minvalue, maxvalue, longname, unit, found = found1, verbose = verbose 
+			read_data, filename[0] , dat+'_liq', ice, no_data_valuei, minvalue, maxvalue, longname1, unit, found = found, verbose = verbose , silent=silent
+			read_data, filename[0] , dat+'_ice', liq, no_data_value, minvalue, maxvalue, longname, unit, found = found1, verbose = verbose , silent=silent
 			if found1 and found then begin
 				outdata = (ice>0) + (liq>0) 
 				idx  = where(ice eq no_data_valuei[0] and liq eq no_data_value[0],idxcnt)
@@ -5141,7 +4993,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else begin
 			if alg eq 'coll6' then begin
 				; is actually not the same!!! daytime only
-				read_data, filename[0],dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+				read_data, filename[0],dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
 				if not found then return,-1
 				liq  = reform(outdata[*,*,0,*])
 				ice  = reform(outdata[*,*,1,*])
@@ -5150,20 +5002,22 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				if idxcnt gt 0 then outdata[idx] = no_data_value[0]
 				longname = 'Cloud Top Temperature (Day) liquid + ice'
 			endif else begin
-				read_data, filename[0] , dat, outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+				read_data, filename[0] , dat, outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+				found = found, verbose = verbose , silent=silent
 				if not found then return,-1
 				if ~total(alg eq ['coll5']) then outdata = reform((outdata[*,*,*,0]>0)+(outdata[*,*,*,1]>0))
 			endelse
 		endelse
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_h1d(dat,/liquid) ) then begin
-		read_data, filename[0] , strreplace(dat,'_liq',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , strreplace(dat,'_liq',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata = reform(outdata[*,*,*,0])
 		longname = longname+' liquid only'
 	endif else if (total(alg eq ['coll5']) and is_h1d(dat,/liquid) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; only for coll5 not for coll6 anymore
-		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
-		read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, unit, found = found1, verbose = verbose 
+		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
+		read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, unit, found = found1, verbose = verbose , silent=silent
 		if found and found1 then begin
 			nig = reform(nig[*,*,0,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain) 
 			day = reform(day[*,*,0,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain) 
@@ -5182,14 +5036,15 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		outdata  = reform(outdata[*,*,0,*])
 		longname = 'Cloud Top Temperature (Day) liquid only'
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_h1d(dat,/ice)) then begin
-		read_data, filename[0] , strreplace(dat,'_ice',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+		read_data, filename[0] , strreplace(dat,'_ice',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,1])
 		longname = longname+' ice only'
 	endif else if (total(alg eq ['coll5']) and is_h1d(dat,/ice) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; only for coll5 not for coll6 anymore
-		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
-		read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, unit, found = found1, verbose = verbose 
+		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
+		read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, unit, found = found1, verbose = verbose , silent=silent
 		if found and found1 then begin
 			nig = reform(nig[*,*,1,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain)
 			day = reform(day[*,*,1,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain)
@@ -5209,11 +5064,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		longname = 'Cloud Top Temperature (Day) ice only'
 	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i']) and is_h1d(dat,/ratio)) then begin
 		if total(alg eq ['clara2','claas','esacci','era-i']) then begin
-			read_data, filename[0] , strreplace(dat,'_ratio',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose 
+			read_data, filename[0] , strreplace(dat,'_ratio',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,$
+			var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
 			if not found then return,-1
 		endif else if total(alg eq ['coll5','coll6']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or stregex(dat,'cwp',/fold,/bool)) then begin
-			read_data, filename[0] , dat+'_liq', ice, no_data_value, minvalue, maxvalue, longname1, unit, found = found, verbose = verbose 
-			read_data, filename[0] , dat+'_ice', liq, no_data_value, minvalue, maxvalue, longname, unit, found = found1, verbose = verbose 
+			read_data, filename[0] , dat+'_liq', ice, no_data_value, minvalue, maxvalue, longname1, unit, found = found, verbose = verbose , silent=silent
+			read_data, filename[0] , dat+'_ice', liq, no_data_value, minvalue, maxvalue, longname, unit, found = found1, verbose = verbose , silent=silent
 			if found and found1 and size(ice,/n_dim) eq 3 then begin
 				si = size(ice,/dim)
 				outdata = fltarr([si,2])
@@ -5225,8 +5081,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endelse
 		endif else if total(alg eq ['coll5']) and (stregex(dat,'ctt',/fold,/bool)) then begin
 			; only for coll5 not for coll6 anymore
-			read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
-			read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, unit, found = found1, verbose = verbose 
+			read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, $
+			verbose = verbose , silent=silent
+			read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, unit, found = found1, $
+			verbose = verbose , silent=silent
 			if found and found1 then begin
 				nig = (transpose(nig,[0,1,3,2]))[*,*,*,0:1] ; [360, 180, 4, 17] -> [360, 180, 17, 2], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain) 
 				day = (transpose(day,[0,1,3,2]))[*,*,*,0:1] ; [360, 180, 4, 17] -> [360, 180, 17, 2], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain)
@@ -5239,7 +5097,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endelse
 		endif else if total(alg eq ['coll6']) and (stregex(dat,'ctt',/fold,/bool)) then begin
 			; ist actually not the same!!! daytime only
-			read_data, filename[0],strreplace(dat,'_ratio',''), outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, verbose = verbose 
+			read_data, filename[0],strreplace(dat,'_ratio',''), outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, $
+			verbose = verbose , silent=silent
 			if not found then return,-1
 			outdata  = (transpose(outdata,[0,1,3,2]))[*,*,*,0:1]
 			longname = 'Cloud Top Temperature (Day)'
@@ -5257,12 +5116,16 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if n_elements(filename) ne 2 then begin
 				files = stregex(files[0],'asc',/bool,/fold) ? [files[0],strreplace(filename[0],'asc','des')] : [files[0],strreplace(filename[0],'des','asc')]
 			endif
-			read_data, files[0], dumdat, bild_asc , no_data_value1, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,found = found1, algo =alg
-			read_data, files[1], dumdat, bild_desc, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,found = found2, algo =alg
+			read_data, files[0], dumdat, bild_asc , no_data_value1, minvalue, maxvalue, longname, unit, verbose = verbose, $
+			raw=raw,found = found1, algo =alg, silent=silent
+			read_data, files[1], dumdat, bild_desc, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, $
+			raw=raw,found = found2, algo =alg, silent=silent
 		endif else begin
 			files = [filename[0],filename[0]] 
-			read_data, files[0], dumdat+'_asc' , bild_asc , no_data_value1, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,found = found1, algo =alg
-			read_data, files[1], dumdat+'_desc', bild_desc, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,found = found2, algo =alg
+			read_data, files[0], dumdat+'_asc' , bild_asc , no_data_value1, minvalue, maxvalue, longname, unit, verbose = verbose, $
+			raw=raw,found = found1, algo =alg, silent=silent
+			read_data, files[1], dumdat+'_desc', bild_desc, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, $
+			raw=raw,found = found2, algo =alg, silent=silent
 		endelse
 		if found1 and found2 then begin
 			if keyword_set(verbose) then print,'Ascending and Descending are now joined together.'
@@ -5277,9 +5140,11 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if idxcnt gt 0 then outdata[idx] = no_data_value[0]
 		endif else found = 0
 	endif else begin
-		read_data, filename[0], dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,found = found, algo =alg
+		read_data, filename[0], dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,$
+		found = found, algo =alg, silent=silent
 		if ~found and alg eq 'esacci' and strmid(dat,0,8) eq 'cc_total' then begin
-			read_data, filename[0], strreplace(dat,'cc_total','cfc'), outdata, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,found = found, algo =alg
+			read_data, filename[0], strreplace(dat,'cc_total','cfc'), outdata, no_data_value, minvalue, maxvalue, longname, unit, $
+			verbose = verbose, raw=raw,found = found, algo =alg, silent=silent
 		endif
 		; specials for testing etc, remove if not needed anymore
 		if keyword_set(error) then begin
@@ -6394,8 +6259,8 @@ function get_hct_ratio, array, sdum, limit=limit, antarctic = antarctic, arctic=
 	bild = array
 
 	if keyword_set(limit) then dumlimit = limit
-	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-65.5,180]
-	if keyword_set(arctic) then dumlimit = [ 65.5,-180, 90.0,180]
+	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
+	if keyword_set(arctic) then dumlimit = [ 60.,-180, 90.0,180]
 	if keyword_set(dumlimit) then begin
 		if ~keyword_set(lon) or ~keyword_set(lat) then make_geo,lon,lat,grid=get_grid_res(bild)
 		dumidx=where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),complement=dd_idx,ncomp=dd_cnt)
@@ -6449,7 +6314,6 @@ function get_hct_maxtype, array, algo, grid_res = grid_res,lon=lon,lat=lat,fillv
 			endif
 		endelse
 	endif else si = (size(arr,/dim))[0:1]
-
 	max_type     = intarr(si[0],si[1])-1
 	dum_maxtype  = lonarr(si[0],si[1],n_elements(htypes))
 
@@ -6558,7 +6422,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 			cci_hist_ctp=dum
 		endif
 		;	plev_claas_clara2 = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-		if total(alg eq ['esacci','clara2','claas']) then begin
+		if total(alg eq ['esacci','clara2','claas','era-i']) then begin
 			dum = fltarr(7)
 			for i = 0,5 do dum[i] = total(cci_hist_ctp[2*i:(2*i)+1])
 			dum[6] = total(cci_hist_ctp[12:*])
@@ -6582,7 +6446,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 			cci_hist_cot=cci_hist_cot[1:*]
 		endif
 		;	tau_clara_clara2_claas  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-		if total(alg eq ['esacci','clara','clara2','claas']) then begin
+		if total(alg eq ['esacci','clara','clara2','claas','era-i']) then begin
 			dum = fltarr(6)
 			dum[0] = total(cci_hist_cot[0:2])
 			for i = 1,5 do dum[i] = total(cci_hist_cot[((2*i)+1):(2*(i+1))])
@@ -7170,3 +7034,6 @@ end
 pro validation_tool_box
 
 end
+
+; 		if self.which_file eq '1330' then file_copy, nc_file, strjoin(strsplit(nc_file,'_[0-9]{4}PM_',/ext,/regex),'_PM_'),/allow_same,/overwrite
+; 		if self.which_file eq '0730' then file_copy, nc_file, strjoin(strsplit(nc_file,'_[0-9]{4}AM_',/ext,/regex),'_AM_'),/allow_same,/overwrite

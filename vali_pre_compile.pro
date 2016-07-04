@@ -39,7 +39,6 @@
 @/cmsaf/nfshome/sstapelb/idl/max/strings/strcnt.pro
 @/cmsaf/nfshome/sstapelb/idl/max/strings/translate_sub_super.pro
 @/cmsaf/nfshome/sstapelb/idl/max/strings/textoidl.pro
-; @/cmsaf/nfshome/sstapelb/idl/view2d.pro
 @/cmsaf/nfshome/sstapelb/idl/unix2ymdhms.pro
 @/cmsaf/nfshome/sstapelb/idl/ymdhms2unix.pro
 @/cmsaf/nfshome/sstapelb/idl/dom.pro
@@ -71,6 +70,6 @@
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/read_modis_l1b.pro
 @/cmsaf/nfshome/sstapelb/idl/calc_rgb.pro
-@validation_tool_box.pro
 @/cmsaf/nfshome/sstapelb/idl/view2d.pro
+@validation_tool_box.pro
 
