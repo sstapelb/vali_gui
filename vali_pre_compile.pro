@@ -42,13 +42,12 @@
 @/cmsaf/nfshome/sstapelb/idl/unix2ymdhms.pro
 @/cmsaf/nfshome/sstapelb/idl/ymdhms2unix.pro
 @/cmsaf/nfshome/sstapelb/idl/dom.pro
+@/cmsaf/nfshome/sstapelb/idl/view2d.pro
 @/cmsaf/nfshome/sstapelb/idl/rene/true_color_index.pro
 @/cmsaf/nfshome/sstapelb/idl/make_cool_contour.pro
 @/cmsaf/nfshome/sstapelb/idl/adv_tempname.pro
 @/cmsaf/nfshome/sstapelb/idl/is_compressed.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/get_ncdf_data_by_name.pro
-@/cmsaf/nfshome/sstapelb/idl/remove_equal_elements.pro
-@/cmsaf/nfshome/sstapelb/idl/ree.pro
 @/cmsaf/nfshome/sstapelb/idl/plot_histo.pro
 @/cmsaf/nfshome/sstapelb/idl/is_tag.pro
 @/cmsaf/nfshome/sstapelb/idl/map_image__define.pro
@@ -71,6 +70,5 @@
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/read_modis_l1b.pro
 @/cmsaf/nfshome/sstapelb/idl/calc_rgb.pro
-@/cmsaf/nfshome/sstapelb/idl/view2d.pro
 @validation_tool_box.pro
 
