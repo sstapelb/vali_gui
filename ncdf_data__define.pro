@@ -4656,8 +4656,12 @@ if sel then sat  = self.satname
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
 			if ~found then return
 
+			if (pcsing and pchov) then begin
+				ok = dialog_message('Use "Multi Time Steps" for Hovmoeller plots!')
+				return
+			endif
 			; erstmal nicht belegt
-			if pcmts or pcmat or pcmatts or pcdts or pcms or (pcts and pcsing) or (pcsing and pchov) then begin
+			if pcmts or pcmat or pcmatts or pcdts or pcms or (pcts and pcsing) then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" oder "Multi Time Steps" instead!')
 				return
 			endif
@@ -4735,8 +4739,8 @@ if sel then sat  = self.satname
 			hist2d = is_jch(varname)
 
 			hist1d = is_h1d(varname)
-			if hist1d and ~pcvar then begin
-				ok=dialog_message('For hist1d choose plot style "Map2D"')
+			if hist1d and ~(pcvar or pchov) then begin
+				ok=dialog_message('For hist1d choose plot style "Map2D" or "Hovmoell"')
 				return
 			endif
 			
@@ -4749,7 +4753,7 @@ if sel then sat  = self.satname
 				if ptr_valid(self.out_hovmoeller) then begin
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
-				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,$
+				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,coverage=cov,$
 				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc
 				if show_values and is_defined(out) then begin
 					if ~keyword_set(nobar) then begin

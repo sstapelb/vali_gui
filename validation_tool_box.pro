@@ -3840,6 +3840,21 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'ctt' 		: begin & unit = ' [K]'			& minv = 210 & maxv = 300 & dist = 10.  & longname = 'Cloud Top Temperature'		& end
 		'cth' 		: begin & unit = ' [km]'		& minv = 0   & maxv =  20 & dist =  1.  & longname = 'Cloud Top Height'			& end
 		'sal' 		: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = 'Surface Albedo'			& end
+		'hist1d_ctp'	: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Pressure'	& end
+		'hist1d_cot'	: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Optical Thickness' & end
+		'hist1d_ctt'	: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Temperature' & end
+		'hist1d_cer'	: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Effective Radius' & end
+		'hist1d_cwp'	: begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Water Path'	& end
+		'hist1d_ctp_liq': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Pressure Liquid'	& end
+		'hist1d_cot_liq': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Optical Thickness Liquid' & end
+		'hist1d_ctt_liq': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Temperature Liquid' & end
+		'hist1d_cer_liq': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Effective Radius Liquid' & end
+		'hist1d_cwp_liq': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Water Path Liquid'	& end
+		'hist1d_ctp_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Pressure Ice'	& end
+		'hist1d_cot_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Optical Thickness Ice' & end
+		'hist1d_ctt_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Temperature Ice' & end
+		'hist1d_cer_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Effective Radius Ice' & end
+		'hist1d_cwp_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Water Path Ice'	& end
 		else  :
 	endcase
 
@@ -3889,28 +3904,30 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if found then begin
 		if keyword_set(hovmoeller) then begin
 			; make seasonal mean for anomalies
-			anz_mm  = n_elements(struc.all[0,*])
-			all_sm  = fltarr(180,anz_mm)
-			land_sm = fltarr(180,anz_mm)
-			sea_sm  = fltarr(180,anz_mm)
-			all     = struc.all
-			all[where(all eq -999)]=!values.f_nan
-			land    = struc.land
-			land[where(land eq -999)]=!values.f_nan
-			sea     = struc.sea
-			sea[where(sea eq -999)]=!values.f_nan
-			for i = 0,anz_mm -1 do begin
-				all_sm[*,i]  = mean(all [*,(i mod 12):*:12],dim=2,/nan)
-				land_sm[*,i] = mean(land[*,(i mod 12):*:12],dim=2,/nan)
-				sea_sm[*,i]  = mean(sea [*,(i mod 12):*:12],dim=2,/nan)
-			endfor
-			idx = where(~finite(all_sm),idx_cnt)
-			if idx_cnt gt 0 then all_sm[idx] = -999.
-			idx = where(~finite(land_sm),idx_cnt)
-			if idx_cnt gt 0 then land_sm[idx] = -999.
-			idx = where(~finite(sea_sm),idx_cnt)
-			if idx_cnt gt 0 then sea_sm[idx] = -999.
-			struc = create_struct(struc,'seasonal_mean',{all:all_sm,land:land_sm,sea:sea_sm})
+			if ~is_h1d(dat) then begin
+				anz_mm  = n_elements(struc.all[0,*])
+				all_sm  = fltarr(180,anz_mm)
+				land_sm = fltarr(180,anz_mm)
+				sea_sm  = fltarr(180,anz_mm)
+				all     = struc.all
+				all[where(all eq -999)]=!values.f_nan
+				land    = struc.land
+				land[where(land eq -999)]=!values.f_nan
+				sea     = struc.sea
+				sea[where(sea eq -999)]=!values.f_nan
+				for i = 0,anz_mm -1 do begin
+					all_sm[*,i]  = mean(all [*,(i mod 12):*:12],dim=2,/nan)
+					land_sm[*,i] = mean(land[*,(i mod 12):*:12],dim=2,/nan)
+					sea_sm[*,i]  = mean(sea [*,(i mod 12):*:12],dim=2,/nan)
+				endfor
+				idx = where(~finite(all_sm),idx_cnt)
+				if idx_cnt gt 0 then all_sm[idx] = -999.
+				idx = where(~finite(land_sm),idx_cnt)
+				if idx_cnt gt 0 then land_sm[idx] = -999.
+				idx = where(~finite(sea_sm),idx_cnt)
+				if idx_cnt gt 0 then sea_sm[idx] = -999.
+				struc = create_struct(struc,'seasonal_mean',{all:all_sm,land:land_sm,sea:sea_sm})
+			endif
 			struc = create_struct(struc,{period:datum,longname:longname,unit:unit,minv:minv,maxv:maxv,dist:dist})
 		endif else begin
 			struc.coverage = cov

@@ -2886,6 +2886,12 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		(keyword_set(diff) ? 'difference_':'')+$
 		(keyword_set(mean_2d) ? '2d_mean_':'')+(keyword_set(single_var)? single_var:'multi_var')+'_L3C_'+strcompress(datum,/rem)+ $
 		(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
+		if keyword_set(mean_2d) then begin
+			save_as1 = !SAVE_DIR +'timeseries'+'/'+algon1+'_time_series_2d_mean_'+single_var+'_'+strcompress(datum,/rem)+ $
+			(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
+			save_as2 = !SAVE_DIR +'timeseries'+'/'+algon2+'_time_series_2d_mean_'+single_var+'_'+strcompress(datum,/rem)+ $
+			(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
+		endif
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200,title='CCI CLARA time series'
 
 	set_proj, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat				, $
@@ -2928,8 +2934,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		return
 	endif
 	if keyword_set(mean_2d) then begin
-		start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
-			!p.multi= [0,2,2]
+		start_save, save_as1, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
+			!p.multi= keyword_set(save_as1) ? 0 : [0,2,2]
 			dumdata = d.mean & minv = 0. & maxv = 100.
 			ititle = datum+' '+longname & btitle = algon1+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
@@ -2945,6 +2951,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
 				limit = limit,debug=verbose,format=bar_format)
 			obj_destroy,m
+		end_save, save_as1
+		start_save, save_as2, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
 			dumdata = d.mean2 & minv = 0. & maxv = 100.
 			ititle = datum+' '+longname & btitle = algon2+' '+strupcase(single)+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
@@ -2960,7 +2968,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
 				limit = limit,debug=verbose,format=bar_format)
 			obj_destroy,m
-		end_save,save_as
+		end_save,save_as2
 		if keyword_set(zoom) then begin
 			get_new_corners = 1
 			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete
@@ -2972,11 +2980,11 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 ; 		return
 	endif
 
-	start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
-		plot_simple_timeseries, '2007','01', single_var[0], sat, alg, cov, reference = ref, structure=d,zonal_only=zonal_only,mean_2d=mean_2d, $
+; 	start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
+		plot_simple_timeseries, single_var[0], sat, alg, cov, reference = ref, structure=d,zonal_only=zonal_only,mean_2d=mean_2d, $
 		mini=mini, maxi=maxi,verbose=verbose,oplots=oplots,found=found,win_nr=win_nr,logarithmic=logarithmic,white_bg=white_bg,datum=datum,$
-		show_values = show_values, rot=rot,error=error
-	end_save,save_as
+		show_values = show_values, rot=rot,error=error,save_as=save_as
+; 	end_save,save_as
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
@@ -3605,7 +3613,7 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi = maxi, win_nr = win_nr,$
 		     ctable = ctable, other = other, reference = reference, out = out, land = land, sea = sea,$
-		     oplots = oplots, found = found, nobar = nobar, limit = limit, antarctic=antarctic, arctic=arctic
+		     oplots = oplots, found = found, nobar = nobar, limit = limit, antarctic=antarctic, arctic=arctic, coverage=coverage
 
 	vali_set_path
 	opl   = keyword_set(oplots)
@@ -3645,22 +3653,36 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 	mima = [keyword_set(mini)? mini[0]:d.minv[0],keyword_set(maxi)? maxi[0]:d.maxv[0]]
 	mima=float(mima)
-	nlev = 8 > ((mima[1]-mima[0])/float(d.dist[0]))+1
+	nlev = 8 > ((mima[1]-mima[0])/float(d.dist[0]))+1 < 100
 	nbar = 8 > nlev < 11
 
 	matrix = transpose(d.(struc_idx))
-	mat_sm = transpose(d.SEASONAL_MEAN.(struc_idx))
+	if is_h1d(dat) then begin
+		dum_cov     = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
+		dum_cov     = [dum_cov,dum_cov+'_land',dum_cov+'_sea']
+		bin_borders = (d.bin_borders) 
+		form = stregex(dat,'cla_vis',/fold,/bool) ?  '(f20.2)' : '(f20.1)'
+		idx = where(bin_borders ge 10000.,idxcnt)
+		bin_borders = strcompress(string(bin_borders,f=form),/rem)
+		if idxcnt gt 0 then bin_borders[idx] = strcompress(string(bin_borders[idx],f='(G20.1)'),/rem)
+		dum_cov_idx = where(coverage[0] eq dum_cov,dum_cov_cnt)
+		dum_cov_idx = dum_cov_cnt gt 0 ? (dum_cov_idx mod 9) : 0
+		matrix = reform(matrix[dum_cov_idx,*,*])
+		mat_sm = matrix * 0
+	endif else mat_sm = transpose(d.SEASONAL_MEAN.(struc_idx))
 	datum  = d.period
 	unit   = d.unit
 	ori_period = fix(strsplit(d.period,'-',/ext))
 
 	if keyword_set(ref) then begin
-		d = get_available_time_series( ref, dat, sat, period = datum, /hovmoeller, found = found)
+
+	d = get_available_time_series( ref, dat, sat, period = datum, /hovmoeller, found = found)
 		if ~float(found) then begin
 			ok = dialog_message('plot_hovmoeller: Reference File not found for '+ref+' '+sat+' '+dat)
 			return
 		endif
 		mat_ref = transpose(d.(struc_idx))
+		if is_h1d(dat) then mat_ref = reform(mat_ref[dum_cov_idx,*,*])
 		idx     = where(matrix eq no_data_val[0] or mat_ref eq no_data_val[0],icnt)
 		matrix  = matrix - mat_ref
 		; contour blacks out all values lower or greater than min / max values
@@ -3721,6 +3743,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 		matrix  = [matrix,mat_dummy]
 		mat_sm  = [mat_sm,mat_dummy]
 	endif
+
 	matrix = matrix[anf:eef<((size(matrix,/dim))[0]-1),*]
 	mat_sm = mat_sm[anf:eef<((size(mat_sm,/dim))[0]-1),*]
 
@@ -3762,10 +3785,10 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	si  = size(matrix,/dim)
 
 	print,'Nlevel: ', string(nlev)
-	print,'Minmax: ', string(minmax(matrix,no=no_data_val))
+	print,'Minmax: ', string(minmax(matrix,no=no_data_val,/nan))
 
-	ytickname = ['-90','-60','-30','0','30','60','90']
-	title     = keyword_set(ref) ? 'Difference '+algon+' - '+ref_name+' '+d.longname+' '+unit : algon+' '+d.longname+' '+unit
+	ytickname = is_h1d(dat) ? bin_borders : ['-90','-60','-30','0','30','60','90']
+	title     = keyword_set(ref) ? 'Difference '+algon+' - '+ref_name+' '+d.longname : algon+' '+d.longname
 
 	if keyword_set(land) then title=title+' Land'
 	if keyword_set(sea)  then title=title+' Sea'
@@ -3779,7 +3802,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	plus = form_len eq 1 ? 1 : 0
 	bar_format = '(f'+strcompress(form_len+3+plus,/rem)+'.'+string(1+plus,f='(i1)')+')'
 
-	if keyword_set(limit) then begin
+	if keyword_set(limit) and ~is_h1d(dat) then begin
 		dum_lat   = vector(-89.5,89.5,180.)
 		rnd_limit = rnd(limit,30,/out)
 		if rnd_limit[0] eq rnd_limit[2] then begin
@@ -3799,9 +3822,10 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	endif
 
 	start_save, save_as
-	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[8,3],ymargin=[5,2], $
-		title=title,bar_title=strupcase(dat),no_data_val=no_data_val[0],/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
-		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle='Latitude',c_charsize = 2., format = bar_format, $
+	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[10,4],ymargin=[5,2], $
+		title=title,bar_title=is_h1d(dat) ? 'rel. occur. of '+strreplace(strupcase(dat),'hist1d_','',/fold)+' '+unit:strupcase(dat)+' '+unit,$
+		no_data_val=no_data_val[0],/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
+		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle=is_h1d(dat) ? 'Bin Borders':'Latitude',c_charsize = 2., format = bar_format, $
 		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
 		col_table=col_tab,brewer =brewer,xticklen=0.00001;,xminor=2,col_tab=105,color=(i/7 eq i/7. ? 1:0 )
 		if si[0] eq 12 then axis,xaxis=0,xtickname=[' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],xticks=11,xminor=2
@@ -4100,7 +4124,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-pro plot_simple_timeseries, year,month, varname, satellite, algo, cov, reference = reference, mini=mini, maxi=maxi,$
+pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference, mini=mini, maxi=maxi,$
 			    sav_file = sav_file, verbose=verbose, oplots=oplots, found=found, structure = structure,$
 			    addtext = addtext,error=error,save_as=save_as, win_nr=win_nr,white_bg=white_bg, $
 			    logarithmic=logarithmic,version=version,correct=correct,zonal_only=zonal_only	, $
@@ -4151,7 +4175,7 @@ pro plot_simple_timeseries, year,month, varname, satellite, algo, cov, reference
 ; 	endif
 
 	if keyword_set(save_as) then begin
-		save_as = !save_dir +'/timeseries/'+file_basename(sav_file,'.sav')+'.eps'
+		save_as = save_as eq '1' ? !save_dir +'/timeseries/'+file_basename(sav_file,'.sav')+'.eps' : save_as
 	endif else if win_nr ne -1 then win, win_nr,title=dat
 
 	yrange     = minmax(ts_data[0,*],/nan)
@@ -5368,7 +5392,7 @@ pro do_create_hovmoeller
 	; combine all you need
 	algon_list = ['cci-noaapm']
 
-	data = 'hist1d_'+['cwp','cot','ctp','ctt','cer']
+	data = 'hist1d_'+['ctp','cot','ctt','cer','cwp']
 	data = [data,data+'_liq',data+'_ice']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
@@ -5395,20 +5419,11 @@ pro do_create_hovmoeller
 		dem = get_dem(grid=grid)
 		idx_sea = where(dem eq 0,complement=idx_land)
 		for dd = 0,n_elements(data)-1 do begin
-			if stregex(data[dd],'hist1d',/bool,/fold) then begin
-				if stregex(data[dd],'hist1d_ctp',/fold,/bool) then nbin = 15
-				if stregex(data[dd],'hist1d_ctt',/fold,/bool) then nbin = 16
-				if stregex(data[dd],'hist1d_cot',/fold,/bool) then nbin = 14
-				if stregex(data[dd],'hist1d_cer',/fold,/bool) then nbin = 11
-				if stregex(data[dd],'hist1d_cwp',/fold,/bool) then nbin = 14
-				matrix_all  = fltarr(nbin,nyears*nmonths,9) + !values.f_nan
-				matrix_land = fltarr(nbin,nyears*nmonths,9) + !values.f_nan
-				matrix_sea  = fltarr(nbin,nyears*nmonths,9) + !values.f_nan
-			endif else begin
-				matrix_all  = fltarr(180./lat_res,nyears*nmonths)-999.
-				matrix_land = fltarr(180./lat_res,nyears*nmonths)-999.
-				matrix_sea  = fltarr(180./lat_res,nyears*nmonths)-999.
-			endelse
+			wbins = 1
+			first = 1
+			matrix_all  = fltarr(180./lat_res,nyears*nmonths)-999.
+			matrix_land = fltarr(180./lat_res,nyears*nmonths)-999.
+			matrix_sea  = fltarr(180./lat_res,nyears*nmonths)-999.
 			counti = 0l
 			found_var = 0l
 			for yy=0,nyears-1 do begin
@@ -5422,7 +5437,7 @@ pro do_create_hovmoeller
 						unit = ''
 					endif else begin
 						dum = 	get_data(years[yy],months[mm],file=dum_file,data=data[dd],sat=sat,algo=ref,found=found,no_data_value=no_data_value,$
-							dirname=dirname,/make_compare,/silent,/print_file,/no_recursive)
+							dirname=dirname,/make_compare,/silent,/print_file,/no_recursive,var_dim_names=var_dim_names)
 					endelse
 					if ref eq 'cci' and found then begin
 						num = get_ncdf_data_by_name(dum_file,'number_of_processed_orbits',/global)
@@ -5431,21 +5446,37 @@ pro do_create_hovmoeller
 							found = 0
 						endif
 					endif
-					free,dum_file
 					if found then begin
 						if stregex(data[dd],'hist1d',/bool,/fold) then begin
+							if first then begin
+								nbin        = (size(dum,/dim))[2]
+								matrix_all  = fltarr(nbin,nyears*nmonths,9) -999.
+								matrix_land = fltarr(nbin,nyears*nmonths,9) -999.
+								matrix_sea  = fltarr(nbin,nyears*nmonths,9) -999.
+								first = 0
+							endif
 							for cc = 0,n_elements(coverage)-1 do begin
 								all  = get_coverage(lon,lat,dem=dem,coverage=coverage[cc])
 								land = get_coverage(lon,lat,dem=dem,coverage=coverage[cc]+'_land')
 								sea  = get_coverage(lon,lat,dem=dem,coverage=coverage[cc]+'_sea')
 								for nb = 0, nbin -1 do begin
-									matrix_all [nb,counti,cc] = total(dum[*,*,nb] * all,/nan)
-									matrix_land[nb,counti,cc] = total(dum[*,*,nb] * land,/nan)
-									matrix_sea [nb,counti,cc] = total(dum[*,*,nb] * sea,/nan)
+									matrix_all [nb,counti,cc] = total(dum[*,*,nb]>0l * all,/nan)
+									matrix_land[nb,counti,cc] = total(dum[*,*,nb]>0l * land,/nan)
+									matrix_sea [nb,counti,cc] = total(dum[*,*,nb]>0l * sea,/nan)
 								endfor
 								matrix_all [*,counti,cc] = matrix_all [*,counti,cc] / total(matrix_all [*,counti,cc],/nan) *100.
 								matrix_land[*,counti,cc] = matrix_land[*,counti,cc] / total(matrix_land[*,counti,cc],/nan) *100.
 								matrix_sea [*,counti,cc] = matrix_sea [*,counti,cc] / total(matrix_sea [*,counti,cc],/nan) *100.
+								if wbins then begin
+									if keyword_set(var_dim_names) then begin
+										dum_bin_val = get_ncdf_data_by_name(dum_file,var_dim_names[2],found=found)
+										dum_border  = get_ncdf_data_by_name(dum_file,strreplace(var_dim_names[2],'_centre','_border'),found=found_border)
+										wbins = 0
+									endif else begin
+										dum_bin_val = -1
+										dum_border  = -1
+									endelse
+								endif
 							endfor
 						endif else begin
 							matrix_all[*,counti]  = zonal_average(dum,lat,fillvalue=no_data_value,/mean,lat_res=lat_res)
@@ -5454,13 +5485,14 @@ pro do_create_hovmoeller
 						endelse
 						found_var++
 					endif
-					
+					free,dum_file
 					counti++
 				endfor
 			endfor
 			if found_var gt 0 then begin
 				print,'Saved -> '+!SAVS_DIR + 'time_series/hovmoeller/'+data[dd]+'_hovmoeller_'+datestr+'_'+ref+era+'_'+sat+'.sav'
-				save_var,{all:matrix_all,land:matrix_land,sea:matrix_sea} ,!SAVS_DIR + 'time_series/hovmoeller/'+data[dd]+'_hovmoeller_'+datestr+'_'+ref+era+'_'+sat+'.sav'
+				save_var,{all:matrix_all,land:matrix_land,sea:matrix_sea,bin_vals:dum_bin_val,bin_borders:dum_border} ,$
+				!SAVS_DIR + 'time_series/hovmoeller/'+data[dd]+'_hovmoeller_'+datestr+'_'+ref+era+'_'+sat+'.sav'
 			endif
 			free,matrix_all
 			free,matrix_land
