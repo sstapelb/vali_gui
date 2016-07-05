@@ -2884,7 +2884,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	if keyword_set(save_as) then begin 
 		save_as = !SAVE_DIR +'timeseries'+'/'+algon1+'_vs_'+algon2+'_time_series_'+$
 		(keyword_set(diff) ? 'difference_':'')+$
-		(keyword_set(mean_2d) ? '2d_mean_':'')+(keyword_set(single_var)? single_var:'multi_var')+'_L3C_'+datum+ $
+		(keyword_set(mean_2d) ? '2d_mean_':'')+(keyword_set(single_var)? single_var:'multi_var')+'_L3C_'+strcompress(datum,/rem)+ $
 		(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200,title='CCI CLARA time series'
 
@@ -5346,6 +5346,7 @@ end
 pro do_create_hovmoeller
 
 	plot_l3
+	coverage   = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	data       = ['cfc_twl','cfc_low','cfc_mid','cfc_high','cfc','cfc_day','cfc_night','ctp','cot','cot_liq','cot_ice','ctt',$
 		      'cth','cer','cer_liq','cer_ice','cwp','iwp','lwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky','sal']
 	avh_list   = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
@@ -5365,7 +5366,10 @@ pro do_create_hovmoeller
 	era_list = ['era-']
 
 	; combine all you need
-; 	algon_list = [gac2_list,pmx_list,coll6_list,coll5_list,gac_list]
+	algon_list = ['cci-noaapm']
+
+	data = 'hist1d_'+['cwp','cot','ctp','ctt','cer']
+	data = [data,data+'_liq',data+'_ice']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')
@@ -5390,11 +5394,21 @@ pro do_create_hovmoeller
 		make_geo,lon,lat,grid = grid
 		dem = get_dem(grid=grid)
 		idx_sea = where(dem eq 0,complement=idx_land)
-
 		for dd = 0,n_elements(data)-1 do begin
-			matrix_all  = fltarr(180./lat_res,nyears*nmonths)-999.
-			matrix_land = fltarr(180./lat_res,nyears*nmonths)-999.
-			matrix_sea  = fltarr(180./lat_res,nyears*nmonths)-999.
+			if stregex(data[dd],'hist1d',/bool,/fold) then begin
+				if stregex(data[dd],'hist1d_ctp',/fold,/bool) then nbin = 15
+				if stregex(data[dd],'hist1d_ctt',/fold,/bool) then nbin = 16
+				if stregex(data[dd],'hist1d_cot',/fold,/bool) then nbin = 14
+				if stregex(data[dd],'hist1d_cer',/fold,/bool) then nbin = 11
+				if stregex(data[dd],'hist1d_cwp',/fold,/bool) then nbin = 14
+				matrix_all  = fltarr(nbin,nyears*nmonths,9) + !values.f_nan
+				matrix_land = fltarr(nbin,nyears*nmonths,9) + !values.f_nan
+				matrix_sea  = fltarr(nbin,nyears*nmonths,9) + !values.f_nan
+			endif else begin
+				matrix_all  = fltarr(180./lat_res,nyears*nmonths)-999.
+				matrix_land = fltarr(180./lat_res,nyears*nmonths)-999.
+				matrix_sea  = fltarr(180./lat_res,nyears*nmonths)-999.
+			endelse
 			counti = 0l
 			found_var = 0l
 			for yy=0,nyears-1 do begin
@@ -5419,11 +5433,28 @@ pro do_create_hovmoeller
 					endif
 					free,dum_file
 					if found then begin
-						matrix_all[*,counti]  = zonal_average(dum,lat,fillvalue=no_data_value,/mean,lat_res=lat_res)
-						matrix_land[*,counti] = zonal_average(dum[idx_land],lat[idx_land],fillvalue=no_data_value,/mean,lat_res=lat_res)
-						matrix_sea[*,counti]  = zonal_average(dum[idx_sea],lat[idx_sea],fillvalue=no_data_value,/mean,lat_res=lat_res)
+						if stregex(data[dd],'hist1d',/bool,/fold) then begin
+							for cc = 0,n_elements(coverage)-1 do begin
+								all  = get_coverage(lon,lat,dem=dem,coverage=coverage[cc])
+								land = get_coverage(lon,lat,dem=dem,coverage=coverage[cc]+'_land')
+								sea  = get_coverage(lon,lat,dem=dem,coverage=coverage[cc]+'_sea')
+								for nb = 0, nbin -1 do begin
+									matrix_all [nb,counti,cc] = total(dum[*,*,nb] * all,/nan)
+									matrix_land[nb,counti,cc] = total(dum[*,*,nb] * land,/nan)
+									matrix_sea [nb,counti,cc] = total(dum[*,*,nb] * sea,/nan)
+								endfor
+								matrix_all [*,counti,cc] = matrix_all [*,counti,cc] / total(matrix_all [*,counti,cc],/nan) *100.
+								matrix_land[*,counti,cc] = matrix_land[*,counti,cc] / total(matrix_land[*,counti,cc],/nan) *100.
+								matrix_sea [*,counti,cc] = matrix_sea [*,counti,cc] / total(matrix_sea [*,counti,cc],/nan) *100.
+							endfor
+						endif else begin
+							matrix_all[*,counti]  = zonal_average(dum,lat,fillvalue=no_data_value,/mean,lat_res=lat_res)
+							matrix_land[*,counti] = zonal_average(dum[idx_land],lat[idx_land],fillvalue=no_data_value,/mean,lat_res=lat_res)
+							matrix_sea[*,counti]  = zonal_average(dum[idx_sea],lat[idx_sea],fillvalue=no_data_value,/mean,lat_res=lat_res)
+						endelse
 						found_var++
 					endif
+					
 					counti++
 				endfor
 			endfor

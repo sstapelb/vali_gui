@@ -42,6 +42,7 @@
 @/cmsaf/nfshome/sstapelb/idl/unix2ymdhms.pro
 @/cmsaf/nfshome/sstapelb/idl/ymdhms2unix.pro
 @/cmsaf/nfshome/sstapelb/idl/dom.pro
+@/cmsaf/nfshome/sstapelb/idl/rene/true_color_index.pro
 @/cmsaf/nfshome/sstapelb/idl/make_cool_contour.pro
 @/cmsaf/nfshome/sstapelb/idl/adv_tempname.pro
 @/cmsaf/nfshome/sstapelb/idl/is_compressed.pro
