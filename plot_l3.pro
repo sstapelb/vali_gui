@@ -3653,7 +3653,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 	mima = [keyword_set(mini)? mini[0]:d.minv[0],keyword_set(maxi)? maxi[0]:d.maxv[0]]
 	mima=float(mima)
-	nlev = 8 > ((mima[1]-mima[0])/float(d.dist[0]))+1 < 100
+	nlev = 8 > ((mima[1]-mima[0])/float(d.dist[0]))+1 < 30
 	nbar = 8 > nlev < 11
 
 	matrix = transpose(d.(struc_idx))
@@ -5390,10 +5390,10 @@ pro do_create_hovmoeller
 	era_list = ['era-']
 
 	; combine all you need
-	algon_list = ['cci-noaapm']
+	algon_list = 'cci-'+['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','noaaam']
 
 	data = 'hist1d_'+['ctp','cot','ctt','cer','cwp']
-	data = [data,data+'_liq',data+'_ice']
+	data = ['cph_day','iwp_allsky','lwp_allsky','cwp_allsky',data,data+'_liq',data+'_ice']
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1   ,f='(i2.2)')
@@ -5401,7 +5401,8 @@ pro do_create_hovmoeller
 	nyears     = n_elements(years)
 	nmonths    = n_elements(months)
 	lat_res    = 1.
-
+	dum_bin_val = -1
+	dum_border  = -1
 	for k = 0,n_elements(algon_list) -1 do begin
 		dum    = strsplit(algon_list[k],'-',/ext)
 		ref    = dum[0]
@@ -5419,6 +5420,8 @@ pro do_create_hovmoeller
 		dem = get_dem(grid=grid)
 		idx_sea = where(dem eq 0,complement=idx_land)
 		for dd = 0,n_elements(data)-1 do begin
+			dum_bin_val = -1
+			dum_border  = -1
 			wbins = 1
 			first = 1
 			matrix_all  = fltarr(180./lat_res,nyears*nmonths)-999.
@@ -5467,15 +5470,10 @@ pro do_create_hovmoeller
 								matrix_all [*,counti,cc] = matrix_all [*,counti,cc] / total(matrix_all [*,counti,cc],/nan) *100.
 								matrix_land[*,counti,cc] = matrix_land[*,counti,cc] / total(matrix_land[*,counti,cc],/nan) *100.
 								matrix_sea [*,counti,cc] = matrix_sea [*,counti,cc] / total(matrix_sea [*,counti,cc],/nan) *100.
-								if wbins then begin
-									if keyword_set(var_dim_names) then begin
-										dum_bin_val = get_ncdf_data_by_name(dum_file,var_dim_names[2],found=found)
-										dum_border  = get_ncdf_data_by_name(dum_file,strreplace(var_dim_names[2],'_centre','_border'),found=found_border)
-										wbins = 0
-									endif else begin
-										dum_bin_val = -1
-										dum_border  = -1
-									endelse
+								if wbins and keyword_set(var_dim_names) then begin
+									dum_bin_val = get_ncdf_data_by_name(dum_file,var_dim_names[2],found=found)
+									dum_border  = get_ncdf_data_by_name(dum_file,strreplace(var_dim_names[2],'_centre','_border'),found=found_border)
+									wbins = 0
 								endif
 							endfor
 						endif else begin

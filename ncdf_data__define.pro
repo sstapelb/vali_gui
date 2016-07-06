@@ -4203,6 +4203,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('Choose Reference Dataset!')
 				return
 			endif
+			if (pcsing and pchov) then begin
+				ok = dialog_message('Use "Multi Time Steps" for Hovmoeller plots!')
+				return
+			endif
 			if select then begin
 ; 				ok = dialog_message('Select not possible for "Compare Variable". Choose "File Difference" instead!')
 ; 				return
@@ -4306,7 +4310,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			histo1d = is_h1d(varname[0])
 
-			if histo1d and pcmult then begin
+			if histo1d and pcmult and ~pchov then begin
 				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean'
 				if ~(histo1d and strlowcase(hct[0]) eq '1d') then !p.multi=[0,2,2]
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, orbit = orbit, $
@@ -4322,7 +4326,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			; erstmal nicht belegt
 			; print,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov
-			if (pcms) or (pcts and pcsing) or (pchov and pcsing) then begin
+			if (pcms) or (pcts and pcsing) then begin
 				ok = dialog_message(pcmatts ? 'This combi is currently not set!':'This combi is currently not set! Try "Multi Time Steps" instead!')
 				return
 			endif
@@ -4420,7 +4424,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				if verbose then print,'Hovmoeller Time Series'
 				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
-				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit
+				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit,coverage=cov
 				if show_values then begin
 					if ~keyword_set(nobar) then begin
 						print,'Set "No Bar" to get Pixel Values'
@@ -4765,7 +4769,7 @@ if sel then sat  = self.satname
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcts and ~hist2d then begin
 				; time series
-				plot_simple_timeseries, year[0],month[0],varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,$
+				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values;,correct=show_values
 				if ~found then opl = 0 > (self.oplotnr -=1 )
