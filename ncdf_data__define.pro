@@ -2055,6 +2055,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	if where(tag_names(theglobattr) eq 'TITLE') ge 0 then begin
 		tcd = (theglobattr).title
 		if verb then print,'TITLE: ',tcd
+		if stregex(tcd,'CALIPSO',/fold,/bool)  then algoname = 'CALIPSO'
 		if stregex(tcd,'CLARA-A1',/fold,/bool) then algoname = 'CLARA'
 		if stregex(tcd,'CLARA-A2',/fold,/bool) then algoname = 'CLARA2'
 		if stregex(tcd,'CLAAS',/fold,/bool)    then algoname = 'CLAAS'
@@ -2141,7 +2142,6 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	if where(tag_names(theglobattr) eq 'PLATFORM') ge 0 then begin
 		tcd = (theglobattr).platform
 		if verb then print,'PLATFORM: ',tcd
-
 		satname  = strjoin(strlowcase(strjoin(strsplit((strsplit(tcd,'_',/ext))[0],'-',/ext))),',')
 		if algoname eq 'CLARA2' then begin
 			dumsatn = strcompress((strsplit(satname,'>',/ext))[0],/rem)
@@ -4771,7 +4771,7 @@ if sel then sat  = self.satname
 				; time series
 				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values;,correct=show_values
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values,correct=nobar
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pchist then begin
 				; histogram
@@ -4823,7 +4823,7 @@ if sel then sat  = self.satname
 
 			if show_values and is_defined(bild) then begin
 				if is_defined(lon) and is_defined(lat) then begin
-					show_pixel_value, bild, lon, lat, data = varname, unit = unit, wtext = self.showpvalID
+					if ~(hist2d and strlowcase(strmid(hct[0],0,2)) eq '1d') then show_pixel_value, bild, lon, lat, data = varname, unit = unit, wtext = self.showpvalID
 				endif
 			endif
 			; reset values

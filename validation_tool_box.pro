@@ -4954,24 +4954,35 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if idx_cnt gt 0 then outdata[idx]=no_data_value[0]
 		endelse
 		longname = 'Joint cloud property Histogram of ice and water clouds'
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','era-i','calipso']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
 		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit, found = found, $
 		verbose = verbose, var_dim_names=var_dim_names , silent=silent
 		if not found then return,-1
 		; total ist "total" langsam ca. 0.95 sek im vergleich zu 0.15 sek!!!
 ;   		outdata  = total(outdata>0,5)
-		if is_jch(dat,/combined) then begin
-			idx  = where(outdata[*,*,*,*,0] eq no_data_value[0] and outdata[*,*,*,*,1] eq no_data_value[0],idx_cnt)
-			outdata = reform((outdata[*,*,*,*,0]>0)+(outdata[*,*,*,*,1]>0))
-			if idx_cnt gt 0 then outdata[idx] = no_data_value[0]
-		endif
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_jch(dat,/liquid)) then begin
+		if alg eq 'calipso' then begin
+			if is_jch(dat,/combined) then begin
+				idx  = where(outdata[*,*,*,*,0] eq no_data_value[0] and $
+				outdata[*,*,*,*,1] eq no_data_value[0] and outdata[*,*,*,*,2] eq no_data_value[0],idx_cnt)
+				outdata = reform((outdata[*,*,*,*,0]>0)+(outdata[*,*,*,*,1]>0)+(outdata[*,*,*,*,2]>0))
+				if idx_cnt gt 0 then outdata[idx] = no_data_value[0]
+			endif else begin
+				outdata = outdata[*,*,*,*,0:1]
+			endelse
+		endif else begin
+			if is_jch(dat,/combined) then begin
+				idx  = where(outdata[*,*,*,*,0] eq no_data_value[0] and outdata[*,*,*,*,1] eq no_data_value[0],idx_cnt)
+				outdata = reform((outdata[*,*,*,*,0]>0)+(outdata[*,*,*,*,1]>0))
+				if idx_cnt gt 0 then outdata[idx] = no_data_value[0]
+			endif
+		endelse
+	endif else if (total(alg eq ['clara2','claas','esacci','era-i','calipso']) and is_jch(dat,/liquid)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
 		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,0])
 		longname = longname+' liquid only'
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_jch(dat,/ice)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','era-i','calipso']) and is_jch(dat,/ice)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
 		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
@@ -4994,7 +5005,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata = (reform(outdata[*,*,*,*,0] - outdata[*,*,*,*,1]))
 		longname = longname+' ice only'
-	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i']) and is_h1d(dat,/combined)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i','calipso']) and is_h1d(dat,/combined)) then begin
 		if total(alg eq ['coll5','coll6']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or stregex(dat,'cwp',/fold,/bool)) then begin
 			read_data, filename[0] , dat+'_liq', ice, no_data_valuei, minvalue, maxvalue, longname1, unit, found = found, verbose = verbose , silent=silent
 			read_data, filename[0] , dat+'_ice', liq, no_data_value, minvalue, maxvalue, longname, unit, found = found1, verbose = verbose , silent=silent
@@ -5014,7 +5025,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				if not found then return,-1
 				liq  = reform(outdata[*,*,0,*])
 				ice  = reform(outdata[*,*,1,*])
-				idx  = where(liq eq no_data_value[0] or ice eq no_data_value[0],idxcnt)
+				idx  = where(liq eq no_data_value[0] and ice eq no_data_value[0],idxcnt)
 				outdata = (liq > 0) + (ice > 0)
 				if idxcnt gt 0 then outdata[idx] = no_data_value[0]
 				longname = 'Cloud Top Temperature (Day) liquid + ice'
@@ -5022,10 +5033,21 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				read_data, filename[0] , dat, outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
 				found = found, verbose = verbose , silent=silent
 				if not found then return,-1
-				if ~total(alg eq ['coll5']) then outdata = reform((outdata[*,*,*,0]>0)+(outdata[*,*,*,1]>0))
+				if ~total(alg eq ['coll5']) then begin
+					if alg eq 'calipso' then begin
+						idx = where(outdata[*,*,*,0] eq no_data_value[0] and outdata[*,*,*,1] eq no_data_value[0] and $
+						outdata[*,*,*,2] eq no_data_value[0],idxcnt)
+						outdata = reform((outdata[*,*,*,0]>0)+(outdata[*,*,*,1]>0)+(outdata[*,*,*,2]>0))
+						if idxcnt gt 0 then outdata[idx] = no_data_value[0]
+					endif else begin
+						idx = where(outdata[*,*,*,0] eq no_data_value[0] and outdata[*,*,*,1] eq no_data_value[0],idxcnt)
+						outdata = reform((outdata[*,*,*,0]>0)+(outdata[*,*,*,1]>0))
+						if idxcnt gt 0 then outdata[idx] = no_data_value[0]
+					endelse
+				endif
 			endelse
 		endelse
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_h1d(dat,/liquid) ) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','era-i','calipso']) and is_h1d(dat,/liquid) ) then begin
 		read_data, filename[0] , strreplace(dat,'_liq',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
 		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
@@ -5052,7 +5074,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,0,*])
 		longname = 'Cloud Top Temperature (Day) liquid only'
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i']) and is_h1d(dat,/ice)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','era-i','calipso']) and is_h1d(dat,/ice)) then begin
 		read_data, filename[0] , strreplace(dat,'_ice',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
 		found = found, verbose = verbose , silent=silent
 		if not found then return,-1
@@ -5079,10 +5101,11 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,1,*])
 		longname = 'Cloud Top Temperature (Day) ice only'
-	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i']) and is_h1d(dat,/ratio)) then begin
-		if total(alg eq ['clara2','claas','esacci','era-i']) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i','calipso']) and is_h1d(dat,/ratio)) then begin
+		if total(alg eq ['clara2','claas','esacci','era-i','calipso']) then begin
 			read_data, filename[0] , strreplace(dat,'_ratio',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,$
 			var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+			if alg eq 'calipso' then outdata = outdata[*,*,*,0:1]
 			if not found then return,-1
 		endif else if total(alg eq ['coll5','coll6']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or stregex(dat,'cwp',/fold,/bool)) then begin
 			read_data, filename[0] , dat+'_liq', ice, no_data_value, minvalue, maxvalue, longname1, unit, found = found, verbose = verbose , silent=silent
@@ -5158,7 +5181,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else found = 0
 	endif else begin
 		read_data, filename[0], dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, verbose = verbose, raw=raw,$
-		found = found, algo =alg, silent=silent
+		found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
 		if ~found and alg eq 'esacci' and strmid(dat,0,8) eq 'cc_total' then begin
 			read_data, filename[0], strreplace(dat,'cc_total','cfc'), outdata, no_data_value, minvalue, maxvalue, longname, unit, $
 			verbose = verbose, raw=raw,found = found, algo =alg, silent=silent
@@ -6106,6 +6129,28 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 					else	: idxse = [0, 4,10,14] ; 'cu'
 				endcase
 			  end
+		'calipso': begin
+				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
+				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
+				case strlowcase(hist_cloud_type) of
+					; low
+					'cu'	: idxse = [0, 4,10,14]
+					'sc'	: idxse = [5, 8,10,14]
+					'st'	: idxse = [9,12,10,14]
+					'low'	: idxse = [0,12,10,14]
+					; mid level
+					'ac'	: idxse = [0, 4, 6, 9]
+					'as'	: idxse = [5, 8, 6, 9]
+					'ns'	: idxse = [9,12, 6, 9]
+					'mid'	: idxse = [0,12, 6, 9]
+					; high
+					'ci'	: idxse = [0, 4, 0, 5]
+					'cs'	: idxse = [5, 8, 0, 5]
+					'cb'	: idxse = [9,12, 0, 5]
+					'high'	: idxse = [0,12, 0, 5]
+					else	: idxse = [0, 4,10,14] ; 'cu'
+				endcase
+			  end
 		'coll5'	: begin
 				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
 				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
@@ -6439,7 +6484,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 			cci_hist_ctp=dum
 		endif
 		;	plev_claas_clara2 = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-		if total(alg eq ['esacci','clara2','claas','era-i']) then begin
+		if total(alg eq ['esacci','clara2','claas','era-i','calipso']) then begin
 			dum = fltarr(7)
 			for i = 0,5 do dum[i] = total(cci_hist_ctp[2*i:(2*i)+1])
 			dum[6] = total(cci_hist_ctp[12:*])
@@ -6463,7 +6508,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 			cci_hist_cot=cci_hist_cot[1:*]
 		endif
 		;	tau_clara_clara2_claas  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-		if total(alg eq ['esacci','clara','clara2','claas','era-i']) then begin
+		if total(alg eq ['esacci','clara','clara2','claas','era-i','calipso']) then begin
 			dum = fltarr(6)
 			dum[0] = total(cci_hist_cot[0:2])
 			for i = 1,5 do dum[i] = total(cci_hist_cot[((2*i)+1):(2*(i+1))])
@@ -6530,7 +6575,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 
 	si = size(bild,/dim)
 
-	if total(alg eq ['esacci','clara','clara2','claas','era-i']) then begin
+	if total(alg eq ['esacci','clara','clara2','claas','era-i','calipso']) then begin
 		; plev_claas_clara2 = reverse([1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100])
 		; plev_clara = reverse([10,90,180,145,310,375,440,500,560,620,680,740,800,950,1100])
 		; tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
@@ -6540,7 +6585,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		for i = 1,5 do qwe[i,*] = bild[(i*2)+1,*] + bild[(i+1)*2,*]
 		bild = qwe
 		qwe  = fltarr(6,7)
-		if total(alg eq ['esacci','claas','clara2','era-i']) then begin
+		if total(alg eq ['esacci','claas','clara2','era-i','calipso']) then begin
 			qwe[*,0] = total(bild[*,0:2],2)
 			for i = 1,6 do qwe[*,i] = bild[*,(2*i)+1] + bild[*,(2*i)+2]
 		endif else for i = 0,6 do qwe[*,i] = bild[*,2*i] + bild[*,(2*i)+1]
