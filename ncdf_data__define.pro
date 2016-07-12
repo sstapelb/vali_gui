@@ -5189,18 +5189,21 @@ PRO NCDF_DATA::ReadVarPlusFromGUI, event
 ;    Widget_Control, theSelection, Get_Value=varName
 ;    index = Where(theList EQ varName, count)
 	; Beobachten ob das immer funktioniert
+	
 	Widget_Control, theSelection, Get_UValue=UName
-	varname = strjoin(UName,'/')
-	index   = Where(theList EQ varName, count)
-   IF count GT 0 THEN BEGIN
-      Widget_Control, self.varpluslistID, SET_DROPLIST_SELECT=index
-;       Widget_Control, self.varplusnameID, Set_Value=IDL_ValidName(theList[index], /CONVERT_ALL)
-      Widget_Control, self.varplusnameID, Set_Value=theList[index]
-   ENDIF
-   
-   ; Get it going...
-   Widget_Control, tlb, /REALIZE
-   XMANAGER, 'read_and_leave', tlb, EVENT_HANDLER='NCDF_DATA_WIDGET_EVENTS', /NO_BLOCK
+	if size(UName,/type) gt 0 then begin
+		varname = strjoin(UName,'/')
+		index   = Where(theList EQ varName, count)
+		IF count GT 0 THEN BEGIN
+			Widget_Control, self.varpluslistID, SET_DROPLIST_SELECT=index
+			;       Widget_Control, self.varplusnameID, Set_Value=IDL_ValidName(theList[index], /CONVERT_ALL)
+			Widget_Control, self.varplusnameID, Set_Value=theList[index]
+		ENDIF
+
+		; Get it going...
+		Widget_Control, tlb, /REALIZE
+		XMANAGER, 'read_and_leave', tlb, EVENT_HANDLER='NCDF_DATA_WIDGET_EVENTS', /NO_BLOCK
+	endif
 END ;---------------------------------------------------------------------------------------------
 
 

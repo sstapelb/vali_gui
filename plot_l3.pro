@@ -1417,12 +1417,12 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 			endif else begin
 				; relative or not relative sis is se question.
-				relative = 1
+				relative = 0
 				bild = get_hct_data(hct,reform(bild[*,*,*,*,0]),algo,sdum=sdum,found=found,relative=relative)
 				minvalue = 0
-				maxvalue = max(bild)
+				maxvalue = relative ? 100. : max(bild)
 				rat = get_hct_ratio(bild,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,$
-						    lat=lat,dem=dem,land=land,sea=sea,void_index=void_index)
+						    lat=lat,dem=dem,land=land,sea=sea,void_index=void_index,relative=relative)
 				print,strupcase(hct)+'/all Ratio '+algon+'  : '+rat
 				if relative then title = strupcase(hct)+' Clouds Fraction [%]'
 			endelse
@@ -2669,7 +2669,9 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	if stregex(dat,'_mid',/fold,/bool)   then dtn = ' - MID'
 	if stregex(dat,'_high',/fold,/bool)  then dtn = ' - HIGH'
 	if stregex(dat,'_liq',/fold,/bool)   then dtn = ' - LIQUID'
+	if stregex(dat,'_sc_liq',/fold,/bool)   then dtn = ' - (SC) LIQUID'
 	if stregex(dat,'_ice',/fold,/bool)   then dtn = ' - ICE'
+	if stregex(dat,'_th_ice',/fold,/bool)   then dtn = ' - (TH) ICE'
 	if stregex(dat,'_allsky',/fold,/bool) then dtn = ' - Allsky'
 	sn_cov = short_cov_name(coverage)
 	if keyword_set(sn_cov) and keyword_set(no_compare) then dtn += ' - '+ sn_cov
@@ -4184,7 +4186,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	sat        = strlowcase(strjoin(strsplit(satellite,'-',/ex)))
 	anomalies  = stregex(varname,'_anomalies',/bool)
 	if anomalies then dat = strreplace(dat,'_anomalies','')
-
+	trend = keyword_set(trend)
 	if keyword_set(structure) then begin
 		d = structure
 	endif else begin
@@ -5097,16 +5099,8 @@ pro create_time_series,data,algon,coverage
 
 		yyyy=years[yy1]
 		mmmm=months[mm1]
-		if cli eq 'cal' then begin
-			dum_file ='calipso file!'
-			tmp = restore_var(!SAVS_DIR + 'calipso_l3c_2degree/'+yyyy+mmmm+'_CALIPSO_CFC_COD_gt_01.sav',found=found)
-			if found then tmp = tmp.mean
-			fv  = -999.
-			unit = ''
-		endif else begin
-			tmp = get_data(	yyyy,mmmm,file=dum_file,data=dat,algo=cli,sat=sat,level=lev,found=found,no_data_val=fv,unit=unit,/silent,$
+		tmp = get_data(	yyyy,mmmm,file=dum_file,data=dat,algo=cli,sat=sat,level=lev,found=found,no_data_val=fv,unit=unit,/silent,$
 				/make_compare,dirname=dirname,/no_recursive)
-		endelse
 		if found then begin
 			if( (total(tmp) eq 0) or (mean(tmp) eq fv) ) then begin 
 				print,( total(tmp) eq 0) ? 'Alles Nuller' : 'Nur Fillvalues!'
@@ -5122,7 +5116,6 @@ pro create_time_series,data,algon,coverage
 		endif
 		if (found) then begin
 			print, algon1+': '+get_product_name(dat,algo=cli)+' '+yyyy+'/'+mmmm+' (File: '+temporary(dum_file)+')'
-			if cli eq 'cal' then found_unc = 0 else $
 			unc = get_data(	yyyy,mmmm,data=dat+'_unc',algo=cli,sat=sat,level=lev,found=found_unc,no_data_val=fv_unc,/silent,$
 					/make_compare,dirname=dirname,/no_recursive)
 			for ii = 0, dim_cov -1 do begin
@@ -5266,6 +5259,7 @@ pro do_create_all_single_time_series
 
 	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctt',$
 		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
+
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 
@@ -5284,7 +5278,23 @@ pro do_create_all_single_time_series
 	; coll5
 	coll5_list = ['myd-','mod-']
 	; era-interim
-	era_list = ['era-']
+	era_list = ['cal-calipso']
+
+	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctt',$
+		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
+data = [ $
+'ctp_mean_all', $
+'ctp_mean_liq', $
+'ctp_mean_ice', $
+'ctp_mean_th_ice', $
+'ctp_mean_sc_liq', $
+'cfc_allclouds', $
+'cfc_allclouds_max', $
+'cfc_cloudsgt01', $
+'cfc_cloudsgt02', $
+'cfc_cloudsgt03', $
+'cfc_allclouds_day', $
+'cfc_allclouds_night']
 
 	; combine all you need
 	algon_list = era_list
@@ -5631,6 +5641,10 @@ pro linear_trend
 		counti++
 	    endfor
 	endfor
+
+	
+	read_ncdf,'/cmsaf/cmsaf-cld6/mstengel/data/ERAInterim/TskinTcwvPsfc_075x075/ERAInterim_entireperiod_TskinTcwvPsfc_075x075.nc','skt',array
+	xdim = 480 & ydim = 241
 
 	lfit = fltarr(xdim,ydim) + !values.f_nan
 

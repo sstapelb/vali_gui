@@ -239,6 +239,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'hist2d_cot_ctp_ice'	: dat = 'jch_ice'
 				'cot_ctp_hist2d_ratio'	: dat = 'jch_ratio'
 				'hist2d_cot_ctp_ratio'	: dat = 'jch_ratio'
+				'cot_ctp_hist2d_mixed'	: dat = 'jch_mixed'
+				'hist2d_cot_ctp_mixed'	: dat = 'jch_mixed'
 				'cc_total' 		: dat = 'cfc'
 				'a_ca'			: dat = 'cfc'
 				'cwp_ice'		: dat = 'iwp'
@@ -462,7 +464,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	return, keyword_set(upper_case) ? strupcase(dat) : strlowcase(dat)
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function is_jch, name, liquid = liquid, ice = ice, combined = combined, ratio=ratio
+function is_jch, name, liquid = liquid, ice = ice, combined = combined, ratio=ratio, mixed = mixed
 
 	if (keyword_set(liquid) + keyword_set(ice)) eq 2 then begin
 		liquid = 0
@@ -477,17 +479,20 @@ function is_jch, name, liquid = liquid, ice = ice, combined = combined, ratio=ra
 	if keyword_set(ice)      then return, (get_product_name(name[0],alg='clara') eq 'jch_ice')
 	; ratio liq/(liq+ice)
 	if keyword_set(ratio)    then return, (get_product_name(name[0],alg='clara') eq 'jch_ratio')
+	; mixed / unknown so far Calipso only
+	if keyword_set(mixed)    then return, (get_product_name(name[0],alg='clara') eq 'jch_mixed')
 	; all jchs
 	return, (strmid(get_product_name(name[0],alg='clara'),0,3) eq 'jch')
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = combined
+function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = combined, mixed = mixed
 
 	dat = get_product_name(name[0],alg='cci')
 	if (keyword_set(liquid) + keyword_set(ice)) eq 2 then begin
 		liquid = 0
 		ice = 0
 		combined = 1
+		mixed = 0
 	endif
 
 	if stregex(dat,'_bin_',/fold,/bool) then return,0
@@ -495,13 +500,16 @@ function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = com
 	hist1d_liq = hist1d and stregex(dat,'_liq',/bool)
 	hist1d_ice = hist1d and stregex(dat,'_ice',/bool)
 	hist1d_rat = hist1d and stregex(dat,'_ratio',/bool)
-	hist1d_com = hist1d and ~hist1d_liq and ~hist1d_ice and ~hist1d_rat
+	hist1d_mix = hist1d and stregex(dat,'_mixed',/bool)
+	hist1d_com = hist1d and ~hist1d_liq and ~hist1d_ice and ~hist1d_rat and ~hist1d_mix
 	; only liquid
 	if keyword_set(liquid)   then return, hist1d_liq
 	; only ice
 	if keyword_set(ice)      then return, hist1d_ice
 	; only ratio
 	if keyword_set(ratio)    then return, hist1d_rat
+	; only mixed
+	if keyword_set(mixed)    then return, hist1d_mix
 	; liquid + ice
 	if keyword_set(combined) then return, hist1d_com
 
@@ -3221,7 +3229,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 	endif
 	if lev eq 'l3c' then dd = ''
 	if keyword_set(dd) then dd = string(dd,f='(i2.2)')
-	orb   = keyword_set(orbit) ? strcompress(orbit,/rem) : '' 
+	orb   = adv_keyword_set(orbit) ? strcompress(orbit,/rem) : '' 
 	sat   = keyword_set(satellite)  ? strupcase(strjoin(strsplit(satellite,/ext,'-')))  : 'Sat Unknown'
 	if stregex(sat,'NOAA',/bool) then sat = strjoin(strmid(sat,[0,4],[4,2]),'-')
 	alg   = keyword_set(algo) ? ref2algo(algo,sat=sat,/upper)  : ''
@@ -3252,15 +3260,20 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 
 	case inst of
 		'CALIPSO': begin
-				if alg eq 'CALIPSO' then begin
-					if lev eq 'l3c' then begin
-						if dat eq 'cfc' or dat eq 'cfc_std' then begin
-							filen = !SAVS_DIR + 'calipso_l3c_2degree/'+yyyy+mm+'_CALIPSO_CFC_COD_gt_01.sav'
-						endif else begin
-							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/mstengel/data/Calipso/CLIM/'+yyyy+'/'
-							filen = dir+'CALIPSO_CTPCFC_climatology_deg2.0_'+yyyy+mm+'.nc'
-						endelse
-					endif
+				if lev eq 'l2' then begin
+					km1 = 1 ; 1: take 1kmClay or 0: take 5kmClay
+					if keyword_set(node) then begin
+						dn = node eq 'asc' ? 'D' : 'N' ; asc:daylight,desc:night
+					endif else dn = '*'
+					orbdum = strlen(orb) eq 4 ? strjoin(strmid(orb,[0,2],[2,2]),'-') : '*'
+					zwischdir = km1 ? '1kmClay/' : ''
+					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld1/thanschm/VALIDATION/DATASETS/CALIOP/'+zwischdir+yyyy+'/'+mm+'/'+dd+'/'
+					filen = dir+'CAL_LID_L2_0?kmCLay-*-V3-01.'+yyyy+'-'+mm+'-'+dd+'T'+orbdum+'-*Z'+dn+'.hdf'
+				endif else if alg eq 'CALIPSO' and (lev eq 'l3c' or lev eq 'l3s') then begin
+; 					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/mstengel/data/Calipso/CLIM/'+yyyy+'/'
+; 					filen = dir+'CALIPSO_CTPCFC_climatology_deg2.0_'+yyyy+mm+'.nc'
+					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/thanschm/DATASET/CALIPSO_L3/'+yyyy+'/'
+					filen = dir+'CPRmm'+yyyy+mm+'01000000120CALIP01GL.nc'
 				endif
 			   end
 		'SEVIRI': begin
@@ -3855,6 +3868,18 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		'hist1d_ctt_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Top Temperature Ice' & end
 		'hist1d_cer_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Effective Radius Ice' & end
 		'hist1d_cwp_ice': begin & unit = ' %'			& minv = 0   & maxv = 100 & dist = 0.1  & longname = '1D Hist Cloud Water Path Ice'	& end
+		'ctp_mean_all'  : begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure'		& end
+		'ctp_mean_liq'  : begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure liquid'	& end
+		'ctp_mean_ice'  : begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure ice'		& end
+		'ctp_mean_th_ice': begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure (th ice)'	& end
+		'ctp_mean_sc_liq': begin & unit = ' [hPa]'		& minv = 100 & maxv = 900 & dist = 20.  & longname = 'Cloud Top Pressure (sc liq)'	& end
+		'cfc_allclouds' : begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (all)' 	& end
+		'cfc_allclouds_max': begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (all_max)' & end
+		'cfc_cloudsgt01': begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (gt01)'	& end
+		'cfc_cloudsgt02': begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (gt02)' 	& end
+		'cfc_cloudsgt03': begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (gt 03)' 	& end
+		'cfc_allclouds_day': begin & unit = '' 			& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (all_day)' & end
+		'cfc_allclouds_night': begin & unit = '' 		& minv = 0   & maxv =   1 & dist = 0.05 & longname = 'Cloud Fractional Cover (all_night)' & end
 		else  :
 	endcase
 
@@ -4988,6 +5013,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,1])
 		longname = longname+' ice only'
+	endif else if (total(alg eq ['calipso']) and is_jch(dat,/mixed)) then begin
+		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
+		if not found then return,-1
+		outdata  = reform(outdata[*,*,*,*,2])
+		longname = longname+' mixed / unknown'
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/combined)) then begin
 		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
 		found = found, verbose = verbose , silent=silent
@@ -5080,6 +5111,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,1])
 		longname = longname+' ice only'
+	endif else if (total(alg eq ['calipso']) and is_h1d(dat,/mixed)) then begin
+		read_data, filename[0] , strreplace(dat,'_mixed',''), outdata, no_data_value, minvalue, maxvalue, longname, unit,var_dim_names=var_dim_names, $
+		found = found, verbose = verbose , silent=silent
+		if not found then return,-1
+		outdata  = reform(outdata[*,*,*,2])
+		longname = longname+' mixed / unknown'
 	endif else if (total(alg eq ['coll5']) and is_h1d(dat,/ice) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; only for coll5 not for coll6 anymore
 		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, unit, found = found, verbose = verbose , silent=silent
@@ -6319,31 +6356,38 @@ function get_hct_ratio, array, sdum, limit=limit, antarctic = antarctic, arctic=
 			void_index = void_index, relative = relative, texstyle = texstyle
 
 	bild = array
+; 	if keyword_set(limit) then dumlimit = limit
+; 	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
+; 	if keyword_set(arctic) then dumlimit = [ 60.,-180, 90.0,180]
+; 	if keyword_set(dumlimit) then begin
+; 		if ~keyword_set(lon) or ~keyword_set(lat) then make_geo,lon,lat,grid=get_grid_res(bild)
+; 		dumidx=where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),complement=dd_idx,ncomp=dd_cnt)
+; 		if dd_cnt gt 0 then sdum[dd_idx] = 0.
+; 	endif
+; 
+; 	if keyword_set(land) or keyword_set(sea) then begin
+; 		if ~keyword_set(dem) then dem = get_dem(grid=get_grid_res(bild))
+; 		if keyword_set(land) then void_index = where(sdum eq 0 or dem eq 0,complement=nvoid,ncomp=nvoid_cnt)
+; 		if keyword_set(sea)  then void_index = where(sdum eq 0 or dem ne 0,complement=nvoid,ncomp=nvoid_cnt)
+; 	endif else void_index = where(sdum eq 0,complement=nvoid,ncomp=nvoid_cnt)
 
-	if keyword_set(limit) then dumlimit = limit
-	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
-	if keyword_set(arctic) then dumlimit = [ 60.,-180, 90.0,180]
-	if keyword_set(dumlimit) then begin
-		if ~keyword_set(lon) or ~keyword_set(lat) then make_geo,lon,lat,grid=get_grid_res(bild)
-		dumidx=where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),complement=dd_idx,ncomp=dd_cnt)
-		if dd_cnt gt 0 then sdum[dd_idx] = 0.
-	endif
-	if keyword_set(land) or keyword_set(sea) then begin
-		if ~keyword_set(dem) then dem = get_dem(grid=get_grid_res(bild))
-		if keyword_set(land) then void_index = where(sdum eq 0 or dem eq 0,complement=nvoid,ncomp=nvoid_idx)
-		if keyword_set(sea)  then void_index = where(sdum eq 0 or dem ne 0,complement=nvoid,ncomp=nvoid_idx)
-	endif else void_index = where(sdum eq 0,complement=nvoid,ncomp=nvoid_idx)
+; 	if keyword_set(relative) then bild = bild/100. * sdum
 
 	if keyword_set(relative) then bild = bild/100. * sdum
 
+	area = get_coverage( lon, lat, dem = dem, limit = limit, land = land, sea = sea, antarctic = antarctic, arctic = arctic, coverage = coverage)
+	sdum = sumdum * area
+	void_index = where(sdum eq 0,complement=nvoid,ncomp=nvoid_cnt)
+
+
 	; global mean ratio
 	if keyword_set(lat) then begin
-		rat   = nvoid_idx gt 0 ? string((total(bild[nvoid])/total(sdum[nvoid]))*100.,f='(f6.2)')+'%' : 'No data points!' 
-		ratio = nvoid_idx gt 0 ? string((gmean(bild[nvoid]/float(sdum[nvoid]),lat[nvoid]))*100.,f='(f6.2)')+$
+		rat   = nvoid_cnt gt 0 ? string((total(bild[nvoid])/total(sdum[nvoid]))*100.,f='(f6.2)')+'%' : 'No data points!' 
+		ratio = nvoid_cnt gt 0 ? string((gmean(bild[nvoid]/float(sdum[nvoid]),lat[nvoid]))*100.,f='(f6.2)')+$
 		(keyword_set(texstyle) ? '\%':'%') : 'No data points!' 
-		if nvoid_idx gt 0 then ratio = keyword_set(texstyle) ? ratio : ratio + ' ('+rat+')'
+		if nvoid_cnt gt 0 then ratio = keyword_set(texstyle) ? ratio : ratio + ' ('+rat+')'
 	endif else begin
-		ratio = nvoid_idx gt 0 ? string((total(bild[nvoid])/total(sdum[nvoid]))*100.,f='(f6.2)')+$
+		ratio = nvoid_cnt gt 0 ? string((total(bild[nvoid])/total(sdum[nvoid]))*100.,f='(f6.2)')+$
 		(keyword_set(texstyle) ? '\%':'%') : 'No data points!' 
 	endelse
 
