@@ -517,6 +517,26 @@ function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = com
 
 end
 ;------------------------------------------------------------------------------------------
+function appendix, varname
+	dtn = ''
+	if stregex(varname,'_day',/fold,/bool)   then dtn = ' - DAY'
+	if stregex(varname,'_night',/fold,/bool) then dtn = ' - NIGHT'
+	if stregex(varname,'_twl',/fold,/bool)   then dtn = ' - TWL'
+	if stregex(varname,'_low',/fold,/bool)   then dtn = ' - LOW'
+	if stregex(varname,'_mid',/fold,/bool)   then dtn = ' - MID'
+	if stregex(varname,'_high',/fold,/bool)  then dtn = ' - HIGH'
+	if stregex(varname,'_liq',/fold,/bool)   then dtn = ' - LIQUID'
+	if stregex(varname,'_sc_liq',/fold,/bool)   then dtn = ' - (SC) LIQUID'
+	if stregex(varname,'_ice',/fold,/bool)   then dtn = ' - ICE'
+	if stregex(varname,'_th_ice',/fold,/bool)   then dtn = ' - (TH) ICE'
+	if stregex(varname,'_cloudsgt01',/fold,/bool)   then dtn = ' - COD > 0.1'
+	if stregex(varname,'_cloudsgt02',/fold,/bool)   then dtn = ' - COD > 0.2'
+	if stregex(varname,'_cloudsgt03',/fold,/bool)   then dtn = ' - COD > 0.3'
+	if stregex(varname,'_allclouds_max',/fold,/bool)   then dtn = ' ALL+MAX'
+	if stregex(varname,'_allsky',/fold,/bool) then dtn = ' - Allsky'
+
+	return,dtn
+end
 pro symball,filled=filled,thick=thick
 	aa = findgen(17) * (!PI*2/16.) & usersym, cos(aa), sin(aa),fill=filled,thick=thick ; kullerchen
 end

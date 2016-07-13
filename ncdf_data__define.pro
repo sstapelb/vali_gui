@@ -4470,10 +4470,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if ~found then return
 
-			if (pcmult) then begin
-				ok = dialog_message('Multi Time steps not allowed with File difference! Try "Compare" instead!')
-				return
-			endif
+; 			if (pcmult) then begin
+; 				ok = dialog_message('Multi Time steps not allowed with File difference! Try "Compare" instead!')
+; 				return
+; 			endif
 
 			if (pcms and ~save_as) or pchov then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" or "Multi Time Steps" instead!')

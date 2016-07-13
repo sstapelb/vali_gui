@@ -1726,21 +1726,34 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	ls = ( keyword_set(land) or keyword_set(sea))
 
 	if ts then begin
-		print,'hier kommt man nie hin, dachte ich'
-		stop
-		if keyword_set(land) then cov = 'land'
-		if keyword_set(sea)  then cov = 'sea'
-		d = get_available_time_series( algo1, dat1, sat1, coverage = coverage, reference = algo2, period = '1978-2016', sav_file = sav_file, found = found)
-		if not found then begin
-			ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
-			return
-		endif
-		bild1 = d.mean
-		bild2 = d.mean2
+		if dat1 ne dat2 then begin
+			d  = get_available_time_series( algo1, dat1, sat1, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found)
+			d2 = get_available_time_series( algo2, dat2, sat2, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found)
+			if not found then begin
+				ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
+				return
+			endif
+			bild1 = d.mean
+			bild2 = d2.mean
+			unit1 = d.unit
+			unit2 = d2.unit
+			datum1=d.actual_date
+			datum2=d2.actual_date
+		endif else begin
+			d = get_available_time_series( algo1, dat1, sat1, coverage = coverage, reference = algo2, period = '1978-2016', sav_file = sav_file, found = found)
+			if not found then begin
+				ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
+				return
+			endif
+			bild1 = d.mean
+			bild2 = d.mean2
+			unit1 = d.unit
+			unit2 = d.unit
+			datum1=d.actual_date
+			datum2=d.actual_date
+		endelse
 		fillvalue1 = -999.
 		fillvalue2 = -999.
-		unit1 = d.unit
-		unit2 = d.unit
 		datum=d.actual_date
 	endif else begin
 		if keyword_set(check_quality) then qcflag1 = fix(get_data(file=file1,data='qcflag', verbose = verbose))
@@ -2662,22 +2675,12 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	d       = struc
 	tsi     = d.TS_INDICES
 	unit    = d.unit
-	dtn = ''
 	dec1 = ''
 	dec2 = ''
 	dec3 = ''
 
-	if stregex(dat,'_day',/fold,/bool)   then dtn = ' - DAY'
-	if stregex(dat,'_night',/fold,/bool) then dtn = ' - NIGHT'
-	if stregex(dat,'_twl',/fold,/bool)   then dtn = ' - TWL'
-	if stregex(dat,'_low',/fold,/bool)   then dtn = ' - LOW'
-	if stregex(dat,'_mid',/fold,/bool)   then dtn = ' - MID'
-	if stregex(dat,'_high',/fold,/bool)  then dtn = ' - HIGH'
-	if stregex(dat,'_liq',/fold,/bool)   then dtn = ' - LIQUID'
-	if stregex(dat,'_sc_liq',/fold,/bool)   then dtn = ' - (SC) LIQUID'
-	if stregex(dat,'_ice',/fold,/bool)   then dtn = ' - ICE'
-	if stregex(dat,'_th_ice',/fold,/bool)   then dtn = ' - (TH) ICE'
-	if stregex(dat,'_allsky',/fold,/bool) then dtn = ' - Allsky'
+	dtn = appendix(dat)
+
 	sn_cov = short_cov_name(coverage)
 	if keyword_set(sn_cov) and keyword_set(no_compare) then dtn += ' - '+ sn_cov
 
@@ -4020,15 +4023,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			ymargin   = [5,2]
 		endelse
 
-		dtn = ''
-		if stregex(varname,'_day',/fold,/bool)   then dtn = ' - DAY'
-		if stregex(varname,'_night',/fold,/bool) then dtn = ' - NIGHT'
-		if stregex(varname,'_twl',/fold,/bool)   then dtn = ' - TWL'
-		if stregex(varname,'_low',/fold,/bool)   then dtn = ' - LOW'
-		if stregex(varname,'_mid',/fold,/bool)   then dtn = ' - MID'
-		if stregex(varname,'_high',/fold,/bool)  then dtn = ' - HIGH'
-		if stregex(varname,'_liq',/fold,/bool)   then dtn = ' - LIQUID'
-		if stregex(varname,'_ice',/fold,/bool)   then dtn = ' - ICE'
+		dtn = appendix(varname)
 		sn_cov = short_cov_name(coverage)
 		if keyword_set(sn_cov) then dtn += ' - '+ sn_cov
 		if opl eq 0 then begin
@@ -4146,15 +4141,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 
 	start_save,save_as,thick=thick,snapshot=(float(opl)?'png':'')
 		title = ts ? date : ''
-		dtn = ''
-		if stregex(varname,'_day',/fold,/bool)   then dtn = ' - DAY'
-		if stregex(varname,'_night',/fold,/bool) then dtn = ' - NIGHT'
-		if stregex(varname,'_twl',/fold,/bool)   then dtn = ' - TWL'
-		if stregex(varname,'_low',/fold,/bool)   then dtn = ' - LOW'
-		if stregex(varname,'_mid',/fold,/bool)   then dtn = ' - MID'
-		if stregex(varname,'_high',/fold,/bool)  then dtn = ' - HIGH'
-		if stregex(varname,'_liq',/fold,/bool)   then dtn = ' - LIQUID'
-		if stregex(varname,'_ice',/fold,/bool)   then dtn = ' - ICE'
+		dtn = appendix(varname)
 		sn_cov = short_cov_name(coverage)
 		if keyword_set(sn_cov) then dtn += ' - '+ sn_cov
 		if wbg or sim then thick = 4
@@ -5243,7 +5230,7 @@ pro do_create_all_single_time_series
 	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctp2','ctt','ctt2',$
 		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','cth2','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
 	; calipso only
-; 	data = [ 'ctp_mean_all', 'ctp_mean_liq', 'ctp_mean_ice', 'ctp_mean_th_ice', 'ctp_mean_sc_liq', 'cfc_allclouds', 'cfc_allclouds_max', 
+; 	data = [ 'ctp_mean_all', 'ctp_mean_liq', 'ctp_mean_ice', 'ctp_mean_th_ice', 'ctp_mean_sc_liq', 'cfc_allclouds', 'cfc_allclouds_max', $
 ; 		 'cfc_cloudsgt01', 'cfc_cloudsgt02', 'cfc_cloudsgt03', 'cfc_allclouds_day', 'cfc_allclouds_night']
 
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
@@ -5270,7 +5257,7 @@ pro do_create_all_single_time_series
 
 	; combine all you need
 	algon_list = [cal_list]
-	algon_list ='cci-aatme'
+; 	algon_list ='cci-aatme'
 
 	for i= 0,n_elements(algon_list)-1 do begin
 		for l=0,n_elements(data)-1 do begin
