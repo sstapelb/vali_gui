@@ -3633,7 +3633,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/l2_meris_aatsr/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+'*'+yyyy+mm+dd+orbdum+'*.nc'
 					endif else begin
-						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
+						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strmid(strupcase(lev),0,3)+'/'+yyyy+'/'+mm+'/'
 						vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 						zwisch = alg eq 'ESACCI_OLD' ? '' : '-'
 						filen = dir+yyyy+mm+dd+'-ESACCI-'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-MERIS'+zwisch+'AATSR_ENVISAT-f'+vers+'.nc'
@@ -3814,7 +3814,6 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3,gm2:4,gm2_std:5,unc2:6,unc2_std:7,bias:8,rmse:9,bcr:10,corr:11}
 	endif else begin
 		cli   = algo2ref(algo,sat=sat)
-		if cli eq 'cal' then sat = 'calipso'
 		pref  = '/plot/plot_'
 		dumalgo = cli eq 'era' ? cli+'1.1':cli
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3}
@@ -3886,7 +3885,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if keyword_set(hovmoeller) then begin
 		dumsat = sat
 		era = cli eq 'era' ? '1.1':''
-		if total(strmid(cli,0,3) eq ['myd','mod','era']) then dumsat = ''
+		if total(strmid(cli,0,3) eq ['myd','mod','era','cal']) then dumsat = ''
 		sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+era+'_'+dumsat+'.sav'
 		sfile    = file_search( sav_file ,count = found)
 		if found eq 0 and keyword_set(period) then begin
@@ -3901,7 +3900,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)
 			endif
-			if found eq 0 and total(strmid(cli,0,3) eq ['myd','mod','era']) then begin
+			if found eq 0 and total(strmid(cli,0,3) eq ['myd','mod','era','cal']) then begin
 				; for MODIS coll? try again without sat, cause ref is always the same for those!
 				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+(cov eq '' ? '':'_')+cov+'_????-????.sav'
 				sfile    = file_search( sav_file ,count = found)

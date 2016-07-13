@@ -4484,9 +4484,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('This works with Monthly Means only!')
 				return
 			endif
-			algo   = self.algoname
-			level  = self.level
-			datum1 = self.datum
+			algo     = self.algoname
+			level    = self.level
+			datum1   = self.datum
+			varname2 = varname
 			if sel then file1  = self.directory+'/'+self.filename else begin
 				datum1 = strjoin([year,month,day,orbit])
 				file1  = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, level = level, found = found,dirname = self.directory)
@@ -4499,21 +4500,32 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 ; 			if select or sel then begin
 			if select or none then begin
-				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? file_dirname(file1):file_dirname(self.file2)),$
-				; following needs to be done for filenames that include white spaces
-				file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? file_basename(file1):file_basename(self.file2),/ext)),2),filter=self.extension)
-				if self.file2 eq '' then return
-				if ~is_hdf(self.file2) then begin
-					if ~is_ncdf(self.file2) then begin
-						ok = dialog_message('The file '+self.file2+' is neither a netcdf nor a hdf file. '+$
-								'Note netcdf4 files are not supported in IDL versions below 8!')
-						return
+				dum = strsplit(varname,',',/ext)
+				if n_elements(dum) gt 1 then begin
+					varname  = dum[0]
+					varname2 = dum[1]
+					algo2    = algo
+					satn     = self.satname
+					datum2   = datum1
+					self.file2 = file1
+				endif else begin
+					self.file2 = dialog_pickfile(path=(self.file2 eq '' ? file_dirname(file1):file_dirname(self.file2)),$
+					; following needs to be done for filenames that include white spaces
+					file = 	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? file_basename(file1):file_basename(self.file2),/ext)),2),$
+						filter=self.extension)
+					if self.file2 eq '' then return
+					if ~is_hdf(self.file2) then begin
+						if ~is_ncdf(self.file2) then begin
+							ok = dialog_message('The file '+self.file2+' is neither a netcdf nor a hdf file. '+$
+									'Note netcdf4 files are not supported in IDL versions below 8!')
+							return
+						endif
 					endif
-				endif
-				ok     = self -> get_file_infos(infile=self.file2)
-				algo2  = ok.algoname
-				satn   = ok.satname
-				datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
+					ok     = self -> get_file_infos(infile=self.file2)
+					algo2  = ok.algoname
+					satn   = ok.satname
+					datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
+				endelse
 			endif else begin
 				if modi   then begin & algo2 = 'coll5'      & satn = 'terra' & end
 				if modi2  then begin & algo2 = 'coll6'      & satn = 'terra' & end
@@ -4540,10 +4552,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				datum2 = strjoin([year,month,day,orbit])
 			endelse
 
-; 			print,'ncdf_data_def: File1: ',file1[0]
-; 			print,'ncdf_data_def: File2: ',self.file2[0]
-if sel then sat  = self.satname
-			if self-> filematch(file1,self.file2) then begin
+			if sel then sat  = self.satname
+			if self-> filematch(file1,self.file2) and strmatch(varname,varname2) then begin
 				ok = dialog_message('File1 and File2 are the same!',/cancel,/default_cancel)
 				if ok eq 'Cancel' then return
 			endif
@@ -4552,7 +4562,7 @@ if sel then sat  = self.satname
 				ok = dialog_message("This combination will create PDF's for the Feedbackloop!",/cancel)
 				if ok eq 'Cancel' then return
 				!p.multi = 0
-				compare_l2_save_serie,file1,self.file2,data1=varname,data2 = varname,mini=mini,maxi=maxi	, $
+				compare_l2_save_serie,file1,self.file2,data1=varname,data2 = varname2,mini=mini,maxi=maxi	, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
 				bild=bild,unit=unit,sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
@@ -4628,7 +4638,7 @@ if sel then sat  = self.satname
 				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif else begin
-				compare_l2,file1,self.file2,data1=varname,data2=varname,mini=mini,maxi=maxi,level=level	, $
+				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level	, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,out=out		, $
 				sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, htypes = hct[0],verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $

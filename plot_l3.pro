@@ -1688,6 +1688,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	endif else begin
 		f1str  = 'File1: '
 		f2str  = 'File2: '
+		if dat1 ne dat2 then begin
+			f1str  = strreplace(f1str,':','')+strupcase(dat1)+': '
+			f2str  = strreplace(f2str,':','')+strupcase(dat2)+': '
+		endif
 	endelse
 	annex  = ''
 	is_new = 0.
@@ -1697,13 +1701,13 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		mtime2 = (file_info(file2)).mtime
 		if mtime1 gt mtime2 then begin
 			if keyword_set(verbose) then print,'File1 with modification time: '+unix2ymdhms(mtime1)+' is newer than File2: '+unix2ymdhms(mtime2)
-			if ~keyword_set(no_time_string) then f1str  = 'File1 (new): '
-			if ~keyword_set(no_time_string) then f2str  = 'File2 (old): '
+			if ~keyword_set(no_time_string) then f1str  = strreplace(f1str,':','')+' (new): '
+			if ~keyword_set(no_time_string) then f2str  = strreplace(f2str,':','')+' (old): '
 			is_new = 1.
 		endif else if mtime2 gt mtime1 then begin
 			if keyword_set(verbose) then print,'File2 with modification time: '+unix2ymdhms(mtime2)+' is newer than File1: '+unix2ymdhms(mtime1)
-			if ~keyword_set(no_time_string) then f1str  = 'File1 (old): '
-			if ~keyword_set(no_time_string) then f2str  = 'File2 (new): '
+			if ~keyword_set(no_time_string) then f1str  = strreplace(f1str,':','')+' (old): '
+			if ~keyword_set(no_time_string) then f2str  = strreplace(f2str,':','')+' (new): '
 			is_new = 2.
 		endif else if keyword_set(verbose) then print,'modification time of File1: '+unix2ymdhms(mtime1)+' and File2: '+unix2ymdhms(mtime2)+' are equal!'
 	endif
@@ -1722,7 +1726,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	ls = ( keyword_set(land) or keyword_set(sea))
 
 	if ts then begin
-		;hier kommt man nie hin, glaub ich
+		print,'hier kommt man nie hin, dachte ich'
+		stop
 		if keyword_set(land) then cov = 'land'
 		if keyword_set(sea)  then cov = 'sea'
 		d = get_available_time_series( algo1, dat1, sat1, coverage = coverage, reference = algo2, period = '1978-2016', sav_file = sav_file, found = found)
@@ -1730,7 +1735,6 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
 			return
 		endif
-stop
 		bild1 = d.mean
 		bild2 = d.mean2
 		fillvalue1 = -999.
@@ -2264,8 +2268,9 @@ bin= ( bin/100.) > 0.01
 				mindum = min(bild1[where(bild1 ne fillvalue1[0],mincount)])
 				if mincount gt 0 then if mindum lt mini[0] then l_eq = 1
 			endif
+
 			m = obj_new("map_image",bild1,lat,lon,void_index=void_index, $
-				box_axes=box_axes,n_lev=4, max=adv_keyword_set(maxi) ? maxi : max(bild1[idx]),min=adv_keyword_set(mini) ? mini[0]: min(bild1[idx]), $
+				box_axes=box_axes,n_lev=4, max=adv_keyword_set(maxi) ? maxi[0] : max(bild1[idx]),min=adv_keyword_set(mini) ? mini[0]: min(bild1[idx]), $
 				countries=countries,magnify = magnify, figure_title = figure_title, charthick = keyword_set(save_as) ? 2. : 1.5, $
 				title= keyword_set(cbar_title) ? cbar_title : $
 				(strupcase(dat) eq 'PHASE' ? 'CPH':get_product_name(dat,algo=algo1,level=level,/upper,h_types=htypes))+$
@@ -2305,7 +2310,7 @@ bin= ( bin/100.) > 0.01
 				~keyword_set(antarctic) and ~keyword_set(arctic) and keyword_set(diff_only)
 
 		m = obj_new("map_image",bild2,lat,lon,void_index=void_index, $
-			box_axes=box_axes,n_lev=4, max=adv_keyword_set(maxi) ? maxi : max(bild2[idx]),min=adv_keyword_set(mini) ? mini[0]: min(bild2[idx]), $
+			box_axes=box_axes,n_lev=4, max=adv_keyword_set(maxi) ? maxi[0] : max(bild2[idx]),min=adv_keyword_set(mini) ? mini[0]: min(bild2[idx]), $
 			countries=countries,magnify = magnify,figure_title=figure_title,title=title,charthick = keyword_set(save_as) ? 2. : 1.5, $
 			format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), limit = limit, flip_colours = flip_colours,$
 			ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel,g_eq=g_eq, l_eq=l_eq	, $
@@ -4718,53 +4723,31 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 		yyyy=years[yy1]
 		mmmm=months[mm1]
-		if cli eq 'cal' and dat1 eq 'cfc' then begin
-			cci_dum_file ='calipso file!'
-			cci_tmp = restore_var(!SAVS_DIR + 'calipso_l3c_2degree/'+yyyy+mmmm+'_CALIPSO_CFC_COD_gt_01.sav',found=found_cci)
-			if found_cci then cci_tmp = cci_tmp.mean
-			fv_cci  = -999.
-			unit = ''
-			found_cci_unc = 0
-		endif else begin
-			cci_dum_file = get_filename(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,/silent,dirname=cci_dirname,/no_recursive)
-			if cli eq 'cci' and found_cci then begin
-				num = get_ncdf_data_by_name(cci_dum_file,'number_of_processed_orbits',/global)
-				if num lt 100 then begin
-					print,'File has only '+string(num)+' Orbits, and will be skipped! ',cci_dum_file
-					found_cci = 0
-				endif
+		cci_dum_file = get_filename(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,/silent,dirname=cci_dirname,/no_recursive)
+		if cli eq 'cci' and found_cci then begin
+			num = get_ncdf_data_by_name(cci_dum_file,'number_of_processed_orbits',/global)
+			if num lt 100 then begin
+				print,'File has only '+string(num)+' Orbits, and will be skipped! ',cci_dum_file
+				found_cci = 0
 			endif
-		endelse
-		if ref eq 'cal' and dat2 eq 'cfc' then begin
-			gac_dum_file ='calipso file!'
-			gac_tmp = restore_var(!SAVS_DIR + 'calipso_l3c_2degree/'+yyyy+mmmm+'_CALIPSO_CFC_COD_gt_01.sav',found=found_gac)
-			if found_gac then gac_tmp = gac_tmp.mean
-			fv_gac  = -999.
-			unit = ''
-			found_gac_unc = 0
-		endif else begin
-			gac_dum_file = get_filename(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,/silent,dirname=gac_dirname,/no_recursive)
-			if ref eq 'cci' and found_gac then begin
-				num = get_ncdf_data_by_name(gac_dum_file,'number_of_processed_orbits',/global)
-				if num lt 100 then begin
-					print,'File has only '+string(num)+' Orbits, and will be skipped! ',gac_dum_file
-					found_gac = 0
-				endif
+		endif
+		gac_dum_file = get_filename(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,/silent,dirname=gac_dirname,/no_recursive)
+		if ref eq 'cci' and found_gac then begin
+			num = get_ncdf_data_by_name(gac_dum_file,'number_of_processed_orbits',/global)
+			if num lt 100 then begin
+				print,'File has only '+string(num)+' Orbits, and will be skipped! ',gac_dum_file
+				found_gac = 0
 			endif
-		endelse
+		endif
 		if found_cci and found_gac then begin
-			if cli ne 'cal' then begin
-				cci_tmp = get_data(yyyy,mmmm,file=cci_dum_file,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,$
-						/mean,/make_compare,no_data_val=fv_cci,/silent,unit=unit,dirname=cci_dirname)
-				cci_unc = get_data(yyyy,mmmm,data=dat1+'_unc',algo=cli,sat=satcci,level=lev,found=found_cci_unc,glob=grid,/mean,$
-					   /make_compare,no_data_val=fv_cci_unc,/silent,dirname=cci_dirname)
-			endif
-			if ref ne 'cal' then begin
-				gac_tmp = get_data(yyyy,mmmm,file=gac_dum_file,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,$
-						/mean,/make_compare,no_data_val=fv_gac,/silent,dirname=gac_dirname)
-				gac_unc = get_data(yyyy,mmmm,data=dat2+'_unc',algo=ref,sat=satgac,level=lev,found=found_gac_unc,glob=grid,/mean,$
-					   /make_compare,no_data_val=fv_gac_unc,/silent,dirname=gac_dirname)
-			endif
+			cci_tmp = get_data(yyyy,mmmm,file=cci_dum_file,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,$
+					/mean,/make_compare,no_data_val=fv_cci,/silent,unit=unit,dirname=cci_dirname)
+			cci_unc = get_data(yyyy,mmmm,data=dat1+'_unc',algo=cli,sat=satcci,level=lev,found=found_cci_unc,glob=grid,/mean,$
+				   /make_compare,no_data_val=fv_cci_unc,/silent,dirname=cci_dirname)
+			gac_tmp = get_data(yyyy,mmmm,file=gac_dum_file,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,$
+					/mean,/make_compare,no_data_val=fv_gac,/silent,dirname=gac_dirname)
+			gac_unc = get_data(yyyy,mmmm,data=dat2+'_unc',algo=ref,sat=satgac,level=lev,found=found_gac_unc,glob=grid,/mean,$
+				   /make_compare,no_data_val=fv_gac_unc,/silent,dirname=gac_dirname)
 			if found_cci and found_gac then begin
 				print, 	strupcase(dat)+': '+yyyy+'/'+mmmm+' '+sat+' - '+ $
 					cli+' ('+get_product_name(dat1,algo=cli)+') vs '+$
@@ -5102,8 +5085,8 @@ pro create_time_series,data,algon,coverage
 		tmp = get_data(	yyyy,mmmm,file=dum_file,data=dat,algo=cli,sat=sat,level=lev,found=found,no_data_val=fv,unit=unit,/silent,$
 				/make_compare,dirname=dirname,/no_recursive)
 		if found then begin
-			if( (total(tmp) eq 0) or (mean(tmp) eq fv) ) then begin 
-				print,( total(tmp) eq 0) ? 'Alles Nuller' : 'Nur Fillvalues!'
+			if ( mean((tmp eq 0) or (tmp eq fv)) eq 1. ) then begin
+				print,algon1+': '+get_product_name(dat,algo=cli)+' '+yyyy+'/'+mmmm+' ### Alles Nuller oder Fillvalues! Skipped! ###'
 				found = 0
 			ENDIF
 		endif
@@ -5257,8 +5240,11 @@ pro do_create_all_single_time_series
 	starttime = systime(1)
 	mem_cur   = memory(/current)
 
-	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctt',$
-		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
+	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctp2','ctt','ctt2',$
+		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','cth2','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
+	; calipso only
+; 	data = [ 'ctp_mean_all', 'ctp_mean_liq', 'ctp_mean_ice', 'ctp_mean_th_ice', 'ctp_mean_sc_liq', 'cfc_allclouds', 'cfc_allclouds_max', 
+; 		 'cfc_cloudsgt01', 'cfc_cloudsgt02', 'cfc_cloudsgt03', 'cfc_allclouds_day', 'cfc_allclouds_night']
 
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
@@ -5278,26 +5264,14 @@ pro do_create_all_single_time_series
 	; coll5
 	coll5_list = ['myd-','mod-']
 	; era-interim
-	era_list = ['cal-calipso']
-
-	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctt',$
-		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
-data = [ $
-'ctp_mean_all', $
-'ctp_mean_liq', $
-'ctp_mean_ice', $
-'ctp_mean_th_ice', $
-'ctp_mean_sc_liq', $
-'cfc_allclouds', $
-'cfc_allclouds_max', $
-'cfc_cloudsgt01', $
-'cfc_cloudsgt02', $
-'cfc_cloudsgt03', $
-'cfc_allclouds_day', $
-'cfc_allclouds_night']
+	era_list = ['era-']
+	; calipso
+	cal_list = ['cal-']
 
 	; combine all you need
-	algon_list = era_list
+	algon_list = [cal_list]
+	algon_list ='cci-aatme'
+
 	for i= 0,n_elements(algon_list)-1 do begin
 		for l=0,n_elements(data)-1 do begin
 			do_it = 1
