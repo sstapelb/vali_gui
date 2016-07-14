@@ -4470,11 +4470,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if ~found then return
 
-; 			if (pcmult) then begin
-; 				ok = dialog_message('Multi Time steps not allowed with File difference! Try "Compare" instead!')
-; 				return
-; 			endif
-
 			if (pcms and ~save_as) or pchov then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" or "Multi Time Steps" instead!')
 				return
@@ -4487,7 +4482,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			algo     = self.algoname
 			level    = self.level
 			datum1   = self.datum
-			varname2 = varname
+			names    = strsplit(varname,',',/ext)
+			if n_elements(names) gt 1 then begin
+				varname  = names[0]
+				varname2 = names[1]
+			endif else varname2 = varname
+
 			if sel then file1  = self.directory+'/'+self.filename else begin
 				datum1 = strjoin([year,month,day,orbit])
 				file1  = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, level = level, found = found,dirname = self.directory)
@@ -4498,15 +4498,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				!p.multi = fix(strsplit(strcompress(pmulti,/rem),'],[()',/ext))
 				self.pmulti_default = pmulti
 			endif
-; 			if select or sel then begin
 			if select or none then begin
-				dum = strsplit(varname,',',/ext)
-				if n_elements(dum) gt 1 then begin
-					varname  = dum[0]
-					varname2 = dum[1]
-					algo2    = algo
-					satn     = self.satname
-					datum2   = datum1
+				if none and n_elements(names) gt 1 then begin
+					algo2      = algo
+					satn       = self.satname
+					datum2     = datum1
 					self.file2 = file1
 				endif else begin
 					self.file2 = dialog_pickfile(path=(self.file2 eq '' ? file_dirname(file1):file_dirname(self.file2)),$
@@ -4543,7 +4539,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
 				if l1g    then begin & algo2 = 'l1gac'      & satn = sat & end
 				if cla    then begin & algo2 = 'claas'      & satn = 'msg' & end
-				self.file2 = (get_filename(year, month, day, data=varname, sat=satn, algo=algo2, level=level, found = found, orbit=orbit))[0]
+				self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, found = found, orbit=orbit))[0]
 				if not found then begin
 					self.file2 = self.directory+'/'+self.filename
 					sat  = self.satname
@@ -4557,12 +4553,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('File1 and File2 are the same!',/cancel,/default_cancel)
 				if ok eq 'Cancel' then return
 			endif
-			; plotte serie und speichere in pdf für feedback loop
+			; plotte serie und speichere in pdf für feedback loop (Varnames intern gesetzt!)
 			if pcms and save_as then begin
 				ok = dialog_message("This combination will create PDF's for the Feedbackloop!",/cancel)
 				if ok eq 'Cancel' then return
 				!p.multi = 0
-				compare_l2_save_serie,file1,self.file2,data1=varname,data2 = varname2,mini=mini,maxi=maxi	, $
+				compare_l2_save_serie,file1,self.file2,data1=varname,data2=varname,mini=mini,maxi=maxi	, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
 				bild=bild,unit=unit,sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
@@ -4587,6 +4583,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif else begin
 					f1str  = 'File1: '
 					f2str  = 'File2: '
+					if ~strmatch(varname,varname2) then begin
+						f1str  = strreplace(f1str,':','')+strupcase(dat1)+': '
+						f2str  = strreplace(f2str,':','')+strupcase(dat2)+': '
+					endif
 				endelse
 				if strlowcase(hct[0]) eq 'max' then !p.multi = [0,2,1]
 				if satn1 eq satn2 and satn1 ne '' then begin
@@ -4594,36 +4594,37 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					mtime1 = (file_info(file1)).mtime
 					mtime2 = (file_info(self.file2)).mtime
 					if mtime1 gt mtime2 then begin
-						if ~keyword_set(no_time_string) then f1str  = 'File1 (new): '
-						if ~keyword_set(no_time_string) then f2str  = 'File2 (old): '
+						if ~keyword_set(no_time_string) then f1str  = strreplace(f1str,':','')+' (new): '
+						if ~keyword_set(no_time_string) then f2str  = strreplace(f2str,':','')+' (old): '
 					endif else if mtime2 gt mtime1 then begin
-						if ~keyword_set(no_time_string) then f1str  = 'File1 (old): '
-						if ~keyword_set(no_time_string) then f2str  = 'File2 (new): '
+						if ~keyword_set(no_time_string) then f1str  = strreplace(f1str,':','')+' (old): '
+						if ~keyword_set(no_time_string) then f2str  = strreplace(f2str,':','')+' (new): '
 					endif
 				endif
 				if strmid(strlowcase(hct[0]),0,2) eq '1d' then begin
 					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat=sat,prefix=[f1str,f2str], $
-					land=land,sea=sea,limit=limit,save_as=save_as,win_nr=win_nr, antarctic = ant, arctic = arc, $
-					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool), $
+					land=land,sea=sea,limit=limit,save_as=save_as,win_nr=win_nr,antarctic=ant,arctic=arc	, $
+					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool)	, $
 					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0]
 				endif else begin
 					; file1
 					plot_l2,year[0],month[0],day[0],file=file1,data=varname[0],mini=mini,maxi=maxi,sat=sat	, $
 					algo=algo[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
-					limit=limit,zoom=zoom,globe=globe,p0lon=p0lon, stereographic = stereographic,msg_proj=msg, $
-					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,log=log		, $
+					limit=limit,zoom=zoom,globe=globe,p0lon=p0lon,stereographic=stereographic,msg_proj=msg	, $
+					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,log=log	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
-					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar,cov=cov,magnify=magnify
+					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar	, $
+					cov=cov,magnify=magnify
 					; file2
-					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname,mini=mini,maxi=maxi,sat=satn, $
+					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname2,mini=mini,maxi=maxi,sat=satn, $
 					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
 					limit=limit,zoom=zoom,lon=lon,lat=lat,bild=bild,unit=unit,globe=globe,p0lon=p0lon	, $
-					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,msg_proj=msg, $
+					p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,msg_proj=msg	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0],log=log, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f2str,nobar=nobar	, $
 					stereographic = stereographic,cov=cov,magnify=magnify
 					if show_values and ~pchist and ~pczm and ~pcmts then show_pixel_value, bild, lon,lat	, $
-					data = varname, unit = unit, wtext = self.showpvalID
+					data = varname2, unit = unit, wtext = self.showpvalID
 				endelse
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if pcmatts then begin
@@ -4638,7 +4639,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif else begin
-				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level	, $
+				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,out=out		, $
 				sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, htypes = hct[0],verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $

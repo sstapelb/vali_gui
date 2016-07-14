@@ -532,7 +532,7 @@ function appendix, varname
 	if stregex(varname,'_cloudsgt01',/fold,/bool)   then dtn = ' - COD > 0.1'
 	if stregex(varname,'_cloudsgt02',/fold,/bool)   then dtn = ' - COD > 0.2'
 	if stregex(varname,'_cloudsgt03',/fold,/bool)   then dtn = ' - COD > 0.3'
-	if stregex(varname,'_allclouds_max',/fold,/bool)   then dtn = ' ALL+MAX'
+	if stregex(varname,'_allclouds_max',/fold,/bool)   then dtn = ' - ALL+MAX'
 	if stregex(varname,'_allsky',/fold,/bool) then dtn = ' - Allsky'
 
 	return,dtn
@@ -1743,7 +1743,7 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		'pmx'	: begin
 				algon = 'PATMOS-X'
 				if lev eq 'l3c' then $
-				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : ''
+				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : satn
 			  end
 		'pmx_old': begin
 				algon = 'PATMOS-X (old)'
@@ -6395,9 +6395,7 @@ function get_hct_ratio, array, sdum, limit=limit, antarctic = antarctic, arctic=
 	if keyword_set(relative) then bild = bild/100. * sdum
 
 	area = get_coverage( lon, lat, dem = dem, limit = limit, land = land, sea = sea, antarctic = antarctic, arctic = arctic, coverage = coverage)
-	sdum = sumdum * area
 	void_index = where(sdum eq 0,complement=nvoid,ncomp=nvoid_cnt)
-
 
 	; global mean ratio
 	if keyword_set(lat) then begin

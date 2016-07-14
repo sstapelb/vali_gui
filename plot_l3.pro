@@ -1049,13 +1049,15 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			free,struc
 		endif else begin
 			datum = '1978-2016'
+			trend = stregex(dat,'_trend',/fold,/bool)
+			if trend then dat = strreplace(dat,'_trend','',/fold)
 			d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = datum, $
 							sav_file = sfile, longname = longname, unit = unit, found = found)
 			if not found then begin
 				ok = dialog_message('plot_l2: Sav_file not found: '+sfile)
 				return
 			endif
-			bild   = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool) ? d.unc : d.mean
+			bild   = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool) ? d.unc : (trend ? d.linear_trend : d.mean)
 			datum  = d.actual_date
 			fillvalue = -999.
 			if keyword_set(error) and sat eq 'noaa7' then begin 
@@ -1375,7 +1377,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			maxi = 9
 			maxvalue = 9
 			title = 'Cloud type'
-			longname ='max type'
+			longname ='most frequent Cloud Type'
 			g_eq = 0
 			l_eq = 0
 			if ls then begin
@@ -1417,7 +1419,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 			endif else begin
 				; relative or not relative sis is se question.
-				relative = 0
+				relative = 1
 				bild = get_hct_data(hct,reform(bild[*,*,*,*,0]),algo,sdum=sdum,found=found,relative=relative)
 				minvalue = 0
 				maxvalue = relative ? 100. : max(bild)
@@ -1728,8 +1730,12 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if ts then begin
 		if dat1 ne dat2 then begin
 			d  = get_available_time_series( algo1, dat1, sat1, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found)
-			d2 = get_available_time_series( algo2, dat2, sat2, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found)
-			if not found then begin
+			if ~found then begin
+				ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
+				return
+			endif
+			d2 = get_available_time_series( algo2, dat2, sat2, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found2)
+			if ~found2 then begin
 				ok = dialog_message("compare_l2: Sav File not found! "+sav_file)
 				return
 			endif
@@ -3334,7 +3340,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		start_save, save_as, thick = thick,size=[32,20]
 			m = obj_new("map_image",cci,lat_c,lon_c,void_index=void_index1,box_axes=box_axes,n_lev=9, $
 				magnify=magnify,  min=0,max=9,ctable = 13,discrete=findgen(10),$
-				figure_title = adc+' '+algon1+' max type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
+				figure_title = adc+' '+algon1+' most frequent Cloud Type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizon=horizon, $
 				format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), $
@@ -3347,7 +3353,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		start_save, save_as, thick = thick,size=[32,20]
 			m = obj_new("map_image",gac,lat_g,lon_g,void_index=void_index2,box_axes=box_axes,n_lev=9, $
 				magnify=magnify, min=0,max=9,ctable = 13,discrete=findgen(10),$
-				figure_title = adg+' '+algon2+' max type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
+				figure_title = adg+' '+algon2+' most frequent Cloud Type', charthick = keyword_set(save_as) ? 2. : 1.5	, $
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizon=horizon, $
 				format=bar_format, charsize = (keyword_set(save_as) ? 3. : 1.5), $
@@ -3902,6 +3908,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	sav   = keyword_set(save_as)
 	wbg   = keyword_set(white_bg)
 	ts    = keyword_set(timeseries)
+
 	algon1= sat_name(algo,sat,year=(ts ? 0:year),month=(ts ? 0:month),level=lev)
 	if keyword_set(ref) then algon2 = sat_name(reference,sat,year=(ts ? 0:year),month=(ts ? 0:month),level=lev)
 
@@ -4842,8 +4849,8 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	endfor
 
 	;linear_trends
-	cci_lfit = fltarr(dim2d) + !values.f_nan
-	gac_lfit = fltarr(dim2d) + !values.f_nan
+	cci_lfit = fltarr(dim2d) -999.
+	gac_lfit = fltarr(dim2d) -999.
 
 	for i = 0,dim2d[0]-1 do begin & $
 	    for j = 0,dim2d[1]-1 do begin & $
@@ -4865,10 +4872,6 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	for ii = 0, dim_cov -1 do begin
 		if nnn[ii] le 100 then continue
 
-		if cov[ii] eq 'full' then begin
-
-		endif
-		
 		hist1        = {data:reform(histo1[*,ii])   ,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
 		hist2        = {data:reform(histo2[*,ii])   ,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
 		hist2d       = {data:reform(histo2D[*,*,ii]),minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
@@ -5014,7 +5017,7 @@ pro create_time_series,data,algon,coverage
 	if cli eq 'cal'  then grid = 2.0
 	if cli eq 'cla'  then grid = 0.25
 	if cli eq 'isp'  then grid = 2.5
-	
+
 	dem = get_dem(grid=grid)
 	make_geo,lon,lat,grid=grid
 	case strmid(dat,0,3) of
@@ -5045,6 +5048,7 @@ pro create_time_series,data,algon,coverage
 	gstats      = fltarr(dim0,nyears*nmonths,dim_cov) +!values.f_nan
 	mean_2d     = fltarr(dims)
 	unce_2d     = fltarr(dims)
+	trend_2d    = fltarr([dim2d,nyears*nmonths]) +!values.f_nan
 	anz_2d      = fltarr(dims)
 	anz_unce_2d = fltarr(dims)
 	mini        = histv[1]
@@ -5121,6 +5125,12 @@ pro create_time_series,data,algon,coverage
 					weight[ii]      += total(cosd(lat[good_idx]))
 					gsum[ii]        += total((tmp[good_idx])    * cosd(lat[good_idx]))
 					gsum2[ii]       += total((tmp[good_idx])^2. * cosd(lat[good_idx]))
+					; das muss zuletzt kommen 
+					if cov[ii] eq 'full' then begin
+						dum_idx = where(anz_tmp eq 0,dum_idx_cnt)
+						if dum_idx_cnt gt 0 then dum_tmp[dum_idx] = !values.f_nan
+						trend_2d[*,*,counti] = dum_tmp
+					endif
 				endif
 				free, anz_tmp
 				free, dum_tmp
@@ -5136,6 +5146,19 @@ pro create_time_series,data,algon,coverage
 	    endfor
 	endfor
 
+	;linear_trends
+	lfit = fltarr(dim2d) -999.
+	for i = 0,dim2d[0]-1 do begin & $
+	    for j = 0,dim2d[1]-1 do begin & $
+		idx = where(finite(trend_2d[i,j,*]),idx_cnt) & $
+		if idx_cnt gt 0 then begin & $
+			dum = linfit(idx,trend_2d[i,j,idx],yfit=yfit) & $
+			lfit[i,j] = ((yfit[idx_cnt-1]-yfit[0])/float(idx_cnt)*120.) & $
+		endif & $
+	    endfor & $
+	endfor
+	free, trend_2d
+	
 	for ii = 0, dim_cov -1 do begin
 
 		if nnn[ii] le 100 then continue
@@ -5164,12 +5187,16 @@ pro create_time_series,data,algon,coverage
 		unce  = reform(unce_2d[*,*,ii]/float(anz_unce_2d[*,*,ii] > 1))
  		if c_qq gt 0 then unce[qq] = -999.
 
+ 		; linear_trend
+		area = get_coverage( lon, lat, dem = dem, coverage = cov[ii],found = found)
+		trend = lfit * (area eq 1)  + (area eq 0) * (-999.)
+
  		str_cov = cov[ii]+'_'
 		if cov[ii] eq 'full'      then str_cov = '' 
 		if cov[ii] eq 'full_land' then str_cov = 'land_'
 		if cov[ii] eq 'full_sea'  then str_cov = 'sea_'
 		out_struc = {algoname:algon1,varname:dat,longname:vollername,unit:unit,coverage:coverage[ii],stats:reform(gstats[*,*,ii]),$
-				stats_non_weighted:reform(stats[*,*,ii]),mean:temporary(cci),unc:temporary(unce)}
+				stats_non_weighted:reform(stats[*,*,ii]),mean:temporary(cci),unc:temporary(unce),linear_trend:temporary(trend)}
 		out_struc = create_struct(out_struc,'histogram',hist)
 		out_struc = create_struct(out_struc,'Overall_Stats',all)
 		sav_file  = !SAVS_DIR + 'time_series/plot/plot_'+dat+'_'+cli+(cli eq 'era'?'1.1':'')+'_time_series_'+sat+'_'+str_cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
@@ -5230,8 +5257,8 @@ pro do_create_all_single_time_series
 	data     = ['cfc','cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph','cph_day','ctp','ctp2','ctt','ctt2',$
 		    'cot','cot_liq','cot_ice','cer','cer_liq','cer_ice','cth','cth2','lwp','iwp','cwp','iwp_allsky','lwp_allsky','cwp_allsky','sal']
 	; calipso only
-; 	data = [ 'ctp_mean_all', 'ctp_mean_liq', 'ctp_mean_ice', 'ctp_mean_th_ice', 'ctp_mean_sc_liq', 'cfc_allclouds', 'cfc_allclouds_max', $
-; 		 'cfc_cloudsgt01', 'cfc_cloudsgt02', 'cfc_cloudsgt03', 'cfc_allclouds_day', 'cfc_allclouds_night']
+	data = [ 'ctp_mean_all', 'ctp_mean_liq', 'ctp_mean_ice', 'ctp_mean_th_ice', 'ctp_mean_sc_liq', 'cfc_allclouds', 'cfc_allclouds_max', $
+		 'cfc_cloudsgt01', 'cfc_cloudsgt02', 'cfc_cloudsgt03', 'cfc_allclouds_day', 'cfc_allclouds_night']
 
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
