@@ -2109,7 +2109,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		datum = year+month+day+orbit
 	endif
 
-	; clara , claas
+	; clara, claas
 	if where(tag_names(theglobattr) eq 'PROCESSED_SATELLITES') ge 0 then begin
 		tcd = (theglobattr).PROCESSED_SATELLITES
 		if verb then print,'PROCESSED_SATELLITES: ',tcd
@@ -2194,7 +2194,6 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 			level    = 'l3c'
 		endif
 	endif
-
 	if where(tag_names(theglobattr) eq 'PROCESSOR') ge 0 then begin
 		tcd = (theglobattr).PROCESSOR
 		if verb then print,'PROCESSOR: ',tcd
@@ -3191,15 +3190,15 @@ function NCDF_DATA::make_VARList, data_only = data_only
 		; exclude all except type "dataset" from list
 		if keyword_set(data_only) then begin
 			typeList = strarr(n_elements(thelist))
-			for i=0,n_elements(thelist)-1 do typeList[i] = (h5g_get_objinfo(file_id, thelist[i])).TYPE	
+			for i=0,n_elements(thelist)-1 do typeList[i] = (h5g_get_objinfo(file_id, thelist[i])).TYPE
 			idx = where(typelist eq 'DATASET',tlcnt)
 			if tlcnt gt 0 then theList = theList[idx]
 		endif
 		h5f_close, file_id
 	endif else theList = [(*self.theVariables).name]
 
-	if ( self.algoname eq 'ESACCI' and total(self.level eq ['l2','l3u']) ) or ( self.algoname eq 'CLARA2' and total(self.level eq ['l3u']) ) then begin
-		if total(self.level eq ['l3u']) then theList=[theList,'sunglint_asc','sunglint_desc','glint_angle_asc','glint_angle_desc'] else $
+	if ( self.algoname eq 'ESACCI' and total(self.level eq ['l2','l3u','l3ue']) ) or ( self.algoname eq 'CLARA2' and total(self.level eq ['l3u']) ) then begin
+		if total(self.level eq ['l3u','l3ue']) then theList=[theList,'sunglint_asc','sunglint_desc','glint_angle_asc','glint_angle_desc'] else $
 		theList=[theList,'sunglint','glint_angle']
 	endif
 	hists = where((  stregex(thelist,'hist1d_',/bool,/fold) or stregex(thelist,'hist2d_',/bool,/fold) ) and $
@@ -3242,59 +3241,46 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	; We want a non-modal pop-up dialog widget.
 	tlb2 = Widget_Base(GROUP_LEADER=event.top, XOFFSET=offsets[0], YOFFSET=offsets[1],col=2, BASE_ALIGN_CENTER=1, /FLOATING, $
 			  UVALUE=self,title='File: '+self.filename,TLB_SIZE_EVENT=1)
- 	if ysize lt 880 then row = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
-	row = Widget_Base(tlb2, ROW=26,FRAME=1)
-	label = Widget_Label(row, Value='Variable to Plot: ', SCR_XSIZE=270,ALIGN_CENTER=1)
+ 	  if ysize lt 880 then leftrow = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
+	  leftrow = Widget_Base(tlb2, ROW=26,FRAME=1)
+	    label = Widget_Label(leftrow, Value='Variable to Plot: ', SCR_XSIZE=270,ALIGN_CENTER=1)
 	    theList = self -> make_VARList(/data_only)
 	    ; neu use combobox instead of droplist
-	    self.variablelistID = Widget_combobox(row, Value=[theList],UVALUE=[theList],Scr_XSize=270, UNAME='PLOTS_VARLIST',/EDITABLE,font='8x13',Scr_YSize=30)
-; 	    label = Widget_Label(row, Value='Variable Name: ', SCR_XSIZE=270)
-; 	    self.varname_plotID = Widget_Text(row, Value=(*self.theVariables)[0].name,/Editable, SCR_XSIZE=270)
-	    bla = Widget_Base(row, row=1,Frame=0, Scr_XSize=270,/nonexclusive)
+	    self.variablelistID = Widget_combobox(leftrow, Value=[theList],UVALUE=[theList],Scr_XSize=270, UNAME='PLOTS_VARLIST',/EDITABLE,font='8x13',Scr_YSize=30)
+	    bla = Widget_Base(leftrow, row=1,Frame=0, Scr_XSize=270,/nonexclusive)
 	      self.enablemima = Widget_Button(bla, Value='Min Value:  Max Value:     P.Multi   Win', UVALUE='SET_PLOT_DEFAULTS',Scr_YSize=21)
-; 	    label = Widget_Label(row, Value='Min Value:     Max Value:     P.Multi   Win', SCR_XSIZE=270)
-	    bla = Widget_Base(row, Column=4,Frame=0, Scr_XSize=270)
+	    bla = Widget_Base(leftrow, Column=4,Frame=0, Scr_XSize=270)
 	      self.minimumID = Widget_Text(bla, Value=strcompress((*self.theVariables)[0].minvalue), /Editable, SCR_XSIZE=85)
 	      self.maximumID = Widget_Text(bla, Value=strcompress((*self.theVariables)[0].maxvalue), /Editable, SCR_XSIZE=85)
               pmult_list     = ['1x1','2x2','3x3','1x2','1x3','2x1','2x3','3x1','3x2','4x1','4x2','4x3','5x1','5x2','5x3']
 	      self.pmultID   = Widget_combobox(bla,VALUE=[pmult_list],UVALUE=[pmult_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_PMULTILIST')
-; 	      self.pmultID   = Widget_Text(bla, Value='1', /Editable, SCR_XSize=58)
 	      self.winnrID   = Widget_Text(bla, Value='1', /Editable, SCR_XSIZE=30)
-; 	    label = Widget_Label(row, Value='Limit=[lat0,lon0,lat1,lon1]   P0Lon  P0Lat', SCR_XSIZE=270)
-; 	    bla = Widget_Base(row, Column=3,Frame=0, Scr_XSize=270)
-; 	      self.limitID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=180)
-; 	      self.p0lonID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=40)
-; 	      self.p0latID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=40)
-	    bla = Widget_Base(row, row=1,Frame=0, Scr_XSize=270,/nonexclusive)
+	    bla = Widget_Base(leftrow, row=1,Frame=0, Scr_XSize=270,/nonexclusive)
 	      self.enablelim = Widget_Button(bla, Value='Limit=[lat0,lon0,lat1,lon1] Projections ', UVALUE='SET_PLOT_DEFAULTS',Scr_YSize=21)
-
-; 	    label = Widget_Label(row, Value='Limit=[lat0,lon0,lat1,lon1]   Projections ', SCR_XSIZE=270)
-	    bla = Widget_Base(row, Column=3,Frame=0, Scr_XSize=270)
+	    bla = Widget_Base(leftrow, Column=3,Frame=0, Scr_XSize=270)
 	      self.limitID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=180)
-	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','MSG']; EASE-grid  = equal angle 'Lambert' ??
+	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','Satellite']; EASE-grid  = equal angle 'Lambert' ??
 	      self.projlist = Widget_combobox(bla, Value=[proj_list],UVALUE=[proj_list],Scr_XSize=85,Scr_YSize=28,UNAME='PLOTS_PROJLIST')
-
-	    label = Widget_Label(row, Value='  Add Text  Bin/Z  Rot/Qu  Magn.  P0lon  P0lat ', SCR_XSIZE=270)
-	    bla = Widget_Base(row, Column=6,Frame=0, Scr_XSize=270)
-	      self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
+	    label = Widget_Label(leftrow, Value='  TS-SymSiz Bin/Z  Rot/Qu. Magn.  P0lon  P0lat ', SCR_XSIZE=270)
+	    bla = Widget_Base(leftrow, Column=6,Frame=0, Scr_XSize=270)
+	      syms_list      = [string([0.,0.5,1+((indgen(21))/10.) ],f='(f3.1)')]
+	      self.symsizeID = Widget_combobox(bla,VALUE=[syms_list],UVALUE=[syms_list],Scr_XSize=54,Scr_YSize=28,UNAME='PLOTS_SYMSIZELIST')
 	      self.zkompID   = Widget_combobox(bla,VALUE=strcompress(indgen(12),/rem),UVALUE=strcompress(indgen(12),/rem),Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_ZLIST')
-; 	      rotlist        = string(indgen(8),f='(i1)')
+;               rotlist        = string(indgen(8),f='(i1)')
               rotlist        = string(indgen(20)/2.,f='(f3.1)')
 	      self.rotateID  = Widget_combobox(bla, Value=[rotlist],UVALUE=[rotlist],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_ROTATELIST') 
-              maglist        = string(indgen(10),f='(i1)')
-	      self.magniID   = Widget_combobox(bla,VALUE=maglist,UVALUE=maglist,Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_MAGNIFYLIST')
+	      maglist        = string(indgen(11)-1,f='(f3.0)')
+	      self.magniID   = Widget_combobox(bla,UVALUE=maglist,VALUE=['Auto',strcompress(fix(maglist[1:*]),/rem)],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_MAGNIFYLIST')
 	      self.p0lonID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
 	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=35,/Editable)
-
-	    label = Widget_Label(row,Value='ISCCP-CT  Color Tables                    ', SCR_XSIZE=270)
-	    bla = Widget_Base(row, Column=2,Frame=0, Scr_XSize=270)
-; 	      self.histct  = Widget_Text(bla, Value='', /Editable, SCR_XSIZE=60)
+	    label = Widget_Label(leftrow,Value='ISCCP-CT  Color Tables                    ', SCR_XSIZE=270)
+	    bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
 	      histlist = strupcase(['--','h_1d','-cot','-ctp','h_2d','low','cu','sc','st','mid','ac','as','ns','high','ci','cs','cb','max','ovw','hcb','vcb'])
 	      self.histct= Widget_combobox(bla, Value=histlist,UVALUE=histlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_HISTCTLIST')
 	      color_table_names,color_tbl_name
 	      self.ctlistID= Widget_combobox(bla, Value=[color_tbl_name],UVALUE=[color_tbl_name],Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_CTLIST')
-	    label = Widget_Label(row, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270)
-	    bla = Widget_Base(row, Column=5,Frame=0, Scr_XSize=270)
+	    label = Widget_Label(leftrow, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270)
+	    bla = Widget_Base(leftrow, Column=5,Frame=0, Scr_XSize=270)
 	      yy_list        = reverse(string(indgen(38)+1978,f='(i4.4)'))
 	      self.yearID    = Widget_combobox(bla,VALUE=['--',yy_list],UVALUE=['--',yy_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_YEARLIST')
 	      mm_list        = string(indgen(12)+1,f='(i2.2)')
@@ -3304,11 +3290,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.orbID     = Widget_Text(bla,Value='1',SCR_XSIZE=45,/Editable,UNAME='ORBITS_TEXT')
 	      level_list     = ['L3C','L3S','L3U','L3UE','L3DM','L3PM','L3DH','L2B_SUM','L2','L1']
 	      self.levelID   = Widget_combobox(bla,VALUE=['??',level_list],UVALUE=['??',level_list],Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_DAYTYPELIST')
-	    bla = Widget_Base(row, col=3, /Exclusive,Frame=1, XSize=270)
+	    bla = Widget_Base(leftrow, col=3, /Exclusive,Frame=1, XSize=270)
 	      self.allpixID  = Widget_Button(bla, Value='All Surfaces  ', UVALUE='SET_PLOT_DEFAULTS')
 	      self.landpixID = Widget_Button(bla, Value='Land Only ', UVALUE='SET_PLOT_DEFAULTS')
 	      self.seapixID  = Widget_Button(bla, Value='Sea Only    ', UVALUE='SET_PLOT_DEFAULTS')
-	    bla = Widget_Base(row, row=2, /Exclusive,Frame=1, XSize=270)
+	    bla = Widget_Base(leftrow, row=2, /Exclusive,Frame=1, XSize=270)
 	      self.globalID  = Widget_Button(bla, Value='Global', UVALUE='SET_PLOT_DEFAULTS')
 	      self.arcticID  = Widget_Button(bla, Value='Arctic', UVALUE='SET_PLOT_DEFAULTS')
 	      self.midlatnID = Widget_Button(bla, Value='MidLN', UVALUE='SET_PLOT_DEFAULTS')
@@ -3318,27 +3304,26 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.antarcID  = Widget_Button(bla, Value='AntArc', UVALUE='SET_PLOT_DEFAULTS')
 	      self.midlatsID = Widget_Button(bla, Value='MidLS', UVALUE='SET_PLOT_DEFAULTS')
 	      self.pm70ID    = Widget_Button(bla, Value=''+string(177b)+'60'+string(176b)+' Lat     ', UVALUE='SET_PLOT_DEFAULTS')
-	    self.sat_base = Widget_Base(row, Column=6, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
-;  	    self.sat_base = Widget_Base(row, Row=4, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
-; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05' , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N' , UVALUE='SET_PLOT_DEFAULTS')
-;  	      self.noaa6     = Widget_Button(self.sat_base, Value='N06' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa7     = Widget_Button(self.sat_base, Value='N07' , UVALUE='SET_PLOT_DEFAULTS')
- 	      self.noaa8     = Widget_Button(self.sat_base, Value='N08' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa9     = Widget_Button(self.sat_base, Value='N09' , UVALUE='SET_PLOT_DEFAULTS')
+	    self.sat_base = Widget_Base(leftrow, Column=6, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
+; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05', UVALUE='SET_PLOT_DEFAULTS')
+; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N', UVALUE='SET_PLOT_DEFAULTS')
+;  	      self.noaa6     = Widget_Button(self.sat_base, Value='N06', UVALUE='SET_PLOT_DEFAULTS')
+	      self.noaa7     = Widget_Button(self.sat_base, Value='N07', UVALUE='SET_PLOT_DEFAULTS')
+ 	      self.noaa8     = Widget_Button(self.sat_base, Value='N08', UVALUE='SET_PLOT_DEFAULTS')
+	      self.noaa9     = Widget_Button(self.sat_base, Value='N09', UVALUE='SET_PLOT_DEFAULTS')
   	      self.noaa10    = Widget_Button(self.sat_base, Value='N10', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa11    = Widget_Button(self.sat_base, Value='N11', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa12    = Widget_Button(self.sat_base, Value='N12', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa14    = Widget_Button(self.sat_base, Value='N14', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa15    = Widget_Button(self.sat_base, Value='N15', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa16    = Widget_Button(self.sat_base, Value='N16',uvalue='SET_PLOT_DEFAULTS')
+	      self.noaa16    = Widget_Button(self.sat_base, Value='N16', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa17    = Widget_Button(self.sat_base, Value='N17', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa18    = Widget_Button(self.sat_base, Value='N18', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa19    = Widget_Button(self.sat_base, Value='N19', UVALUE='SET_PLOT_DEFAULTS')
-	      self.metopa    = Widget_Button(self.sat_base, Value='MA', UVALUE='SET_PLOT_DEFAULTS')
-	      self.metopb    = Widget_Button(self.sat_base, Value='MB', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaaAM     = Widget_Button(self.sat_base, Value='AM', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaaPM     = Widget_Button(self.sat_base, Value='PM', UVALUE='SET_PLOT_DEFAULTS')
+	      self.metopa    = Widget_Button(self.sat_base, Value='MA' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.metopb    = Widget_Button(self.sat_base, Value='MB' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.noaaAM    = Widget_Button(self.sat_base, Value='AM' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.noaaPM    = Widget_Button(self.sat_base, Value='PM' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
 	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
 	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
@@ -3347,88 +3332,93 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.avhrrs    = Widget_Button(self.sat_base, Value='AVs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.modises   = Widget_Button(self.sat_base, Value='MOs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.allsat    = Widget_Button(self.sat_base, Value='ALL', UVALUE='SET_PLOT_DEFAULTS')
-	    bla = Widget_Base(row, ROW=1,Frame=0)
+	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Style: ')
-	    bla = Widget_Base(row, Column=2, Scr_XSize=270, /Exclusive,Frame=1)
+	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270, /Exclusive,Frame=1)
 	      self.pcsingle  = Widget_Button(bla, Value='Single Time Step', UVALUE='SET_PLOT_DEFAULTS')
 	      self.pcmulti   = Widget_Button(bla, Value='Multi Time Steps', UVALUE='SET_PLOT_DEFAULTS')
-	    bla = Widget_Base(row, Column=2, Scr_XSize=270, /Exclusive,Frame=1)              				; neu    = alt
+	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270, /Exclusive,Frame=1)
 	      self.pcvar     = Widget_Button(bla, Value='Map2D', UVALUE='SET_PLOT_DEFAULTS') 				; Map2D  = Variable (TS-MEAN)
-	      self.pcts      = Widget_Button(bla, Value='Serie', UVALUE='SET_PLOT_DEFAULTS') 				; Serie  = Timesereis
+	      self.pcts      = Widget_Button(bla, Value='Serie', UVALUE='SET_PLOT_DEFAULTS') 				; Serie  = Timeseries
 	      self.pchist    = Widget_Button(bla, Value='Histo', UVALUE='SET_PLOT_DEFAULTS') 				; Histo  = Histogram
 	      self.pczm      = Widget_Button(bla, Value='Zonal', UVALUE='SET_PLOT_DEFAULTS') 				; Zonal  = Zonal Mean
 	      self.pchov     = Widget_Button(bla, Value='HovMoell', UVALUE='SET_PLOT_DEFAULTS')				; Hovm   = Hovmoeller
-; 	      self.pcms      = Widget_Button(bla, Value='Multi-Sat-TS (MTS Only)', UVALUE='SET_PLOT_DEFAULTS')		; TS-Multi-Sat
-	      self.pcms      = Widget_Button(bla, Value='FBL-PDFs (Diff + Save Only)', UVALUE='SET_PLOT_DEFAULTS')		; TS-Multi-Sat
+	      self.pcms      = Widget_Button(bla, Value='FBL-PDFs (Diff + Save Only)', UVALUE='SET_PLOT_DEFAULTS')	; TS-Multi-Sat
 	      self.pcmat     = Widget_Button(bla, Value='Diff Matrix (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 	; Matrix = Matrix (MATRIX-TS)
-	      self.pcdts     = Widget_Button(bla, Value='Diff2D (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 		; Diff   = TS-Diff 
+	      self.pcdts     = Widget_Button(bla, Value='Diff2D (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 		; Diff   = TS-Diff
 	      self.pcmts     = Widget_Button(bla, Value='Box Plots (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 	; BoxPlot= TS-Mean 
 	      self.pcmatts   = Widget_Button(bla, Value='Taylor-Diagr. (Compare Only)', UVALUE='SET_PLOT_DEFAULTS')	; Stats  = Matrix-TS
-; 	    bla = Widget_Base(row, ROW=1,Frame=0)
-; 	      label = Widget_Label(bla, Value='Compare? - Choose Reference Dataset: ')
-	    bla = Widget_Base(row, Column=2, Scr_XSize=270,Frame=1)
+	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270,Frame=1)
 ; 	      self.archive  = Widget_Button(bla, Value='Archive', UVALUE='SET_PLOT_DEFAULTS')
 	      bla1 = Widget_Base(bla, Column=1, Scr_XSize=52,/NonExclusive)
 	         self.refself  = Widget_Button(bla1, Value='Load:', UVALUE='SET_PLOT_DEFAULTS')
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
-			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','PATMOS-X','PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','SELECT FILE']
+			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','PATMOS-X',$
+			  'PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','SELECT FILE']
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
-; 	      self.refself  = Widget_Button(bla, Value='Loaded: '+self.datum+' '+sat_name(self.algoname,self.satname)+' '+self.level, UVALUE='SET_PLOT_DEFAULTS')
-	    bla = Widget_Base(row, ROW=1,Frame=0)
+	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
-	    bla = Widget_Base(row, row=5, Scr_XSize=270, /Exclusive,Frame=1)
-	      self.refgac    = Widget_Button(bla, Value='CLARA1'  , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmyd    = Widget_Button(bla, Value='C5-AQUA' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmod    = Widget_Button(bla, Value='C5-TERRA', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refisp    = Widget_Button(bla, Value='ISCCP'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refgac2   = Widget_Button(bla, Value='CLARA2'  , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmyd2   = Widget_Button(bla, Value='C6-AQUA' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcla    = Widget_Button(bla, Value='CLAAS'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'  , UVALUE='SET_PLOT_DEFAULTS')
+	    bla = Widget_Base(leftrow, row=5, Scr_XSize=270, /Exclusive,Frame=1)
+	      self.refgac    = Widget_Button(bla, Value='CLARA1'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmyd    = Widget_Button(bla, Value='C5-AQUA'     , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmod    = Widget_Button(bla, Value='C5-TERRA'    , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refisp    = Widget_Button(bla, Value='ISCCP'       , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refgac2   = Widget_Button(bla, Value='CLARA2'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmyd2   = Widget_Button(bla, Value='C6-AQUA'     , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA'    , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcla    = Widget_Button(bla, Value='CLAAS'       , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refpmx    = Widget_Button(bla, Value='PATMOS_old'  , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refera    = Widget_Button(bla, Value='ERA-Interim'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci2   = Widget_Button(bla, Value='ESACCI'  , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci    = Widget_Button(bla, Value='ESACCI-v1.0', UVALUE='SET_PLOT_DEFAULTS')
-	      self.refgwx    = Widget_Button(bla, Value='ESACCI-GEWEX' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcal    = Widget_Button(bla, Value='CALIPSO' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refselect = Widget_Button(bla, Value='Select File', UVALUE='SET_PLOT_DEFAULTS')
-;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'  , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refera    = Widget_Button(bla, Value='ERA-Interim' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcci2   = Widget_Button(bla, Value='ESACCI'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcci    = Widget_Button(bla, Value='ESACCI-v1.0' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refgwx    = Widget_Button(bla, Value='ESACCI-GEWEX', UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcal    = Widget_Button(bla, Value='CALIPSO'     , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refselect = Widget_Button(bla, Value='Select File' , UVALUE='SET_PLOT_DEFAULTS')
+;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.refself   = Widget_Button(bla, Value='Loaded: '+sat_name(self.algoname,self.satname), UVALUE='SET_PLOT_DEFAULTS')
-	  buttonrow = Widget_Base(tlb2, ROW=3,/base_align_center)
-	    bla = Widget_Base(buttonrow,row=1,/NonExclusive,Frame=0)
-	      self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
-	      self.oplotID   = Widget_Button(bla, Value='Oplot', UVALUE='SET_PLOT_DEFAULTS')
-	      self.zoomID    = Widget_Button(bla, Value='Zoom', UVALUE='SET_PLOT_DEFAULTS')
-	      self.errID     = Widget_Button(bla, Value='Error', UVALUE='SET_PLOT_DEFAULTS')
-	      self.verbID    = Widget_Button(bla, Value='Verbose', UVALUE='SET_PLOT_DEFAULTS')
-	      self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noBarID   = Widget_Button(bla, Value='No Bar', UVALUE='SET_PLOT_DEFAULTS')
-	      self.logID     = Widget_Button(bla, Value='Log-Plot', UVALUE='SET_PLOT_DEFAULTS')
-	      self.wbgrID    = Widget_Button(bla, Value='White-BG', UVALUE='SET_PLOT_DEFAULTS')
-	      self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
-	    val = Widget_Base(buttonrow, ROW=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
-	      self.showpvalID = Widget_Text(val, Value='', SCR_XSIZE=245)
+	  rightrow = Widget_Base(tlb2, ROW=3,/base_align_center)
+            topright = Widget_Base(rightrow,column=4,/base_align_center)
+	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
+	        self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
+	        self.oplotID   = Widget_Button(bla, Value='Oplot'     , UVALUE='SET_PLOT_DEFAULTS')
+	        self.zoomID    = Widget_Button(bla, Value='Zoom'      , UVALUE='SET_PLOT_DEFAULTS')
+	        self.errID     = Widget_Button(bla, Value='Error'     , UVALUE='SET_PLOT_DEFAULTS')
+	        self.verbID    = Widget_Button(bla, Value='Verbose'   , UVALUE='SET_PLOT_DEFAULTS')
+	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
+	        self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
+	        self.noBarID   = Widget_Button(bla, Value='No Bar'    , UVALUE='SET_PLOT_DEFAULTS')
+	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
+	        self.logID     = Widget_Button(bla, Value='Log-Plot'  , UVALUE='SET_PLOT_DEFAULTS')
+	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
+	        self.showpvalID = Widget_Text(bla, Value='', SCR_XSIZE=245)
+	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
+	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
+	        self.wbgrID    = Widget_Button(bla, Value='White-BG'  , UVALUE='SET_PLOT_DEFAULTS')
+ 	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
+	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
+	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
+;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
+; 	        sym_list       = ['PSymbols',string((indgen(9)),f='(f3.1)')]
+;                 self.symbolID  = Widget_combobox(bla,VALUE=[sym_list],UVALUE=[sym_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_SYMBOLLIST')
+      
+	    self.draw = WIDGET_DRAW(rightrow, scr_XSIZE=xsize, scr_YSIZE=ysize,frame=1)
 
-	    self.draw = WIDGET_DRAW(buttonrow, scr_XSIZE=xsize, scr_YSIZE=ysize,frame=1)
-
-	    bla = Widget_Base(buttonrow, col=5,/base_align_center)
-	      button = Widget_Button(bla, Value='Plot Variable', UVALUE='PLOT_AND_STAY')
-	      button = Widget_Button(bla, Value='Compare Variable', UVALUE='JUST_COMPARE_CCI_WITH')
-	      button = Widget_Button(bla, Value='File Difference', UVALUE='PLOT_DIFF')
-	      button = Widget_Button(bla, Value='Take a Snapshot', UVALUE='SNAPSHOT')
-	      button = Widget_Button(bla, Value='Quit', UVALUE='QUIT_PLOT_VARIABLE_GUI')
+	    bottomright = Widget_Base(rightrow, col=5,/base_align_center)
+	      button = Widget_Button(bottomright, Value='Plot Variable', UVALUE='PLOT_AND_STAY')
+	      button = Widget_Button(bottomright, Value='Compare Variable', UVALUE='JUST_COMPARE_CCI_WITH')
+	      button = Widget_Button(bottomright, Value='File Difference', UVALUE='PLOT_DIFF')
+	      button = Widget_Button(bottomright, Value='Take a Snapshot', UVALUE='SNAPSHOT')
+	      button = Widget_Button(bottomright, Value='Quit', UVALUE='QUIT_PLOT_VARIABLE_GUI')
 
 	plot_l3
 
 	; Get the geometries of the tree widget and the button base. These
 	; will set the minimun and maximum values for resizing.
-	; self.geoPlotWin = Widget_Info(tlb2, /GEOMETRY)
-	self.georow     = Widget_Info(row, /GEOMETRY)
-	self.geoButtrow = Widget_Info(bla, /GEOMETRY)
-	self.geoToprow  = Widget_Info(val, /GEOMETRY)
+	self.georow     = Widget_Info(leftrow, /GEOMETRY)
+	self.geoButtrow = Widget_Info(bottomright, /GEOMETRY)
+	self.geoToprow  = Widget_Info(topright, /GEOMETRY)
 	self.geodraw    = Widget_Info(self.draw, /GEOMETRY)
 	self.minxs      = self.geodraw.scr_xsize
 	self.minys      = self.geodraw.scr_ysize
@@ -3452,8 +3442,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		return
 	endif
 ;  	theData      = self -> ReadVariable((theList[index])[0], Success=success)
-;	stapel (08/2014)  replaced with this. 
-; 	read_data,self.directory+'/'+self.filename, (theList[index[0]])[0], thedata, found = success, fillvalue, minvalue, maxvalue
+;	stapel (08/2014)  replaced with :
 	thedata = get_data(self.year,self.month,self.day,file=self.directory+'/'+self.filename,data=(theList[index[0]])[0], $
 			   algo=self.algoname,level=self.level,/keep_data_name, sat=self.satname,minvalue=minvalue,$
 			   maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success,/silent)
@@ -3474,8 +3463,10 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	endif else begin
 		widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
 	endelse
+	;symsize default
+	self.PsymSize = 1.5
 	;magnify defaults
-	self.magnify = 1
+	self.magnify = -1
 	;set defaults for comboboxes
 	self.varname_plotID = varName
 	; 3rd dimension
@@ -3513,32 +3504,25 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.compare_algo1 = self.algoname
 	IF count GT 0 THEN BEGIN
 		Widget_Control, self.variablelistID, SET_COMBOBOX_SELECT=index[0]
-		;stapel
 		Widget_Control, self.ctlistID, SET_COMBOBOX_SELECT=0
 		Widget_Control, self.projlist, SET_COMBOBOX_SELECT=0
-
-; 		Widget_Control, self.varname_plotID , Set_Value=theList[index[0]]
 		Widget_Control, self.minimumID , Set_Value=is_string(theData) ? '' : strcompress(minvalue,/rem)
 		Widget_Control, self.maximumID , Set_Value=is_string(theData) ? '' : strcompress(maxvalue,/rem)
-; 		Widget_Control, self.yearID    , Set_Value=self.year
-; 		Widget_Control, self.monthID   , Set_Value=self.month
-; 		Widget_Control, self.dayID     , Set_Value=self.day
 		Widget_Control, self.yearID    , SET_COMBOBOX_SELECT=yy_idx,sensitive=0
 		Widget_Control, self.monthID   , SET_COMBOBOX_SELECT=mm_idx,sensitive=0
 		Widget_Control, self.dayID     , SET_COMBOBOX_SELECT=dd_idx,sensitive=0
 		Widget_Control, self.levelID   , SET_COMBOBOX_SELECT=lidx,sensitive=0
+; 		Widget_Control, self.axquotID  , SET_COMBOBOX_SELECT=0
+; 		Widget_Control, self.symbolID  , SET_COMBOBOX_SELECT=0
+		Widget_Control, self.symsizeID , SET_COMBOBOX_SELECT=7,sensitive=0
 		Widget_Control, self.orbID     , Set_Value=self.orbit
-; 		Widget_Control, self.zkompID   , Set_Value=''
 		Widget_Control, self.zkompID   , SET_COMBOBOX_SELECT=0
-; 		Widget_Control, self.rotateID  , Set_Value=''
-		Widget_Control, self.magniID   , SET_COMBOBOX_SELECT=1
+		Widget_Control, self.magniID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.rotateID  , SET_COMBOBOX_SELECT=0
-;  		Widget_Control, self.pmultID   , Set_Value=''
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.winnrID   , Set_Value=''
-; 		Widget_Control, self.histct    , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
-		Widget_Control, self.selftxt   , Set_Value=''
+		Widget_Control, self.selftxt   , Set_Value=' Add Text'
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
 		Widget_Control, self.p0lonID   , Set_Value=''
@@ -3546,12 +3530,9 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		WIDGET_CONTROL, self.showpvalID, Set_Value='             Pixel Values'
 		Widget_Control, self.enablelim , Set_Button=0
 		Widget_Control, self.enablemima, Set_Button=0
-		Widget_Control, self.pixvalID  , Set_Button=0
-		Widget_Control, self.verbID    , Set_Button=0
 		Widget_Control, self.allpixID  , Set_Button=1
 		Widget_Control, self.landpixID , Set_Button=0
 		Widget_Control, self.seapixID  , Set_Button=0
-; 		Widget_Control, self.invID     , Set_Button=0
 		Widget_Control, self.globalID  , Set_Button=1
 		Widget_Control, self.northhmID , Set_Button=0
 		Widget_Control, self.southhmID , Set_Button=0
@@ -3561,11 +3542,16 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.midlatnID , Set_Button=0
 		Widget_Control, self.arcticID  , Set_Button=0
 		Widget_Control, self.pm70ID    , Set_Button=0
+		Widget_Control, self.pixvalID  , Set_Button=0
+		Widget_Control, self.invID     , Set_Button=0
+		Widget_Control, self.verbID    , Set_Button=0
+		Widget_Control, self.bordID    , Set_Button=0
 		Widget_Control, self.saveID    , Set_Button=0
 		Widget_Control, self.zoomID    , Set_Button=0
 		Widget_Control, self.oplotID   , Set_Button=0
 		Widget_Control, self.errID     , Set_Button=0
 		Widget_Control, self.noBarID   , Set_Button=0
+		Widget_Control, self.noTitleID , Set_Button=0
 ;  		Widget_Control, self.noaa5     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
 ;  		Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
@@ -3597,20 +3583,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.refself   , Set_Button=1
 		Widget_Control, self.refselect , Set_Button=0
 		Widget_Control, self.refnone   , Set_Button=1
-; 		Widget_Control, self.refgac    , Set_Button=(self.algoname eq 'CLARA' ? 1:0)
-; 		Widget_Control, self.refmyd    , Set_Button=(self.satname eq 'aqua' and self.algoname eq 'COLL5' ? 1:0)
-; 		Widget_Control, self.refmod    , Set_Button=(self.satname eq 'terra' and self.algoname eq 'COLL5' ? 1:0)
-; 		Widget_Control, self.refgac2   , Set_Button=(self.algoname eq 'CLARA2' ? 1:0)
-; 		Widget_Control, self.refmyd2   , Set_Button=(self.satname eq 'aqua' and self.algoname eq 'COLL6' ? 1:0)
-; 		Widget_Control, self.refmod2   , Set_Button=(self.satname eq 'terra' and self.algoname eq 'COLL6' ? 1:0)
-; 		Widget_Control, self.refgwx    , Set_Button=(self.algoname eq 'GEWEX' ? 1:0)
-; 		Widget_Control, self.refisp    , Set_Button=(self.algoname eq 'ISCCP' ? 1:0)
-; 		Widget_Control, self.refcci2   , Set_Button=(self.algoname eq 'ESACCI' ? 1:0)
-; 		Widget_Control, self.refcci    , Set_Button=(self.algoname eq 'ESACCI_OLD' ? 1:0)
-; 		Widget_Control, self.refpmx    , Set_Button=(self.algoname eq 'PATMOS' ? 1:0)
-; ; 		Widget_Control, self.refl1gac  , Set_Button=(self.algoname eq 'L1GAC' ? 1:0)
-; 		Widget_Control, self.refcla    , Set_Button=(self.algoname eq 'CLAAS' ? 1:0)
-; 		Widget_Control, self.refera    , Set_Button=(self.algoname eq 'ERA-I' ? 1:0)
 		Widget_Control, self.refgac    , Set_Button=0
 		Widget_Control, self.refmyd    , Set_Button=0
 		Widget_Control, self.refmod    , Set_Button=0
@@ -3807,7 +3779,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
-		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify
+		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle
 
 	found=1
 ; 	varName=self.varname_plotID
@@ -3832,6 +3804,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 ; 	oth = strlowcase(oth[0])
 
 	widget_control,self.selftxt,get_value=addtext
+	addtext = addtext eq ' Add Text' ? '' : addtext
 
 	hct = self.hct eq '--' ? '' : strlowcase(self.hct)
 	if hct eq 'ovw' then hct = 'overview'
@@ -3872,16 +3845,19 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	if day   eq '--' then day   = ''
 	dim3 = self.dim3
 	magnify = self.magnify
+	symsize = self.PsymSize
 	dtyp=self.leveltype
 
 	widget_control,self.orbID,get_value=orbit
 
 	show_values = Widget_Info(self.pixvalID, /BUTTON_SET)
 	verbose     = Widget_Info(self.verbID, /BUTTON_SET)
+	countries   = Widget_Info(self.bordID, /BUTTON_SET)
 	save_as     = Widget_Info(self.saveID, /BUTTON_SET)
 	zoom        = Widget_Info(self.zoomID, /BUTTON_SET)
 	error       = Widget_Info(self.errID, /BUTTON_SET)
 	nobar       = Widget_Info(self.noBarID, /BUTTON_SET)
+	notitle     = Widget_Info(self.noTitleID, /BUTTON_SET)
 	log         = Widget_Info(self.logID, /BUTTON_SET)
 
 	if Widget_Info(self.oplotID, /BUTTON_SET) then begin
@@ -3992,10 +3968,16 @@ l1g = 0
 		'sinusoidal'	: sinusoidal= 1
 		'robinson'	: robinson  = 1
 		'globe (ortho)'	: globe     = 1
-		'msg'		: msg       = 1
+		'satellite'	: msg       = 1
+; 		'msg'		: msg       = 1
 		else		: 
 	endcase
 
+	; map_image crash
+	if (keyword_set(robinson) or keyword_set(mollweide) or keyword_set(goode) or keyword_set(sinusoidal)) and ~ant and ~arc then begin
+		if p0lat[0] ne '' then print,'Setting P0lat different to Zero, causes Map_image to crash! Use "Default","Globe","Aitoff","Hammer" or "Stereo" instead!'
+		p0lat=['']
+	endif
 	setlist = Widget_Info([	self.noaa7,	$
 ; 				self.tirosn,	$
 ; 				self.noaa5,	$
@@ -4130,6 +4112,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			none   = widget_Info(self.refnone,/BUTTON_SET)
 			pcmult = Widget_Info(self.pcmulti,/BUTTON_SET)
 			hide   = ((sel+none) eq 2 and ~pcmult);or pcmult)
+			Widget_Control, self.SymSizeID,sensitive=pcmult 
 			if hide then begin
 				Widget_Control, self.yearID  ,SET_COMBOBOX_SELECT=self.year_idx,sensitive=( hide ? 0:1 )
 				Widget_Control, self.monthID ,SET_COMBOBOX_SELECT=self.month_idx,sensitive=( hide ? 0:1 )
@@ -4195,9 +4178,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
-				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
+				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
+				countries=countries,symsize=symsize,notitle=notitle
 
 			if ~found then return
+
+			;set System Variables
+			plot_l3, save_as = save_as
 
 			if none then begin
 				ok = dialog_message('Choose Reference Dataset!')
@@ -4299,7 +4286,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				win_nr = win_nr, save_as= save_as,land = land, sea = sea,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$
 				globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
-				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum,magnify=magnify
+				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum,magnify=magnify, $
+				countries=countries,notitle=notitle
 				if show_values and pcdts and ~total(strlowcase(hct[0]) eq ['hist2d','hist_2d','max']) then $
 				show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 				if ~(pcdts and ~total(strlowcase(hct[0]) eq ['max','1d'])) then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
@@ -4318,8 +4306,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
+				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				return
 			endif
@@ -4339,8 +4327,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
+				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcdts and pcsing then begin
@@ -4354,7 +4342,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
-				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID
+				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle
 				if show_values then show_pixel_value, out.bild, out.lon, out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcmat then begin
@@ -4370,8 +4358,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				single_var = varname,mini=mini,maxi=maxi,limit=limit,error=error, show_values = show_values, $
 				verbose = verbose, other = oth, ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, $
-				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),rot=rot,magnify=magnify
+				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl,countries=countries,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),rot=rot,magnify=magnify,symsize=symsize,notitle=notitle
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pczm and pcsing then begin
@@ -4381,7 +4369,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab,/zonal_only, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,log=log,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,magnify=magnify
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,magnify=magnify,countries=countries,notitle=notitle
 			endif
 			if pczm and pcmult then begin
 				if verbose then print,'Zonal Average Multi Time Step'
@@ -4390,7 +4378,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
 				robinson=robinson,show_values = show_values,nobar=nobar, stereographic = stereographic, ztext = ztext,log=log, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),magnify=magnify
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),magnify=magnify,countries=countries,symsize=symsize,notitle=notitle
 			endif
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
@@ -4398,7 +4386,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
-				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext,magnify=magnify
+				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext,magnify=magnify, $
+				countries=countries,symsize=symsize,notitle=notitle
 				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID
 			endif
 			if pcvar and pcmult then begin
@@ -4407,13 +4396,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
 				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log,$
-				show_values = show_values
+				show_values = show_values,countries=countries,symsize=symsize,notitle=notitle
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram, year, month, day, file1=file, sat=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
-				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,time_series=pcmult
+				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,$
+				time_series=pcmult,notitle=notitle
 			endif
 			if pcms and pcmult then begin
  				if verbose then print,'Currently Unset'
@@ -4424,7 +4414,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				if verbose then print,'Hovmoeller Time Series'
 				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
-				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit,coverage=cov
+				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit,coverage=cov, $
+				notitle=notitle
 				if show_values then begin
 					if ~keyword_set(nobar) then begin
 						print,'Set "No Bar" to get Pixel Values'
@@ -4439,13 +4430,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_histogram,year,month,day,file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,level=level, $
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], cov=cov,addtext = addtext[0], $
 				datum=datum, ref = ref, change_side = show_values,verbose=verbose, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),log=log
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),log=log,notitle=notitle
 			endif
 			if pcmts then begin
 				if verbose then print,'BoxPlots'
 				boxplot, year, month, day, data=varname, satellite = sat, timeseries=pcmult,level=level, limit = limit, $
 				filename1 = file, coverage = cov, error = error, mini = mini, maxi = maxi, save_as = save_as, win_nr = win_nr, $
-				datum=datum,algo=algo[0],verbose=verbose,reference = ref
+				datum=datum,algo=algo[0],verbose=verbose,reference = ref,notitle=notitle
 				if pcmult then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 
@@ -4466,9 +4457,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
-				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
+				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
+				countries=countries,symsize=symsize,notitle=notitle
 
 			if ~found then return
+
+			;set System Variables
+			plot_l3, save_as = save_as
 
 			if (pcms and ~save_as) or pchov then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" or "Multi Time Steps" instead!')
@@ -4565,7 +4560,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide	, $
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,log=log	, $
 				other=oth,ctable=ctab, level=level,nobar=nobar, stereographic = stereographic		, $
-				/all_parameter,dim3=dim3,coverage=cov,rot=rot,magnify=magnify
+				/all_parameter,dim3=dim3,coverage=cov,rot=rot,magnify=magnify,countries=countries	, $
+				notitle=notitle
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if is_jch(varname) and total(strlowcase(hct[0]) eq ['1d','1d_cot','1d_ctp','max']) then begin
 				satn1  = sat_name(algo,sat)
@@ -4602,10 +4598,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					endif
 				endif
 				if strmid(strlowcase(hct[0]),0,2) eq '1d' then begin
-					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat=sat,prefix=[f1str,f2str], $
-					land=land,sea=sea,limit=limit,save_as=save_as,win_nr=win_nr,antarctic=ant,arctic=arc	, $
-					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool)	, $
-					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0]
+					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat1=sat,prefix=[f1str,f2str], $
+					land=land,sea=sea,limit=limit,save_as=save_as,win_nr=win_nr,antarctic=ant,arctic=arc	 , $
+					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool)	 , $
+					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0],notitle=notitle,sat2=satn
 				endif else begin
 					; file1
 					plot_l2,year[0],month[0],day[0],file=file1,data=varname[0],mini=mini,maxi=maxi,sat=sat	, $
@@ -4614,7 +4610,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,log=log	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar	, $
-					cov=cov,magnify=magnify
+					cov=cov,magnify=magnify,countries=countries,notitle=notitle
 					; file2
 					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname2,mini=mini,maxi=maxi,sat=satn, $
 					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
@@ -4622,7 +4618,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,msg_proj=msg	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0],log=log, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f2str,nobar=nobar	, $
-					stereographic = stereographic,cov=cov,magnify=magnify
+					stereographic = stereographic,cov=cov,magnify=magnify,countries=countries,notitle=notitle
 					if show_values and ~pchist and ~pczm and ~pcmts then show_pixel_value, bild, lon,lat	, $
 					data = varname2, unit = unit, wtext = self.showpvalID
 				endelse
@@ -4631,12 +4627,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat=sat,save_as=save_as		, $
 				win_nr=win_nr,reference=algo2,verbose=verbose,varname=varname,mini=mini,maxi=maxi,limit=limit	, $
-				unit=unit,other=oth,antarctic=ant,arctic=arc,algo = algo,level=level,time_series=pcmult
+				unit=unit,other=oth,antarctic=ant,arctic=arc,algo = algo,level=level,time_series=pcmult,notitle=notitle
 			endif else if pcmat then begin
 				if verbose then print,'Matrix'
 				make_2d_overview,year=year,month=month,sat,reference=algo2, cov = cov,sat2=satn, out = out, $
 				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,$
-				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2
+				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2,notitle=notitle
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif else begin
 				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level, $
@@ -4648,7 +4644,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				diff_only=pcdts,hist_only=pchist,maps_only=pcvar,other=oth,ctable=ctab,zonal_only=pczm	, $
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
 				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify	, $
-				wtext = self.showpvalID
+				wtext = self.showpvalID,countries=countries,notitle=notitle
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
@@ -4665,11 +4661,16 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
-				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
-				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
-				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,$
+				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
+				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
+				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
+				countries=countries,symsize=symsize,notitle=notitle
+
 			if ~found then return
+
+			;set System Variables
+			plot_l3, save_as = save_as
 
 			if (pcsing and pchov) then begin
 				ok = dialog_message('Use "Multi Time Steps" for Hovmoeller plots!')
@@ -4780,9 +4781,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcts and ~hist2d then begin
 				; time series
-				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,$
+				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,symsize=symsize,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values,correct=nobar
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values,correct=nobar,$
+				notitle=notitle
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pchist then begin
 				; histogram
@@ -4793,7 +4795,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_histogram,year[0],month[0],day[0],file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,$
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], found = found,addtext = addtext[0], $
 				datum=datum, change_side = show_values,verbose=verbose,cov=cov,oplots = opl,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pczm then begin
 				; zonal median
@@ -4803,7 +4805,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,algo=algo	,$
 				timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0]			,$
-				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov
+				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcms and pcmult then begin
 				; Unset change to something new!
@@ -4820,7 +4822,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],obj_out=obj_out,addtext = addtext[0],$
-				magnify=magnify
+				magnify=magnify,countries=countries,notitle=notitle
 
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
@@ -4857,6 +4859,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 	theName = Widget_Info(event.id, /UNAME)
 	if theName eq 'PLOTS_PROJLIST' then begin
 		self.proj = list[event.index]
+	endif else if theName eq 'PLOTS_SYMSIZELIST' then begin
+		self.PsymSize=list[event.index]
 	endif else if theName eq 'PLOTS_MAGNIFYLIST' then begin
 		self.magnify=list[event.index]
 	endif else if theName eq 'PLOTS_CTLIST' then begin
@@ -5852,6 +5856,10 @@ PRO NCDF_DATA__DEFINE, class
              monthID:'',               $
              dayID:'',                 $
              levelID:'',               $
+             symsizeID:'',             $
+             PsymSize:0.,               $
+             symbolID:'',              $
+             axquotID:'',              $
              lalgID:'',                $
              year_idx:0L,              $
              month_idx:0L,             $
@@ -5874,7 +5882,9 @@ PRO NCDF_DATA__DEFINE, class
              version:'',               $
              selftxt:'',               $
              pixvalID:0L,              $
+             bordID:0L,                $
              verbID:0L,                $
+             noTitleID:0L,             $
              noBarID:0L,               $
              invID:0L,                 $
              enablelim:0l,             $
