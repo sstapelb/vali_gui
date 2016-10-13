@@ -3343,7 +3343,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.pchist    = Widget_Button(bla, Value='Histo', UVALUE='SET_PLOT_DEFAULTS') 				; Histo  = Histogram
 	      self.pczm      = Widget_Button(bla, Value='Zonal', UVALUE='SET_PLOT_DEFAULTS') 				; Zonal  = Zonal Mean
 	      self.pchov     = Widget_Button(bla, Value='HovMoell', UVALUE='SET_PLOT_DEFAULTS')				; Hovm   = Hovmoeller
-	      self.pcms      = Widget_Button(bla, Value='FBL-PDFs (Diff + Save Only)', UVALUE='SET_PLOT_DEFAULTS')	; TS-Multi-Sat
+	      self.pcms      = Widget_Button(bla, Value='Pic-Serie (FBL,PUG) (+ Save)', UVALUE='SET_PLOT_DEFAULTS')	; TS-Multi-Sat
 	      self.pcmat     = Widget_Button(bla, Value='Diff Matrix (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 	; Matrix = Matrix (MATRIX-TS)
 	      self.pcdts     = Widget_Button(bla, Value='Diff2D (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 		; Diff   = TS-Diff
 	      self.pcmts     = Widget_Button(bla, Value='Box Plots (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 	; BoxPlot= TS-Mean 
@@ -3396,9 +3396,10 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
 	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
 	        self.wbgrID    = Widget_Button(bla, Value='White-BG'  , UVALUE='SET_PLOT_DEFAULTS')
- 	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
-	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
-	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
+;removed , lets see if someone misses this, grep for selftxt and uncomment to re instate this
+;  	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
+; 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
+; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
 ;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
 ; 	        sym_list       = ['PSymbols',string((indgen(9)),f='(f3.1)')]
 ;                 self.symbolID  = Widget_combobox(bla,VALUE=[sym_list],UVALUE=[sym_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_SYMBOLLIST')
@@ -3522,7 +3523,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.winnrID   , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
-		Widget_Control, self.selftxt   , Set_Value=' Add Text'
+; 		Widget_Control, self.selftxt   , Set_Value=' Add Text'
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
 		Widget_Control, self.p0lonID   , Set_Value=''
@@ -3775,7 +3776,7 @@ END ;---------------------------------------------------------------------------
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
-		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year,month,day	, $
+		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year,month,day, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
@@ -3803,8 +3804,9 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 ; 	widget_control,self.other,get_value=oth
 ; 	oth = strlowcase(oth[0])
 
-	widget_control,self.selftxt,get_value=addtext
-	addtext = addtext eq ' Add Text' ? '' : addtext
+; 	widget_control,self.selftxt,get_value=addtext
+;  	addtext = addtext eq ' Add Text' ? '' : addtext
+	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
 
 	hct = self.hct eq '--' ? '' : strlowcase(self.hct)
 	if hct eq 'ovw' then hct = 'overview'
@@ -3824,6 +3826,13 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 			'Elevation'		: oth = 'elevation'
 			'BluetoRed'		: oth = 'bwr'
 			'Greyscale'		: oth = 'greyscale'
+			'GISTEarth'		: oth = 'gistearth'
+			'GMTGlobe'		: oth = 'gmtglobe'
+			'GMTRelief'		: oth = 'gmtrelief'
+			'GMTSplit'		: oth = 'gmtsplit'
+			'NYTDrought'		: oth = 'nytdrought'
+			'UKMHadcrut'		: oth = 'ukmhadcrut'
+			'TempAnomaly'		: oth = 'tempanomaly'
 			else			: oth = 'rainbow'
 		endcase
 		if inv then oth = 'flip_'+oth
@@ -4048,7 +4057,8 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 	endif
 
 	; das alles hier muss noch getestet werden!!
-	set_dummy = total(strlowcase(varname) eq ['blue_marble','usgs_lus','usgs_dem'])
+	set_dummy = total(strlowcase(varname) eq ['blue_marble','usgs_lus','usgs_dem','usgs_ls','usgs_lsm',$
+						  'refl1','refl2','refl3a','rad3b','rad4','rad5'])
 	if keyword_set(set_dummy) then begin
 		found=1
 		return,self.directory+'/'+self.filename
@@ -4534,13 +4544,19 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
 				if l1g    then begin & algo2 = 'l1gac'      & satn = sat & end
 				if cla    then begin & algo2 = 'claas'      & satn = 'msg' & end
-				self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, found = found, orbit=orbit))[0]
-				if not found then begin
-					self.file2 = self.directory+'/'+self.filename
-					sat  = self.satname
-					return
-				endif
-				datum2 = strjoin([year,month,day,orbit])
+				if pcmult then begin
+					self.file2 = ''
+					found = 1
+					datum2 = ''
+				endif else begin
+					self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, found = found, orbit=orbit))[0]
+					if not found then begin
+						self.file2 = self.directory+'/'+self.filename
+						sat  = self.satname
+						return
+					endif
+					datum2 = strjoin([year,month,day,orbit])
+				endelse
 			endelse
 
 			if sel then sat  = self.satname
@@ -4677,7 +4693,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				return
 			endif
 			; erstmal nicht belegt
-			if pcmts or pcmat or pcmatts or pcdts or pcms or (pcts and pcsing) then begin
+			if pcmts or pcmat or pcmatts or pcdts or (pcms and ~save_as) or (pcts and pcsing) then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" oder "Multi Time Steps" instead!')
 				return
 			endif
@@ -4760,7 +4776,17 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				return
 			endif
 			
-			if pchov then begin
+			if pcms and save_as then begin
+				ok = dialog_message("This combination will create PUG Pictures! Make sure that Date, Projection and Limit is properly set. ",/cancel)
+				if ok eq 'Cancel' then return
+				plot_l2_save_serie,year[0],month[0],day[0],sat=sat[0],algo=algo[0], $
+				sea = sea,land=land,save_as=save_as,limit=limit,timeseries=pcmult, $
+				p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
+				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
+				cov=cov, ztext = ztext, stereographic = stereographic,msg_proj=msg,error=error,log=log,$
+				dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],addtext = addtext[0],$
+				magnify=magnify,countries=countries,notitle=notitle
+			endif else if pchov then begin
 				; hovmoeller
 				if hist2d then begin 
 					   ok=dialog_message('Hovmoeller Diagram Not available for '+varname)
@@ -4783,8 +4809,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				; time series
 				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,symsize=symsize,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values,correct=nobar,$
-				notitle=notitle
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values,$
+				notitle=notitle,nobar=nobar,logarithmic=log
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pchist then begin
 				; histogram
@@ -4805,7 +4831,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,algo=algo	,$
 				timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0]			,$
-				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle
+				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle,nobar=nobar
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcms and pcmult then begin
 				; Unset change to something new!

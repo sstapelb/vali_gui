@@ -348,7 +348,6 @@ PRO cgTaylorDiagram, stddev, correlation, $
   ; Long Ticks
   nticks = 10
   cir_ticks = Findgen(nticks)/nticks * stddev_max
-  
   ; Coordinates of the two extremes of the ticks for the outer circle: we will create a polyline as ticks
   long_x_right = cir_ticks
   long_y_right = SQRT(stddev_max^2 - cir_ticks^2)
@@ -358,26 +357,33 @@ PRO cgTaylorDiagram, stddev, correlation, $
   ; Multiple RMS circles
 	multi_cir = 1000          	;number of points of each RMS circle
 	ratio = 0.25 			;ratios for each circle: i.e. in increments of this value
-	number_cirs = stddev_max * 4 	;Number of RMS circles
+	number_cirs = (stddev_max > 1) * 5	;Number of RMS circles
 
   FOR i=0, number_cirs-1 DO BEGIN
-
     multi_max = ref_stddev + ratio
     multi_min = ref_stddev - ratio
-   
+    if multi_min ge !x.crange[1] then begin
+	ratio += 0.25
+	continue
+    endif
+
     multi_circlesx = Findgen(multi_cir)/(multi_cir-1)*(multi_max-multi_min)+multi_min
     multi_circlesy = SQRT(ratio^2 - (multi_circlesx-ref_stddev)^2)
 
-    cgPlotS, 0 > multi_circlesx < stddev_max, multi_circlesy, COLOR=c_stddev, LINESTYLE=1
+;     cgPlotS, 0 > multi_circlesx < stddev_max, multi_circlesy, COLOR=c_stddev, LINESTYLE=1
+    ; this avoids blue line on the very right of the image 
+
+    idx = where(multi_circlesx lt !x.crange[1] and multi_circlesx ge 0)
+    cgPlotS, multi_circlesx[idx], multi_circlesy[idx], COLOR=c_stddev, LINESTYLE=1
     number = i eq 0 ? 'RMS '+String(ratio,f='(f4.2)') : String(ratio,f='(f4.2)')
     IF (multi_circlesx[i+50] GT 0) AND (multi_circlesx[i+50] LT 1.5) THEN BEGIN
-        cgText, multi_circlesx[i+50], multi_circlesy[i+50], number, $
+           cgText, multi_circlesx[i+50], multi_circlesy[i+50], number, $
            CHARSIZE=cgDefCharsize()*0.8, ALIGNMENT=1, /DATA, CLIP=0, COLOR=c_stddev
     ENDIF
 
     ratio = ratio + 0.25
   ENDFOR
-  
+
   ; Mask: Masking part of the RMS circles out:
   cgColorFill, [x, stddev_max, x[0]],[y, stddev_max, y[0]], /data,color=background_color;, COLOR='white'
   cgPolygon, [x, stddev_max, x[0]],[y, stddev_max, y[0]], /data,color=background_color;, COLOR='white'
@@ -457,7 +463,7 @@ PRO cgTaylorDiagram, stddev, correlation, $
 
   cgText, stddev_max, y[N_Elements(y)-1], ' 1.0', CHARSIZE=cgDefCharsize()*0.85, CLIP=0, COLOR=c_correlation
   
-  
+
   ;Extra ticks between correlation values 0.9 and 1:
   ;Even Shorter Ticks
  ; new circle where its points will be used as the end point of the Extra short ticks
@@ -484,14 +490,12 @@ PRO cgTaylorDiagram, stddev, correlation, $
   FOR i=0, extrashort_nticks-1 DO BEGIN
     cgPlots, [extrashort_outerx[i], extrashortx[i]], [extrashort_outery[i], extrashorty[i]], COLOR=c_correlation
   ENDFOR
-  
   ;Correlation Axis Name
   cc_namex  = stddev_max - stddev_max*0.25
   cc_namey  = stddev_max - stddev_max*0.25
 
 ;   cgText, cc_namex, cc_namey, 'Correlation', ORIENTATION=-45., ALIGNMENT=0.5,  COLOR=c_correlation, CHARSIZE=3
    cgText, cc_namex, cc_namey, 'Correlation', ORIENTATION=-25., ALIGNMENT=2.5,  COLOR=c_correlation, CHARSIZE=2.
-
 
   ; Observed/Reference Circles. The dashed circles centered in the Observed value are the centered RMS
   ; (root-mean-square) values.
@@ -506,7 +510,7 @@ PRO cgTaylorDiagram, stddev, correlation, $
   cgPlots, ref_cir_x, ref_cir_y, LINESTYLE=2, COLOR='pur7'
 ;   cgText, ref_max, stddev_max * 0.05, 'Observed', ALIGNMENT=0.5, COLOR='pur7'
   cgText, ref_max, stddev_max * 0.05, observation, ALIGNMENT=0.5, COLOR='pur7'
-  
+
   ; PART III: Plotting the Input Data Points
   dataangle = ACos( correlation )            
   data_x = stddev * Cos( dataangle )     

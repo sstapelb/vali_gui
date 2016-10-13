@@ -196,7 +196,7 @@ endif else begin
     fixit=0
   endelse
 endelse
-   
+
 tvcrs,x0,y0
 
 if keyword_set(inc) then begin
