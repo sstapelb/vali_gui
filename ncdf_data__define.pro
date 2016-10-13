@@ -1992,7 +1992,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 			algoname = 'APOLLO'
 			level    = 'l2'
 			dum           = strsplit(filen,/ext,'_')
-			if dum[0] eq 'ATS' then satname = 'aatsr'
+			if dum[0] eq 'ATS' then satname = 'envisat'
 			datum    = dum[1]+dum[2]
 			year     = strmid(datum,0,4)
 			month    = strmid(datum,4,2)
@@ -2166,7 +2166,10 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		if verb then print,'SENSOR: ',tcd
 		if tcd eq 'MERISAATSR' then satname = 'aatme'
 		if tcd eq 'MERIS-AATSR' then satname = 'aatme'
-		if tcd eq 'AATSR' then satname = 'aatsr'
+; 		if tcd eq 'AATSR' then satname = 'aatsr'
+; 		if tcd eq 'ATSR2' then satname = 'atsr2'
+		if tcd eq 'AATSR' then satname = 'envisat'
+		if tcd eq 'ATSR2' then satname = 'ers2'
 		if tcd eq 'AVHRR_MERGED' then begin & satname = 'avhrrs' &  level = 'l3s' & end
 		if tcd eq 'MODIS_MERGED' then begin & satname = 'modises' &  level = 'l3s' & end
 		if tcd eq 'MERGED' then begin & satname = 'allsat' &  level = 'l3s' & end
@@ -2278,7 +2281,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	if stregex(satname[0],'meteosat',/bool,/fold) then satname = 'msg'
 
 	; workaround for l2 aatsr files , hopefully not necassary in future
-	if satname[0] eq 'aatsr' and algoname eq 'ESACCI' and level eq 'l2' then begin
+	if satname[0] eq 'envisat' and algoname eq 'ESACCI' and level eq 'l2' then begin
 		datum = stregex(filen,'[0-9]{12}',/ext)
 		year  = strmid(datum,0,4)
 		month = strmid(datum,4,2)
@@ -3324,10 +3327,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.metopb    = Widget_Button(self.sat_base, Value='MB' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaaAM    = Widget_Button(self.sat_base, Value='AM' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaaPM    = Widget_Button(self.sat_base, Value='PM' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
+; 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
 	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
 	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aatsr     = Widget_Button(self.sat_base, Value='AAT', UVALUE='SET_PLOT_DEFAULTS')
+	      self.ers2      = Widget_Button(self.sat_base, Value='ERS', UVALUE='SET_PLOT_DEFAULTS')
+	      self.envisat   = Widget_Button(self.sat_base, Value='ENV', UVALUE='SET_PLOT_DEFAULTS')
 	      self.aatme     = Widget_Button(self.sat_base, Value='A/M', UVALUE='SET_PLOT_DEFAULTS')
 	      self.avhrrs    = Widget_Button(self.sat_base, Value='AVs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.modises   = Widget_Button(self.sat_base, Value='MOs', UVALUE='SET_PLOT_DEFAULTS')
@@ -3570,9 +3574,10 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.noaa19    , Set_Button=(self.satname eq 'noaa19' ? 1:0)
 		Widget_Control, self.metopa    , Set_Button=(self.satname eq 'metopa' ? 1:0)
  		Widget_Control, self.metopb    , Set_Button=(self.satname eq 'metopb' ? 1:0)
-		Widget_Control, self.msg       , Set_Button=(self.satname eq 'msg'    ? 1:0)
+; 		Widget_Control, self.msg       , Set_Button=(self.satname eq 'msg'    ? 1:0)
 		Widget_Control, self.aqua      , Set_Button=(self.satname eq 'aqua'   ? 1:0)
-		Widget_Control, self.aatsr     , Set_Button=(self.satname eq 'aatsr'  ? 1:0)
+		Widget_Control, self.envisat   , Set_Button=(self.satname eq 'envisat'? 1:0)
+		Widget_Control, self.ers2      , Set_Button=(self.satname eq 'ers2'   ? 1:0)
 		Widget_Control, self.aatme     , Set_Button=(self.satname eq 'aatme'  ? 1:0)
 		Widget_Control, self.terra     , Set_Button=(self.satname eq 'terra'  ? 1:0)
 		Widget_Control, self.avhrrs    , Set_Button=(self.satname eq 'avhrrs' ? 1:0)
@@ -4004,20 +4009,22 @@ l1g = 0
 				self.noaa19,	$
 				self.metopa,	$
 				self.metopb,	$
-				self.msg,	$
+; 				self.msg,	$
 				self.aqua,	$
 				self.terra,	$
 				self.avhrrs,	$
 				self.modises,	$
 				self.allsat,	$
-				self.aatsr,	$
+				self.ers2,	$
+				self.envisat,	$
 				self.aatme,	$
 				self.noaaam,	$
 				self.noaapm	$
 				],/button_set)
 ; 	satlist = ['noaa'+strcompress([7,5,6,8,9,10,11,12,14,15,16,17,18,19],/rem),$
 ; 		   'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','noaaam','noaapm']
- 	satlist = ['noaa'+strcompress([7,8,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','noaaam','noaapm']
+ 	satlist = ['noaa'+strcompress([7,8,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','aqua','terra','avhrrs',$
+		   'modises','allsat','ers2','envisat','aatme','noaaam','noaapm']
 	blabal = where(setlist eq 1,bla_cnt)
 	sat = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
 
@@ -4150,9 +4157,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				Widget_Control, self.noaa19    , Set_Button=(self.satname eq 'noaa19' ? 1:0)
 				Widget_Control, self.metopa    , Set_Button=(self.satname eq 'metopa' ? 1:0)
 				Widget_Control, self.metopb    , Set_Button=(self.satname eq 'metopb' ? 1:0)
-				Widget_Control, self.msg       , Set_Button=(self.satname eq 'msg'    ? 1:0)
+; 				Widget_Control, self.msg       , Set_Button=(self.satname eq 'msg'    ? 1:0)
+				Widget_Control, self.ers2      , Set_Button=(self.satname eq 'ers2'   ? 1:0)
 				Widget_Control, self.aqua      , Set_Button=(self.satname eq 'aqua'   ? 1:0)
-				Widget_Control, self.aatsr     , Set_Button=(self.satname eq 'aatsr'  ? 1:0)
+				Widget_Control, self.envisat   , Set_Button=(self.satname eq 'envisat'? 1:0)
 				Widget_Control, self.aatme     , Set_Button=(self.satname eq 'aatme'  ? 1:0)
 				Widget_Control, self.terra     , Set_Button=(self.satname eq 'terra'  ? 1:0)
 				Widget_Control, self.avhrrs    , Set_Button=(self.satname eq 'avhrrs' ? 1:0)
@@ -4713,12 +4721,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pmx    then begin & algo = 'patmos_old'  & ref = 'pmx_old' & end
 			if pmx2   then begin & algo = 'patmos'      & ref = 'pmx'     & end
 			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
-			if cla    then begin & algo = 'claas'       & ref = 'cla'     & end
+			if cla    then begin & algo = 'claas'       & sat = 'msg'     & ref = 'cla'  & end
 
 			if select then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
 				; following needs to be done for filenames that include white spaces
-				file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),filter=self.extension)
+				file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
+				filter=self.extension)
 				if self.file2 eq '' then return
 				ok     = self -> get_file_infos(infile=self.file2)
 				sat    = ok.satname ne '' ? ok.satname : sat
@@ -4775,7 +4784,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok=dialog_message('For hist1d choose plot style "Map2D" or "Hovmoell"')
 				return
 			endif
-			
+
 			if pcms and save_as then begin
 				ok = dialog_message("This combination will create PUG Pictures! Make sure that Date, Projection and Limit is properly set. ",/cancel)
 				if ok eq 'Cancel' then return
@@ -4821,7 +4830,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_histogram,year[0],month[0],day[0],file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,$
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], found = found,addtext = addtext[0], $
 				datum=datum, change_side = show_values,verbose=verbose,cov=cov,oplots = opl,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,logarithmic=log
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pczm then begin
 				; zonal median
@@ -4829,9 +4838,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					   ok=dialog_message('Not available for '+varname)
 					   return
 				endif
-				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,algo=algo	,$
-				timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0]			,$
-				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle,nobar=nobar
+				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,$
+				algo=algo,timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0],$
+				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle,nobar=nobar,$
+				logarithmic=log
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcms and pcmult then begin
 				; Unset change to something new!
@@ -5961,6 +5971,8 @@ PRO NCDF_DATA__DEFINE, class
              metopb:0L,                $
              msg:0L,                   $
              aqua:0L,                  $
+             envisat:0L,               $
+             ers2:0L,                  $
              aatsr:0L,                 $
              aatme:0L,                 $
              noaaAM:0L,                $

@@ -967,6 +967,29 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		endif
 	endif
 
+	if keyword_set(save_dir) then begin
+		charthick = 1.5
+		xcharsize = 1.7 
+		ycharsize = 1.7
+		lcharsize = 2.5
+		xmargin   = [14,6]
+		ymargin   = [ 7,3]
+	endif else if keyword_set(white_bg) and keyword_set(zonal_only) then begin
+		charthick = 3.0
+		xcharsize = 2.5
+		ycharsize = 2.5
+		lcharsize = 3.0
+		xmargin   = [20,6]
+		ymargin   =  [8,3]
+	endif else begin
+		charthick = 1.2
+		xcharsize = 1.2 
+		ycharsize = 1.2
+		lcharsize = 1.5
+		xmargin   =[10,3]
+		ymargin   = [5,2]
+	endelse
+
 	; cci
 	medi_c = zonal_average(dum_bildc,lat,fillvalue=fillvalue1,lat_zon=lat1dc,/mean,/nan,lat_res=lat_res);,/median)
 	; gac
@@ -974,18 +997,21 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	savbg = keyword_set(save_dir) or keyword_set(white_bg)
 
+; 	DEVICE, SET_FONT='-adobe-helvetica-medium-r-normal--10-100-75-75-p-56-iso8859-1'
+
 	start_save, save_as4, thick = thick, size = [32, 20]
-		if savbg then symsize = 2
-		title = savbg ? vollername : 'bias: '+string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f7.2)')+ $
+		title = keyword_set(notitle) ? '' : $
+		'bias: '+string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f7.2)')+ $
 		' ; rmse: '+string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f6.2)') + $
 		' ; stdd: '+string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - gbias(bild_cci[idx],bild_gac[idx],lat[idx])^2),f='(f6.2)')+unit
 
 		yr = [(adv_keyword_set(mini) ? mini : (dat eq 'ctt' ? 200:0)),(adv_keyword_set(maxi) ? maxi : max([medi_c,medi_g])*1.05)] 
 		plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-		xtitle='latitude [degrees]',ytitle='zonal mean of '+strupcase(dat)+unit,yr=yr,title=title, $
-		charthick = (savbg ? 1.5:1.2), charsize = (savbg ? 1.7:1.2), $
- 		xcharsize = (savbg ? 1.7:1.2), ycharsize= (savbg ? 1.7:1.2), $
-		xmargin=[7,3]+(savbg ? [7,0]:0),ymargin=[4,2]+(savbg ? [3,1]:0)
+		xtitle='latitude [degrees]',ytitle=vollername+unit,yr=yr,title=title, ylog=logarithmic,$
+; 		charthick = (savbg ? 1.5:1.2), charsize = (savbg ? 1.7:1.2), $
+;  		xcharsize = (savbg ? 1.7:1.2), ycharsize= (savbg ? 1.7:1.2), $
+; 		xmargin=[7,3]+(savbg ? [7,0]:0),ymargin=[4,2]+(savbg ? [3,1]:0)
+		charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize, xmargin=xmargin,ymargin=ymargin
 
 		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
 		print,'-----------'+dat+'-'+cov+'--------------'
@@ -1006,10 +1032,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		oplot,lat1dc,medi_c,thick=thick
 		oplot,lat1dg,medi_g,thick=thick,col=cgColor("Red")
 		if keyword_set(show_values) then begin
-			legend,[algon_cci,algon_gac],thick=replicate(thick,2),spos='bot',charsize=(savbg ? 2.5:1.5), $
+			legend,[algon_cci,algon_gac],thick=replicate(thick,2),spos='bot',charsize=lcharsize, $
 			color=[-1,cgColor("Red")]
 		endif else begin
-			legend,[algon_cci,algon_gac],thick=replicate(thick,2),spos='top',charsize=(savbg ? 2.5:1.5), $
+			legend,[algon_cci,algon_gac],thick=replicate(thick,2),spos='top',charsize=lcharsize, $
 			color=[-1,cgColor("Red")]
 		endelse
 	end_save, save_as4
@@ -2882,16 +2908,22 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		xcharsize = 1.7 
 		ycharsize = 1.7
 		lcharsize = 2.5
-	endif else if wbg then begin
+		xmargin   = [14,6]
+		ymargin   = [ 7,3]
+	endif else if wbg and zoo then begin
 		charthick = 3.0
 		xcharsize = 2.5
 		ycharsize = 2.5
 		lcharsize = 3.0
+		xmargin   = [20,6]
+		ymargin   =  [8,3] ;+ (keyword_set(notitle) ? 0 : [0,1])
 	endif else begin
 		charthick = 1.2
-		xcharsize = 1.2
+		xcharsize = 1.2 
 		ycharsize = 1.2
 		lcharsize = 1.5
+		xmargin   =[10,3]
+		ymargin   = [5,2]
 	endelse
 
 	if sav and (sig or zoo) then begin
@@ -2944,13 +2976,12 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					aa = d.HIST_2D.data
 					regr = d.HIST_2D.linfit.regr
 				endelse
-				view2d,aa,xtitle=algon1+' '+strupcase(dat)+' '+unit,ytitle=ref+' '+strupcase(dat)+' '+unit,$
+				view2d,aa,xtitle=algon1+' '+title+' '+unit,ytitle=ref+' '+title+' '+unit,$
 				bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
 				ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 				xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
 				ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
 				title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
-; ; 				charthick = 1., xcharsize = 1., ycharsize = 1.
 				xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize
 				oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
 				oplot,!x.crange,!y.crange
@@ -3000,15 +3031,18 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					stdd = d.OVERALL_STATS.LATITUDE_WEIGHTED.BC_RMSE
 				endelse
 				plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-				xtitle='latitude [degrees]',ytitle='zonal mean '+(trend ? 'of linear trend ':'')+dat+unit,yr=yr,position=pos2,noerase=~zoo,ylog=log,$
-				title= 	'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit
+				xtitle='latitude [degrees]',ytitle=(trend ? 'linear trend ':'')+title+' '+unit,yr=yr,position=pos2,$
+				noerase=~zoo,ylog=log, title= keyword_set(notitle) ? '':'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+$
+				string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit,$
+				charthick=charthick,xcharsize=xcharsize,ycharsize=ycharsize,xmargin=xmargin,ymargin=ymargin
 				oplot,lat1d_c,medi_c,thick=thick
 				oplot,lat1d_g,medi_g,thick=thick,col=cgColor("Red")
 				if keyword_set(show_values) then begin
-					legend,[date+' '+ref+dtn,date+' '+algon1+dtn],thick=replicate(thick,2),spos='top',charsize=1.5,color=[cgColor("Red"),-1]
+					legend,[date+' '+ref+dtn,date+' '+algon1+dtn],thick=replicate(thick,2),spos='top',$
+					charsize=lcharsize,color=[cgColor("Red"),-1],charthick=charthick
 				endif else begin
-					legend,date+' '+ref+dtn,thick=thick,color=cgColor("Red"),spos='bl',charsize=1.5
-					legend,date+' '+algon1+dtn,thick=thick,color=-1,spos='br',charsize=1.5
+					legend,date+' '+ref+dtn,thick=thick,color=cgColor("Red"),spos='bl',charsize=lcharsize,charthick=charthick
+					legend,date+' '+algon1+dtn,thick=thick,color=-1,spos='br',charsize=lcharsize,charthick=charthick
 				endelse
 				;--------------------------------------------
 			end_save,save_as2
@@ -3236,10 +3270,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		single = strlowcase(single_var)
 		if single eq 'cc_total' then single = 'cfc'
 	endif
-; 	trend   = stregex(single,'_trend',/fold,/bool)
-; 	tr_corr = stregex(single,'_trend_corr',/fold,/bool)
-; 	if tr_corr then single = strreplace(single,'_trend_corr','',/fold) else $
-; 	if trend   then single = strreplace(single,'_trend','',/fold)
+
 	d = get_available_time_series( 	alg, single, sat, coverage = coverage, reference = ref, period = datum, uncertainty = uncertainty, $
 					sav_file = sfile, longname = longname, unit = unit, trend = trend, tr_corr = tr_corr, $
 					stddev = stddev, anomalies = anomalies, found = found, no_trend_found = no_trend_found)
@@ -3305,7 +3336,6 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(bild1 eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv), $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, g_eq=g_eq, l_eq=l_eq	, $
-; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5)	, $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, box_axes=box_axes,$
 				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow,flip_colours = flip_colours,$
@@ -3338,7 +3368,6 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, $
-; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5)	, $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, box_axes=box_axes,$
 				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow,flip_colours = flip_colours,$
@@ -3356,7 +3385,6 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle		, $
-; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5)	, $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, box_axes=box_axes,$
 				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow,flip_colours = flip_colours,$
@@ -3376,7 +3404,6 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
 			lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
 		endif
-; 		return
 	endif
 
 	plot_simple_timeseries, single_var[0], sat, alg, cov, reference = ref, structure=d,zonal_only=zonal_only,mean_2d=mean_2d, $
@@ -4282,6 +4309,8 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	wbg   = keyword_set(white_bg)
 	ts    = keyword_set(timeseries)
 
+	vollername = full_varname(varname)
+
 	algon1= sat_name(algo,sat,year=(ts ? 0:year),month=(ts ? 0:month),level=lev)
 	if keyword_set(ref) then algon2 = sat_name(reference,sat,year=(ts ? 0:year),month=(ts ? 0:month),level=lev)
 
@@ -4408,8 +4437,8 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 		sn_cov = short_cov_name(coverage)
 		if keyword_set(sn_cov) then dtn += ' - '+ sn_cov
 		if opl eq 0 then begin
-			plot,xx,hh/total(hh)*100.,xtitle=strupcase(varname)+' '+unit,title=(ts ? date:''),xr=[minv[0],maxv[0]],thick=thick,$
-			yrange=yrange,ytitle='% of occur.',xlog=logarithmic,$
+			plot,xx,hh/total(hh)*100.,xtitle=vollername+' '+unit,title=keyword_set(notitle) ? '' : (ts ? date:''),$
+			xr=[minv[0],maxv[0]],thick=thick,yrange=yrange,ytitle='% of occur.',xlog=logarithmic,$
 			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
 			if ts then date=''
 			if is_defined(hh2) then begin
@@ -4434,7 +4463,7 @@ end
 pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=sea,land=land, save_as=save_as,mini=mini,maxi=maxi, $
 			win_nr = win_nr,timeseries=timeseries,satellite=satellite,oplots=oplots,found=found,level=level, coverage = coverage		,$
 			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts,simulator=simulator,dirname=dirname,$
-			notitle=notitle,nobar=nobar
+			notitle=notitle,nobar=nobar,logarithmic=logarithmic
 
 	opl   = keyword_set(oplots) ? fix(oplots) : 0
 	hct   = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
@@ -4530,7 +4559,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		if wbg or sim then thick = 5
 		if opl eq 0 then begin
 			plot,[0,0],[1,1],xr=[-90,90],xs=3,/ys,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-			xtitle='latitude [degrees]',ytitle=full_varname(varname) + unit,yr=yr,title=title, $
+			xtitle='latitude [degrees]',ytitle=full_varname(varname) + unit,yr=yr,title=title,ylog=logarithmic, $
 			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
 			if ts then date = ''
 			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick
@@ -4668,6 +4697,12 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		ori_period[0] = dum[0]
 	endif
 	anz = ( dum[1]-dum[0] + 1 ) *12.
+
+	if anz eq 12. then begin
+; 		xtickname = [xtickname[0],'Jan',' ','Feb',' ','Mar',' ','Apr',' ','May',' ','Jun',' ','Jul',' ',$
+; 				'Aug',' ','Sep',' ','Oct',' ','Nov',' ','Dec',xtickname[1]]
+		xtickname = [xtickname[0],' ','Q1',' ',' ',' ','Q2',' ',' ',' ','Q3',' ',' ',' ','Q4',' ',xtickname[1]]
+	endif
 
 	if anz lt n_elements(ts_data[0,*]) then begin
 		anf = ((dum[0]-ori_period[0])*12)
@@ -5045,18 +5080,20 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	dem = get_dem(grid=grid)
 	make_geo,lon,lat,grid=grid
 
+	vollername = full_varname(dat)
+
 	case strmid(dat,0,3) of
-		'cot'	: begin & histv = [0.1,0.,100.]    & vollername = 'Cloud Optical Thickness' & end
-		'cth'	: begin & histv = [0.1,0.,20.]     & vollername = 'Cloud Top Height' & end
-		'cwp'	: begin & histv = [1.,0.,1000.]    & vollername = 'Cloud Water Path' & end
-		'iwp'	: begin & histv = [1.,0.,1000.]    & vollername = 'Cloud Ice Water Path' & end
-		'lwp'	: begin & histv = [1.,0.,1000.]    & vollername = 'Cloud Liquid Water Path' & end
-		'ctp'	: begin & histv = [1.,100.,1000.]  & vollername = 'Cloud Top Pressure' & end
-		'ctt'	: begin & histv = [1.,180.,330.]   & vollername = 'Cloud Top Temperature' & end
-		'cfc'	: begin & histv = [0.01,0.,1.]     & vollername = 'Cloud Fraction' & end
-		'cph'	: begin & histv = [0.01,0.,1.]     & vollername = 'Liquid Cloud Fraction' & end
-		'cer'	: begin & histv = [0.1,0.,80.]     & vollername = 'Cloud Effective Radius' & end
-		'sal'	: begin & histv = [0.1,0.,100.]    & vollername = 'Surface Albedo' & end
+		'cot'	: histv = [0.1,0.,100.]
+		'cth'	: histv = [0.1,0.,20.]  
+		'cwp'	: histv = [1.,0.,1000.]  
+		'iwp'	: histv = [1.,0.,1000.]  
+		'lwp'	: histv = [1.,0.,1000.]  
+		'ctp'	: histv = [1.,100.,1000.]
+		'ctt'	: histv = [1.,180.,330.] 
+		'cfc'	: histv = [0.01,0.,1.]   
+		'cph'	: histv = [0.01,0.,1.]   
+		'cer'	: histv = [0.1,0.,80.]   
+		'sal'	: histv = [0.1,0.,100.]  
 		else : begin & print, 'tbd' & stop & end
 	endcase
 

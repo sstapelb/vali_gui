@@ -3456,7 +3456,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		if stregex(sat,'TERRA',/bool)   then inst = 'MODIS'
 		if stregex(sat,'MODISES',/bool) then inst = 'MODIS'
 		if stregex(sat,'AATSR',/bool)   then inst = 'AATSR'
+		if stregex(sat,'ATSR2',/bool)   then inst = 'ATSR2'
 		if stregex(sat,'ENVISAT',/bool) then inst = 'AATSR'
+		if stregex(sat,'ERS',/bool)     then inst = 'ATSR2'
 		if stregex(sat,'AATME',/bool)   then inst = 'MERISAATSR'
 		if stregex(alg,'ERA',/bool)     then inst = 'MODEL'
 	endif else inst  = strupcase(instrument)
@@ -3819,7 +3821,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					if dat eq 'cm' then filen = dir+'swansea_cm/ATS_TOA_1PRUPA'+yyyy+mm+dd+'*cldMask.nc' $
 					else filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-L2P_AEROSOL-ALL-AATSR_ENVISAT-SU*.nc'
 				endif
-				if strmid(alg,0,6) eq 'ESACCI' then begin
+				if alg eq 'ESACCI' then begin
 					if lev eq 'l2' then begin
 						dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/ral_l2_aatsr/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+'*PP.primary.nc'
@@ -3828,6 +3830,15 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 						filen = dir+yyyy+mm+dd+'*ESACCI*'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-AATSR*-f'+vers+'.nc'
 					endelse
+				endif
+			  end
+		'ATSR2'	: begin
+				if alg eq 'ESACCI' then begin
+					if lev eq 'l3c' then begin
+						dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strmid(strupcase(lev),0,3)+'/'+yyyy+'/'+mm+'/'
+						vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
+						filen = dir+yyyy+mm+dd+'*ESACCI*'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-ATSR2_ERS2-f'+vers+'.nc'
+					endif
 				endif
 			  end
 		'MERISAATSR': begin
