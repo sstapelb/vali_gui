@@ -2852,7 +2852,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		 uncertainty = uncertainty,satnames = satnames, sum=sum
 
 	pinatubo = 0
-	satn_background = 1
+	satn_background = 0
 	sav     = keyword_set(save_as)
 	sig     = keyword_set(single_var)
 	zoo     = keyword_set(zonal_only)
