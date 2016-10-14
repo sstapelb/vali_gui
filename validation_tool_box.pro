@@ -742,6 +742,12 @@ end
 ;---------------------------------------------------------------------------------------
 function is_hdf5, filename
 	hdf = 0
+	error_status = 0
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		return, 0
+	endif
 	if file_test(filename[0],/read) then begin
 		hdf = H5F_IS_HDF5(filename[0])
 		if hdf then begin
@@ -4934,6 +4940,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else return,-1
 	endif else if ( dat eq 'rgb' and total(lev eq ['l3u','l3ue'])) then begin
 		found = file_test(filename[0])
+		if arg_present(finfo) then finfo = file_info(filename[0])
 		if found then begin
 			outdata = read_image(filename[0])
 			if outdata[0] eq -1 then begin
@@ -5106,6 +5113,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		filename = !SAVS_DIR + ref+'_rad_mm/'+string(year,f='(i4.4)')+string(month,f='(i2.2)')+'_'+strlowcase(sat)+'_'+ref+'_radiances_L3c.sav'
 		d = restore_var(filename,found=found)
 		if found then begin
+			if arg_present(finfo) then finfo = file_info(filename[0])
 			if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
 			strucname = stregex(dat,'refl',/bool,/fold) ? strupcase('rad'+strmid(dat,4)) : strupcase(dat)
 			strucidx  = where(tag_names(d) eq strucname,idxcnt)
@@ -5121,6 +5129,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
 		marble_file = !SAVS_DIR + '/blue_marble/blue_marble_0.10.sav'
+		if arg_present(finfo) then finfo = file_info(marble_file[0])
 		outdata = restore_var(marble_file,found=found)
 		if found then outdata = fix(outdata)
 		if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(marble_file[0],/rem)
@@ -5138,7 +5147,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			ls = 0
 		endelse
 		if keyword_set(error) and dumdat eq 'lus' then begin
-			dum 		= restore_var(!SAVS_DIR + 'usgs/USGS_0.5km_MODIS_based_Land_Cover_Type_2_0.05_degree_regular.sav',found=found)
+			usgs_file       = !SAVS_DIR + 'usgs/USGS_0.5km_MODIS_based_Land_Cover_Type_2_0.05_degree_regular.sav'
+			dum 		= restore_var(usgs_file[0],found=found)
 			outdata 	= dum.sampled ; dum.averaged
 			minvalue 	= dum.minvalue
 			maxvalue 	= dum.maxvalue
@@ -5169,6 +5179,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			longname = 'Land Sea Mask based on USGS Land USE'
 			flag_meanings = ['Sea','Land']
 		endif
+		if arg_present(finfo) then finfo = file_info(usgs_file[0])
 	endif else if ( (total(alg eq ['coll5','coll6']) and total(dat eq ['cph_day','cph_16_day','cph_37_day']) ) ) then begin
 		ch = ''
 		if stregex(dat,'_16_',/fold,/bool) and alg eq 'coll6' then ch = '16_'
@@ -5244,7 +5255,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if dat eq 'ref' then longname = 'monthly mean cloud effective radius'
 		if dat eq 'cer' then longname = 'monthly mean cloud effective radius'
 		if ~sil then print,''
-	endif else if is_hdf5(filename[0]) and (sat eq 'msg' or alg eq 'claas') then begin
+	endif else if is_hdf5(filename) and (sat eq 'msg' or alg eq 'claas') then begin
 		outdata = read_cmsaf_seviri(filename[0], dat, fillvalue = no_data_value, longname = longname, found = found, $
 			  minvalue = minvalue, maxvalue = maxvalue, unit = unit, verbose = verbose)
 	endif else if strmid(dat,0,8) eq 'tempdiff' and strmid(alg,0,6) eq 'esacci' and (lev eq 'l2' or lev eq 'l3u' or lev eq 'l3ue') then begin
@@ -5578,6 +5589,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if idxcnt gt 0 then outdata[idx] = no_data_value[0]
 		endif else found = 0
 	endif else begin
+		if size(filename,/type) eq 0 then begin
+			found = 0
+			return,-1
+		endif
 		read_data, filename[0], dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, flag_meanings, verbose = verbose, raw=raw,$
 		found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
 		; specials for testing etc, remove if not needed anymore

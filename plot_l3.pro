@@ -808,7 +808,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						max=(float(size(maxi,/type)) ? maxi : maxvalue)				, $
 						title= title2, format=bar_format,countries=countries,usa=countries	, $
 						charthick = !m_charthick	, panoply = panoply			, $
-						charsize  = !m_charsize , bar_tickname=bar_tickname2, $
+						charsize  = !m_charsize , bar_tickname=bar_tickname2			, $
 						limit = limit, figure_title = figure_title2, rainbow = rainbow		, $
 						ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel	, $
 						noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar, $
@@ -4892,44 +4892,77 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 	apx1  = ''
 	apx2  = ''
 	ts    = keyword_set(timeseries)
-	dat   = keyword_set(data) 	? strlowcase(data) 	: ''
+	dat   = keyword_set(data) 	? strsplit(strlowcase(data),',',/ext) 	: ''
+	if n_elements(dat) ne 2 then dat = [dat,dat]
 	sat   = keyword_set(satellite) 	? strlowcase(satellite)	: ''
 	cov   = keyword_set(coverage) 	? strlowcase(coverage) 	: ''
 
 	if keyword_set(save_as) then begin
-		save_as = !SAVE_DIR +'boxplots'+'/'+datum+'_'+dat+'_'+sat+'_'+dat+'_'+cov+'_box_plots'+'.eps'
+		save_as = !SAVE_DIR +'boxplots'+'/'+datum+'_'+dat[0]+'_'+sat+'_'+dat[1]+'_'+cov+'_box_plots'+'.eps'
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200
 
 	if ts then begin
 		datum = '1978-2016'
-		d = get_available_time_series( 	algo, dat, sat, reference = reference, coverage = cov, period = datum, found = found, $
-						stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, no_trend_found = no_trend_found)
-		if found then begin
-			cci = d.percentiles
-			ref = d.percentiles2
-			unit = d.unit
-			longname = d.longname
-			datum = d.actual_date
-			name  = [sat_name(algo,sat),sat_name(reference,sat)]
+		if ~strmatch(dat[0],dat[1]) then begin
+			d = get_available_time_series( 	algo, dat[0], sat, coverage = cov, period = datum, found = found, $
+							stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, $
+							no_trend_found = no_trend_found)
+			if found then begin
+				cci  = d.mean
+				cci  = percentile(cci[where(cci ne -999.)],[.5,.75,.25,.975,.025])
+				unit = d.unit
+				longname = d.longname
+				datum = d.actual_date
+				name  = sat_name(algo,sat)+' '+strupcase(dat[0])
+				free,d
+			endif else begin
+				if ~no_trend_found then ok = dialog_message('No Time Series found!')
+				return
+			endelse
+			d = get_available_time_series( 	reference, dat[1], sat, coverage = cov, period = datum, found = found, $
+							stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, $
+							no_trend_found = no_trend_found)
+			if found then begin
+				ref   = d.mean
+				ref   = percentile(ref[where(ref ne -999.)],[.5,.75,.25,.975,.025])
+				name  = [name,sat_name(reference,sat)+' '+strupcase(dat[1])]
+				free,d
+			endif else begin
+				if ~no_trend_found then ok = dialog_message('No Time Series found!')
+				return
+			endelse
 			array = [[temporary(cci)],[temporary(ref)]]
-			free,d
 		endif else begin
-			if ~no_trend_found then ok = dialog_message('No Time Series found!')
-			return
+			d = get_available_time_series( 	algo, dat[0], sat, reference = reference, coverage = cov, period = datum, found = found, $
+							stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, $
+							no_trend_found = no_trend_found)
+			if found then begin
+				cci = d.percentiles
+				ref = d.percentiles2
+				unit = d.unit
+				longname = d.longname
+				datum = d.actual_date
+				name  = [sat_name(algo,sat),sat_name(reference,sat)]
+				array = [[temporary(cci)],[temporary(ref)]]
+				free,d
+			endif else begin
+				if ~no_trend_found then ok = dialog_message('No Time Series found!')
+				return
+			endelse
 		endelse
 	endif else begin
 		datum = string(month,f='(i2.2)')+'/'+string(year,f='(i4.4)')
-		cci  = 	get_data(year,month,day,file = filename1,data=dat,algo=algo,sat=sat,glob=1,/mean,verbose=verbose,finfo=cci_info,/print_filename, $
+		cci  = 	get_data(year,month,day,file = filename1,data=dat[0],algo=algo,sat=sat,glob=1,/mean,verbose=verbose,finfo=cci_info,/print_filename, $
 			no_data=ndv_cci,unit=unit,longname=longname,found=found,level=level,/sil,/make_compareable,/join_nodes,dim3=dim3)
 		if not found then begin
-			ok=dialog_message('Data not found! '+algo+' '+dat)
+			ok=dialog_message('Data not found! '+algo+' '+dat[0])
 			return
 		endif
 
-		ref  = 	get_data(year,month,day,file = filename2,data=dat,algo=reference,sat=sat,glob=1,/mean,verbose=verbose,dim3=dim3, $
+		ref  = 	get_data(year,month,day,file = filename2,data=dat[1],algo=reference,sat=sat,glob=1,/mean,verbose=verbose,dim3=dim3, $
 			no_data=ndv_ref,found=found,level=level,/sil,/make_compareable,/join_nodes,finfo=ref_info,print_filename=2)
 		if not found then begin
-			ok=dialog_message('Data not found! '+reference+' '+dat)
+			ok=dialog_message('Data not found! '+reference+' '+dat[1])
 			return
 		endif
 
@@ -4943,6 +4976,10 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		if is_the_same(algo,reference,sat=sat) then begin
 			if ref_info.mtime gt cci_info.mtime then begin & apx1 = ' (old)' & apx2 = ' (new)' & new = 1 & end
 			if cci_info.mtime gt ref_info.mtime then begin & apx1 = ' (new)' & apx2 = ' (old)' & new = 0 & end
+			if ~strmatch(dat[0],dat[1]) then begin
+				apx1 += ' '+strupcase(dat[0])
+				apx2 += ' '+strupcase(dat[1])
+			endif
 		endif else new = -1
 
 		name  = [sat_name(algo,sat,year=year,month=month,level=level)+apx1,sat_name(reference,sat,year=year,month=month,level=level)+apx2]
@@ -4951,8 +4988,8 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		; see what else we have
 		if level eq 'l3u' then median = 1 else mean = 1
 		annex = (sat eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
-		set_algolist, algo_list, sat = sat, data = dat, exclude = [algo,reference],/default
-		struc = get_all_avail_data(year,month,day,data=dat+annex,sat=sat,level=level,algo_list=algo_list,coverage=coverage, $
+		set_algolist, algo_list, sat = sat, data = dat[0], exclude = [algo,reference],/default
+		struc = get_all_avail_data(year,month,day,data=dat[0]+annex,sat=sat,level=level,algo_list=algo_list,coverage=coverage, $
 			glob=1,/make_compare,mean=mean,median=median,verbose=verbose,percentile=[.5,.75,.25,.975,.025],limit=limit)
 		if is_struct(struc) then begin
 			name  = [name,struc.algo_names]
@@ -4985,12 +5022,12 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 	start_save,save_as,thick=thick
 
 	plot,[0,0],[1,1],yr=[min(wh_unten[where(wh_unten ne -999.)]),max(wh_oben[where(wh_oben ne -999.)])],xticks = n_elements(name)+1, $
-	xtickname=[' ',name,' '], ytitle=strupcase(dat+annex)+' '+unit, xminor=1, xticklen=0.007, charsize=2, $
+	xtickname=[' ',name,' '], ytitle=full_varname(dat[0]+annex,/universal)+' '+unit, xminor=1, xticklen=0.007, charsize=2, $
 	title=strupcase(cov)+'  '+longname+'  '+datum
 
 	for i = 0, n_elements(medi)-1 do begin
 		if medi[i] eq -999 then continue
-		if keyword_set(apx1) then begin
+		if keyword_set(apx1) and strmatch(dat[0],dat[1]) then begin
 			if (i eq new) then color = cgcolor('red') ; red only for the new cci
 		endif
 		; box
