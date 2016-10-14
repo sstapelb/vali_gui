@@ -2871,18 +2871,15 @@ pro polyfill_ts_error,ts_data,ts_unce,error=error,color=color, fill = fill, bars
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anomalies=anomalies			, $
-		 log=log,save_as=save_as,single_var=single_var,error=error,show_values = show_values		, $
-		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl,coverage=coverage		, $
-		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum,mean_2d=mean_2d	, $
+		 log=log,save_as=save_as,error=error,show_values = show_values		, $
+		 no_compare=no_compare,nobar=nobar,opl=opl,coverage=coverage		, $
+		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum			, $
 		 trend=trend,symsize=symsize,notitle=notitle,tr_corr=tr_corr, stddev = stddev			, $
-		 uncertainty = uncertainty,satnames = satnames, sum=sum
+		 uncertainty = uncertainty,satnames = satnames, sum=sum, dtn=dtn
 
 	pinatubo = 0
-	satn_background = 0
+	satn_background = 1
 	sav     = keyword_set(save_as)
-	sig     = keyword_set(single_var)
-	zoo     = keyword_set(zonal_only)
-	m2d     = keyword_set(mean_2d)
 	wbg     = keyword_set(white_bg)
 	syms    = adv_keyword_set(symsize) ? symsize : 1.5
 	psym    = syms eq 0 ? 0 : -8 ; 8 :=circles, changes here will use cgsymcat() 
@@ -2898,8 +2895,6 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	dec2 = ''
 	dec3 = ''
 
-	dtn = appendix(dat,trend_corrected=tr_corr)
-
 	sn_cov = short_cov_name(coverage)
 	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) and ~keyword_set(satn_background) then dtn += ' '+ sn_cov
 
@@ -2910,13 +2905,13 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		lcharsize = 2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
-	endif else if wbg and zoo then begin
+	endif else if wbg then begin
 		charthick = 3.0
 		xcharsize = 2.5
 		ycharsize = 2.5
 		lcharsize = 3.0
 		xmargin   = [20,6]
-		ymargin   =  [8,3] ;+ (keyword_set(notitle) ? 0 : [0,1])
+		ymargin   =  [8,3]
 	endif else begin
 		charthick = 1.2
 		xcharsize = 1.2 
@@ -2926,12 +2921,10 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		ymargin   = [5,2]
 	endelse
 
-	if sav and (sig or zoo) then begin
+	if sav then begin
 		!p.multi = 0
 		save_dum = file_dirname(save_as)+'/'+file_basename(save_as,'.eps')
-		save_as1 = save_dum + '_2dhist.eps'
-		save_as2 = save_dum + '_zonalmean.eps'
-		save_as3 = save_dum + '_time_series.eps'
+		save_as1 = save_dum + '_time_series.eps'
 	endif
 
 	cc = 5
@@ -2940,115 +2933,6 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 			   (stregex(dat,'_std',/fold,/bool) ? ' Stdd.' : '')
 
 	if ~keyword_set(no_compare) then begin
-		min_a = d.HIST_2D.minvalue[0]
-		max_a = d.HIST_2D.maxvalue[0]
-		bin   = d.HIST_2D.bin
-; 		if ~zoo then begin
-		if m2d then begin
-			start_save, save_as1, thick = thick, size = [32,20]
-				; 2d hist
-				if sig and ~sav and ~m2d then pos1 = [0.01,0.05,0.4,0.85]
-				if keyword_set(trend) then begin
-					maxi   = max(rnd(minmax(abs([d.trend.mean,d.trend.mean2]),/nan,no_data_value=999),bin))
-					bin    = (bin / 10.) > 0.01
-					min_a  = (-1.*maxi)
-					max_a  = maxi
-					aa     = hist_2d(float(d.trend.mean),float(d.trend.mean2),min1=min_a,max1=max_a,bin1=bin,min2=min_a,max2=max_a,bin2=bin)
-					h2_idx = where((d.trend.mean ne -999.) and (d.trend.mean2 ne -999.),h2_cnt )
-					regr = h2_cnt gt 0 ? linfit(float(d.trend.mean[h2_idx]),float(d.trend.mean2[h2_idx])) : [-999.,0.]
-				endif else if keyword_set(stddev) then begin
-					maxi   = max(rnd(minmax(abs([d.std,d.std2]),/nan,no_data_value=999),bin))
-					bin    = (bin / 10.) > 0.01
-					min_a  = 0
-					max_a  = maxi
-					aa     = hist_2d(float(d.std),float(d.std2),min1=min_a,max1=max_a,bin1=bin,min2=min_a,max2=max_a,bin2=bin)
-					h2_idx = where((d.std ne -999.) and (d.std2 ne -999.),h2_cnt )
-					regr = h2_cnt gt 0 ? linfit(float(d.std[h2_idx]),float(d.std2[h2_idx])) : [-999.,0.]
-				endif else if keyword_set(uncertainty) then begin
-					maxi   = max(rnd(minmax(abs([d.unc,d.unc2]),/nan,no_data_value=999),bin))
-					bin    = (bin / 10.) > 0.01
-					min_a  = 0
-					max_a  = maxi
-					aa     = hist_2d(float(d.unc),float(d.unc2),min1=min_a,max1=max_a,bin1=bin,min2=min_a,max2=max_a,bin2=bin)
-					h2_idx = where((d.unc ne -999.) and (d.unc2 ne -999.),h2_cnt )
-					regr = h2_cnt gt 0 ? linfit(float(d.unc[h2_idx]),float(d.unc2[h2_idx])) : [-999.,0.]
-				endif else begin
-					aa = d.HIST_2D.data
-					regr = d.HIST_2D.linfit.regr
-				endelse
-				view2d,aa,xtitle=algon1+' '+title+' '+unit,ytitle=ref+' '+title+' '+unit,$
-				bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
-				ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
-				xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-				ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-				title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
-				xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize
-				oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
-				oplot,!x.crange,!y.crange
-			end_save, save_as1
-		endif
-; 		if sig or zoo or m2d then begin
-		if zoo or m2d then begin
-			start_save, save_as2, thick = thick, size = [32,20]
-				if wbg then thick=4
-				if ~sav and ~zoo and ~m2d then pos2 = [0.55,0.59,0.95,0.9]
-				date = ~sig ? datum : ''
-				;------zonal-means----------------------
-				fillvalue = -999.
-				make_geo,lon_d,lat_d,grid=([360.,180.]/size(d.MEAN,/dim))[0]
-				lat_res = 1. > get_grid_res(d.mean)
-				if keyword_set(trend) then begin
-					bild1 = d.trend.mean
-					bild2 = d.trend.mean2
-				endif else if keyword_set(stddev) then begin
-					bild1 = d.std
-					bild2 = d.std2
-				endif else if keyword_set(uncertainty) then begin
-					bild1 = d.unc
-					bild2 = d.unc2
-				endif else begin
-					bild1 = d.mean
-					bild2 = d.mean2
-				endelse
-				medi_c = zonal_average(bild1,lat_d,fillvalue=fillvalue,lat_zon=lat1d_c,/nan,/mean,lat_res=lat_res)
-				medi_g = zonal_average(bild2,lat_d,fillvalue=fillvalue,lat_zon=lat1d_g,/nan,/mean,lat_res=lat_res)
-				yr  = keyword_set(yrange) ? yrange : [(dat eq 'CTT' ? 200:0.1),max([medi_c,medi_g],/nan)]
-				; globale bias, rmse und bc-rmse gewichtet nach latitude
-				if keyword_set(trend) or keyword_set(stddev) or keyword_set(uncertainty) then begin
-					md_idx = where((bild1 ne -999.) and (bild2 ne -999.),md_cnt )
-					if md_cnt gt 0 then begin
-						bias = gbias(bild1[md_idx],bild2[md_idx],lat_d[md_idx])
-						rmse = grmse(bild1[md_idx],bild2[md_idx],lat_d[md_idx])
-						stdd = bc_rmse(bias,rmse)
-					endif else begin
-						bias = -999.
-						rmse = -999.
-						stdd = -999.
-					endelse
-				endif else begin
-					bias = d.OVERALL_STATS.LATITUDE_WEIGHTED.BIAS
-					rmse = d.OVERALL_STATS.LATITUDE_WEIGHTED.RMSE
-					stdd = d.OVERALL_STATS.LATITUDE_WEIGHTED.BC_RMSE
-				endelse
-				plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-				xtitle='latitude [degrees]',ytitle=(trend ? 'linear trend ':'')+title+' '+unit,yr=yr,position=pos2,$
-				noerase=~zoo,ylog=log, title= keyword_set(notitle) ? '':'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+$
-				string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit,$
-				charthick=charthick,xcharsize=xcharsize,ycharsize=ycharsize,xmargin=xmargin,ymargin=ymargin
-				oplot,lat1d_c,medi_c,thick=thick
-				oplot,lat1d_g,medi_g,thick=thick,col=cgColor("Red")
-				if keyword_set(show_values) then begin
-					legend,[date+' '+ref+dtn,date+' '+algon1+dtn],thick=replicate(thick,2),spos='top',$
-					charsize=lcharsize,color=[cgColor("Red"),-1],charthick=charthick
-				endif else begin
-					legend,date+' '+ref+dtn,thick=thick,color=cgColor("Red"),spos='bl',charsize=lcharsize,charthick=charthick
-					legend,date+' '+algon1+dtn,thick=thick,color=-1,spos='br',charsize=lcharsize,charthick=charthick
-				endelse
-				;--------------------------------------------
-			end_save,save_as2
-			if zoo or m2d then return
-		endif
-
 		start_save, save_as3, thick = thick, size = [42,22]
 			if wbg then thick=4
 			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
@@ -3069,9 +2953,9 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				if keyword_set(coverage) then begin
 					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 				endif
-				legend,algon1+dtn,psym=cgsymcat(psym),thick=thick,color=[cgColor("Red")],spos='tl',$
+				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor("Red")],spos='tl',$
 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-				legend,ref+dtn,psym=cgsymcat(psym),thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
+				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 
 				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
 				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('Red4'),fill=fill,bars=bars
@@ -3102,12 +2986,12 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue'),fill=fill,bars=bars
 				oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgcolor(cols)
 				oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms;,col=cgcolor(cols)
-; 				legend,algon1+dtn+' ('+datum+')',psym=cgsymcat(psym),thick=thick,color=-1,spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
-				legend,algon1+dtn,psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+; 				legend,algon1+dtn[0]+' ('+datum+')',psym=cgsymcat(psym),thick=thick,color=-1,spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
-; 				legend,ref+dtn,psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+; 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 ; 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
-if 1 eq 2 then 			legend,ref+dtn,psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos=spos,charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+if 1 eq 2 then 			legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos=spos,charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
  				ystretch=((ystretch+1)*1.1)+0.5,linestyle = linestyle
 			endif
 		end_save,save_as3
@@ -3206,7 +3090,7 @@ if 1 eq 2 then 			legend,ref+dtn,psym=cgsymcat(psym),thick=thick,color=[cgColor(
 					endif
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,symsize=syms
 				if ~keyword_set(show_values) and ~keyword_set(nobar) and ~keyword_set(satn_background) then $
-				legend,ref+dtn+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
+				legend,ref+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
 			endif else begin
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
 				dumidx = where(~between(ts_data[nc,*],pf_ycr[0],pf_ycr[1]) and finite(ts_data[nc,*]),dumidxcnt)
@@ -3243,7 +3127,7 @@ if 1 eq 2 then 			legend,ref+dtn,psym=cgsymcat(psym),thick=thick,color=[cgColor(
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,mean_2d=mean_2d		, $
+pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr	, $
 				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=limit,land=land,sea=sea		, $
 				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values,zoom=zoom,error=error,verbose=verbose	, $
 				other=other,ctable=ctable, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon		, $
@@ -3260,111 +3144,176 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	if keyword_set(land) then coverage = 'land'
 	if keyword_set(sea) then coverage = 'sea'
 	datum = '1978-2016' ; start dummy
+	no_trends_etc = 0
+	!p.multi=0
+
+	sav     = keyword_set(save_as)
+	zoo     = keyword_set(zonal_only)
+	wbg     = keyword_set(white_bg)
 
 	algon1 = sat_name(alg,sat)
 	algon2 = sat_name(ref,sat)
 
-	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
+	set_colors, rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, $
+			panoply = panoply
 
-	if keyword_set(single_var) then begin
-		single = strlowcase(single_var)
-		if single eq 'cc_total' then single = 'cfc'
-	endif
+	single = strlowcase(single_var)
+	if single eq 'cc_total' then single = 'cfc'
 
-	d = get_available_time_series( 	alg, single, sat, coverage = coverage, reference = ref, period = datum, uncertainty = uncertainty, $
-					sav_file = sfile, longname = longname, unit = unit, trend = trend, tr_corr = tr_corr, $
-					stddev = stddev, anomalies = anomalies, found = found, no_trend_found = no_trend_found)
-	if not found then begin
-		if ~no_trend_found then ok = dialog_message('plot_cci_gac_time_series: Sav_file not found: '+sfile)
-		return
-	endif
+	if strmatch(algon1,algon2) then begin
+		varn = strsplit(single,',',/ext)
+		if n_elements(varn) ne 2 then begin
+			ok = dialog_message('plot_cci_gac_time_series: Same file! , same variable? '+single)
+			return
+		endif
+		single = strjoin(varn,'-')
+		d = get_available_time_series( 	alg, varn[0], sat, coverage = coverage, period = datum, uncertainty = uncertainty, $
+						sav_file = sfile, longname = longname, unit = unit, trend = trend, tr_corr = tr_corr, $
+						stddev = stddev, anomalies = anomalies, found = found, no_trend_found = no_trend_found)
+		if not found then begin
+			if ~no_trend_found then ok = dialog_message('plot_cci_gac_time_series: Sav_file not found: '+sfile)
+			return
+		endif
+		if trend then begin
+			bild1 = d.TREND.MEAN
+			longname = longname + ' - trend per decade'
+		endif else if anomalies then begin
+			bild1 = d.TREND.ANOM_MEAN
+			longname = longname + ' - Anomalies'
+		endif else if uncertainty then begin
+			bild1 = d.UNC 
+			longname = longname + ' - Uncertainty'
+		endif else if stddev then begin
+			bild1 = d.STD 
+			longname = longname + ' - Standard Deviation'
+		endif else begin
+			bild1  = d.MEAN
+		endelse
 
-	datum = d.actual_date
-	if trend then begin
-		bild1 = d.TREND.MEAN
-		bild2 = d.TREND.MEAN2
-		longname = longname + ' - trend per decade'
-	endif else if anomalies then begin
-		bild1 = d.TREND.ANOM_MEAN
-		bild2 = d.TREND.ANOM_MEAN2
-		longname = longname + ' - Anomalies'
-	endif else if uncertainty then begin
-		bild1 = d.UNC 
-		bild2 = d.UNC2
-		longname = longname + ' - Uncertainty'
-	endif else if stddev then begin
-		bild1 = d.STD 
-		bild2 = d.STD2 
-		longname = longname + ' - Standard Deviation'
+		d1 = get_available_time_series( 	alg, varn[1], sat, coverage = coverage, period = datum, uncertainty = uncertainty, $
+						sav_file = sfile, longname = longname2, unit = unit2, trend = trend, tr_corr = tr_corr, $
+						stddev = stddev, anomalies = anomalies, found = found, no_trend_found = no_trend_found)
+		if not found then begin
+			if ~no_trend_found then ok = dialog_message('plot_cci_gac_time_series: Sav_file not found: '+sfile)
+			return
+		endif
+		if trend then begin
+			bild2 = d1.TREND.MEAN
+			longname2 = longname2 + ' - trend per decade'
+		endif else if anomalies then begin
+			bild2 = d1.TREND.ANOM_MEAN
+			longname2 = longname2 + ' - Anomalies'
+		endif else if uncertainty then begin
+			bild2 = d1.UNC 
+			longname2 = longname2 + ' - Uncertainty'
+		endif else if stddev then begin
+			bild2 = d1.STD 
+			longname2 = longname2 + ' - Standard Deviation'
+		endif else begin
+			bild2 = d1.MEAN
+		endelse
+		dtn    = [appendix(varn[0],trend_corrected=tr_corr),appendix(varn[1],trend_corrected=tr_corr)]
 	endif else begin
-		bild1 = d.MEAN
-		bild2 = d.MEAN2
+		d = get_available_time_series( 	alg, single, sat, coverage = coverage, reference = ref, period = datum, uncertainty = uncertainty, $
+						sav_file = sfile, longname = longname, unit = unit, trend = trend, tr_corr = tr_corr, $
+						stddev = stddev, anomalies = anomalies, found = found, no_trend_found = no_trend_found)
+		if not found then begin
+			if ~no_trend_found then ok = dialog_message('plot_cci_gac_time_series: Sav_file not found: '+sfile)
+			return
+		endif
+
+		if trend then begin
+			bild1 = d.TREND.MEAN
+			bild2 = d.TREND.MEAN2
+			longname = longname + ' - trend per decade'
+		endif else if anomalies then begin
+			bild1 = d.TREND.ANOM_MEAN
+			bild2 = d.TREND.ANOM_MEAN2
+			longname = longname + ' - Anomalies'
+		endif else if uncertainty then begin
+			bild1 = d.UNC 
+			bild2 = d.UNC2
+			longname = longname + ' - Uncertainty'
+		endif else if stddev then begin
+			bild1 = d.STD 
+			bild2 = d.STD2 
+			longname = longname + ' - Standard Deviation'
+		endif else begin
+			bild1 = d.MEAN
+			bild2 = d.MEAN2
+			no_trends_etc = 1
+		endelse
+		longname2 = longname
+		unit2     = unit
+		dtn       = [appendix(single,trend_corrected=tr_corr),appendix(single,trend_corrected=tr_corr)]
 	endelse
+	datum = d.actual_date
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin
-			save_as = !SAVE_DIR +'timeseries'+'/'+algon1+'_vs_'+algon2+'_time_series_'+$
-			(keyword_set(diff) ? 'difference_':'')+$
-			(keyword_set(mean_2d) ? '2d_mean_':'')+(keyword_set(single_var)? single_var:'multi_var')+'_L3C_'+strcompress(datum,/rem)+ $
-			(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
-			if keyword_set(mean_2d) then begin
-				save_as1 = !SAVE_DIR +'timeseries'+'/'+algon1+'_time_series_2d_mean_'+single_var+'_'+strcompress(datum,/rem)+ $
+			save_as = !SAVE_DIR +'timeseries'+'/'+algon1+'_vs_'+algon2+'_time_series_difference_'+single_var+$
+				'_L3C_'+strcompress(datum,/rem)+ (keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
+			save_as1 = !SAVE_DIR +'timeseries'+'/'+algon1+'_time_series_2d_mean_'+single_var+'_'+strcompress(datum,/rem)+ $
 				(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
-				save_as2 = !SAVE_DIR +'timeseries'+'/'+algon2+'_time_series_2d_mean_'+single_var+'_'+strcompress(datum,/rem)+ $
+			save_as2 = !SAVE_DIR +'timeseries'+'/'+algon2+'_time_series_2d_mean_'+single_var+'_'+strcompress(datum,/rem)+ $
 				(keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
-			endif
+			save_as3 = !SAVE_DIR +'timeseries'+'/'+algon1+'_vs_'+algon2+'_time_series_2dhist_'+single_var+$
+				'_L3C_'+strcompress(datum,/rem)+ (keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
+			save_as4 = !SAVE_DIR +'timeseries'+'/'+algon1+'_vs_'+algon2+'_time_series_zonal_mean_'+single_var+$
+				'_L3C_'+strcompress(datum,/rem)+ (keyword_set(coverage) ? '_'+strlowcase(coverage):'')+'.eps'
 		endif else begin
-			if keyword_set(mean_2d) then begin
-				save_as1 = file_name_info(save_as,/path,/name) + '_2d_mean_'+algon1+'_'+file_name_info(save_as,/ext)
-				save_as2 = file_name_info(save_as,/path,/name) + '_2d_mean_'+algon2+'_'+file_name_info(save_as,/ext)
-			endif
+			save_as1 = file_name_info(save_as,/path,/name) + '_2d_mean_'+algon1+'_'+file_name_info(save_as,/ext)
+			save_as2 = file_name_info(save_as,/path,/name) + '_2d_mean_'+algon2+'_'+file_name_info(save_as,/ext)
+			save_as3 = file_name_info(save_as,/path,/name) + '_2dhist_'+algon1+'_vs_'+algon2+'_'+file_name_info(save_as,/ext)
+			save_as4 = file_name_info(save_as,/path,/name) + '_zonal_mean_'+algon1+'_vs_'+algon2+'_'+file_name_info(save_as,/ext)
 		endelse
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200,title='CCI CLARA time series'
 
-	set_proj, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat				, $
-		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, limit = limit				, $
-		  ortho=ortho,iso=iso,horizon=horizon,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic	, $
-		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg, $
-		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert
-
 	make_geo,lon,lat,grid = get_grid_res(bild1)
 
-	if keyword_set(diff) then begin
-		start_save, save_as, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
-			dumdata = bild1 - bild2 & minv = -20. & maxv = 20.
-			ititle = keyword_set(notitle) ? '' : datum+' '+longname & btitle = 'Diff '+algon1+' - '+algon2+' '+strupcase(single)+unit
-			m = obj_new("map_image",dumdata,lat,lon,void_index=where(bild1 eq -999.),n_lev=4	, $
-				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv), $
-				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, g_eq=g_eq, l_eq=l_eq	, $
-				charthick = !m_charthick, charsize  = !m_charsize,$
-				bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, box_axes=box_axes,$
-				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow,flip_colours = flip_colours,$
-				ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel, logarithmic=logarithmic	, $
-				noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
-				p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
-				mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,stereographic=stereographic, $
-				latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
-				limit = limit,format=bar_format,debug=verbose)
-			obj_destroy,m
-		end_save,save_as
-		bild = dumdata
-		if keyword_set(show_values) and keyword_set(single_var) then show_pixel_value, dumdata, lon,lat, data=single, unit=unit
+	if ~zoo then begin
+		set_proj, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat				, $
+			Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, $
+			limit = limit, ortho=ortho,iso=iso,horizon=horizon,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,$
+			stereographic=stereographic, no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,$
+			nobar=nobar,msg=msg, maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert
+		if keyword_set(diff) then begin
+			start_save, save_as, thick = thick, size = [32,20]
+				dumdata = bild1 - bild2 & minv = -20. & maxv = 20.
+				ititle = keyword_set(notitle) ? '' : datum+' '+strjoin([longname,longname2],' - ')
+				btitle = 'Diff '+algon1+' - '+algon2+' '+strupcase(single)+unit
+				m = obj_new("map_image",dumdata,lat,lon,void_index=where(bild1 eq -999.),n_lev=4	, $
+					max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv), $
+					countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, g_eq=g_eq, l_eq=l_eq	, $
+					charthick = !m_charthick, charsize  = !m_charsize,$
+					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, box_axes=box_axes,$
+					brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow,flip_colours = flip_colours,$
+					ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel, logarithmic=logarithmic	, $
+					noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
+					p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
+					mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,stereographic=stereographic, $
+					latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
+					limit = limit,format=bar_format,debug=verbose)
+				obj_destroy,m
+			end_save,save_as
+			bild = dumdata
+			if keyword_set(show_values) then show_pixel_value, dumdata, lon,lat, data=single, unit=unit
 
-		if keyword_set(zoom) then begin
-			get_new_corners = 1
-			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete
-			if win_nr ne -1 then win, win_nr
-			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,mean_2d=mean_2d,$
-			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
-			lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
+			if keyword_set(zoom) then begin
+				get_new_corners = 1
+				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete
+				if win_nr ne -1 then win, win_nr
+				plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
+				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
+				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
+			endif
+			return
 		endif
-		return
-	endif
-	if keyword_set(mean_2d) then begin
-		start_save, save_as1, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
+		start_save, save_as1, thick = thick, size = [32,20]
 			!p.multi= keyword_set(save_as1) ? 0 : [0,2,2]
 			dumdata = bild1 & minv = 0. & maxv = 100.
-			ititle = keyword_set(notitle) ? '' : datum+' '+longname & btitle = algon1+' '+strupcase(single)+unit
+			ititle = keyword_set(notitle) ? '' : datum+' '+longname
+			btitle = algon1+' '+longname+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, $
@@ -3379,9 +3328,10 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				limit = limit,debug=verbose,format=bar_format)
 			obj_destroy,m
 		end_save, save_as1
-		start_save, save_as2, thick = thick, size = keyword_set(single_var) ? [32,20] :'A3'
+		start_save, save_as2, thick = thick, size = [32,20]
 			dumdata = bild2 & minv = 0. & maxv = 100.
-			ititle = keyword_set(notitle) ? '' : datum+' '+longname & btitle = algon2+' '+strupcase(single)+unit
+			ititle = keyword_set(notitle) ? '' : datum+' '+longname2
+			btitle = algon2+' '+longname2+unit2
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle		, $
@@ -3396,20 +3346,121 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				limit = limit,debug=verbose,format=bar_format)
 			obj_destroy,m
 		end_save,save_as2
+
 		if keyword_set(zoom) then begin
 			get_new_corners = 1
 			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete
 			if win_nr ne -1 then win, win_nr
-			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,mean_2d=mean_2d,$
+			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
 			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
 			lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
 		endif
+
+		cc = 5
+		; hist2d
+		start_save, save_as3, thick = thick, size = [32,20]
+			; 2d hist
+			if no_trends_etc then begin
+				aa     = d.HIST_2D.data
+				regr   = d.HIST_2D.linfit.regr
+				min_a  = d.HIST_2D.minvalue[0]
+				max_a  = d.HIST_2D.maxvalue[0]
+				bin    = d.HIST_2D.bin
+			endif else if is_defined(varn) then begin
+				bin    = d.HISTOGRAM.bin
+				min_a  = min([d.HISTOGRAM.minvalue[0],d1.HISTOGRAM.minvalue[0]])
+				max_a  = max([d.HISTOGRAM.maxvalue[0],d1.HISTOGRAM.maxvalue[0]])
+				aa     = hist_2d(float(bild1),float(bild2),min1=min_a,max1=max_a,bin1=bin,min2=min_a,max2=max_a,bin2=bin)
+				h2_idx = where((bild1 ne -999.) and (bild2 ne -999.),h2_cnt )
+				regr   = h2_cnt gt 0 ? linfit(float(bild1[h2_idx]),float(bild2[h2_idx])) : [-999.,0.]
+			endif else begin
+				bin    = (d.HISTOGRAM.bin / 10.) > 0.01
+				maxi   = max(rnd(minmax(abs([bild1,bild2]),/nan,no_data_value=-999),bin))
+				min_a  = (-1.*maxi)
+				max_a  = maxi
+				aa     = hist_2d(float(bild1),float(bild2),min1=min_a,max1=max_a,bin1=bin,min2=min_a,max2=max_a,bin2=bin)
+				h2_idx = where((bild1 ne -999.) and (bild2 ne -999.),h2_cnt )
+				regr   = h2_cnt gt 0 ? linfit(float(bild1[h2_idx]),float(bild2[h2_idx])) : [-999.,0.]
+			endelse
+			view2d,aa,xtitle=algon1+' '+longname+' '+unit,ytitle=algon2+' '+longname2+' '+unit2,$
+			bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
+			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
+			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
+			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
+			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
+			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize
+			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
+			oplot,!x.crange,!y.crange
+		end_save, save_as3
 	endif
 
-	plot_simple_timeseries, single_var[0], sat, alg, cov, reference = ref, structure=d,zonal_only=zonal_only,mean_2d=mean_2d, $
-	mini=mini, maxi=maxi,verbose=verbose,oplots=oplots,found=found,win_nr=win_nr,logarithmic=logarithmic,white_bg=white_bg,datum=datum,$
-	show_values = show_values, rot=rot,error=error,save_as=save_as,symsize=symsize,notitle=notitle,$
-	trend = trend, tr_corr = tr_corr, stddev = stddev, anomalies = anomalies, uncertainty = uncertainty
+	if sav then begin
+		charthick = 1.5
+		xcharsize = 1.7 
+		ycharsize = 1.7
+		lcharsize = 2.5
+		xmargin   = [14,6]
+		ymargin   = [ 7,3]
+	endif else if wbg and zoo then begin
+		charthick = 3.0
+		xcharsize = 2.5
+		ycharsize = 2.5
+		lcharsize = 3.0
+		xmargin   = [20,6]
+		ymargin   =  [8,3] ;+ (keyword_set(notitle) ? 0 : [0,1])
+	endif else begin
+		charthick = 1.2
+		xcharsize = 1.2 
+		ycharsize = 1.2
+		lcharsize = 1.5
+		xmargin   =[10,3]
+		ymargin   = [5,2]
+	endelse
+
+	; zonal mean
+	start_save, save_as4, thick = thick, size = [32,20]
+		if wbg then thick=4
+		date = zoo ? datum : ''
+		;------zonal-means----------------------
+		fillvalue = -999.
+		lat_res = 1. > get_grid_res(bild1)
+		medi_c = zonal_average(bild1,lat,fillvalue=fillvalue,lat_zon=lat1d_c,/nan,/mean,lat_res=lat_res)
+		medi_g = zonal_average(bild2,lat,fillvalue=fillvalue,lat_zon=lat1d_g,/nan,/mean,lat_res=lat_res)
+		yr  = keyword_set(yrange) ? yrange : [(unit eq ' [K]' ? 200:0.1),max([medi_c,medi_g],/nan)]
+		; globale bias, rmse und bc-rmse gewichtet nach latitude
+		if no_trends_etc then begin
+			bias = d.OVERALL_STATS.LATITUDE_WEIGHTED.BIAS
+			rmse = d.OVERALL_STATS.LATITUDE_WEIGHTED.RMSE
+			stdd = d.OVERALL_STATS.LATITUDE_WEIGHTED.BC_RMSE
+		endif else begin
+			md_idx = where((bild1 ne -999.) and (bild2 ne -999.),md_cnt )
+			if md_cnt gt 0 then begin
+				bias = gbias(bild1[md_idx],bild2[md_idx],lat[md_idx])
+				rmse = grmse(bild1[md_idx],bild2[md_idx],lat[md_idx])
+				stdd = bc_rmse(bias,rmse)
+			endif else begin
+				bias = -999.
+				rmse = -999.
+				stdd = -999.
+			endelse
+		endelse
+		plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
+		xtitle='latitude [degrees]',ytitle=(trend ? 'linear trend ':'')+longname+' '+unit,yr=yr,position=pos2,$
+		noerase=~zoo,ylog=logarithmic, title= keyword_set(notitle) ? '':'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+$
+		string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit,$
+		charthick=charthick,xcharsize=xcharsize,ycharsize=ycharsize,xmargin=xmargin,ymargin=ymargin
+		oplot,lat1d_c,medi_c,thick=thick
+		oplot,lat1d_g,medi_g,thick=thick,col=cgColor("Red")
+		if ~keyword_set(show_values) then begin
+			legend,[date+' '+algon2+dtn[1],date+' '+algon1+dtn[0]],thick=replicate(thick,2),spos='top',$
+			charsize=lcharsize,color=[cgColor("Red"),-1],charthick=charthick
+		endif else begin
+			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor("Red"),spos='bl',charsize=lcharsize,charthick=charthick
+			legend,date+' '+algon1+dtn[0],thick=thick,color=-1,spos='br',charsize=lcharsize,charthick=charthick
+		endelse
+		;--------------------------------------------
+	end_save,save_as4
+
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini = mini, maxi = maxi, limit=limit, zoom=zoom,algo1 = algo1, sat=sat,$
@@ -4576,53 +4627,102 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference, mini=mini, maxi=maxi,$
-			    sav_file = sav_file, verbose=verbose, oplots=oplots, found=found, structure = structure,$
+			    sav_file = sav_file, verbose=verbose, oplots=oplots, found=found,$
 			    addtext = addtext,error=error,save_as=save_as, win_nr=win_nr,white_bg=white_bg, $
-			    logarithmic=logarithmic,version=version,zonal_only=zonal_only	, $
-			    datum = datum, show_values = show_values,mean_2d=mean_2d, rot = rot,$
-			    symsize=symsize,notitle=notitle,nobar=nobar, $
-			    trend = trend, tr_corr = tr_corr, stddev = stddev, anomalies = anomalies, uncertainty = uncertainty
+			    logarithmic=logarithmic, show_values = show_values, rot = rot,$
+			    symsize=symsize,notitle=notitle,nobar=nobar
 
 	hct        = keyword_set(addtext)    ? ' - '+strupcase(addtext[0]) : ''
 	win_nr     = adv_keyword_set(win_nr) ? win_nr : 1
 	opl        = keyword_set(oplots)     ? fix(oplots) : 0
-	no_compare = ~keyword_set(reference)
-	dat        = strlowcase(varname)
+	dat        = strsplit(strlowcase(varname),',',/ext)
 	sat        = strlowcase(strjoin(strsplit(satellite,'-',/ex)))
-	trend      = keyword_set(trend)
-	if keyword_set(structure) then begin
-		anomalies  = stregex(varname,'_anomalies',/bool)
-		sum = stregex(varname,'_sum',/bool)
-		d = structure
-	endif else begin
-		d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = '1978-2016', sav_file = sav_file, found = found, $
-						stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
+	cmp_2vars  = n_elements(dat) eq 2
+
+	if n_elements(dat) ge 2 then begin
+		if n_elements(dat) gt 2 then begin
+			ok = dialog_message('Found more than 2 variable names. Stop')
+			return
+		endif
+		if ~strmatch(algo,reference) then begin
+			ok = dialog_message('Compare 2 variables only on same Algorithms')
+			return
+		endif
+		free, reference
+
+		d = get_available_time_series( 	algo, dat[0], sat, coverage = cov, reference = reference, period = '1978-2016', $
+						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
+						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
 		if not found then begin
 			if ~no_trend_found then ok = dialog_message("plot_simple_timeseries: Sav File not found! "+sav_file)
 			return
 		endif
+		ts_data  = d.stats ; stats = global mean (latitude weighted)
+		if anomalies and is_tag(d,'TREND') then begin
+			ts_data = d.trend.stats_anom
+		endif else if anomalies and ~is_tag(d,'TREND') then begin
+			ts_data = (d.stats-d.stats_sm)
+		endif
+		if tr_corr and is_tag(d,'TREND') then begin
+			;replace gm1 with trend_corrected gm
+			ts_data = d.TREND.stats
+		endif else if tr_corr and ~is_tag(d,'TREND') then begin
+			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
+		endif
+		dtn     = appendix(dat[0],trend_corrected=tr_corr)
+		d1 = get_available_time_series( algo, dat[1], sat, coverage = cov, reference = reference, period = '1978-2016', $
+						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
+						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
+		if not found then begin
+			if ~no_trend_found then ok = dialog_message("plot_simple_timeseries: Sav File not found! "+sav_file)
+			return
+		endif
+		ts_data1  = d1.stats ; stats = global mean (latitude weighted)
+		if anomalies and is_tag(d1,'TREND') then begin
+			ts_data1 = d1.trend.stats_anom
+		endif else if anomalies and ~is_tag(d1,'TREND') then begin
+			ts_data1 = (d1.stats-d1.stats_sm)
+		endif
+		if tr_corr and is_tag(d1,'TREND') then begin
+			;replace gm1 with trend_corrected gm
+			ts_data1 = d1.TREND.stats
+		endif else if tr_corr and ~is_tag(d1,'TREND') then begin
+			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
+		endif
+		ts_data = ts_data - ts_data1
+		dtn     = [dtn,appendix(dat[1],trend_corrected=tr_corr)]
+		dat     = strjoin(dat,' - ')
+		dtn     = strjoin(dtn,' - ')
+	endif else begin
+		d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = '1978-2016', $
+						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
+						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
+		if not found then begin
+			if ~no_trend_found then ok = dialog_message("plot_simple_timeseries: Sav File not found! "+sav_file)
+			return
+		endif
+		ts_data  = d.stats ; stats = global mean (latitude weighted)
+		if anomalies and is_tag(d,'TREND') then begin
+			ts_data = d.trend.stats_anom
+		endif else if anomalies and ~is_tag(d,'TREND') then begin
+			ts_data = (d.stats-d.stats_sm)
+		endif
+		if tr_corr and is_tag(d,'TREND') then begin
+			;replace gm1 with trend_corrected gm
+			ts_data = d.TREND.stats
+		endif else if tr_corr and ~is_tag(d,'TREND') then begin
+			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
+		endif
+		dtn = appendix(dat,trend_corrected=tr_corr)
 	endelse
 
-	ts_data  = d.stats ; stats = global mean (latitude weighted)
-	if anomalies and is_tag(d,'TREND') then begin
-		ts_data = d.trend.stats_anom
-	endif else if anomalies and ~is_tag(d,'TREND') then begin
-		ts_data = (d.stats-d.stats_sm)
-	endif
-	if tr_corr and is_tag(d,'TREND') then begin
-		;replace gm1 with trend_corrected gm
-		ts_data = d.TREND.stats
-	endif else if tr_corr and ~is_tag(d,'TREND') then begin
-		print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
-	endif
 	zeitraum = d.period
 	ori_period = fix(strsplit(d.period,'-',/ext))
 	longname = d.longname
 
 	coverage = (stregex(d.coverage,'midlat_trop',/fold,/bool) ? string(177b)+'60'+string(176b)+' Lat' : d.coverage)
 
-	only_sat = (stregex(dat,'refl',/fold,/bool) or stregex(dat,'rad',/fold,/bool) ) and algo2ref(algo) eq 'gac2'
-
+	only_sat = (stregex(dat[0],'refl',/fold,/bool) or stregex(dat[0],'rad',/fold,/bool) ) and algo2ref(algo) eq 'gac2'
 	algon    = sat_name(algo,sat,only_sat=only_sat)
 	ref      = sat_name((keyword_set(reference) ? reference:algo),sat,only_sat=only_sat)
 	datum    = strcompress(d.actual_date,/rem)
@@ -4642,10 +4742,10 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 			count ++ & $
 		endfor & $
 	endfor
-	
+
 	if keyword_set(save_as) then begin
 		save_as = strcompress(save_as,/rem) eq '1' ? !save_dir +'/timeseries/'+file_basename(sav_file,'.sav')+'.eps' : save_as
-	endif else if win_nr ne -1 then win, win_nr,title=dat
+	endif else if win_nr ne -1 then win, win_nr,title=dat[0]
 
 	yrange     = minmax(ts_data[0,*],/nan)
 	dum        = fix(strsplit(zeitraum,'-',/ext))
@@ -4734,6 +4834,10 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	endif else begin
 		print,'Glob. Mean    '+string(algon,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',$
 		string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE,f='(f11.4)')
+		if cmp_2vars then begin
+			print,'Glob. Mean2   '+string(algon,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',$
+			string(d1.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE,f='(f11.4)')
+		endif
 		if keyword_set(reference) then begin
 			print,'Glob. Mean    '+string(ref,f='(A'+strcompress(strlen(str_pholder),/rem)+')')+' : ',$
 			string(d.OVERALL_STATS.LATITUDE_WEIGHTED.AVGERAGE2,f='(f11.4)')
@@ -4745,12 +4849,12 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	endelse
 
 	gac_ts_plots,d,ts_data,strupcase(dat),algon,yrange,lines,anz,xtickname,qu,ref		, $
-		 log=logarithmic,save_as=save_as,/single_var,error=error,show_values=show_values, $
-		 no_compare=no_compare,zonal_only=zonal_only,nobar=nobar,opl=opl		, $
+		 log=logarithmic,save_as=save_as,error=error,show_values=show_values, $
+		 no_compare=~keyword_set(reference),nobar=nobar,opl=opl		, $
 		 longname=longname,coverage=coverage,hct=hct,white_bg=white_bg,datum=datum	, $
-		 standard=stregex(varname,'_std',/bool,/fold),mean_2d=mean_2d,anomalies=anomalies,$
+		 standard=stregex(varname,'_std',/bool,/fold),anomalies=anomalies,$
 		 trend = trend,symsize=symsize,tr_corr=tr_corr,notitle=notitle, $
-		 stddev = stddev, uncertainty = uncertainty,satnames = satnames, sum=sum
+		 stddev = stddev, uncertainty = uncertainty,satnames = satnames, sum=sum, dtn=dtn
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------

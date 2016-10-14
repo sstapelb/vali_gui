@@ -4370,14 +4370,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif
 			if pcmult and pcts then begin
-				if verbose then print,'Time Series + 2d Histo + Zonal Mean'
-; 				!p.multi = [0,1,2]
-				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, $
-				single_var = varname,mini=mini,maxi=maxi,limit=limit,error=error, show_values = show_values, $
-				verbose = verbose, other = oth, ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
-				arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, $
-				robinson=robinson,nobar=nobar, stereographic = stereographic,log=log,oplots=opl,countries=countries,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),rot=rot,magnify=magnify,symsize=symsize,notitle=notitle
+				if verbose then print,'Time Series'
+				plot_simple_timeseries, varname, sat, algo, cov, reference = ref,mini=mini, maxi=maxi,verbose=verbose,  $
+				oplots=opl,win_nr=win_nr,logarithmic=log,white_bg=Widget_Info(self.wbgrID, /BUTTON_SET),$
+				show_values = show_values, rot=rot,error=error,save_as=save_as,symsize=symsize,notitle=notitle,$
+				nobar=nobar, addtext = addtext
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pczm and pcsing then begin
@@ -4410,7 +4407,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcvar and pcmult then begin
 				if verbose then print,'Map2d Multi Time Step'
-				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/mean_2d, verbose = verbose,$
+				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, verbose = verbose,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
 				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log,$

@@ -621,7 +621,7 @@ end
 ;------------------------------------------------------------------------------------------
 function appendix, varname,trend_corrected=trend_corrected
 	dtn = ''
-	
+
 	if stregex(varname,'refl',/fold,/bool) then dtn += '_Ch'+strmid(varname,4)
 	if stregex(varname,'rad',/fold,/bool) then dtn += '_Ch'+strmid(varname,3)
 
@@ -1866,7 +1866,8 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
 
 	if total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) then satn = 'MERIS+AATSR'
-	if total(satn eq ['atsr','atsr2']) then satn = 'ATSR-2'
+	if total(satn eq ['atsr','atsr2','ers','ers2']) then satn = 'ATSR-2'
+	if total(satn eq ['envisat','aatsr','env']) then satn = 'AATSR'
 
 	case algo of
 ; 		'cci'	: algon = total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) ? 'Fame-C' : 'CC4CL' +(keyword_set(version) ? '-'+version : '')
@@ -4026,12 +4027,12 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 
 	cov = keyword_set(coverage) ? strlowcase(coverage) : ''
 	sat = strlowcase(satellite)
-	dat = (strlowcase(data))[0]
+	dat = strsplit((strlowcase(data))[0],',',/ext)
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
 
 	tr_corr     	= stregex(dat,'_trend_corr',/fold,/bool) 	 	; TS: ECT,ENSO and seasonal Trend corrected
 	trend       	= ~tr_corr and stregex(dat,'_trend',/fold,/bool)	; 2D: ECT,ENSO and seasonal Trend 
-	anomalies   	= stregex(dat,'_anomalies',/bool,/fold)	 	; TS: ECT,ENSO and seasonal Anomalies
+	anomalies   	= stregex(dat,'_anomalies',/bool,/fold)	 		; TS: ECT,ENSO and seasonal Anomalies
 	uncertainty 	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool)
 	stddev      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
 	sum        	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (algo2ref(algo,sat=sat) eq 'cci') and $
