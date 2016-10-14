@@ -4212,35 +4212,21 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('Use "Multi Time Steps" for Hovmoeller plots!')
 				return
 			endif
-			if select then begin
-; 				ok = dialog_message('Select not possible for "Compare Variable". Choose "File Difference" instead!')
-; 				return
-; 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
-; 				; following needs to be done for filenames that include white spaces
-; 				file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),filter=self.extension)
-; ; 				file = self.file2
-; 				if self.file2 eq '' then return
-; 				if ~is_hdf(self.file2) then begin
-; 					if ~is_ncdf(self.file2) then begin
-; 						ok = dialog_message('The file '+self.file2+' is neither a netcdf nor a hdf file. '+$
-; 								'Note netcdf4 files are not supported in IDL versions below 8!')
-; 						return
-; 					endif
-; 				endif
-; 				ok     = self -> get_file_infos(infile=self.file2)
-				ref = 'select'
-; 				ref    = ok.algoname eq '' ? self.algoname : ok.algoname
-; 				satn   = ok.satname  eq '' ? '' : ok.satname
-; 				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
-			endif
+
+			if select then ref = 'select'
 
 			if pcmat and (total(self.leveltype eq ['L2','L3U','L1','L3DH','L2B_SUM'])) then begin 
 				ok = dialog_message('This works with Monthly Means only!')
 				return
 			endif
 
-; 			algo = self.algoname
 			algo = self.compare_algo1
+
+			names    = strsplit(varname,',',/ext)
+			if n_elements(names) gt 1 then begin
+				varname  = names[0]
+				varname2 = names[1]
+			endif else varname2 = varname
 
 			if pcmult then begin
 				file  = ''
@@ -4249,8 +4235,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif else if algo eq 'SELECT FILE' then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
 				; following needs to be done for filenames that include white spaces
-				file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),filter=self.extension)
-				file = self.file2
+					file =	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
+					filter=self.extension)
+				file = 	self.file2
 				if file eq '' then return
 				if ~is_hdf(file) then begin
 					if ~is_ncdf(file) then begin
@@ -4263,13 +4250,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				algo   = ok.algoname eq '' ? self.algoname : ok.algoname
 				satn   = ok.satname  eq '' ? '' : ok.satname
 				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
-; 				print,'ncdf_data_def: File1: ',file[0]
 			endif else begin
 				if sel and (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
 				print,'Load button is checked! Search for file in loaded directory!'
-				file = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, level = level, found = found,$
+				file = self -> get_new_filename( sat, year, month, day, orbit, algo, varname2, level = level, found = found,$
 								 dirname = (sel ? self.directory:0))
-; 				print,'ncdf_data_def: File1: ',file[0]
 				datum=strjoin([year,month,day,orbit])
 			endelse
 			if ~found then return
@@ -4299,6 +4284,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				self.pmulti_default = pmulti
 			endif
 
+			varname = strjoin(names,',')
+			
 			if is_jch(varname) then begin
 				vergleiche_ctp_cot_histogram_cci_mit_clara,file,varname = varname, mini = mini, maxi = maxi, limit=limit, zoom=zoom, sat=sat,$
 				win_nr = win_nr, save_as= save_as,land = land, sea = sea,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$

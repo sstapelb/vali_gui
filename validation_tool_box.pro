@@ -518,7 +518,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 end
 
 ;-------------------------------------------------------------------------------------------------------------------------
-function full_varname, varname, unit = unit
+function full_varname, varname, unit = unit, universal = universal
 
 	dat  = strlowcase(varname)
 	unit = '' ; set standard unit
@@ -542,10 +542,32 @@ function full_varname, varname, unit = unit
 		'cee'	: vollername = 'Cloud Effective Emissivity'
 		'cla'	: begin
 				vollername = 'Cloud Albedo'
-				if stregex(dat,'vis006',/fold,/bool) then vollername = vollername+' at 600 nm'
-				if stregex(dat,'vis008',/fold,/bool) then vollername = vollername+' at 800 nm'
+				if ~keyword_set(universal) then begin
+					if stregex(dat,'vis006',/fold,/bool) then vollername = vollername+textoidl(' at 0.6 \mum')
+					if stregex(dat,'vis008',/fold,/bool) then vollername = vollername+textoidl(' at 0.8 \mum')
+				endif
 			  end
 		'nob'	: vollername = 'Number of Observations'
+		'rad'	: begin 
+				vollername = 'Brightness Temperature' & unit = ' [K]' 
+				if ~keyword_set(universal) then begin
+					if stregex(dat,'rad3b',/fold,/bool) then vollername = vollername+textoidl(' at 3.7 \mum')
+					if stregex(dat,'rad4',/fold,/bool)  then vollername = vollername+textoidl(' at 10.8 \mum')
+					if stregex(dat,'rad5',/fold,/bool)  then vollername = vollername+textoidl(' at 12.0 \mum')
+				endif
+			  end
+		'ref'	: begin 
+				if stregex(dat,'refl',/fold,/bool) then begin
+					vollername = 'Reflectance' & unit = ' [%]'
+					if ~keyword_set(universal) then begin
+						if stregex(dat,'refl1',/fold,/bool)  then vollername = vollername+textoidl(' at 0.6 \mum')
+						if stregex(dat,'refl2',/fold,/bool)  then vollername = vollername+textoidl(' at 0.8 \mum')
+						if stregex(dat,'refl3a',/fold,/bool) then vollername = vollername+textoidl(' at 1.6 \mum')
+					endif
+				endif else begin
+					vollername = 'Cloud Effective Radius' & unit = textoidl(' [\mum]')
+				endelse
+			  end
 		else : vollername = varname
 	endcase
 
@@ -4022,17 +4044,20 @@ end
 function get_available_time_series, algo, data, satellite, coverage = coverage, reference = reference, period = period	, $
 				longname = longname, unit = unit, sav_file = sav_file, found = found			, $
 				hovmoeller = hovmoeller, trend = trend, tr_corr = tr_corr, anomalies = anomalies	, $
-				stddev = stddev, uncertainty = uncertainty, sum = sum					, $
+				stddev = stddev, uncertainty = uncertainty, sum = sum, diff = diff			, $
 				no_trend_found = no_trend_found, silent=silent
 
 	cov = keyword_set(coverage) ? strlowcase(coverage) : ''
 	sat = strlowcase(satellite)
-	dat = strsplit((strlowcase(data))[0],',',/ext)
+	dat = (strlowcase(data))[0]
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
 
-	tr_corr     	= stregex(dat,'_trend_corr',/fold,/bool) 	 	; TS: ECT,ENSO and seasonal Trend corrected
-	trend       	= ~tr_corr and stregex(dat,'_trend',/fold,/bool)	; 2D: ECT,ENSO and seasonal Trend 
-	anomalies   	= stregex(dat,'_anomalies',/bool,/fold)	 		; TS: ECT,ENSO and seasonal Anomalies
+	diff      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'diff',/fold,/bool)
+	if diff    	then dat = strreplace(dat,'_diff','',/fold)
+
+	tr_corr     	= stregex(dat,'_trend_corr',/fold,/bool) 	 			; TS: ECT,ENSO and seasonal Trend corrected
+	trend       	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'trend',/fold,/bool)	; 2D: ECT,ENSO and seasonal Trend 
+	anomalies   	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'anomalies',/fold,/bool)	; TS: ECT,ENSO and seasonal Anomalies
 	uncertainty 	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool)
 	stddev      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
 	sum        	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (algo2ref(algo,sat=sat) eq 'cci') and $
