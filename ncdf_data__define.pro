@@ -4802,7 +4802,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				; time series
 				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,symsize=symsize,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),version=self.version,show_values=show_values,$
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),show_values=show_values,$
 				notitle=notitle,nobar=nobar,logarithmic=log
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pchist then begin

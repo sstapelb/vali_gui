@@ -4442,7 +4442,6 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			(keyword_set(oplots) ? '_oplots':'')+'.eps'
 	endif else if win_nr ne -1 then win, win_nr,title=dat
 
-
 	start_save,save_as,thick=thick,snapshot=(float(opl)?'png':'')
 		if ~ts then begin
 			minv = keyword_set(mini) ? strsplit(mini[0],',',/ext) : min(bild[where(bild ne fillvalue1)])

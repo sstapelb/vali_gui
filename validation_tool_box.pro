@@ -2892,12 +2892,17 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'CER_37_ICE'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Mean'
 			'CER_37_ICE_STD'	: hdf_var = 'Cloud_Effective_Radius_37_Ice_Std_Deviation_Mean'
 			'CER_37_ICE_UNC'	: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Uncertainty'
+
 			'CFC'			: hdf_var = 'Cloud_Fraction_Mean_Mean'    
 			'CFC_STD'		: hdf_var = 'Cloud_Fraction_Std_Deviation_Mean'     
 			'CFC_COUNTS'		: hdf_var = 'Cloud_Fraction_Pixel_Counts' 
 			'CFC_DAY'		: hdf_var = 'Cloud_Fraction_Day_Mean_Mean'
 			'CFC_DAY_MICRO'		: hdf_var = 'Cloud_Retrieval_Fraction_Combined_FMean' ; diese muss für die optischen produkte benutzt werden
 			'CFC_NIGHT'		: hdf_var = 'Cloud_Fraction_Night_Mean_Mean'
+			'CFC_HIGH'		: hdf_var = 'High_Cloud_Fraction_Infrared_FMean'
+			'CFC_CIRRUS'		: hdf_var = 'Cirrus_Fraction_Infrared_FMean'
+
+			'SUNGLINT'		: hdf_var = 'Sunglint_Fraction_Day_FMean'
 
 			; coll6 cph: "Cloud_Retrieval_Fraction_Liquid_FMean(FSTD,Pixel_Counts)"
 			'CPH'			: hdf_var = 'Cloud_Phase_Infrared_Histogram_Counts'
@@ -5274,7 +5279,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = -10.
 		maxvalue =  50.
 		longname = 'Difference of Surface Temperature and Cloud Top Temperature'
-	endif else if (strmid(dat,0,8) eq 'sunglint' or strmid(dat,0,11) eq 'glint_angle') then begin
+	endif else if (strmid(dat,0,8) eq 'sunglint' or strmid(dat,0,11) eq 'glint_angle') and (lev ne 'l3c' and lev ne 'l3s') then begin
 		node   = strmid(lev,0,3) eq 'l3u' ? (reverse(strsplit(dat,'_',/ext)))[0] : ''
 		if (strmid(lev,0,3) eq 'l3u') and (node ne 'asc') and (node ne 'desc') then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Satellite Node not defined or wrong! Append "_asc" or "_desc" to data name.')
