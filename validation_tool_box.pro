@@ -4082,6 +4082,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if sum		then dat = strreplace(dat,'_sum','',/fold) 
 
 	if algo2ref(algo,sat=sat) eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
+	if algo2ref(algo,sat=sat) eq 'cci' and sat eq 'envisat' then sat = 'aatsr'
 
 	vali_set_path
 
@@ -5707,35 +5708,6 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				maxvalue = 2.
 				flag_meanings = flag_meanings[[0,1,4]]
 			endif
-			if get_product_name(datd,algo='patmos') eq 'cloud_type' then begin
-				no_data_value = -999.
-				; leave out fillvalue(-999),clear(0) and N/A(1)
-				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
-				outdata -= 2
-				ice_idx = where(outdata gt 3,ice_cnt)
-				if ice_cnt gt 0 then outdata[ice_idx] -= 1
-				idx = where(~between(outdata,0,10),vi_count)
-				if vi_count gt 0 then outdata[idx] = no_data_value
-				minvalue = 0
-				maxvalue = 6
-				longname = 'Pavolonis Cloud Types'
-				flag_meanings = flag_meanings[[2,3,4,6,7,8,9]]
-			endif
-		endif else if get_product_name(datd,algo='patmos') eq 'cloud_type' and lev eq 'l3u' then begin
-			if total(alg eq ['clara2','esacci']) then begin
-				no_data_value = -999.
-				; leave out fillvalue(-999),clear(0) and N/A(1)
-				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
-				outdata -= 2
-				ice_idx = where(outdata gt 3,ice_cnt)
-				if ice_cnt gt 0 then outdata[ice_idx] -= 1
-				idx = where(~between(outdata,0,10),vi_count)
-				if vi_count gt 0 then outdata[idx] = no_data_value
-				minvalue = 0
-				maxvalue = 6
-				longname = 'Pavolonis Cloud Types'
-				flag_meanings = alg eq 'cci' ? flag_meanings[[2,3,4,6,7,8,9]] : [flag_meanings[[1,2,3,5,6,7]],'overshooting']
-			endif
 		endif else if total(datd eq ['cloud_fraction','a_ca']) or strmid(datd,0,8) eq 'cc_total' $
 				or strmid(datd,0,3) eq 'cfc' or dat eq '8' then begin
 			if total(alg eq ['clara2','clara','claas','isccp']) then begin
@@ -6300,10 +6272,12 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 				; leave out fillvalue(-999),clear(0) and N/A(1)
 				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
 				bild1 -= (alg1 eq 'clara2' ? 1:2)
+				mixed  = where(bild1 eq 3,mix_cnt)
 				ice_idx = where(bild1 gt 3,ice_cnt)
 				if ice_cnt gt 0 then bild1[ice_idx] -= 1
 				idx = where(~between(bild1,0,10),vi_count)
 				if vi_count gt 0 then bild1[idx] = fillvalue1
+				if mix_cnt gt 0 then bild1[mixed] = fillvalue1
 				minv1 = 0
 				maxv1 = 6
 				unit1 = ' '
@@ -6316,10 +6290,12 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 				; leave out fillvalue(-999),clear(0) and N/A(1)
 				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
 				bild2 -= (alg2 eq 'clara2' ? 1:2)
+				mixed  = where(bild2 eq 3,mix_cnt)
 				ice_idx = where(bild2 gt 3,ice_cnt)
 				if ice_cnt gt 0 then bild2[ice_idx] -= 1
 				idx = where(~between(bild2,0,10),vi_count)
 				if vi_count gt 0 then bild2[idx] = fillvalue2
+				if mix_cnt gt 0 then bild1[mixed] = fillvalue1
 				minv2 = 0
 				maxv2 = 6
 				unit2 = ' '
