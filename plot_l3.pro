@@ -3160,7 +3160,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					endif
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,symsize=syms
 				if ~keyword_set(show_values) and ~keyword_set(nobar) then $
-				legend,ref+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
+				legend,algon1+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
 			endif else begin
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
 				dumidx = where(~between(ts_data[nc,*],pf_ycr[0],pf_ycr[1]) and finite(ts_data[nc,*]),dumidxcnt)
@@ -3181,7 +3181,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
-				legend,ref+dtn+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
+				legend,algon1+dtn+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
 				charsize=lcharsize,charthick=charthick,linestyle = linestyle,psym=cgsymcat(psym)
 			endelse
 			if keyword_set(show_values) then begin
@@ -4743,10 +4743,6 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 			ok = dialog_message('Found more than 2 variable names. Stop')
 			return
 		endif
-		if ~strmatch(algo,reference) then begin
-			ok = dialog_message('Compare 2 variables only on same Algorithms')
-			return
-		endif
 		d = get_available_time_series( 	algo, dat[0], sat, coverage = cov, period = '1978-2016', $
 						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
 						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
@@ -4814,6 +4810,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		if diff then begin
 			ts_data[[d.TS_INDICES.GM1,d.TS_INDICES.GM1_STD,d.TS_INDICES.UNC1,d.TS_INDICES.UNC1_STD],*] -= $ 
 			ts_data[[d.TS_INDICES.GM2,d.TS_INDICES.GM2_STD,d.TS_INDICES.UNC2,d.TS_INDICES.UNC2_STD],*]
+			dat     = strjoin([strreplace(dat,'_diff',''),strreplace(dat,'_diff','')],' - ')
 			free_reference = 1
 		endif
 		dtn = appendix(dat,trend_corrected=tr_corr)
@@ -4829,10 +4826,17 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	algon    = sat_name(algo,sat,only_sat=only_sat)
 	ref      = sat_name((keyword_set(reference) ? reference:algo),sat,only_sat=only_sat)
 	datum    = strcompress(d.actual_date,/rem)
-
 	satn_background = (sat eq 'noaaam' or sat eq 'noaapm')
 
-	if keyword_set(free_reference) then free, reference
+	if keyword_set(free_reference) then begin
+		free, reference
+		if strmatch(algon,ref) then begin
+			algon = algon + dat
+		endif else begin
+			dtn   = ''
+			algon = strjoin([' '+algon,ref] + ' '+strupcase(strsplit(dat,' - ',/ext)),' -!C ')
+		endelse
+	endif
 
 	; set all reflectance and brightness TS dots to NAN if Noaa15 and end of 2000 (very low coverage, orbit count s below 100)
 	if only_sat and sat eq 'noaa15' or sat eq 'noaaam' then begin
