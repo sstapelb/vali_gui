@@ -644,23 +644,23 @@ end
 function appendix, varname,trend_corrected=trend_corrected
 	dtn = ''
 
-	if stregex(varname,'refl',/fold,/bool) then dtn += '_Ch'+strmid(varname,4)
-	if stregex(varname,'rad',/fold,/bool) then dtn += '_Ch'+strmid(varname,3)
+	if stregex(varname,'refl',/fold,/bool) then dtn += '-Ch'+strmid(varname,4)
+	if stregex(varname,'rad',/fold,/bool) then dtn += '-Ch'+strmid(varname,3)
 
-	if stregex(varname,'_16',/fold,/bool) then dtn += '_1.6um'
-	if stregex(varname,'_37',/fold,/bool) then dtn += '_3.7um'
-	if stregex(varname,'_day',/fold,/bool)   then dtn += '_DAY'
-	if stregex(varname,'_night',/fold,/bool) then dtn += '_NIGHT'
-	if stregex(varname,'_twl',/fold,/bool)   then dtn += '_TWL'
-	if stregex(varname,'_low',/fold,/bool)   then dtn += '_LOW'
-	if stregex(varname,'_mid',/fold,/bool)   then dtn += '_MID'
-	if stregex(varname,'_high',/fold,/bool)  then dtn += '_HIGH'
-	if stregex(varname,'_liq',/fold,/bool)   then dtn += '_LIQ'
-	if stregex(varname,'_ice',/fold,/bool)   then dtn += '_ICE'
+	if stregex(varname,'_16',/fold,/bool) then dtn += textoidl('-1.6\mum')
+	if stregex(varname,'_37',/fold,/bool) then dtn += textoidl('-3.7\mum')
+	if stregex(varname,'_day',/fold,/bool)   then dtn += '-DAY'
+	if stregex(varname,'_night',/fold,/bool) then dtn += '-NIGHT'
+	if stregex(varname,'_twl',/fold,/bool)   then dtn += '-TWL'
+	if stregex(varname,'_low',/fold,/bool)   then dtn += '-LOW'
+	if stregex(varname,'_mid',/fold,/bool)   then dtn += '-MID'
+	if stregex(varname,'_high',/fold,/bool)  then dtn += '-HIGH'
+	if stregex(varname,'_liq',/fold,/bool)   then dtn += '-LIQ'
+	if stregex(varname,'_ice',/fold,/bool)   then dtn += '-ICE'
 
-	if stregex(varname,'_allsky',/fold,/bool) then dtn += '_Allsky'
-	if stregex(varname,'_corrected',/fold,/bool) then dtn += '_Corrected'
-	
+	if stregex(varname,'_allsky',/fold,/bool) then dtn += '-Allsky'
+	if stregex(varname,'_corrected',/fold,/bool) then dtn += '-Corrected'
+
 	;CAlipso only
 	if stregex(varname,'_sc_liq',/fold,/bool)   then dtn = ' (SC) LIQ'
 	if stregex(varname,'_th_ice',/fold,/bool)   then dtn = ' (TH) ICE'
@@ -673,8 +673,8 @@ function appendix, varname,trend_corrected=trend_corrected
 	if stregex(varname,'cth2',/fold,/bool) then dtn = ' CTH2'
 	if stregex(varname,'ctp2',/fold,/bool) then dtn = ' CTP2'
 	
-	if keyword_set(trend_corrected) then dtn += '_(TC)'
-	if strpos(dtn,'_') eq 0 then dtn = ' '+strmid(dtn,1) 
+	if keyword_set(trend_corrected) then dtn += '-(TC)'
+	if strpos(dtn,'-') eq 0 then dtn = ' '+strmid(dtn,1) 
 	return,dtn
 end
 ;-------------------------------------------------------------------------------------------------------------------------
@@ -1156,7 +1156,7 @@ function short_cov_name, coverage
 			'tropic'			: short_name = 'TRO'
 			'midlat_north'			: short_name = 'MLN'
 			'arctic'			: short_name = 'ARC'
-			'midlat_trop'			: short_name = 'P60'
+			'midlat_trop'			: short_name = textoidl('\pm60\circ')
 			'northern_hemisphere'		: short_name = 'NH'
 			'southern_hemisphere'		: short_name = 'SH'
 			'land'				: short_name = 'LAND'
@@ -1166,7 +1166,7 @@ function short_cov_name, coverage
 			'tropic_land'			: short_name = 'TRO-L'
 			'midlat_north_land'		: short_name = 'MLN-L'
 			'arctic_land'			: short_name = 'ARC-L'
-			'midlat_trop_land'		: short_name = 'P60-L'
+			'midlat_trop_land'		: short_name = textoidl('\pm60\circ-L')
 			'northern_hemisphere_land'	: short_name = 'NH-L'
 			'southern_hemisphere_land'	: short_name = 'SH-L'
 			'sea'				: short_name = 'SEA'
@@ -1176,7 +1176,7 @@ function short_cov_name, coverage
 			'tropic_sea'			: short_name = 'TRO-S'
 			'midlat_north_sea'		: short_name = 'MLN-S'
 			'arctic_sea'			: short_name = 'ARC-S'
-			'midlat_trop_sea'		: short_name = 'P60-S'
+			'midlat_trop_sea'		: short_name = textoidl('\pm60\circ-S')
 			'northern_hemisphere_sea'	: short_name = 'NH-S'
 			'southern_hemisphere_sea'	: short_name = 'SH-S'
 			else				: short_name = Coverage
@@ -4082,7 +4082,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if sum		then dat = strreplace(dat,'_sum','',/fold) 
 
 	if algo2ref(algo,sat=sat) eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
-	if algo2ref(algo,sat=sat) eq 'cci' and sat eq 'envisat' then sat = 'aatsr'
+	if algo2ref(algo,sat=sat) eq 'cci' and sat eq 'envisat' then sat = 'aatsr' ; is this a good idea? I don't know.
 
 	vali_set_path
 

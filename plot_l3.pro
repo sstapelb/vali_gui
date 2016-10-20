@@ -796,6 +796,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		title2 = vollername+' '+unit
 		out = {bild:bild_gac,lon:lon,lat:lat,unit:unit}
 		if cidx[0] ne -1 then begin
+			qw_cnt = n_elements(cidx)
+			qw     = cidx
 			if limit_test or keyword_set(antarctic) or keyword_set(arctic) then begin
 				if keyword_set(antarctic) then qw = where(between(lon[cidx],-180,180) and between(lat[cidx],-90,-60),qw_cnt) else $
 				if keyword_set(arctic)    then qw = where(between(lon[cidx],-180,180) and between(lat[cidx], 60, 90),qw_cnt) else $
@@ -2870,7 +2872,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		 uncertainty = uncertainty,satnames = satnames, sum=sum, dtn=dtn		, $
 		 satn_background = satn_background
 
-	pinatubo = 1
+	pinatubo = 0
 	sav     = keyword_set(save_as)
 	wbg     = keyword_set(white_bg)
 	syms    = adv_keyword_set(symsize) ? symsize : 1.5
@@ -2888,7 +2890,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	dec3 = ''
 
 	sn_cov = short_cov_name(coverage)
-	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) and ~keyword_set(satn_background) then dtn += ' '+ sn_cov
+	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) and ~keyword_set(satn_background) then dtn += ' ('+ sn_cov+')'
 
 	if sav then begin
 		charthick = 1.5
@@ -2931,28 +2933,89 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 			if idx_cnt eq 0 then return 
 			if opl eq 0 then begin
 				anz=anz-0.5
-				plot,[0,0],[1,1],xr=[anz[0],anz[1]],xs=3,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
+				if keyword_set(notitle) then begin
+					xtickname = [' ',' ']
+					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
+				endif else ymargin= [5,2]+(sav or wbg ? [2,1]:0)
+				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
 				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log, $
-				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(wbg ? 6:0)]:0),ymargin=[5,2]+(sav or wbg ? [2,1]:0),$
+				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(qu eq 0 ? 0:6)]:0),ymargin=ymargin,$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,title = keyword_set(notitle) ? '' : datum
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
+				; polyfills
+				if keyword_set(satn_background) then begin
+					eq_sn = ree(satnames)
+					for sn = 0,n_elements(eq_sn)-1 do begin
+						dumname = satnames[eq_sn[sn]]
+						if dumname eq '' then continue
+						dumidx = where(satnames eq dumname,dumidxcnt)
+						if dumidxcnt gt 1 then begin
+							print,'Glob. Mean1    '+dumname+'  : '+string(mean(ts_data[tsi.gm1,dumidx]),f='(f14.4)')
+							print,'Glob. Mean2    '+dumname+'  : '+string(mean(ts_data[tsi.gm2,dumidx]),f='(f14.4)')
+; 							col = (sn mod 2) eq 0 ? cgcolor('wheat') : !p.background
+; 							col = (sn mod 2) eq 0 ? cgcolor('medium gray') : !p.background
+							col = (sn mod 2) eq 0 ? cgcolor('lavender') : !p.background
+							polyfill,[min(dumidx),max(dumidx),max(dumidx),min(dumidx)],$
+							[pf_ycr[0],pf_ycr[0],pf_ycr[1],pf_ycr[1]],col=col
+						endif
+					endfor
+				endif
+				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
+				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('Red4'),fill=fill,bars=bars
 				if keyword_set(pinatubo) then polyfill,[160.,162.,162.,160.],[pf_ycr[0],pf_ycr,pf_ycr[1]],col=cgcolor('tomato')
 				div = ((anz[1]-anz[0]) le 12 ? 3. : 12.)
 				for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],pf_ycr,linestyle=2
 				for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
-				if qu ne 0 then axis,yaxis=1,ystyle=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
+				if keyword_set(satn_background) then begin
+					eq_sn = ree(satnames)
+					for sn = 0,n_elements(eq_sn)-1 do begin
+						dumname = satnames[eq_sn[sn]]
+						if dumname eq '' then continue
+						dumidx = where(satnames eq dumname,dumidxcnt)
+						if dumidxcnt gt 1 then begin
+							dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)-14
+							if between(dum_xx,anz[0],anz[1]) then begin
+								xyouts, dum_xx,(keyword_set(log) ? $
+								10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
+								((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
+; 								dumname, charthick = charthick*1.3, charsize = xcharsize*1.3,font=1
+								dumname, charthick = charthick, charsize = xcharsize
+							endif
+						endif
+					endfor
+					;polyfill plots over max yrange and yticks, set axes again 
+					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,$
+					xtickformat="(A1)",xticks=(anz[1]-anz[0])/12,xticklen=0.00001
+					if qu eq 0 then axis,yaxis=1,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, $
+					ycharsize = ycharsize, ytickformat="(A1)"
+					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
+				endif
+				if qu ne 0 then axis,yaxis=1,ys=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
 				charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
 				if keyword_set(coverage) then begin
 					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 				endif
+				if keyword_set(nobar) then begin
+					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor("Red")
+					sm_data = smooth(reform(ts_data[tsi.gm1,*]),8,/nan,/edge_truncate)
+					sm_idx = where(~finite(ts_data[tsi.gm1,*]),sm_cnt)
+					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
+					oplot,ts_data[tsi.gm2,*],thick=2
+					sm_data = smooth(reform(ts_data[tsi.gm2,*]),8,/nan,/edge_truncate)
+					sm_idx = where(~finite(ts_data[tsi.gm2,*]),sm_cnt)
+					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
+					if keyword_set(coverage) then begin
+						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+					endif
+				endif else begin
+					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
+					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms
+				endelse
 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor("Red")],spos='tl',$
 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-
-				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
-				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('Red4'),fill=fill,bars=bars
-				oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
-				oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms
 			endif
 
 			if qu ne 0 then oplot,ts_data[tsi.bcr,*]*qu,psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
@@ -2976,15 +3039,25 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
 				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
 				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue'),fill=fill,bars=bars
-				oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgcolor(cols)
-				oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms;,col=cgcolor(cols)
-; 				legend,algon1+dtn[0]+' ('+datum+')',psym=cgsymcat(psym),thick=thick,color=-1,spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+				if keyword_set(nobar) then begin
+					oplot,ts_data[tsi.gm1,*],thick=2,col=cgcolor(cols)
+					sm_data = smooth(reform(ts_data[tsi.gm1,*]),8,/nan,/edge_truncate)
+					sm_idx = where(~finite(ts_data[tsi.gm1,*]),sm_cnt)
+					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgcolor(cols)
+					oplot,ts_data[tsi.gm2,*],thick=2
+					sm_data = smooth(reform(ts_data[tsi.gm2,*]),8,/nan,/edge_truncate)
+					sm_idx = where(~finite(ts_data[tsi.gm2,*]),sm_cnt)
+					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
+				endif else begin
+					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgcolor(cols)
+					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms;,col=cgcolor(cols)
+				endelse
 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
 ; 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 ; 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
-if 1 eq 2 then 			legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos=spos,charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
- 				ystretch=((ystretch+1)*1.1)+0.5,linestyle = linestyle
 			endif
 		end_save,save_as3
 	endif
@@ -4433,9 +4506,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 				ok= dialog_message('plot_histogramm: Data '+varn[1]+' not found in Reference '+reference+' File! ')
 				return
 			endif
-			date2 = date1
 		endif
-
 		if keyword_set(limit) or keyword_set(land) or keyword_set(sea) then begin
 			make_geo,grid_res = get_grid_res(bild),lon,lat
 			area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found)
@@ -4446,6 +4517,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 				bild2 = (area2 * bild2 + (area2 eq 0) * fillvalue2)
 			endif
 		endif
+		date2 = date1
 	endelse
 
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
@@ -4513,7 +4585,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 
 		dtn = [appendix(varn[0]),appendix(varn[1])]
 		sn_cov = short_cov_name(coverage)
-		if keyword_set(sn_cov) then dtn += ' - '+ sn_cov
+		if keyword_set(sn_cov) then dtn += ' ('+ sn_cov+')'
 		if opl eq 0 then begin
 			plot,xx,hh/total(hh)*100.,xtitle=vollername+' '+unit,title=keyword_set(notitle) ? '' : (ts ? date1:''),$
 			xr=[minv[0],maxv[0]],thick=thick,yrange=yrange,ytitle='% of occur.',xlog=logarithmic,$
@@ -4633,7 +4705,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		title = keyword_set(notitle) ? '' : (ts ? date : '')
 		dtn = appendix(varname)
 		sn_cov = short_cov_name(coverage)
-		if keyword_set(sn_cov) then dtn += ' - '+ sn_cov
+		if keyword_set(sn_cov) then dtn += ' ('+ sn_cov+')'
 		if wbg or sim then thick = 5
 		if opl eq 0 then begin
 			plot,[0,0],[1,1],xr=[-90,90],xs=3,/ys,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
