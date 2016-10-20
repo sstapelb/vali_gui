@@ -4829,11 +4829,11 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	satn_background = (sat eq 'noaaam' or sat eq 'noaapm')
 
 	if keyword_set(free_reference) then begin
+		dtn   = ''
 		free, reference
 		if strmatch(algon,ref) then begin
-			algon = algon + dat
+			algon = algon +' '+strupcase(dat)
 		endif else begin
-			dtn   = ''
 			algon = strjoin([' '+algon,ref] + ' '+strupcase(strsplit(dat,' - ',/ext)),' -!C ')
 		endelse
 	endif
