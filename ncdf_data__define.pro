@@ -3347,7 +3347,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.pchist    = Widget_Button(bla, Value='Histo', UVALUE='SET_PLOT_DEFAULTS') 				; Histo  = Histogram
 	      self.pczm      = Widget_Button(bla, Value='Zonal', UVALUE='SET_PLOT_DEFAULTS') 				; Zonal  = Zonal Mean
 	      self.pchov     = Widget_Button(bla, Value='HovMoell', UVALUE='SET_PLOT_DEFAULTS')				; Hovm   = Hovmoeller
-	      self.pcms      = Widget_Button(bla, Value='Pic-Serie (FBL,PUG) (+ Save)', UVALUE='SET_PLOT_DEFAULTS')	; TS-Multi-Sat
+	      self.pcms      = Widget_Button(bla, Value='Pic-Serie (PVIR,PUG) (+Save)', UVALUE='SET_PLOT_DEFAULTS')	; TS-Multi-Sat
 	      self.pcmat     = Widget_Button(bla, Value='Diff Matrix (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 	; Matrix = Matrix (MATRIX-TS)
 	      self.pcdts     = Widget_Button(bla, Value='Diff2D (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 		; Diff   = TS-Diff
 	      self.pcmts     = Widget_Button(bla, Value='Box Plots (Compare Only)' , UVALUE='SET_PLOT_DEFAULTS') 	; BoxPlot= TS-Mean 
@@ -3401,8 +3401,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
 	        self.wbgrID    = Widget_Button(bla, Value='White-BG'  , UVALUE='SET_PLOT_DEFAULTS')
 ;removed , lets see if someone misses this, grep for selftxt and uncomment to re instate this
-;  	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
-; 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
+ 	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
+	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 ; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
 ;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
 ; 	        sym_list       = ['PSymbols',string((indgen(9)),f='(f3.1)')]
@@ -3469,7 +3469,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
 	endelse
 	;symsize default
-	self.PsymSize = 1.5
+	self.PsymSize = 1.
 	;magnify defaults
 	self.magnify = -1
 	;set defaults for comboboxes
@@ -3519,7 +3519,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.levelID   , SET_COMBOBOX_SELECT=lidx,sensitive=0
 ; 		Widget_Control, self.axquotID  , SET_COMBOBOX_SELECT=0
 ; 		Widget_Control, self.symbolID  , SET_COMBOBOX_SELECT=0
-		Widget_Control, self.symsizeID , SET_COMBOBOX_SELECT=7,sensitive=0
+		Widget_Control, self.symsizeID , SET_COMBOBOX_SELECT=2,sensitive=0
 		Widget_Control, self.orbID     , Set_Value=self.orbit
 		Widget_Control, self.zkompID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.magniID   , SET_COMBOBOX_SELECT=0
@@ -3527,7 +3527,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.winnrID   , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
-; 		Widget_Control, self.selftxt   , Set_Value=' Add Text'
+ 		Widget_Control, self.selftxt   , Set_Value=' Add Text'
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
 		Widget_Control, self.p0lonID   , Set_Value=''
@@ -3809,9 +3809,9 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 ; 	widget_control,self.other,get_value=oth
 ; 	oth = strlowcase(oth[0])
 
-; 	widget_control,self.selftxt,get_value=addtext
-;  	addtext = addtext eq ' Add Text' ? '' : addtext
-	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
+	widget_control,self.selftxt,get_value=addtext
+ 	addtext = addtext eq ' Add Text' ? '' : addtext
+; 	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
 
 	hct = self.hct eq '--' ? '' : strlowcase(self.hct)
 	if hct eq 'ovw' then hct = 'overview'
@@ -4358,6 +4358,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmult and pcts then begin
 				if verbose then print,'Time Series'
+stop
 				plot_simple_timeseries, varname, sat, algo, cov, reference = ref,mini=mini, maxi=maxi,verbose=verbose,  $
 				oplots=opl,win_nr=win_nr,logarithmic=log,white_bg=Widget_Info(self.wbgrID, /BUTTON_SET),$
 				show_values = show_values, rot=rot,error=error,save_as=save_as,symsize=symsize,notitle=notitle,$
@@ -4770,9 +4771,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 
 			if pcms and save_as then begin
-				ok = dialog_message("This combination will create PUG Pictures! Make sure that Date, Projection and Limit is properly set. ",/cancel)
+				ok = dialog_message("This combination will create PUG/PVIR Pictures! Make sure that Date, Projection and Limit is properly set. ",/cancel)
 				if ok eq 'Cancel' then return
-				plot_l2_save_serie,year[0],month[0],day[0],sat=sat[0],algo=algo[0], $
+				plot_l2_save_serie,year[0],month[0],day[0],sat=sat[0],algo=algo[0],file=file, $
 				sea = sea,land=land,save_as=save_as,limit=limit,timeseries=pcmult, $
 				p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
