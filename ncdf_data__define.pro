@@ -3312,7 +3312,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N', UVALUE='SET_PLOT_DEFAULTS')
 ;  	      self.noaa6     = Widget_Button(self.sat_base, Value='N06', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa7     = Widget_Button(self.sat_base, Value='N07', UVALUE='SET_PLOT_DEFAULTS')
- 	      self.noaa8     = Widget_Button(self.sat_base, Value='N08', UVALUE='SET_PLOT_DEFAULTS')
+;  	      self.noaa8     = Widget_Button(self.sat_base, Value='N08', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa9     = Widget_Button(self.sat_base, Value='N09', UVALUE='SET_PLOT_DEFAULTS')
   	      self.noaa10    = Widget_Button(self.sat_base, Value='N10', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa11    = Widget_Button(self.sat_base, Value='N11', UVALUE='SET_PLOT_DEFAULTS')
@@ -3323,18 +3323,19 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.noaa17    = Widget_Button(self.sat_base, Value='N17', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa18    = Widget_Button(self.sat_base, Value='N18', UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaa19    = Widget_Button(self.sat_base, Value='N19', UVALUE='SET_PLOT_DEFAULTS')
+	      self.aatme     = Widget_Button(self.sat_base, Value='A/M', UVALUE='SET_PLOT_DEFAULTS')
 	      self.metopa    = Widget_Button(self.sat_base, Value='MA' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.metopb    = Widget_Button(self.sat_base, Value='MB' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaaAM    = Widget_Button(self.sat_base, Value='AM' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.noaaPM    = Widget_Button(self.sat_base, Value='PM' , UVALUE='SET_PLOT_DEFAULTS')
 ; 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
-	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
 	      self.ers2      = Widget_Button(self.sat_base, Value='ERS', UVALUE='SET_PLOT_DEFAULTS')
 	      self.envisat   = Widget_Button(self.sat_base, Value='ENV', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aatme     = Widget_Button(self.sat_base, Value='A/M', UVALUE='SET_PLOT_DEFAULTS')
+	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
+	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
 	      self.avhrrs    = Widget_Button(self.sat_base, Value='AVs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.modises   = Widget_Button(self.sat_base, Value='MOs', UVALUE='SET_PLOT_DEFAULTS')
+	      self.aatsr     = Widget_Button(self.sat_base, Value='ATs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.allsat    = Widget_Button(self.sat_base, Value='ALL', UVALUE='SET_PLOT_DEFAULTS')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Style: ')
@@ -3561,7 +3562,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
 ;  		Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
 		Widget_Control, self.noaa7     , Set_Button=(self.satname eq 'noaa7'  ? 1:0)
-		Widget_Control, self.noaa8     , Set_Button=(self.satname eq 'noaa8'  ? 1:0)
+; 		Widget_Control, self.noaa8     , Set_Button=(self.satname eq 'noaa8'  ? 1:0)
 		Widget_Control, self.noaa9     , Set_Button=(self.satname eq 'noaa9'  ? 1:0)
  		Widget_Control, self.noaa10    , Set_Button=(self.satname eq 'noaa10' ? 1:0)
 		Widget_Control, self.noaa11    , Set_Button=(self.satname eq 'noaa11' ? 1:0)
@@ -3579,6 +3580,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.envisat   , Set_Button=(self.satname eq 'envisat'? 1:0)
 		Widget_Control, self.ers2      , Set_Button=(self.satname eq 'ers2'   ? 1:0)
 		Widget_Control, self.aatme     , Set_Button=(self.satname eq 'aatme'  ? 1:0)
+		Widget_Control, self.aatsr     , Set_Button=(self.satname eq 'atsrs'  ? 1:0)
 		Widget_Control, self.terra     , Set_Button=(self.satname eq 'terra'  ? 1:0)
 		Widget_Control, self.avhrrs    , Set_Button=(self.satname eq 'avhrrs' ? 1:0)
 		Widget_Control, self.modises   , Set_Button=(self.satname eq 'modises'? 1:0)
@@ -3996,7 +3998,7 @@ l1g = 0
 ; 				self.tirosn,	$
 ; 				self.noaa5,	$
 ; 				self.noaa6,	$
-				self.noaa8,	$
+; 				self.noaa8,	$
 				self.noaa9,	$
  				self.noaa10,	$
 				self.noaa11,	$
@@ -4018,13 +4020,15 @@ l1g = 0
 				self.ers2,	$
 				self.envisat,	$
 				self.aatme,	$
+				self.aatsr,	$
 				self.noaaam,	$
 				self.noaapm	$
 				],/button_set)
 ; 	satlist = ['noaa'+strcompress([7,5,6,8,9,10,11,12,14,15,16,17,18,19],/rem),$
 ; 		   'metopa','metopb','msg','aqua','terra','avhrrs','modises','allsat','aatsr','aatme','noaaam','noaapm']
- 	satlist = ['noaa'+strcompress([7,8,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','aqua','terra','avhrrs',$
-		   'modises','allsat','ers2','envisat','aatme','noaaam','noaapm']
+
+	satlist = ['noaa'+strcompress([7,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','aqua','terra','avhrrs',$
+		   'modises','allsat','ers2','envisat','aatme','atsrs','noaaam','noaapm']
 	blabal = where(setlist eq 1,bla_cnt)
 	sat = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
 
@@ -4144,7 +4148,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 ;				Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
 ; 				Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
 				Widget_Control, self.noaa7     , Set_Button=(self.satname eq 'noaa7'  ? 1:0)
-				Widget_Control, self.noaa8     , Set_Button=(self.satname eq 'noaa8'  ? 1:0)
+; 				Widget_Control, self.noaa8     , Set_Button=(self.satname eq 'noaa8'  ? 1:0)
 				Widget_Control, self.noaa9     , Set_Button=(self.satname eq 'noaa9'  ? 1:0)
 				Widget_Control, self.noaa10    , Set_Button=(self.satname eq 'noaa10' ? 1:0)
 				Widget_Control, self.noaa11    , Set_Button=(self.satname eq 'noaa11' ? 1:0)
@@ -4162,12 +4166,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				Widget_Control, self.aqua      , Set_Button=(self.satname eq 'aqua'   ? 1:0)
 				Widget_Control, self.envisat   , Set_Button=(self.satname eq 'envisat'? 1:0)
 				Widget_Control, self.aatme     , Set_Button=(self.satname eq 'aatme'  ? 1:0)
+				Widget_Control, self.aatsr     , Set_Button=(self.satname eq 'atsrs'  ? 1:0)
 				Widget_Control, self.terra     , Set_Button=(self.satname eq 'terra'  ? 1:0)
 				Widget_Control, self.avhrrs    , Set_Button=(self.satname eq 'avhrrs' ? 1:0)
 				Widget_Control, self.modises   , Set_Button=(self.satname eq 'modises'? 1:0)
 				Widget_Control, self.allsat    , Set_Button=(self.satname eq 'allsat' ? 1:0)
-				Widget_Control, self.noaaAM    , Set_Button=(self.satname eq 'noaaam'  ? 1:0)
-				Widget_Control, self.noaaPM    , Set_Button=(self.satname eq 'noaapm'  ? 1:0)
+				Widget_Control, self.noaaAM    , Set_Button=(self.satname eq 'noaaam' ? 1:0)
+				Widget_Control, self.noaaPM    , Set_Button=(self.satname eq 'noaapm' ? 1:0)
 			endif else begin
 				Widget_Control, self.yearID  ,sensitive=( hide ? 0:1 )
 				Widget_Control, self.monthID ,sensitive=( hide ? 0:1 )
@@ -4358,7 +4363,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmult and pcts then begin
 				if verbose then print,'Time Series'
-stop
 				plot_simple_timeseries, varname, sat, algo, cov, reference = ref,mini=mini, maxi=maxi,verbose=verbose,  $
 				oplots=opl,win_nr=win_nr,logarithmic=log,white_bg=Widget_Info(self.wbgrID, /BUTTON_SET),$
 				show_values = show_values, rot=rot,error=error,save_as=save_as,symsize=symsize,notitle=notitle,$

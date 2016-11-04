@@ -290,6 +290,11 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'hist2d_cot_ctp_ratio'	: dat = 'jch_ratio'
 				'cot_ctp_hist2d_mixed'	: dat = 'jch_mixed'
 				'hist2d_cot_ctp_mixed'	: dat = 'jch_mixed'
+				'hist2d_cot_ctp2'	: dat = 'jch'
+				'hist2d_cot_ctp2_liq'	: dat = 'jch_liq'
+				'hist2d_cot_ctp2_ice'	: dat = 'jch_ice'
+				'hist2d_cot_ctp2_ratio'	: dat = 'jch_ratio'
+				'hist2d_cot_ctp2_mixed'	: dat = 'jch_mixed'
 				'cc_total' 		: dat = 'cfc'
 				'a_ca'			: dat = 'cfc'
 				'cwp_ice'		: dat = 'iwp'
@@ -1757,6 +1762,16 @@ function cci_name, sat, algoname_only = algoname_only
 	return, names
 end
 ;--------------------------------------------------------------------------------------------------------------------------
+function atsr_prime,year,month,instrument=instrument
+
+	aatsr_start = my_julday(2002,07,24) ; at least RAL starts here with first L3U
+	if my_julday(year,month,01) lt aatsr_start then begin
+		return, keyword_set(instrument) ? 'ATSR2' : 'ERS2'
+	endif else begin
+		return, keyword_set(instrument) ? 'AATSR' : 'ENVISAT'
+	endelse
+end
+;--------------------------------------------------------------------------------------------------------------------------
 function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 				 node=node		, $ ; node of the specified sat (asc,des)
 				 which=which		, $ ; which file from database
@@ -1913,8 +1928,8 @@ function noaa_ampm, satellite, ampm = ampm
 		else		: result = 'unknown'
 	endcase
 
-	if stregex(result,'am',/bool) then ampm = 0
-	if stregex(result,'pm',/bool) then ampm = 1
+	if strmatch(result,'am') then ampm = 0
+	if strmatch(result,'pm') then ampm = 1
 
 	return, keyword_set_ampm ? ampm : result
 
@@ -1928,8 +1943,9 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
 
 	if total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) then satn = 'MERIS+AATSR'
-	if total(satn eq ['atsr','atsr2','ers','ers2']) then satn = 'ATSR-2'
+	if total(satn eq ['atsr','atsr2','ers','ers2']) then satn = 'ATSR2'
 	if total(satn eq ['envisat','aatsr','env']) then satn = 'AATSR'
+	if total(satn eq ['atsrs']) then satn = 'ATSR2-AATSR'
 
 	case algo of
 ; 		'cci'	: algon = total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) ? 'Fame-C' : 'CC4CL' +(keyword_set(version) ? '-'+version : '')
@@ -2521,7 +2537,7 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 end
 ;---------------------------------------------------------------------------------------------
 pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = algoname, set_fillvalue = set_fillvalue , $		;input 
-		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw, attribute = attribute, var_dim_names = var_dim_names	;output
+		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw, attributes = attributes, var_dim_names = var_dim_names	;output
 
 	ff = nc_file[0]
 
@@ -2530,6 +2546,10 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		if keyword_set(verbose) then print, data+' not found!'
 		return
 	end
+
+	if arg_present(attributes) then begin
+		attributes = get_ncdf_data_by_name(ff, data, /all_attributes)
+	endif
 
 	bild_raw  = reform(bild_raw)
 	raw = bild_raw
@@ -3552,6 +3572,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		if stregex(sat,'TERRA',/bool)   then inst = 'MODIS'
 		if stregex(sat,'MODISES',/bool) then inst = 'MODIS'
 		if stregex(sat,'AATSR',/bool)   then inst = 'AATSR'
+		if stregex(sat,'ATSRS',/bool)   then begin
+			inst = atsr_prime(yyyy,mm,/inst) ; either ATSR2 or AATSR use prime 
+			sat  = atsr_prime(yyyy,mm)	 ; either ers2 or envisat use prime
+		endif
 		if stregex(sat,'ATSR2',/bool)   then inst = 'ATSR2'
 		if stregex(sat,'ENVISAT',/bool) then inst = 'AATSR'
 		if stregex(sat,'ERS',/bool)     then inst = 'ATSR2'
@@ -3811,10 +3835,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif
 						 end
 					'GEWEX': begin
-							if ~total(lev eq ['l3c','l3s']) then goto, ende
+						if ~total(lev eq ['l3c','l3s']) then goto, ende
 							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
-								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
@@ -3870,7 +3894,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/MODIS/'+yyyy+'/'
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-							filen = dir+dat+'_ESACCI_'+strupcase(sat)+'_'+strupcase(noaa_ampm(sat))+'_'+yyyy+'.nc'
+							filen = dir+dat+'_ESACCI_*_'+strupcase(noaa_ampm(sat))+'_'+yyyy+'.nc'
 						 end
 					'COLL5' : begin
 							doy   = string(doy(yyyy,mm,dd eq '' ? 1:dd),f='(i3.3)')
@@ -3927,6 +3951,12 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						filen = dir+yyyy+mm+dd+'*ESACCI*'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-AATSR*-f'+vers+'.nc'
 					endelse
 				endif
+				if alg eq 'GEWEX' then begin
+					if ~total(lev eq ['l3c','l3s']) then goto, ende
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/ATSR/'+yyyy+'/'
+					dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
+					filen = dir+dat+'_ESACCI_AATSR_AM_'+yyyy+'.nc'
+				endif
 			  end
 		'ATSR2'	: begin
 				if alg eq 'ESACCI' then begin
@@ -3935,6 +3965,12 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 						filen = dir+yyyy+mm+dd+'*ESACCI*'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-ATSR2_ERS2-f'+vers+'.nc'
 					endif
+				endif
+				if alg eq 'GEWEX' then begin
+					if ~total(lev eq ['l3c','l3s']) then goto, ende
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/ATSR/'+yyyy+'/'
+					dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
+					filen = dir+dat+'_ESACCI_AATSR_AM_'+yyyy+'.nc'
 				endif
 			  end
 		'MERISAATSR': begin
@@ -5461,6 +5497,32 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if idx_cnt gt 0 then outdata[idx]=no_data_value[0]
 		endelse
 		longname = 'Joint cloud property Histogram of ice and water clouds'
+	endif else if (total(alg eq ['coll5','coll6']) and  is_jch(dat,/ratio)) then begin
+		if ~sil then print,'Combine '+dat+' for '+alg
+		read_data, filename[0] , 'cot_ctp_hist2d_liq', liq, no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
+				unit, found = found, verbose = verbose , silent=silent
+		read_data, filename[0] , 'cot_ctp_hist2d_ice', ice, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue ,$
+				unit, found = found1, verbose = verbose , silent=silent
+		if found and found1 then begin
+			si  = size(ice,/dim)
+			si1 = size(liq,/dim)
+			;bin dimension needs to be equal
+			if total(si) eq total(si1) then begin
+				si = size(ice,/dim)
+				outdata = fltarr([si,2])
+				outdata[*,*,*,*,*,0] = liq
+				outdata[*,*,*,*,*,1] = ice
+			endif else begin
+				if ~keyword_set(silent) then print,'Dimensions of liquid and ice do not agree.'
+				if ~keyword_set(silent) then print,si
+				if ~keyword_set(silent) then print,si1
+				found   =  0
+				outdata = -1
+			endelse
+		endif else begin
+			outdata = -1
+			found=0
+		endelse
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i','calipso']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
 		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit, found = found, verbose = verbose, var_dim_names=var_dim_names , silent=silent
@@ -6029,7 +6091,8 @@ end
 function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = satellite, $
 			    grid_res = grid_res, l3u_dir = l3u_dir, save_as = save_as	, $
 			    arithmetical = arithmetical, in_cloud_mean = in_cloud_mean	, $
-			    found = found, verbose = verbose,print_file=print_file
+			    found = found, verbose = verbose, print_file = print_file	, $
+			    nadir_only = nadir_only,set_fillvalue = set_fillvalue
 
 	found   = 1
 	yyyy  	= keyword_set(year)  	? string(year,f='(i4.4)')  	: '2007'
@@ -6038,7 +6101,13 @@ function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = s
 	dat	= keyword_set(data)	? strreplace(data,['_asc','_desc'],['',''])	: 'CTP'
 	res   	= keyword_set(grid_res)	? float(grid_res)		: 0.5 ; in degree
 
-	res_l3u = (algo2ref(algo) eq 'gac2' ? 0.05 : 0.1)
+	res_l3u = (algo2ref(algo) eq 'pmx' ? 0.1 : 0.05)
+
+	day   = stregex(dat,'_day',/fold,/bool)
+	twl   = stregex(dat,'_twl',/fold,/bool)
+	night = stregex(dat,'_night',/fold,/bool)
+	
+	dat = strreplace(dat,['_day','_twl','_night'],['','',''])
 
 	if res/res_l3u ne fix(res/res_l3u) and ~keyword_set(arithmetical) then begin
 		print,'L3C output Grid-Size ('+string(res,f='(f5.2)')+') needs to be an integral multiple of the L3U Grid-Size ('+string(res_l3u,f='(f5.2)')+').'
@@ -6047,9 +6116,7 @@ function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = s
 		return,-1
 	endif
 
-	if get_product_name(dat,algo='gac') eq 'cfc' then dat = 'cc_mask'
-
-	if algo2ref(algo) eq 'pmx' then l3u_dir = '/cmsaf/cmsaf-cld6/PATMOS_l2b/ftp.ssec.wisc.edu/pub/patmosx/data/hdf/level2b/avhrr/global_ncdc/'+yyyy+'/'
+	if get_product_name(dat,algo='gac') eq 'cfc' then dat = 'cmask'
 
 	full_array = fltarr(360./res,180./res,2*dom) + !values.f_nan
 	if keyword_set(arithmetical) then begin
@@ -6058,7 +6125,7 @@ function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = s
 	endif
 
 	o_myt_orb = obj_new('my_timer',dom)
-
+	count = 0
 	for i = 0, dom-1 do begin
 		dum = get_data(yyyy,mm,(i+1),data = dat+'_asc', no_data_value = no_data_value, longname = longname, unit = unit,/silent	, $
 		verbose = verbose, level='l3u', algo = algo, sat=satellite,error=error, found = found,/make_compare, dirname=l3u_dir,print_file=print_file)
@@ -6066,11 +6133,29 @@ function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = s
 		if found then begin
 			; cci prototype had parameter no matter if clear or cloudy , some versions of cci phase2 too
 			; this can be always done but of course takes its time ,set keyword in_cloud_mean if necassary
-			if strmid(algo2ref(algo),0,3) eq 'cci' and keyword_set(in_cloud_mean) then begin	
-				cma = get_data(yyyy,mm,(i+1),data = 'cc_mask_asc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
+			if strmid(algo2ref(algo),0,3) eq 'cci' and keyword_set(in_cloud_mean) and dat ne 'cmask' then begin	
+				cma = get_data(yyyy,mm,(i+1),data = 'cmask_asc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
 				level='l3u', algo = algo, sat=satellite,error=error,found = found,/make_compare, dirname=l3u_dir)
 				if found then begin
 					dum = ( no_data_value[0] * (cma eq ndv_cma[0] or cma eq 0) ) + (dum * (cma eq 1))
+					free, cma
+				endif
+			endif
+			if day or twl or night then begin
+				cma = get_data(yyyy,mm,(i+1),data = 'illum_asc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
+				level='l3u', algo = algo, sat=satellite,error=error,found = found,/make_compare, dirname=l3u_dir)
+				if found then begin
+					if day   then dum = ( no_data_value[0] * (cma ne 1) ) + (dum * (cma eq 1))
+					if twl   then dum = ( no_data_value[0] * (cma ne 2) ) + (dum * (cma eq 2))
+					if night then dum = ( no_data_value[0] * (cma ne 3) ) + (dum * (cma eq 3))
+					free, cma
+				endif
+			endif
+			if keyword_set(nadir_only) then begin	
+				cma = get_data(yyyy,mm,(i+1),data = 'satzen_asc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
+				level='l3u', algo = algo, sat=satellite,error=error,found = found,/make_compare, dirname=l3u_dir)
+				if found then begin
+					dum = ( no_data_value[0] * (cma eq ndv_cma[0] or cma gt 0.5) ) + (dum * (between(cma,0,0.5)))
 					free, cma
 				endif
 			endif
@@ -6078,17 +6163,38 @@ function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = s
 				dum = sat2global(lon,lat,dum,no_data_value=no_data_value,grid=res,/nan_fillv)
 				full_array[*,*,(i*2)] = dum.sum
 				full_count += dum.count
-			endif else full_array[*,*,(i*2)] = grid_down_globe(dum,res,no_data_value=no_data_value[0],/nan_fillv)
+			endif else begin
+				full_array[*,*,(i*2)] = grid_down_globe(dum,res,no_data_value=no_data_value[0],/nan_fillv)
+			endelse
+			count++
 		endif
 		dum = get_data(yyyy,mm,(i+1),data = dat+'_desc', no_data_value = no_data_value, longname = longname, unit = unit,/silent	, $
 		verbose = verbose, level='l3u', algo = algo, sat=satellite,error=error, found = found,/make_compare, dirname=l3u_dir,print_file=print_file)
 		if strlowcase(dat) eq 'cph' then dum = ( no_data_value[0] * (dum eq no_data_value[0] or dum eq 0) ) + (dum * (dum eq 1))
 		if found then begin
-			if strmid(algo2ref(algo),0,3) eq 'cci' and keyword_set(in_cloud_mean) then begin
-				cma = get_data(yyyy,mm,(i+1),data = 'cc_mask_desc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
+			if strmid(algo2ref(algo),0,3) eq 'cci' and keyword_set(in_cloud_mean) and dat ne 'cmask' then begin
+				cma = get_data(yyyy,mm,(i+1),data = 'cmask_desc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
 				level='l3u', algo = algo, sat=satellite,error=error,found = found,/make_compare, dirname=l3u_dir)
 				if found then begin
 					dum = ( no_data_value[0] * (cma eq ndv_cma[0] or cma eq 0) ) + (dum * (cma eq 1))
+					free, cma
+				endif
+			endif
+			if day or twl or night then begin
+				cma = get_data(yyyy,mm,(i+1),data = 'illum_desc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
+				level='l3u', algo = algo, sat=satellite,error=error,found = found,/make_compare, dirname=l3u_dir)
+				if found then begin
+					if day   then dum = ( no_data_value[0] * (cma ne 1) ) + (dum * (cma eq 1))
+					if twl   then dum = ( no_data_value[0] * (cma ne 2) ) + (dum * (cma eq 2))
+					if night then dum = ( no_data_value[0] * (cma ne 3) ) + (dum * (cma eq 3))
+					free, cma
+				endif
+			endif
+			if keyword_set(nadir_only) then begin	
+				cma = get_data(yyyy,mm,(i+1),data = 'satzen_desc', no_data_value = ndv_cma,/silent,print_file=print_file	, $
+				level='l3u', algo = algo, sat=satellite,error=error,found = found,/make_compare, dirname=l3u_dir)
+				if found then begin
+					dum = ( no_data_value[0] * (cma eq ndv_cma[0] or cma gt 0.5) ) + (dum * (between(cma,0,0.5)))
 					free, cma
 				endif
 			endif
@@ -6097,19 +6203,31 @@ function make_l3c_from_l3u, year, month, data = data, algo = algo, satellite = s
 				full_array[*,*,(i*2+1)] = dum.sum
 				full_count += dum.count
 			endif else full_array[*,*,(i*2+1)] = grid_down_globe(dum,res,no_data_value=no_data_value[0],/nan_fillv)
+			count++
 		endif
 		o_myt_orb -> wie_lang_noch
 	endfor
 
+	if count eq 0 then begin
+		print,'Found Nothing. Check satnames, launches, variable names, etc.'
+		found = 0
+		return,-1
+	endif
+	
 	if keyword_set(arithmetical) then begin
 		fsum = total(full_array,3,/nan)
 		mean = fsum/float(full_count>1)
 	endif else mean = mean(full_array,dim=3,/nan)
 
+	no_data_value = keyword_set(set_fillvalue) ? set_fillvalue[0] : no_data_value[0]
+
 	idx = where(~finite(mean),idxcnt)
-	if idxcnt then mean[idx] = no_data_value[0]
+	if idxcnt gt 0 then mean[idx] = no_data_value[0]
 
 	if keyword_set(save_as) then begin
+		if day   then dat += '_day'
+		if twl   then dat += '_twl'
+		if night then dat += '_night'
 		name = yyyy+mm+'_'+ref2algo(algo)+'_'+dat+'_'+sat+'_l3c_from_l2b.sav'
 		save_var,{image:mean,longname:'monthly mean of '+longname,unit:unit,fillvalue:no_data_value[0]},!SAVS_DIR + name
 		print,"Saved -> Open with d = restore_var('"+!SAVS_DIR +name+"')"

@@ -1570,7 +1570,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 					bar_tickname[i] = strjoin(dum[0:middle],' ')+'!C'+strjoin(dum[middle+1:*],' ')
 				endif
 			endfor
-			discrete     = findgen(n_elements(flag_meanings)+1)+minvalue
+			discrete     = findgen(n_elements(flag_meanings)+1)+(adv_keyword_set(mini) ? mini[0]:minvalue)
 			n_lev        = n_elements(flag_meanings)
 			g_eq         = 0
 			l_eq         = 0
@@ -1750,28 +1750,28 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 			oplots=oplots,error=error,dim3=dim3,rot=rot,datum=datum, $
 			addtext=addtext,countries=countries,notitle=notitle,save_as=save_as
 
-	pug  = 0
-	pvir = 1
+	pug  = 1
+	pvir = 0
 	
 	if pug then begin
 		if level eq 'l3c' then begin
-			varnames = ['ctp_unc','ctp_corr_unc','ctp_prop_unc','cfc','cph','cot','cer','ctp','lwp','iwp','cla_vis006','hist2d_cot_ctp','hist2d_cot_ctp']
-			minv	 = [        0,             0,             0,    0,    0,    0,    3,  200,    0,    1,          0,                0,               0]
-			maxv	 = [      200,           350,            10,    1,    1,   40,   60,  900,  500, 2000,          1,                8,             100]
-			hct      = [       '',            '',            '',   '',   '',   '',   '',   '',   '',   '',         '',         'hist2d',           'cu' ]
+			varnames = ['cfc','cph','cot','cer','ctp','lwp','iwp','cla_vis006','hist2d_cot_ctp','hist2d_cot_ctp']
+			minv	 = [    0,    0,    0,    3,  200,    0,    1,          0,                0,               0]
+			maxv	 = [    1,    1,   40,   60,  900,  500, 2000,          1,                8,             100]
+			hct      = [   '',   '',   '',   '',   '',   '',   '',         '',         'hist2d',           'cu' ]
 		endif else if level eq 'l3u' then begin
-			varnames = ['ctp','cmask','cph','cot','cer','ctp','cwp','cla_vis006','cty']
-			minv	 = [    0,      0,    0,    0,  0.1,   10,    0,           0,    0]
-			maxv	 = [  100,      1,    2,   30,   70, 1050,  300,           1,    8]
-			hct      = [   '',     '',   '',   '',   '',   '',   '',          '',   '']
-			varnames = strlowcase(sat) eq 'aatme' or strlowcase(sat) eq 'aatsr' ? varnames + '_desc' : varnames + '_asc' 
-			varnames[0] = varnames[0]+'_unc' ; only ctp uncertainty
+			varnames = ['cmask','cph','cot','cer','ctp','cwp','cla_vis006']
+			minv	 = [      0,    0,    0,  0.1,   10,    0,           0]
+			maxv	 = [      1,    2,   30,   70, 1050,  300,           1]
+			hct      = [     '',   '',   '',   '',   '',   '',          '']
+			varnames += (noaa_ampm(sat) eq 'am' ? '_desc' : '_asc')
 		endif else begin
 			ok = dialog_message('Dont know what to do!')
 			stop
 		endelse
+		robinson  = 1
 	endif
-	
+
 	if pvir then begin
 		if level eq 'l3c' then begin
 			varnames1 = ['cfc','ctp','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','cph']+'_pvir'
@@ -1808,7 +1808,6 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 			free, ctable
 			other  = 'extended_rainbow'
 		endelse
-		print,varnames[dd]+' '+other
 
 		plot_l2, year, month, day ,sat = sat, data = varnames[dd], mini = minv[dd], maxi = maxv[dd]	, $
 			limit=limit, save_as=save_as, logarithmic=logarithmic, land = land, sea = sea		, $
@@ -2971,9 +2970,9 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				if keyword_set(notitle) then begin
 					xtickname = [' ',' ']
 					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
-				endif else ymargin= [5,2]+(sav or wbg ? [2,1]:0)
+				endif else ymargin= [6,2]+(sav or wbg ? [2,1]:0)
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
-				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log, $
+				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log,xtitle=(keyword_set(notitle) ? '' : 'Time [years]'), $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(qu eq 0 ? 0:6)]:0),ymargin=ymargin,$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,title = keyword_set(notitle) ? '' : datum
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
@@ -3117,11 +3116,11 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				if keyword_set(notitle) then begin
 					xtickname = [' ',' ']
 					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
-				endif else ymargin= [5,2]+(sav or wbg ? [2,1]:0)
+				endif else ymargin= [6,2]+(sav or wbg ? [2,1]:0)
 ; for PVIR
 if keyword_set(nobar) then ymargin += [18,0] 
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=1,xticklen=0.01,$
-				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle='Time [years]', $
+				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle=(keyword_set(notitle) ? '' : 'Time [years]'), $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=ymargin,$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
@@ -4858,7 +4857,11 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	ori_period = fix(strsplit(d.period,'-',/ext))
 	longname = d.longname
 
-	coverage = (stregex(d.coverage,'midlat_trop',/fold,/bool) ? string(177b)+'60'+string(176b)+' Lat' : d.coverage)
+	if stregex(d.coverage,'midlat_trop',/fold,/bool) then begin
+		coverage = string(177b)+'60'+string(176b)+' Lat'
+		if stregex(d.coverage,'sea',/fold,/bool)  then coverage += ' (Sea)'
+		if stregex(d.coverage,'land',/fold,/bool) then coverage += ' (Land)'
+	endif else coverage = d.coverage
 
 	only_sat = (stregex(dat[0],'refl',/fold,/bool) or stregex(dat[0],'rad',/fold,/bool) ) and algo2ref(algo) eq 'gac2'
 	algon    = sat_name(algo,sat,only_sat=only_sat)
@@ -5944,7 +5947,7 @@ pro create_time_series,data,algon,coverage,period=period
 
 	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
 	trend_sat = 1
-	if total(cli eq ['cci','gac','gac2','pmx']) and ~total(sat eq ['noaaam','noaapm','aatme','aatsr','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
+	if total(cli eq ['cci','gac','gac2','pmx']) and ~total(sat eq ['noaaam','noaapm','aatme','atsrs','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
 	if total(strmid(dat,0,4) eq ['nobs','nret']) then begin
 		trend_sat = 0
 		sum_up    = 1 	;use total() instead of mean ???? not necassray, I guess spatial avergae = total / number of area 
@@ -6240,14 +6243,14 @@ pro do_create_all_single_time_series
 
 	starttime = systime(1)
 	mem_cur   = memory(/current)
-	period    = ['2003-2011']
-	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','cfc_day','cfc_night','cfc_twl','cfc_low',$
-		     'cfc_mid','cfc_high','cph_day','ctp2','ctt','ctt2',$
+; 	period    = ['2003-2011']
+	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
+		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
 
 	; coll6 only
-	data     = [	'iwp_16','lwp_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
-			'iwp_37','lwp_37','cot_37_liq','cer_37_liq','cot_37_ice','cer_37_ice'];, $
+; 	data     = [	'iwp_16','lwp_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
+; 			'iwp_37','lwp_37','cot_37_liq','cer_37_liq','cot_37_ice','cer_37_ice'];, $
 ; 			'cwp_16','cwp_37','cot_16','cer_16','cot_37','cer_37',$
 ; 			'iwp_16_allsky','lwp_16_allsky','cwp_16_allsky','iwp_37_allsky','lwp_37_allsky','cwp_37_allsky']
 	; calipso only
@@ -6265,7 +6268,7 @@ pro do_create_all_single_time_series
 	;sensors and algorithmen
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
-	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
+	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-atsr2','cci-aatme','cci-atsrs','cci-avhrrs','cci-modises','cci-allsat']
 	; gac
 	gac_list = ['gac-allsat','gac-'+avh_list]
 	; gac2
@@ -6284,7 +6287,7 @@ pro do_create_all_single_time_series
 	cla_list = ['cla-']
 
 	; combine all you need
-	algon_list = [coll6_list]
+	algon_list = ['cci-atsrs']
 
 	if is_defined(period) then begin
 		print,''
@@ -6670,9 +6673,9 @@ end
 pro do_all_time_series
 
 	do_create_all_single_time_series
-	do_create_hovmoeller
-	do_hist_cloud_type_time_series, /compare_to_cci
-;	do_1d_hist_time_series, /compare_to_cci
+; 	do_create_hovmoeller
+; 	do_hist_cloud_type_time_series, /compare_to_cci
+; 	do_1d_hist_time_series, /compare_to_cci
 ; 	do_create_all_compare_time_series
 ; 	do_hist_cloud_type_time_series
 ; 	do_1d_hist_time_series
