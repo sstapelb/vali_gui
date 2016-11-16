@@ -76,7 +76,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			endcase
 		endelse
 	endif
-	if total(alg eq ['gac2','clara2']) then begin
+	if total(alg eq ['gac2','clara2','hec','hector']) then begin
 		if keyword_set(path) then begin
 			datd = dat
 			; Martins Calipso Jahresmittel
@@ -1283,6 +1283,8 @@ function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = 
 		'clara'		: alg = 'clara'
 		'gac2'		: alg = 'clara2'
 		'clara2'	: alg = 'clara2'
+		'hec'		: alg = 'hector'
+		'hector'	: alg = 'hector'
 		'mod'		: begin & alg = 'coll5' & sat = 'terra' & end
 		'coll5'		: alg = 'coll5'
 		'myd'		: begin & alg = 'coll5' & sat = 'aqua' & end
@@ -1337,6 +1339,8 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'gac2'		: ref = 'gac2'
 		'clara2'		: ref = 'gac2'
 		'clara-a2'	: ref = 'gac2'
+		'hector'	: ref = 'hec'
+		'hec'		: ref = 'hec'
 		'mod'		: ref = 'mod'
 		'coll5-terra'	: ref = 'mod'
 		'myd'		: ref = 'myd'
@@ -1956,6 +1960,7 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		'gac'	: algon = 'CLARA-A1'
 		'gac2'	: algon = 'CLARA-A2'
 		'l1gac' : algon = 'L1-GAC'
+		'hec'	: algon = 'HECTOR'
 		'myd'	: return,'COLL5-AQUA'
 		'mod'	: return,'COLL5-TERRA'
 		'myd2'	: return,'COLL6-AQUA'
@@ -3583,6 +3588,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		if stregex(alg,'ERA',/bool)     then inst = 'MODEL'
 	endif else inst  = strupcase(instrument)
 
+	if alg eq 'HECTOR' and inst eq 'AVHRR' then inst = 'HIRS'
+
 	case inst of
 		'CALIPSO': begin
 				if lev eq 'l2' then begin
@@ -3997,6 +4004,50 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					else:
 				endcase
 			  end
+		'HIRS'	: begin
+				case alg of
+					'HECTOR': begin
+							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+; 								if found_prime then satellite = sat
+							endif
+							dumdat = dat
+							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
+							if dat eq '' and ~sil then begin & print,alg+' needs a productname to find filename!'& found =0 & return,1 & end
+							case lev of 
+								'l3c'	:	apx = 'mm'
+								'l3s'	:	apx = 'mm'
+								'l3u'	:	apx = 'in'
+								'l3dh'	:	apx = 'dh'
+								'l3dm'	:	apx = 'dm'
+								'l3pm'	:	apx = 'pm'
+								else 	: 	apx=(dd ? 'in' : 'mm')
+							endcase
+
+							if ( (dat eq 'JCH' or is_h1d(dumdat)) and apx eq 'mm' ) then apx = 'mh'
+; 							if  dat eq 'JCH' and apx eq 'dm' then apx = 'dh'
+							c2_ende = keyword_set(filename) ? strmid(file_basename(filename),strlen(file_basename(filename))-5,2) : 'GL'
+
+							case strmid(sat,0,4) of
+								'NOAA'	: satn = 'HIN'+string(strmid(sat,5,2),f='(i2.2)')
+								'METO'	: satn = 'HIME'+strmid(sat,5,1)
+								'AVHR'	: satn = 'HIPOS'
+								'ALLS'	: satn = 'HIPOS'
+								else	: satn = 'NN'
+							endcase
+							dumlevel = '';apx eq 'in' ? 'LEVEL2B' : 'LEVEL3'
+							if din then begin
+								last_subdir = (reverse(strsplit(dirname,'/',/ext)))[0]
+								if is_number(last_subdir) and strlen(last_subdir) eq 4 then begin
+									dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
+								endif
+							endif
+							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld2/thanschm/DATASET/HECTOR_L3_DWD_PROCESSING/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
+							filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
+						end
+					else:
+				endcase
+			  end  
 		'ALL'	: begin
 				if strmid(alg,0,6) eq 'ESACCI' then begin
 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/l3s/'+yyyy+'/'+mm+'/'+dd+'/'
@@ -4998,7 +5049,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		found = 0.
 		return,-1
 	endif
-
+	plot_l3
 	sil = keyword_set(silent)
 	if keyword_set(satellite) then sat = strlowcase(satellite)
 	if not keyword_set(sat) then sat = ''
@@ -5968,7 +6019,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endif
 		endif else if total(datd eq ['cloud_fraction','a_ca']) or strmid(datd,0,8) eq 'cc_total' $
 				or strmid(datd,0,3) eq 'cfc' or dat eq '8' then begin
-			if total(alg eq ['clara2','clara','claas','isccp']) then begin
+			if total(alg eq ['clara2','clara','claas','isccp','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] /= 100.
@@ -5977,7 +6028,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				unit = ' '
 			endif
 		endif else if total(datd eq ['cph','cph_day','a_cawr','a_cawdr']) and total(lev eq ['l3c','l3s']) then begin
-			if total(alg eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old']) then begin
+			if total(alg eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] /= 100.
@@ -5986,7 +6037,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				unit = ' '
 			endif
 		endif else if total(datd eq ['cwp_asc','cwp_desc','cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
-			if total(alg eq ['clara2','clara','claas']) then begin
+			if total(alg eq ['clara2','clara','claas','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] *= 1000.
@@ -5995,7 +6046,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				unit = textoidl(' [ g/m^2]')
 			endif
 		endif else if total(datd eq ['cth_asc','cth_desc','cth','cth_arith_mean','cth_corrected']) then begin
-			if total(alg eq ['clara2','clara','claas']) then begin
+			if total(alg eq ['clara2','clara','claas','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] /= 1000.
@@ -6004,7 +6055,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				unit = textoidl(' [ km]')
 			endif
 		endif else if total(datd eq ['ref','ref_liq','ref_ice','cer','cer_liq','cer_ice']) then begin
-			if total(alg eq ['clara2','claas'])  and lev ne 'l3u' then begin
+			if total(alg eq ['clara2','claas','hector'])  and lev ne 'l3u' then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] /= 1.e-06
@@ -6023,11 +6074,13 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endif
 		endif
 		if is_stdd then datd = datd + '_std'
-		iidx = where(outdata eq no_data_value,iidxcnt)
-		no_data_value = -999.
-		if iidxcnt gt 0 then begin 
-			outdata = float(outdata)
-			outdata[iidx] = -999.
+		if size(outdata,/type) ne 5 then begin ; dont do this on double precision data type
+			iidx = where(outdata eq no_data_value,iidxcnt)
+			no_data_value = -999.
+			if iidxcnt gt 0 then begin
+				outdata = float(outdata)
+				outdata[iidx] = -999.
+			endif
 		endif
 	endif else begin
 		if dat eq 'cph_extended_asc' and alg eq 'clara2' then begin
@@ -6618,7 +6671,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 													 flag_meanings2[[2,3,4,6,7,8,9]]
 			endif
 	endif else if total(dat eq ['cph','cph_day']) then begin
-		if total(alg1 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old']) then begin
+		if total(alg1 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old','hector']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] /= 100.
@@ -6627,7 +6680,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = ' '
 			if verb then print,'Divide now '+dat+' of '+alg1+' by 100.'
 		endif
-		if total(alg2 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old']) then begin
+		if total(alg2 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old','hector']) then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] /= 100.
@@ -6638,7 +6691,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 		endif
 	endif else if total(dat eq ['cloud_fraction','a_ca']) or strmid(dat,0,8) eq 'cc_total' $
 				or strmid(dat,0,3) eq 'cfc'  then begin
-		if total(alg1 eq ['clara2','clara','claas','isccp']) then begin
+		if total(alg1 eq ['clara2','clara','claas','isccp','hector']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] /= 100.
@@ -6647,7 +6700,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = ' '
 			if verb then print,'Divide now '+dat+' of '+alg1+' by 100.'
 		endif
-		if total(alg2 eq ['clara2','clara','claas','isccp']) then begin
+		if total(alg2 eq ['clara2','clara','claas','isccp','hector']) then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] /= 100.
@@ -6657,7 +6710,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			if verb then print,'Divide now '+dat+' of '+alg2+' by 100.'
 		endif
 	endif else if total(dat eq ['cwp_asc','cwp_desc','cwp_ice','cwp_liq','cwp','29','lwp','a_clwp','iwp','a_ciwp','iwp_allsky','lwp_allsky','cwp_allsky']) then begin
-		if total(alg1 eq ['clara2','clara','claas']) then begin
+		if total(alg1 eq ['clara2','clara','claas','hector']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] *= 1000.
@@ -6666,7 +6719,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = textoidl(' [ g/m^2]')
 			if verb then print,'Multiply now '+dat+' of '+alg1+' with 1000.'
 		endif
-		if total(alg2 eq ['clara2','clara','claas']) then begin
+		if total(alg2 eq ['clara2','clara','claas','hector']) then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] *= 1000.
@@ -6676,7 +6729,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			if verb then print,'Multiply now '+dat+' of '+alg2+' with 1000.'
 		endif
 	endif else if total(dat eq ['cth','cth_day','cth_arith_mean','cth_corrected']) then begin
-		if total(alg1 eq ['clara2','clara','claas']) then begin
+		if total(alg1 eq ['clara2','clara','claas','hector']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] /= 1000.
@@ -6685,7 +6738,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = textoidl(' [ km]')
 			if verb then print,'Divide now '+dat+' of '+alg1+' by 1000.'
 		endif
-		if total(alg2 eq ['clara2','clara','claas']) then begin
+		if total(alg2 eq ['clara2','clara','claas','hector']) then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] /= 1000.
@@ -6695,7 +6748,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			if verb then print,'Divide now '+dat+' of '+alg2+' by 1000.'
 		endif
 	endif else if total(strmid(dat,0,3) eq ['ref','cer']) then begin
-		if total(alg1 eq ['clara2','claas']) and lev ne 'l3u' then begin
+		if total(alg1 eq ['clara2','claas','hector']) and lev ne 'l3u' then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] /= 1.e-06
@@ -6704,7 +6757,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = textoidl(' [ \mum]')
 			if verb then print,'Divide now '+dat+' of '+alg1+' by 1.e-08'
 		endif
-		if total(alg2 eq ['clara2','claas']) and lev ne 'l3u' then begin
+		if total(alg2 eq ['clara2','claas','hector']) and lev ne 'l3u' then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] /= 1.e-06

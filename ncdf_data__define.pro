@@ -2052,6 +2052,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 			endcase
 		endif
 	endif
+
 	if where(tag_names(theglobattr) eq 'TITLE') ge 0 then begin
 		tcd = (theglobattr).title
 		if verb then print,'TITLE: ',tcd
@@ -2078,6 +2079,11 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 			month    = '01'
 			level    = 'l3c'
 		endif
+	endif
+	if where(tag_names(theglobattr) eq 'INSTRUMENT') ge 0 then begin
+		tcd = (theglobattr).instrument
+		if verb then print,'Instrument: ',tcd
+		if stregex(tcd,'HIRS',/bool)  then algoname = 'HECTOR'
 	endif
 	if where(tag_names(theglobattr) eq 'DATA_NODE') ge 0 then begin
 		tcd = (theglobattr).DATA_NODE
@@ -2143,10 +2149,10 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		tcd = (theglobattr).platform
 		if verb then print,'PLATFORM: ',tcd
 		satname  = strjoin(strlowcase(strjoin(strsplit((strsplit(tcd,'_',/ext))[0],'-',/ext))),',')
-		if algoname eq 'CLARA2' then begin
+		if algoname eq 'CLARA2' or algoname eq 'HECTOR' then begin
 			dumsatn = strcompress((strsplit(satname,'>',/ext))[0],/rem)
 			case dumsatn of
-				'noaapoes'	: begin & dumsatn = 'avhrrs' &  level = 'l3s' & end
+				'noaapoes'	: begin & dumsatn = (algoname eq 'HECTOR') ?'hirss':'avhrrs' &  level = 'l3s' & end
 				'metop'		: dumsatn = (strsplit(satname,'>',/ext))[1]
 				else		:
 			endcase
@@ -2303,6 +2309,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		'patmos': reference = 'pmx'
 		'claas'	: reference = 'cla'
 		'l1gac'	: reference = 'l1gac'
+		'hector': reference = 'hec'
 		'esacci_old' : reference = 'cci_old'
 		else :
 	endcase
@@ -3360,7 +3367,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
 			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','PATMOS-X',$
-			  'PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','SELECT FILE']
+			  'PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','HECTOR','SELECT FILE']
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
@@ -3374,8 +3381,9 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA'    , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcla    = Widget_Button(bla, Value='CLAAS'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refpmx    = Widget_Button(bla, Value='PATMOS_old'  , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refera    = Widget_Button(bla, Value='ERA-Interim' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refhec    = Widget_Button(bla, Value='HECTOR'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refera    = Widget_Button(bla, Value='ERA-I'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcci2   = Widget_Button(bla, Value='ESACCI'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcci    = Widget_Button(bla, Value='ESACCI-v1.0' , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refgwx    = Widget_Button(bla, Value='ESACCI-GEWEX', UVALUE='SET_PLOT_DEFAULTS')
@@ -3606,6 +3614,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.refpmx2   , Set_Button=0
 ; 		Widget_Control, self.refl1gac  , Set_Button=0
 		Widget_Control, self.refcla    , Set_Button=0
+		Widget_Control, self.refhec    , Set_Button=0
 		Widget_Control, self.refera    , Set_Button=0
 ; 		Widget_Control, self.loaded    , Set_Button=1
 		Widget_Control, self.pcsingle  , Set_Button=1
@@ -3783,7 +3792,7 @@ END ;---------------------------------------------------------------------------
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
-		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year,month,day, $
+		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
@@ -3914,6 +3923,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 ; 	l1g         = Widget_Info(self.refl1gac, /BUTTON_SET)
 l1g = 0
 	cla         = Widget_Info(self.refcla, /BUTTON_SET)
+	hec         = Widget_Info(self.refhec, /BUTTON_SET)
 	sel         = Widget_Info(self.refself, /BUTTON_SET)
 	select      = Widget_Info(self.refselect, /BUTTON_SET)
 	none        = widget_Info(self.refnone,/BUTTON_SET)
@@ -4198,7 +4208,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
+				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4280,6 +4290,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if ccigwx then ref = 'gwx'
 			if syn    then ref = 'cal'
 			if isp    then ref = 'isp'
+			if hec    then ref = 'hec'
 
 			if not keyword_set(maxi) then free,maxi
 			if not keyword_set(mini) then free,mini
@@ -4461,7 +4472,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,win_nr,year, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4541,6 +4552,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
 				if l1g    then begin & algo2 = 'l1gac'      & satn = sat & end
 				if cla    then begin & algo2 = 'claas'      & satn = 'msg' & end
+				if hec    then begin & algo2 = 'hector'     & satn = sat & end
 				if pcmult then begin
 					self.file2 = ''
 					found = 1
@@ -4674,7 +4686,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,sel,pcms,$
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,$
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4711,6 +4723,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pmx2   then begin & algo = 'patmos'      & ref = 'pmx'     & end
 			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
 			if cla    then begin & algo = 'claas'       & sat = 'msg'     & ref = 'cla'  & end
+			if hec    then begin & algo = 'hector'      & ref = 'hec'     & end
 
 			if select then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
@@ -5984,6 +5997,7 @@ PRO NCDF_DATA__DEFINE, class
              refpmx:0L,                $
              refpmx2:0L,               $
              refl1gac:0L,              $
+             refhec:0L,                $
              refcla:0L,                $
              refself:0L,               $
              refselect:0L,             $

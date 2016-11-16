@@ -1121,7 +1121,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if n_elements(file) eq 1 then fidx = 0
 			if strlen(fidx) eq 4 then fidx = 0
 		endelse
-	endif
+	endif else fidx = 0
 
 	if keyword_set(browse) then begin
 		ncdf_browser, file[fidx]
