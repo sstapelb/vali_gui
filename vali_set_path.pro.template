@@ -1,4 +1,4 @@
-PRO vali_set_path, save_as = save_as,white_bg=white_bg,algo=algo
+PRO vali_set_path, save_as = save_as,white_bg=white_bg, reference = reference
 
 	; define here your directories as system variable
 	DEFSYSV,'!SAVE_DIR', '/cmsaf/cmsaf-cld1/sstapelb/bilder/'		; directory to store and find images

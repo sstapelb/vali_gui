@@ -1,8 +1,8 @@
 @vali_pre_compile.pro
 
-pro plot_l3, save_as = save_as, white_bg = white_bg, algo = algo
+pro plot_l3, save_as = save_as, white_bg = white_bg, reference = reference
 
-	vali_set_path, save_as = save_as, white_bg = white_bg, algo = algo
+	vali_set_path, save_as = save_as, white_bg = white_bg, reference = reference
 
 	symball,/filled
 

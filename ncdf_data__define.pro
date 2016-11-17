@@ -3427,7 +3427,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      button = Widget_Button(bottomright, Value='Take a Snapshot', UVALUE='SNAPSHOT')
 	      button = Widget_Button(bottomright, Value='Quit', UVALUE='QUIT_PLOT_VARIABLE_GUI')
 
-	plot_l3
+; 	plot_l3
 
 	; Get the geometries of the tree widget and the button base. These
 	; will set the minimun and maximum values for resizing.
@@ -4217,9 +4217,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if ~found then return
 
-			;set System Variables
-			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
-
 			if none then begin
 				ok = dialog_message('Choose Reference Dataset!')
 				return
@@ -4292,6 +4289,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if syn    then ref = 'cal'
 			if isp    then ref = 'isp'
 			if hec    then ref = 'hec'
+
+			;set System Variables
+			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),reference = ref
 
 			if not keyword_set(maxi) then free,maxi
 			if not keyword_set(mini) then free,mini
@@ -4695,9 +4695,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if ~found then return
 
-			;set System Variables
-			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
-
 			if (pcsing and pchov) then begin
 				ok = dialog_message('Use "Multi Time Steps" for Hovmoeller plots!')
 				return
@@ -4725,6 +4722,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
 			if cla    then begin & algo = 'claas'       & sat = 'msg'     & ref = 'cla'  & end
 			if hec    then begin & algo = 'hector'      & ref = 'hec'     & end
+
+			;set System Variables
+			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),reference = ref
 
 			if select then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
