@@ -3271,13 +3271,14 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.limitID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=180)
 	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','Satellite']; EASE-grid  = equal angle 'Lambert' ??
 	      self.projlist = Widget_combobox(bla, Value=[proj_list],UVALUE=[proj_list],Scr_XSize=85,Scr_YSize=28,UNAME='PLOTS_PROJLIST')
-	    label = Widget_Label(leftrow, Value='  TS-SymSiz Bin/Z  Rot/Qu. Magn.  P0lon  P0lat ', SCR_XSIZE=270)
+	    label = Widget_Label(leftrow, Value='  TS-SymSiz Bin/Z  Rot/BC Magn.  P0lon  P0lat ', SCR_XSIZE=270)
 	    bla = Widget_Base(leftrow, Column=6,Frame=0, Scr_XSize=270)
 	      syms_list      = [string([0.,0.5,1+((indgen(21))/10.) ],f='(f3.1)')]
 	      self.symsizeID = Widget_combobox(bla,VALUE=[syms_list],UVALUE=[syms_list],Scr_XSize=54,Scr_YSize=28,UNAME='PLOTS_SYMSIZELIST')
 	      self.zkompID   = Widget_combobox(bla,VALUE=strcompress(indgen(12),/rem),UVALUE=strcompress(indgen(12),/rem),Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_ZLIST')
 ;               rotlist        = string(indgen(8),f='(i1)')
-              rotlist        = string(indgen(20)/2.,f='(f3.1)')
+;               rotlist        = string(indgen(20)/2.,f='(f3.1)')
+              rotlist        = string(indgen(8),f='(i1)')
 	      self.rotateID  = Widget_combobox(bla, Value=[rotlist],UVALUE=[rotlist],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_ROTATELIST') 
 	      maglist        = string(indgen(11)-1,f='(f3.0)')
 	      self.magniID   = Widget_combobox(bla,UVALUE=maglist,VALUE=['Auto',strcompress(fix(maglist[1:*]),/rem)],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_MAGNIFYLIST')

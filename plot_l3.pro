@@ -3037,52 +3037,50 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 							endif
 						endif
 					endfor
-					;polyfill plots over max yrange and yticks, set axes again 
+					;polyfill plots over max yrange and yticks, set axes again
 					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,$
 					xtickformat="(A1)",xticks=(anz[1]-anz[0])/12,xticklen=0.00001
 					if qu eq 0 then axis,yaxis=1,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, $
 					ycharsize = ycharsize, ytickformat="(A1)"
 					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
 				endif
-				if qu ne 0 then axis,yaxis=1,ys=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
+; 				if qu ne 0 then axis,yaxis=1,ys=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
+; 				charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
+
+				if qu ne 0 then axis,yaxis=1,ystyle=1,yrange=[0,abs([yrange[1]-yrange[0]])],col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
 				charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
 				if keyword_set(coverage) then begin
 					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 				endif
 				if keyword_set(nobar) then begin
-; 					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor("Red")
 					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor(!compare_col1)
 					sm_data = smooth(reform(ts_data[tsi.gm1,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[tsi.gm1,*]),sm_cnt)
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
-; 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
-; 					oplot,ts_data[tsi.gm2,*],thick=2
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col1)
 					oplot,ts_data[tsi.gm2,*],thick=2,col=cgColor(!compare_col2) 
 					sm_data = smooth(reform(ts_data[tsi.gm2,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[tsi.gm2,*]),sm_cnt)
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
-; 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 					if keyword_set(coverage) then begin
-; 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 						legend,'Coverage: '+strupcase(coverage),color=cgColor(!compare_col2) ,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 					endif
 				endif else begin
-; 					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
-; 					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms
 					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col1)
 					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 				endelse
-; 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor("Red")],spos='tl',$
-; 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-; 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(!compare_col1)] ,spos='tl',$
 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=cgColor(!compare_col2) ,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 			endif
 
-			if qu ne 0 then oplot,ts_data[tsi.bcr,*]*qu,psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
+; 			if qu ne 0 then oplot,ts_data[tsi.bcr,*]*qu,psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
+			if qu ne 0 then begin
+				if yrange[0] gt yrange[1] then $
+				oplot,yrange[0] - ts_data[tsi.bcr,*],psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms else $
+				oplot,ts_data[tsi.bcr,*]+yrange[0],psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
+			endif
 			if keyword_set(show_values) then begin
 				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
 				res1=linfit(idx,ts_data[tsi.gm1,idx],yfit=yfit1)
