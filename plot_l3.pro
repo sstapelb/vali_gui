@@ -5379,6 +5379,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if cli eq 'cla'  then gridc = 0.25
 	if cli eq 'isp'  then gridc = 2.5
 	if cli eq 'cal'  then gridc = 2.0
+	if cli eq 'hec'  then gridc = 0.5
 	if ~keyword_set(gridc) then begin
 		print,'Gridc not defined! Unknown Climatology?'
 		return
@@ -5396,6 +5397,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if ref eq 'cla'  then gridr = 0.25
 	if ref eq 'isp'  then gridr = 2.5
 	if ref eq 'cal'  then gridr = 2.0
+	if ref eq 'hec'  then gridr = 0.5
 	if ~keyword_set(gridc) then begin
 		print,'Gridr not defined! Unknown Reference?'
 		return
@@ -5950,6 +5952,7 @@ pro create_time_series,data,algon,coverage,period=period
 	if cli eq 'cal'  then grid = 2.0
 	if cli eq 'cla'  then grid = 0.05
 	if cli eq 'isp'  then grid = 2.5
+	if cli eq 'hec'  then grid = 0.5
 	if ~keyword_set(grid) then begin
 		print,'Grid not defined! Unknown Climatology?'
 		return
