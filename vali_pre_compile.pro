@@ -71,5 +71,6 @@
 @/cmsaf/nfshome/sstapelb/idl/slash.pro
 @/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/read_modis_l1b.pro
 @/cmsaf/nfshome/sstapelb/idl/calc_rgb.pro
+@vali_set_path.pro
 @validation_tool_box.pro
 

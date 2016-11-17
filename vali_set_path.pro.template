@@ -1,11 +1,34 @@
-PRO vali_set_path
+PRO vali_set_path, save_as = save_as,white_bg=white_bg,algo=algo
+
 	; define here your directories as system variable
 	DEFSYSV,'!SAVE_DIR', '/cmsaf/cmsaf-cld1/sstapelb/bilder/'		; directory to store and find images
 	DEFSYSV,'!STD_DIR' , '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'	; standard data directory used in ncdf_browser.pro
-	DEFSYSV,'!DEFAULT_FILE', '/cmsaf/cmsaf-cld6/esa_cci_cloud_data/data/l3c/1982/01/198201-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-7-fv1.4.nc'
+	DEFSYSV,'!ECMWF_DIR' , '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/temp/fromECMWF/'	; standard ECTRANS downloadpath used in ncdf_browser.pro
+	DEFSYSV,'!DEFAULT_FILE', '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C/1982/01/198201-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-7-fv2.0.nc'
 
-	;CHANGE BELOW ONLY IF YOU KNOW WHAT YOU ARE DOING
+	;CHANGE THIS ONLY IF YOU KNOW WHAT YOU ARE DOING
 	DEFSYSV,'!SAVS_DIR', '/cmsaf/cmsaf-cld1/sstapelb/savs/'			; directory to store and find IDL sav files
 	DEFSYSV,'!KML_DIR' , '/cmsaf/cmsaf-cld1/sstapelb/kmls/'			; directory to store and find kml files
 	DEFSYSV,'!BREWER_CT_FILE', '/cmsaf/nfshome/sstapelb/idl/vali_gui/coyote/fsc_brewer.tbl' ; brewer color table 
+
+	;charsizes used for 2d plots
+	; map_image/view2d
+	DEFSYSV, '!m_charsize'	,(keyword_set(save_as) ? 3.0 : 1.5)
+	DEFSYSV, '!m_xcharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
+	DEFSYSV, '!m_ycharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
+	DEFSYSV, '!m_charthick'	,(keyword_set(save_as) ? 2.0 : 1.5)
+
+	; still to do
+	; plot / oplot 
+; 	DEFSYSV, '!p_charsize'	,(keyword_set(save_as) ? 2.5 : 1.5)
+; 	DEFSYSV, '!p_xcharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
+; 	DEFSYSV, '!p_ycharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
+; 	DEFSYSV, '!p_charthick'	,(keyword_set(save_as) ? 2.0 : 1.2)
+; 	; legend
+; 	DEFSYSV, '!l_charsize'	,(keyword_set(save_as) ? 2.5 : 1.5)
+
+	; colors for compare plots, Time Series, Zonal Means, histogram, 
+	DEFSYSV, '!compare_col1',(keyword_set(white_bg) ? 'black' : 'white')
+	DEFSYSV, '!compare_col2','red'
+
 END

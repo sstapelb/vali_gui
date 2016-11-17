@@ -1,26 +1,10 @@
 @vali_pre_compile.pro
 
-pro plot_l3, save_as = save_as,white_bg=white_bg
-	vali_set_path
+pro plot_l3, save_as = save_as, white_bg = white_bg, algo = algo
+
+	vali_set_path, save_as = save_as, white_bg = white_bg, algo = algo
+
 	symball,/filled
-; 	!except=0
-	; map_image/view2d
-	DEFSYSV, '!m_charsize'	,(keyword_set(save_as) ? 3.0 : 1.5)
-	DEFSYSV, '!m_xcharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
-	DEFSYSV, '!m_ycharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
-	DEFSYSV, '!m_charthick'	,(keyword_set(save_as) ? 2.0 : 1.5)
-
-	; noch nicht eingebaut zu unterschiedlich, mal sehen
-	; plot / oplot 
-; 	DEFSYSV, '!p_charsize'	,(keyword_set(save_as) ? 2.5 : 1.5)
-; 	DEFSYSV, '!p_xcharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
-; 	DEFSYSV, '!p_ycharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
-; 	DEFSYSV, '!p_charthick'	,(keyword_set(save_as) ? 2.0 : 1.2)
-; 	; legend
-; 	DEFSYSV, '!l_charsize'	,(keyword_set(save_as) ? 2.5 : 1.5)
-
-	DEFSYSV, '!compare_col1',(keyword_set(white_bg) ? 'black' : 'white')
-	DEFSYSV, '!compare_col2','red'
 
 end
 ;------------------------------------------------------------------------------------------
