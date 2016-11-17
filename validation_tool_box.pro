@@ -19,6 +19,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cfc_day'	: dat = 'cfc_allclouds_day'
 			'cfc_night'	: dat = 'cfc_allclouds_night'
 			'ctp'		: dat = 'ctp_mean_all'
+			'cph'		: dat = 'liq_cloud_fraction_all'
 			else		:
 		endcase
 	endif
@@ -4405,7 +4406,7 @@ function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = fo
 	error_status = 0
 	ecmwf_path = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'
 	para = keyword_set(parameter) ? strlowcase(parameter) : 'stemp'
-	plot_l3
+; 	plot_l3
 
 	catch, error_status
 	if (error_status ne 0) then begin
@@ -5049,7 +5050,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		found = 0.
 		return,-1
 	endif
-	plot_l3
+; 	plot_l3
 	sil = keyword_set(silent)
 	if keyword_set(satellite) then sat = strlowcase(satellite)
 	if not keyword_set(sat) then sat = ''

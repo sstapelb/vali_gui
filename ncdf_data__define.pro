@@ -4217,7 +4217,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if ~found then return
 
 			;set System Variables
-			plot_l3, save_as = save_as
+			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
 
 			if none then begin
 				ok = dialog_message('Choose Reference Dataset!')
@@ -4481,7 +4481,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if ~found then return
 
 			;set System Variables
-			plot_l3, save_as = save_as
+			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
 
 			if (pcms and ~save_as) or pchov then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" or "Multi Time Steps" instead!')
@@ -4695,7 +4695,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if ~found then return
 
 			;set System Variables
-			plot_l3, save_as = save_as
+			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
 
 			if (pcsing and pchov) then begin
 				ok = dialog_message('Use "Multi Time Steps" for Hovmoeller plots!')

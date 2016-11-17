@@ -1,6 +1,6 @@
 @vali_pre_compile.pro
 
-pro plot_l3, save_as = save_as
+pro plot_l3, save_as = save_as,white_bg=white_bg
 	vali_set_path
 	symball,/filled
 ; 	!except=0
@@ -18,6 +18,9 @@ pro plot_l3, save_as = save_as
 ; 	DEFSYSV, '!p_charthick'	,(keyword_set(save_as) ? 2.0 : 1.2)
 ; 	; legend
 ; 	DEFSYSV, '!l_charsize'	,(keyword_set(save_as) ? 2.5 : 1.5)
+
+	DEFSYSV, '!compare_col1',(keyword_set(white_bg) ? 'black' : 'white')
+	DEFSYSV, '!compare_col2','red'
 
 end
 ;------------------------------------------------------------------------------------------
@@ -596,25 +599,35 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 					xtitle=data_name,ytitle=ytitle,xminor=2,charsize = (savbg ? 2.5 : 1.5),$
 					charthick = (savbg ? 2. : 1),/ys
 					idx = where(bild_cci ge 0,idx_cnt)
-					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=-8,linestyle=linestyle,symsize=2
+; phere
+; 					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=-8,linestyle=linestyle,symsize=2
+					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=-8,color=cgcolor(!compare_col1) ,linestyle=linestyle,symsize=2
 					idx = where(bild_gac ge 0,idx_cnt)
-					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=-8,color = cgcolor('Red'),linestyle=linestyle,symsize=2
+; 					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=-8,color = cgcolor('Red'),linestyle=linestyle,symsize=2
+					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=-8,color=cgcolor(!compare_col2) ,linestyle=linestyle,symsize=2
 					if keyword_set(show_values) then begin
-						legend,'Coverage '+(keyword_set(coverage) ? coverage : 'Global'),spos='top',charsize=(savbg ? 2.:1.5),numsym=1,color=-1
+						legend,'Coverage '+(keyword_set(coverage) ? coverage : 'Global'),spos='top',charsize=(savbg ? 2.:1.5),numsym=1,$
+; 						color=-1
+						color=cgcolor(!compare_col1)
 					endif else begin
-						legend,[algon_cci+zwi1+apx,algon_gac+zwi2+apx],psym=[8,8],numsym=1,color=[-1,cgcolor('Red')],$
+						legend,[algon_cci+zwi1+apx,algon_gac+zwi2+apx],psym=[8,8],numsym=1,$
+; ; 						color=[-1,cgcolor('Red')],$
+						color=[cgcolor(!compare_col1) , cgcolor(!compare_col2) ] , $
 						thick=[thick,thick],spos='top',charsize=(savbg ? 2.:1.5)
 					endelse
 				endif else begin
 					psym      = (keyword_set(show_values) and (opl eq 1) ? -8 : -1*(opl*2))
 					linestyle = (keyword_set(show_values) and (opl eq 1) ? 0:opl+1)
 					idx = where(bild_cci ge 0,idx_cnt)
-					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=psym,linestyle=linestyle,symsize=2
+					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=psym,color=cgcolor(!compare_col1) ,linestyle=linestyle,symsize=2
 					idx = where(bild_gac ge 0,idx_cnt)
-					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=psym,color = cgcolor('Red'),linestyle=linestyle,symsize=2
-					legend,algon_cci+zwi1+apx,psym=psym,color=-1,thick=thick,spos='tl',charsize=(savbg ? 2.:1.5),$
+; 					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=psym,color = cgcolor('Red'),linestyle=linestyle,symsize=2
+					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=psym,color=cgcolor(!compare_col2) ,linestyle=linestyle,symsize=2
+; 					legend,algon_cci+zwi1+apx,psym=psym,color=-1,thick=thick,spos='tl',charsize=(savbg ? 2.:1.5),$
+					legend,algon_cci+zwi1+apx,psym=psym,color=cgcolor(!compare_col1) ,thick=thick,spos='tl',charsize=(savbg ? 2.:1.5),$
 					ystretch=opl+1,linestyle=linestyle
-					legend,algon_gac+zwi2+apx,psym=psym,color=cgcolor('Red'),thick=thick,spos='tr',charsize=(savbg ? 2.:1.5),$
+; 					legend,algon_gac+zwi2+apx,psym=psym,color=cgcolor('Red'),thick=thick,spos='tr',charsize=(savbg ? 2.:1.5),$
+					legend,algon_gac+zwi2+apx,psym=psym,color=cgcolor(!compare_col2) ,thick=thick,spos='tr',charsize=(savbg ? 2.:1.5),$
 					ystretch=opl+1,linestyle=linestyle
 				endelse
 			end_save,save_as5
@@ -1022,15 +1035,19 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 								   strcompress(string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx])^2.,f='(f11.4)'),/rem)+')'
 		print,'----------------------------------'
 		thick = savbg ? thick + 2 : thick
-		oplot,lat1dc,medi_c,thick=thick
-		oplot,lat1dg,medi_g,thick=thick,col=cgColor("Red")
+; 		oplot,lat1dc,medi_c,thick=thick
+; 		oplot,lat1dg,medi_g,thick=thick,col=cgColor("Red")
+		oplot,lat1dc,medi_c,thick=thick,col=cgcolor(!compare_col1)
+		oplot,lat1dg,medi_g,thick=thick,col=cgColor(!compare_col2)
 		lnames = strmatch(dat[0],dat[1]) ? ['',''] : strupcase(' '+[dat[0],dat[1]]) 
 		if keyword_set(show_values) then begin
 			legend,[algon_cci,algon_gac]+lnames,thick=replicate(thick,2),spos='bot',charsize=lcharsize, $
-			color=[-1,cgColor("Red")]
+; 			color=[-1,cgColor("Red")]
+			color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
 		endif else begin
 			legend,[algon_cci,algon_gac]+lnames,thick=replicate(thick,2),spos='top',charsize=lcharsize, $
-			color=[-1,cgColor("Red")]
+			color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
+; 			color=[-1,cgColor("Red")]
 		endelse
 	end_save, save_as4
 
@@ -2103,11 +2120,14 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 					xtitle=apx+data_name,ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 2.5 : 1.5),$
 					charthick = (keyword_set(save_as) ? 2. : 1)
 					didx = where(bild1 ge 0,didx_cnt)
-					if didx_cnt gt 0 then oplot,didx,bild1[didx],thick=thick,psym=-8
+; 					if didx_cnt gt 0 then oplot,didx,bild1[didx],thick=thick,psym=-8
+					if didx_cnt gt 0 then oplot,didx,bild1[didx],thick=thick,col=cgcolor(!compare_col1) ,psym=-8
 					didx = where(bild2 ge 0,didx_cnt)
-					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor('Red')
-
-					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[-1,cgcolor('Red')],thick=[thick,thick],$
+; 					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor('Red')
+					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor(!compare_col2)
+; phere
+; 					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[-1,cgcolor('Red')],thick=[thick,thick],$
+					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],thick=[thick,thick],$
 					spos=keyword_set(show_value) ? 'bot':'top', charsize=(keyword_set(save_as) ? 2.:1.5)
 				end_save,save_as
 				return
@@ -3030,26 +3050,36 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 				endif
 				if keyword_set(nobar) then begin
-					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor("Red")
+; 					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor("Red")
+					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor(!compare_col1)
 					sm_data = smooth(reform(ts_data[tsi.gm1,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[tsi.gm1,*]),sm_cnt)
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
-					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
-					oplot,ts_data[tsi.gm2,*],thick=2
+; 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
+; 					oplot,ts_data[tsi.gm2,*],thick=2
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col1)
+					oplot,ts_data[tsi.gm2,*],thick=2,col=cgColor(!compare_col2) 
 					sm_data = smooth(reform(ts_data[tsi.gm2,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[tsi.gm2,*]),sm_cnt)
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
-					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
+; 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 					if keyword_set(coverage) then begin
-						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+; 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+						legend,'Coverage: '+strupcase(coverage),color=cgColor(!compare_col2) ,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
 					endif
 				endif else begin
-					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
-					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms
+; 					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Red")
+; 					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms
+					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col1)
+					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 				endelse
-				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor("Red")],spos='tl',$
+; 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor("Red")],spos='tl',$
+; 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
+; 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
+				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(!compare_col1)] ,spos='tl',$
 				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=-1,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
+				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=cgColor(!compare_col2) ,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
 			endif
 
 			if qu ne 0 then oplot,ts_data[tsi.bcr,*]*qu,psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
@@ -3061,8 +3091,10 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				dec1 = ' '+string(((yfit1[idx_cnt-1]-yfit1[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				dec2 = ' '+string(((yfit2[idx_cnt-1]-yfit2[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				dec3 = ' '+string(((yfit3[idx_cnt-1]-yfit3[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
-				oplot,idx,yfit1,col=opl eq 0 ? cgColor("Red") : cgcolor(cols)
-				oplot,idx,yfit2
+; 				oplot,idx,yfit1,col=opl eq 0 ? cgColor("Red") : cgcolor(cols)
+; 				oplot,idx,yfit2
+				oplot,idx,yfit1,col=opl eq 0 ? cgColor(!compare_col1) : cgcolor(cols)
+				oplot,idx,yfit2,col=cgColor(!compare_col2) 
 				if qu ne 0 then oplot,idx,yfit3*qu,col=cgColor("Gray")
 				str_pholder = strjoin(replicate(' ',max([strlen(algon1),strlen(ref)])))
 				print,'Trend (ALG1)  '+str_pholder+' : '+dec1
@@ -3558,14 +3590,19 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		noerase=~zoo,ylog=logarithmic, title= keyword_set(notitle) ? '':'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+$
 		string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit,$
 		charthick=charthick,xcharsize=xcharsize,ycharsize=ycharsize,xmargin=xmargin,ymargin=ymargin
-		oplot,lat1d_c,medi_c,thick=thick
-		oplot,lat1d_g,medi_g,thick=thick,col=cgColor("Red")
+; 		oplot,lat1d_c,medi_c,thick=thick
+; 		oplot,lat1d_g,medi_g,thick=thick,col=cgColor("Red")
+		oplot,lat1d_c,medi_c,thick=thick,col=cgColor(!compare_col1)
+		oplot,lat1d_g,medi_g,thick=thick,col=cgColor(!compare_col2)
 		if ~keyword_set(show_values) then begin
 			legend,[date+' '+algon2+dtn[1],date+' '+algon1+dtn[0]],thick=replicate(thick,2),spos='top',$
-			charsize=lcharsize,color=[cgColor("Red"),-1],charthick=charthick
+; 			charsize=lcharsize,color=[cgColor("Red"),-1],charthick=charthick
+			charsize=lcharsize,color=[cgColor(!compare_col2) , cgColor(!compare_col1)] ,charthick=charthick
 		endif else begin
-			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor("Red"),spos='bl',charsize=lcharsize,charthick=charthick
-			legend,date+' '+algon1+dtn[0],thick=thick,color=-1,spos='br',charsize=lcharsize,charthick=charthick
+; 			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor("Red"),spos='bl',charsize=lcharsize,charthick=charthick
+; 			legend,date+' '+algon1+dtn[0],thick=thick,color=-1,spos='br',charsize=lcharsize,charthick=charthick
+			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor(!compare_col2) ,spos='bl',charsize=lcharsize,charthick=charthick
+			legend,date+' '+algon1+dtn[0],thick=thick,color=cgColor(!compare_col1) ,spos='br',charsize=lcharsize,charthick=charthick
 		endelse
 		;--------------------------------------------
 	end_save,save_as4
@@ -3708,9 +3745,13 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=xtickname.ctp, $
 					xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
 					charthick = (keyword_set(save_as) ? 2. : 1)
-					oplot,cci_histos.ctp,thick=thick,col=cgcolor('Red'),psym=-8
-					oplot,gac_histos.ctp,thick=thick,psym=-8
-					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
+; phere
+; 					oplot,cci_histos.ctp,thick=thick,col=cgcolor('Red'),psym=-8
+; 					oplot,gac_histos.ctp,thick=thick,psym=-8
+; 					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
+					oplot,cci_histos.ctp,thick=thick,col=cgcolor(!compare_col1) ,psym=-8
+					oplot,gac_histos.ctp,thick=thick,col=cgcolor(!compare_col2) ,psym=-8
+					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2)],$
 					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? 2.5:1.5)
 				if keyword_set(save_as) then end_save, save_dum+'_'+algon1+'_-_'+algon2+'_CTP.eps'
 			endif
@@ -3720,9 +3761,12 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					plot,[0,0],[1,1],yr=yrange,xr=[0,5],xticks=6,xtickname=xtickname.cot, $
 					xtitle=apx+'Cloud optical Thickness',ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
 						charthick = (keyword_set(save_as) ? 2. : 1)
-					oplot,cci_histos.cot,thick=thick,col=cgcolor('Red'),psym=-8
-					oplot,gac_histos.cot,thick=thick,psym=-8
-					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
+; 					oplot,cci_histos.cot,thick=thick,col=cgcolor('Red'),psym=-8
+; 					oplot,gac_histos.cot,thick=thick,psym=-8
+; 					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
+					oplot,cci_histos.cot,thick=thick,col=cgcolor(!compare_col1) ,psym=-8
+					oplot,gac_histos.cot,thick=thick,col=cgcolor(!compare_col2) ,psym=-8
+					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2)],$
 					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? 2.5:1.5)
 				if keyword_set(save_as) then end_save, save_dum+'_'+algon1+'_-_'+algon2+'_COT.eps'
 			endif
@@ -4628,12 +4672,18 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
 ; 			if ts then date=''
 			if is_defined(hh2) then begin
-				oplot,xx,hh2/total(hh2)*100.,color = cgcolor('Red'),thick=thick
+				oplot,xx,hh/total(hh)*100.,color = cgcolor(!compare_col1) ,thick=thick
+; phere
+; 				oplot,xx,hh2/total(hh2)*100.,color = cgcolor('Red'),thick=thick
+; 				legend,[date1+algon1+dtn[0]+hct,date2+algon2+dtn[1]+hct],thick=[thick,thick],$
+; 				color=[-1,cgcolor('Red')],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
+				oplot,xx,hh2/total(hh2)*100.,color = cgcolor(!compare_col2) ,thick=thick
 				legend,[date1+algon1+dtn[0]+hct,date2+algon2+dtn[1]+hct],thick=[thick,thick],$
-				color=[-1,cgcolor('Red')],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
+				color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
 			endif else begin
 				legend,date2+algon1+dtn[0]+hct,thick=thick,spos=(keyword_set(change_side) ? 'bot':'top'),$
-				charsize=lcharsize,charthick = charthick,color =-1
+; 				charsize=lcharsize,charthick = charthick,color =-1
+				charsize=lcharsize,charthick = charthick,color =cgcolor(!compare_col1)
 			endelse
 		endif else begin
 ; 			if ts then date1=''
@@ -6332,7 +6382,7 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
-	plot_l3
+; 	plot_l3
 	datestr = years[0]+'-'+(reverse(years))[0]
 
 	for k = 0,n_elements(algon_list) -1 do begin
@@ -6431,7 +6481,7 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
-	plot_l3
+; 	plot_l3
 	datestr = years[0]+'-'+(reverse(years))[0]
 
 	for k = 0,n_elements(algon_list) -1 do begin
