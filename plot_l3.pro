@@ -2,7 +2,9 @@
 
 pro plot_l3, save_as = save_as, white_bg = white_bg, reference = reference
 
-	vali_set_path, save_as = save_as, white_bg = white_bg, reference = reference
+	vali_set_path
+	vali_set_charsize, save_as = save_as
+	vali_set_plot_colors, white_bg = white_bg, reference = reference
 
 	symball,/filled
 
@@ -3267,6 +3269,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	no_trends_etc = 0
 	!p.multi=0
 
+	if adv_keyword_set(mini) and adv_keyword_set(maxi) then yrange = [mini,maxi] 
+	
 	sav     = keyword_set(save_as)
 	zoo     = keyword_set(zonal_only)
 	wbg     = keyword_set(white_bg)
@@ -3281,7 +3285,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	if single eq 'cc_total' then single = 'cfc'
 
 	if strmatch(algon1,algon2) then begin
-		varn = strsplit(single,',',/ext)
+		varn = strcompress(strsplit(single,',',/ext),/rem)
+
 		if n_elements(varn) ne 2 then begin
 			ok = dialog_message('plot_cci_gac_time_series: Same file! , same variable? '+single)
 			return
@@ -3297,7 +3302,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		longname = full_varname(varn[0],/universal)
 		if trend then begin
 			bild1 = d.TREND.MEAN
-			longname = longname + ' - trend per decade'
+			longname = longname + ' - trend p.D.'
 		endif else if anomalies then begin
 			bild1 = d.TREND.ANOM_MEAN
 			longname = longname + ' - Anomalies'
@@ -3321,7 +3326,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		longname2 = full_varname(varn[1],/universal)
 		if trend then begin
 			bild2 = d1.TREND.MEAN
-			longname2 = longname2 + ' - trend per decade'
+			longname2 = longname2 + ' - trend p.D.'
 		endif else if anomalies then begin
 			bild2 = d1.TREND.ANOM_MEAN
 			longname2 = longname2 + ' - Anomalies'
@@ -3347,7 +3352,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		if trend then begin
 			bild1 = d.TREND.MEAN
 			bild2 = d.TREND.MEAN2
-			longname = longname + ' - trend per decade'
+			longname = longname + ' - trend p.D.'
 		endif else if anomalies then begin
 			bild1 = d.TREND.ANOM_MEAN
 			bild2 = d.TREND.ANOM_MEAN2
@@ -3489,7 +3494,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				min_a  = d.HIST_2D.minvalue[0]
 				max_a  = d.HIST_2D.maxvalue[0]
 				bin    = d.HIST_2D.bin
-			endif else if is_defined(varn) then begin
+			endif else if strmatch(algon1,algon2) then begin
 				bin    = d.HISTOGRAM.bin
 				min_a  = min([d.HISTOGRAM.minvalue[0],d1.HISTOGRAM.minvalue[0]])
 				max_a  = max([d.HISTOGRAM.maxvalue[0],d1.HISTOGRAM.maxvalue[0]])
@@ -4899,7 +4904,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	algon    = sat_name(algo,sat,only_sat=only_sat)
 	ref      = sat_name((keyword_set(reference) ? reference:algo),sat,only_sat=only_sat)
 	datum    = strcompress(d.actual_date,/rem)
-	satn_background = (sat eq 'noaaam' or sat eq 'noaapm')
+	satn_background = (sat eq 'noaaam' or sat eq 'noaapm') and keyword_set(white_bg)
 
 	if keyword_set(free_reference) then begin
 		dtn   = ''

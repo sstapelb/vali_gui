@@ -5050,7 +5050,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		found = 0.
 		return,-1
 	endif
-; 	plot_l3
+
+	vali_set_path
+
 	sil = keyword_set(silent)
 	if keyword_set(satellite) then sat = strlowcase(satellite)
 	if not keyword_set(sat) then sat = ''

@@ -1,4 +1,4 @@
-PRO vali_set_path, save_as = save_as,white_bg=white_bg, reference = reference
+PRO vali_set_path
 
 	; define here your directories as system variable
 	DEFSYSV,'!SAVE_DIR', '/cmsaf/cmsaf-cld1/sstapelb/bilder/'		; directory to store and find images
@@ -10,6 +10,10 @@ PRO vali_set_path, save_as = save_as,white_bg=white_bg, reference = reference
 	DEFSYSV,'!SAVS_DIR', '/cmsaf/cmsaf-cld1/sstapelb/savs/'			; directory to store and find IDL sav files
 	DEFSYSV,'!KML_DIR' , '/cmsaf/cmsaf-cld1/sstapelb/kmls/'			; directory to store and find kml files
 	DEFSYSV,'!BREWER_CT_FILE', '/cmsaf/nfshome/sstapelb/idl/vali_gui/coyote/fsc_brewer.tbl' ; brewer color table 
+
+END
+
+pro vali_set_charsize, save_as = save_as
 
 	;charsizes used for 2d plots
 	; map_image/view2d
@@ -27,8 +31,12 @@ PRO vali_set_path, save_as = save_as,white_bg=white_bg, reference = reference
 ; 	; legend
 ; 	DEFSYSV, '!l_charsize'	,(keyword_set(save_as) ? 2.5 : 1.5)
 
+end
+
+pro set_vali_plot_colors,white_bg=white_bg, reference = reference
+
 	; colors for compare plots, Time Series, Zonal Means, histogram, 
 	DEFSYSV, '!compare_col1',(keyword_set(white_bg) ? 'black' : 'white')
 	DEFSYSV, '!compare_col2','red'
 
-END
+end
