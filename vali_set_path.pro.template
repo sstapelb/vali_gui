@@ -2,7 +2,7 @@ PRO vali_set_path
 
 	; define here your directories as system variable
 	DEFSYSV,'!SAVE_DIR', '/cmsaf/cmsaf-cld1/sstapelb/bilder/'		; directory to store and find images
-	DEFSYSV,'!STD_DIR' , '/cmsaf/cmsaf-cld5/esa_cci_cloud_data/data/'	; standard data directory used in ncdf_browser.pro
+	DEFSYSV,'!STD_DIR' , '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/'	; standard data directory used in ncdf_browser.pro
 	DEFSYSV,'!ECMWF_DIR' , '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/temp/fromECMWF/'	; standard ECTRANS downloadpath used in ncdf_browser.pro
 	DEFSYSV,'!DEFAULT_FILE', '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C/1982/01/198201-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-7-fv2.0.nc'
 

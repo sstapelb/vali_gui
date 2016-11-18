@@ -3270,7 +3270,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	!p.multi=0
 
 	if adv_keyword_set(mini) and adv_keyword_set(maxi) then yrange = [mini,maxi] 
-	
+
 	sav     = keyword_set(save_as)
 	zoo     = keyword_set(zonal_only)
 	wbg     = keyword_set(white_bg)

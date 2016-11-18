@@ -1,5 +1,10 @@
 @mean.pro
 @stddev.pro
+@/cmsaf/nfshome/sstapelb/idl/bias.pro
+@/cmsaf/nfshome/sstapelb/idl/rene/rmse.pro
+@/cmsaf/nfshome/sstapelb/idl/doy.pro
+@./coyote/error_message.pro
+@./subtools/centertlb.pro
 @/cmsaf/nfshome/sstapelb/idl/trend/give_trend.pro
 @/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
