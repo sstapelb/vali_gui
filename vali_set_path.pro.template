@@ -33,10 +33,10 @@ pro vali_set_charsize, save_as = save_as
 
 end
 
-pro set_vali_plot_colors,white_bg=white_bg, reference = reference
+pro vali_set_plot_colors,white_bg=white_bg, save_as = save_as, reference = reference
 
 	; colors for compare plots, Time Series, Zonal Means, histogram, 
-	DEFSYSV, '!compare_col1',(keyword_set(white_bg) ? 'black' : 'white')
+	DEFSYSV, '!compare_col1',( (keyword_set(white_bg) or keyword_set(save_as)) ? 'black' : 'white')
 	DEFSYSV, '!compare_col2','red'
 
 end

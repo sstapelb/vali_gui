@@ -4,7 +4,7 @@ pro plot_l3, save_as = save_as, white_bg = white_bg, reference = reference
 
 	vali_set_path
 	vali_set_charsize, save_as = save_as
-	vali_set_plot_colors, white_bg = white_bg, reference = reference
+	vali_set_plot_colors, white_bg = white_bg, save_as = save_as, reference = reference
 
 	symball,/filled
 
@@ -2984,7 +2984,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 ; 				endif else $
 				ymargin= [6,2]+(sav or wbg ? [2,1]:0)
 ; for PVIR
-if keyword_set(nobar) then ymargin += [18,0]
+if keyword_set(nobar) and ~sav then ymargin += [18,0]
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
 				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(qu eq 0 ? 0:6)]:0),ymargin=ymargin,$
@@ -3145,7 +3145,7 @@ if keyword_set(nobar) then ymargin += [18,0]
 ; 				endif else $
 				ymargin= [6,2]+(sav or wbg ? [2,1]:0)
 ; for PVIR
-if keyword_set(nobar) then ymargin += [18,0] 
+if keyword_set(nobar) and ~sav then ymargin += [18,0] 
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=1,xticklen=0.01,$
 				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=ymargin,$
@@ -3406,6 +3406,10 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			save_as3 = file_name_info(save_as,/path,/name) + '_2dhist_'+algon1+'_vs_'+algon2+'_'+file_name_info(save_as,/ext)
 			save_as4 = file_name_info(save_as,/path,/name) + '_zonal_mean_'+algon1+'_vs_'+algon2+'_'+file_name_info(save_as,/ext)
 		endelse
+		save_as1 = strcompress(save_as1,/rem)
+		save_as2 = strcompress(save_as2,/rem)
+		save_as3 = strcompress(save_as3,/rem)
+		save_as4 = strcompress(save_as4,/rem)
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200,title='CCI CLARA time series'
 
 	make_geo,lon,lat,grid = get_grid_res(bild1)
@@ -4724,6 +4728,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		make_geo,grid_res=get_grid_res(bild),lon,lat
 		fillvalue = -999.
 		date=d.actual_date
+		file = 'time_series'
 	endif else begin
 		bild = get_data(year,month,day,file=file,data=varname,no_data_value=fillvalue,minvalue=minvalue,algo=algo,sat=satellite,dirname=dirname,/print_filename, $
 			maxvalue=maxvalue,longname=longname,unit=unit,verbose=verbose,found=found,/make_compareable,level=level,dim3=dim3,error=error)
@@ -4744,6 +4749,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 			(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')+ $
 			(keyword_set(limit) ? '_limit_'+strjoin(strcompress(limit,/rem),'_'):'')+$
 			(keyword_set(oplots) ? '_oplots':'')+'.eps'
+		save_as=strjoin(save_as,'_')
 	endif else if win_nr ne -1 then win, win_nr,title=dat
 
 	if keyword_set(limit) then begin
