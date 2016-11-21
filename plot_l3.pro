@@ -1988,6 +1988,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		endif
 	endelse
 	dat = dat1
+	
+	;change byte into integer to avoid problems when making differences
+	if size(bild1,/type) eq 1 then bild1 = fix(bild1)
+	if size(bild2,/type) eq 1 then bild2 = fix(bild2)
 
 	if keyword_set(rot) then begin
 		if size(reform(bild1),/n_dim) eq 2 then begin
@@ -2479,11 +2483,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 			max_a = max([bild1[idx]-bild2[idx]])
 bin= ( bin/100.) > 0.01 
-			dd = where(abs(bild1[idx]-bild2[idx]) gt bin_dum,n_diffgt100)
+			dd = where(abs(float(bild1[idx]-bild2[idx])) gt bin_dum,n_diffgt100)
 			prozent = n_gesamt gt 0 ? string(float(n_diffgt100)/float(n_gesamt) *100.,f='(f5.2)')+'%' : ' No valid Data found'
 			if n_gesamt gt 0 then dd = histogram(float(bild1[idx]-bild2[idx]),bin=bin)
 			if ~keyword_set(hist_only) then position = [0.55,0.59,0.95,0.9]
-			
 
 			if n_gesamt gt 0 or total(dd) eq 0 then begin
 				xx = findgen(n_elements(dd))*bin+min(bild1[idx]-bild2[idx])
@@ -2967,18 +2970,23 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 			   (stregex(dat,'_std',/fold,/bool) ? ' Stdd.' : '')
 
 	if ~keyword_set(no_compare) then begin
-		start_save, save_as3, thick = thick, size = [42,22]
+		start_save, save_as1, thick = thick, size = [42,22]
 			if wbg then thick=4
 			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
 			if idx_cnt eq 0 then return 
 			if opl eq 0 then begin
+				xtitle='Time [years]'
 				anz=anz-0.5
-				if keyword_set(notitle) then begin
-					xtickname = [' ',' ']
-					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
-				endif else ymargin= [6,2]+(sav or wbg ? [2,1]:0)
+; 				if keyword_set(notitle) then begin
+; 					xtickname = [' ',' ']
+; 					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
+; 					xtitle    = ''
+; 				endif else $
+				ymargin= [6,2]+(sav or wbg ? [2,1]:0)
+; for PVIR
+if keyword_set(nobar) then ymargin += [18,0]
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
-				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log,xtitle=(keyword_set(notitle) ? '' : 'Time [years]'), $
+				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(qu eq 0 ? 0:6)]:0),ymargin=ymargin,$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,title = keyword_set(notitle) ? '' : datum
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
@@ -3109,7 +3117,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 ; 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 ; 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
 			endif
-		end_save,save_as3
+		end_save,save_as1
 	endif
 
 	if keyword_set(no_compare) then begin
@@ -3125,18 +3133,21 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		idx = where(finite(ts_data[nc,*]),idx_cnt)
 		if idx_cnt eq 0 then return
 		apx    =  keyword_set(standard) ? ' STD' : ''
-		start_save, save_as3, thick = thick, size = [42,22]
+		start_save, save_as1, thick = thick, size = [42,22]
 			if wbg then thick=4
 			if opl eq 0 then begin
 				anz=anz-0.5
-				if keyword_set(notitle) then begin
-					xtickname = [' ',' ']
-					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
-				endif else ymargin= [6,2]+(sav or wbg ? [2,1]:0)
+				xtitle='Time [years]'
+; 				if keyword_set(notitle) then begin
+; 					xtickname = [' ',' ']
+; 					ymargin   = [2,2]+(sav or wbg ? [2,1]:0)
+; 					xtitle    = ''
+; 				endif else $
+				ymargin= [6,2]+(sav or wbg ? [2,1]:0)
 ; for PVIR
 if keyword_set(nobar) then ymargin += [18,0] 
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=1,xticklen=0.01,$
-				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle=(keyword_set(notitle) ? '' : 'Time [years]'), $
+				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=ymargin,$
 				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
@@ -3244,7 +3255,7 @@ if keyword_set(nobar) then ymargin += [18,0]
 				str_pholder = strjoin(replicate(' ',strlen(ref)))
 				print,'Trend / decade'+str_pholder+' : '+dec1
 			endif
-		end_save,save_as3
+		end_save, save_as1
 	endif
 
 end

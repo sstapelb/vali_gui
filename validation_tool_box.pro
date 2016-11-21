@@ -4263,7 +4263,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		tsi = sum ? {gm1:0,gm1_std:1,unc1:2,unc1_std:3,sum1:4} : {gm1:0,gm1_std:1,unc1:2,unc1_std:3}
 	endelse
 
-	if total(strmid(cli,0,3) eq ['myd','mod','era','cal','cla']) then sat = ''
+	if total(strmid(cli,0,3) eq ['myd','mod','cal','cla']) then sat = ''
 
 	if total(dat eq ['cloud_fraction','cc_total','a_ca']) then dat =  'cfc'
 	if total(dat eq ['a_cod']) then  dat =  'cot'
@@ -4275,7 +4275,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if total(dat eq ['a_crei']) then dat =  'cer_ice'
 	if total(dat eq ['a_codw']) then dat =  'cot_liq'
 	if total(dat eq ['a_codi']) then dat =  'cot_ice'
-	
+
 	if stregex(dat,'ref',/fold,/bool) and ~stregex(dat,'refl',/fold,/bool) then dat = strreplace(dat,'ref','cer')
 
 	longname = full_varname(dat, unit=unit)
