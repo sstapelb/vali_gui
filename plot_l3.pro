@@ -3504,10 +3504,10 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		start_save, save_as3, thick = thick, size = [32,20]
 			; 2d hist
 			if no_trends_etc then begin
-				aa     = d.HIST_2D.data
+				aa     = d.HIST_2D.data;/total(d.HIST_2D.data)*100.
 				regr   = d.HIST_2D.linfit.regr
-				min_a  = d.HIST_2D.minvalue[0]
-				max_a  = d.HIST_2D.maxvalue[0]
+				min_a  = d.HIST_2D.minvalue[0];/total(d.HIST_2D.data)*100.
+				max_a  = d.HIST_2D.maxvalue[0];/total(d.HIST_2D.data)*100.
 				bin    = d.HIST_2D.bin
 			endif else if strmatch(algon1,algon2) then begin
 				bin    = d.HISTOGRAM.bin
@@ -3527,9 +3527,10 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			endelse
 ; 			view2d,aa,xtitle=algon1+' '+longname+' '+unit,ytitle=algon2+' '+longname2+' '+unit2,$
 ; 			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
+; 			view2d,aa,xtitle=algon1,ytitle=algon2,$
 			view2d,aa,xtitle=algon1,ytitle=algon2,$
 			title = (keyword_set(notitle) ? '':longname+' '+unit+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-			bar_format='(i)',no_data_val=0,log=log,position=pos1,$
+			bar_format='(i)',no_data_val=0,/log,position=pos1,$
 			bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
