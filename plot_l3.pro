@@ -3,7 +3,7 @@
 pro plot_l3, save_as = save_as, white_bg = white_bg, reference = reference
 
 	vali_set_path
-	vali_set_charsize, save_as = save_as
+	vali_set_charsize, white_bg = white_bg, save_as = save_as
 	vali_set_plot_colors, white_bg = white_bg, save_as = save_as, reference = reference
 
 	symball,/filled
@@ -185,7 +185,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin
-			save_as = !SAVE_DIR + datum+'_'+strupcase(varname)+'_taylor_diagram_'+algon1+'_vs_'+algon2+ '.eps'
+			save_as = strcompress(!SAVE_DIR + datum+'_'+strupcase(varname)+'_taylor_diagram_'+algon1+'_vs_'+algon2+ '.eps',/rem)
 		endif
 	endif
 
@@ -963,24 +963,24 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif
 
 	if keyword_set(save_dir) then begin
-		charthick = 1.5
-		xcharsize = 1.7 
-		ycharsize = 1.7
-		lcharsize = 2.5
+		charthick = !p_charthick ;1.5
+		xcharsize = !p_xcharsize ;1.7 
+		ycharsize = !p_ycharsize ;1.7
+		lcharsize = !l_charsize  ;2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if keyword_set(white_bg) and keyword_set(zonal_only) then begin
-		charthick = 3.0
-		xcharsize = 2.5
-		ycharsize = 2.5
-		lcharsize = 3.0
+		charthick = !p_charthick ;3.0
+		xcharsize = !p_xcharsize ;2.5
+		ycharsize = !p_ycharsize ;2.5
+		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = 1.2
-		xcharsize = 1.2 
-		ycharsize = 1.2
-		lcharsize = 1.5
+		charthick = !p_charthick ;1.2
+		xcharsize = !p_xcharsize ;1.2 
+		ycharsize = !p_ycharsize ;1.2
+		lcharsize = !l_charsize  ;1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -2936,24 +2936,24 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) and ~keyword_set(satn_background) then dtn += ' ('+ sn_cov+')'
 
 	if sav then begin
-		charthick = 1.5
-		xcharsize = 1.7 
-		ycharsize = 1.7
-		lcharsize = 2.5
+		charthick = !p_charthick ;1.5
+		xcharsize = !p_xcharsize ;1.7 
+		ycharsize = !p_ycharsize ;1.7
+		lcharsize = !l_charsize  ;2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg then begin
-		charthick = 3.0
-		xcharsize = 2.5
-		ycharsize = 2.5
-		lcharsize = 3.0
+		charthick = !p_charthick ;3.0
+		xcharsize = !p_xcharsize ;2.5
+		ycharsize = !p_ycharsize ;2.5
+		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = 1.2
-		xcharsize = 1.2 
-		ycharsize = 1.2
-		lcharsize = 1.5
+		charthick = !p_charthick ;1.2
+		xcharsize = !p_xcharsize ;1.2 
+		ycharsize = !p_ycharsize ;1.2
+		lcharsize = !l_charsize  ;1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -2988,7 +2988,7 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
 				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(qu eq 0 ? 0:6)]:0),ymargin=ymargin,$
-				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,title = keyword_set(notitle) ? '' : datum
+				charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize, title = keyword_set(notitle) ? '' : datum
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
 				; polyfills
 				if keyword_set(satn_background) then begin
@@ -3027,24 +3027,24 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 								10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
 								((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
 ; 								dumname, charthick = charthick*1.3, charsize = xcharsize*1.3,font=1
-								dumname, charthick = charthick, charsize = xcharsize
+								dumname, charthick = !p_charthick, charsize = !p_xcharsize
 							endif
 						endif
 					endfor
 					;polyfill plots over max yrange and yticks, set axes again
-					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,$
+					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize,$
 					xtickformat="(A1)",xticks=(anz[1]-anz[0])/12,xticklen=0.00001
-					if qu eq 0 then axis,yaxis=1,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, $
-					ycharsize = ycharsize, ytickformat="(A1)"
-					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
+					if qu eq 0 then axis,yaxis=1,yr=yrange,ys=1,ylog=log, charthick = !p_charthick, xcharsize = !p_xcharsize, $
+					ycharsize = !p_ycharsize, ytickformat="(A1)"
+					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize
 				endif
 ; 				if qu ne 0 then axis,yaxis=1,ys=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
 ; 				charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
 
 				if qu ne 0 then axis,yaxis=1,ystyle=1,yrange=[0,abs([yrange[1]-yrange[0]])],col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
-				charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
+				charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize= !p_ycharsize
 				if keyword_set(coverage) then begin
-					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=!l_charsize, charthick=!p_charthick, numsym=1
 				endif
 				if keyword_set(nobar) then begin
 					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor(!compare_col1)
@@ -3058,15 +3058,15 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 					if keyword_set(coverage) then begin
-						legend,'Coverage: '+strupcase(coverage),color=cgColor(!compare_col2) ,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+						legend,'Coverage: '+strupcase(coverage),color=cgColor(!compare_col2) ,spos='top',charsize=lcharsize,charthick=!p_charthick, numsym=1
 					endif
 				endif else begin
 					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col1)
 					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 				endelse
 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(!compare_col1)] ,spos='tl',$
-				charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
-				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=cgColor(!compare_col2) ,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,ystretch=1.5
+				charsize=lcharsize-(wbg ? 0.5:0),charthick=!p_charthick,ystretch=1.5
+				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=cgColor(!compare_col2) ,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=!p_charthick,ystretch=1.5
 			endif
 
 ; 			if qu ne 0 then oplot,ts_data[tsi.bcr,*]*qu,psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
@@ -3112,7 +3112,7 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					oplot,ts_data[tsi.gm1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgcolor(cols)
 					oplot,ts_data[tsi.gm2,*],psym=cgsymcat(psym),thick=thick,symsize=syms;,col=cgcolor(cols)
 				endelse
-				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
+				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tl',charsize=lcharsize-(wbg ? 0.5:0),charthick=!p_charthick, $
 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
 ; 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(cols)],spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=charthick,$
 ; 				ystretch=((opl+1)*1.1)+0.5,linestyle = linestyle
@@ -3149,7 +3149,7 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=1,xticklen=0.01,$
 				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=ymargin,$
-				charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
+				charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
 				; polyfills
 				if keyword_set(satn_background) then begin
@@ -3187,18 +3187,18 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 								10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
 								((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
 ; 								dumname, charthick = charthick*1.3, charsize = xcharsize*1.3,font=1
-								dumname, charthick = charthick, charsize = xcharsize
+								dumname, charthick = !p_charthick, charsize = !p_xcharsize
 							endif
 						endif
 					endfor
 					;polyfill plots over max yrange and yticks, set axes again 
-					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,$
+					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize,$
 					xtickformat="(A1)",xticks=(anz[1]-anz[0])/12,xticklen=0.00001
-					axis,yaxis=1,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize,$
+					axis,yaxis=1,yr=yrange,ys=1,ylog=log, charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize,$
 					ytickformat="(A1)"
-					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize
+					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize
 ; 					if keyword_set(coverage) then begin
-; 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+; 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=!p_charthick, numsym=1
 ; 					endif
 				endif
 
@@ -3219,11 +3219,11 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
 					if keyword_set(coverage) then begin
-						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick,numsym=1
+						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=!p_charthick, numsym=1
 					endif
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,symsize=syms
 				if ~keyword_set(show_values) and ~keyword_set(nobar) then $
-				legend,algon1+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
+				legend,algon1+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=!p_charthick
 			endif else begin
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
 				dumidx = where(~between(ts_data[nc,*],pf_ycr[0],pf_ycr[1]) and finite(ts_data[nc,*]),dumidxcnt)
@@ -3245,7 +3245,7 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
 				legend,algon1+dtn+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
-				charsize=lcharsize,charthick=charthick,linestyle = linestyle,psym=cgsymcat(psym)
+				charsize=lcharsize,charthick=!p_charthick, linestyle = linestyle,psym=cgsymcat(psym)
 			endelse
 			if keyword_set(show_values) then begin
 				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
@@ -3538,24 +3538,24 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	endif
 
 	if sav then begin
-		charthick = 1.5
-		xcharsize = 1.7 
-		ycharsize = 1.7
-		lcharsize = 2.5
+		charthick = !p_charthick ;1.5
+		xcharsize = !p_xcharsize ;1.7 
+		ycharsize = !p_ycharsize ;1.7
+		lcharsize = !l_charsize  ;2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg and zoo then begin
-		charthick = 3.0
-		xcharsize = 2.5
-		ycharsize = 2.5
-		lcharsize = 3.0
+		charthick = !p_charthick ;3.0
+		xcharsize = !p_xcharsize ;2.5
+		ycharsize = !p_ycharsize ;2.5
+		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3] ;+ (keyword_set(notitle) ? 0 : [0,1])
 	endif else begin
-		charthick = 1.2
-		xcharsize = 1.2 
-		ycharsize = 1.2
-		lcharsize = 1.5
+		charthick = !p_charthick ;1.2
+		xcharsize = !p_xcharsize ;1.2 
+		ycharsize = !p_ycharsize ;1.2
+		lcharsize = !l_charsize  ;1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -4641,26 +4641,26 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 		endelse
 
 		if sav then begin
-			charthick = 1.5
-			xcharsize = 1.7 
-			ycharsize = 1.7
-			lcharsize = 2.5
+			charthick = !p_charthick ;1.5
+			xcharsize = !p_xcharsize ;1.7 
+			ycharsize = !p_ycharsize ;1.7
+			lcharsize = !l_charsize  ;2.5
 			xmargin   = [14,6]
 			ymargin   = [ 7,3]
 		endif else if wbg then begin
-			charthick = 3.0
-			xcharsize = 2.5
-			ycharsize = 2.5
-			lcharsize = 3.0
+			charthick = !p_charthick ;3.0
+			xcharsize = !p_xcharsize ;2.5
+			ycharsize = !p_ycharsize ;2.5
+			lcharsize = !l_charsize  ;3.0
 			xmargin   = [20,6]
 			ymargin   =  [8,3]
 			thick     = 4
 			symsize   = 1.5
 		endif else begin
-			charthick = 1.2
-			xcharsize = 1.2 
-			ycharsize = 1.2
-			lcharsize = 1.5
+			charthick = !p_charthick ;1.2
+			xcharsize = !p_xcharsize ;1.2 
+			ycharsize = !p_ycharsize ;1.2
+			lcharsize = !l_charsize  ;1.5
 			xmargin   =[10,3]
 			ymargin   = [5,2]
 		endelse
@@ -4770,24 +4770,24 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	yr = [(adv_keyword_set(mini)? mini : (varname eq 'ctt' ? 200:0)),(adv_keyword_set(maxi)? maxi : max(medi[idx])*1.05)] 
 
 	if sav or sim then begin
-		charthick = 1.5
-		xcharsize = 1.7 
-		ycharsize = 1.7
-		lcharsize = sim ? 2.0 : 2.5
+		charthick = !p_charthick ;1.5
+		xcharsize = !p_xcharsize ;1.7 
+		ycharsize = !p_ycharsize ;1.7
+		lcharsize = sim ? 2.0 : !l_charsize  ;sim ? 2.0 : 2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg then begin
-		charthick = 3.0
-		xcharsize = 2.5
-		ycharsize = 2.5
-		lcharsize = 3.0
+		charthick = !p_charthick ;3.0
+		xcharsize = !p_xcharsize ;2.5
+		ycharsize = !p_ycharsize ;2.5
+		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = 1.2
-		xcharsize = 1.2 
-		ycharsize = 1.2
-		lcharsize = 1.5
+		charthick = !p_charthick ;1.2
+		xcharsize = !p_xcharsize ;1.2 
+		ycharsize = !p_ycharsize ;1.2
+		lcharsize = !l_charsize  ;1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse

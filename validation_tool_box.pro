@@ -4255,15 +4255,15 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		;time series indices
 		; stats : [cci-gmean,cci-stdd,cci-unc-gmean,cci-unc-stdd,gac-gmean,gac-stdd,gac-unc-gmean,gac-unc-stdd,gbias,grmse,bc_rmse,correlate]
 		tsi = {gm1:0,gm1_std:1,unc1:2,unc1_std:3,gm2:4,gm2_std:5,unc2:6,unc2_std:7,bias:8,rmse:9,bcr:10,corr:11}
+		if total(strmid(cli,0,3) eq ['myd','mod','cal','cla']) then sat = ''
 	endif else begin
 		cli   = algo2ref(algo,sat=sat)
 		pref  = '/plot/plot_'
 		dumalgo = cli eq 'era' ? cli+'1.2':cli
 ; 		dumalgo = cli eq 'pmx' ? cli+'1.1':cli
 		tsi = sum ? {gm1:0,gm1_std:1,unc1:2,unc1_std:3,sum1:4} : {gm1:0,gm1_std:1,unc1:2,unc1_std:3}
+		if total(strmid(cli,0,3) eq ['myd','mod','cal','cla','era']) then sat = ''
 	endelse
-
-	if total(strmid(cli,0,3) eq ['myd','mod','cal','cla']) then sat = ''
 
 	if total(dat eq ['cloud_fraction','cc_total','a_ca']) then dat =  'cfc'
 	if total(dat eq ['a_cod']) then  dat =  'cot'
