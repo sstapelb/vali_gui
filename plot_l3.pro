@@ -117,7 +117,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 			title='Diff. '+name1+' - '+name2, $
 			mini = mini, maxi = maxi,$
 ; 			charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
-			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize, $
+			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
 			oplot,[2,2],!y.crange,thick=(keyword_set(save_as) ? 8:2),col=cgcolor('White')
@@ -136,7 +136,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 			xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name1, $
 			mini = mini, maxi = maxi,$
 ; 			charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
-			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize, $
+			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
 			oplot,[2,2],!y.crange,thick=(keyword_set(save_as) ? 8:2),col=cgcolor('White')
@@ -155,7 +155,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 				xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name2, $
 				mini = mini, maxi = maxi,$
 ; 				charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
-				xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize, $
+				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 				xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 				; plot cloud type boxes
 				oplot,[2,2],!y.crange,thick=(keyword_set(save_as) ? 8:2),col=cgcolor('White')
@@ -943,7 +943,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 4, $
 			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,log=~bar_discontinous,$
 ; 			charthick = 1.2, xcharsize = 1.2,ycharsize = 1.2,$
-			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, $
+			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
 			bar_tickname = bar_tickname,xmargin=[7,3],ymargin=[3,2]+(savbg ? [2,1]:0)
 			if chk_idx gt 0 and total(size(aa,/dim)) gt 4 then begin
 				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2
@@ -1369,7 +1369,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			bar_format='(f7.1)', brewer=brewer,col_tab=col_tab, meridian_vec = meridian_vec, $
 			coast_vec = coast_vec,boxed=boxed,$
 ; 			charthick = keyword_set(save_as) ? 2. : 1.5,charsize = (keyword_set(save_as) ? 2. : 1.2), $
-			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize
+			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
 		end_save, save_dum
 		print,'No Lon/LAT Info found! -> View2D only!'
 		return
@@ -2471,7 +2471,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), $
 			title = 'Binsize = '+string(bin,f='(f6.3)')+unit1,log=log,position=position, bar_format='(i)', $
 ; 			charthick = 1., xcharsize = 1., ycharsize = 1.,bar_nlev=bar_nlev
-			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize
+			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
 
 			if ~stregex(dat,'cc_mask',/bool,/fold) then begin
 ; 				oplot,!x.crange,[regr[0]/bin,regr[1]*!x.crange[1]+regr[0]/bin],linestyle=2
@@ -3434,8 +3434,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 					ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel, logarithmic=logarithmic	, $
 					noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
 					p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
-					mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,stereographic=stereographic, $
-					latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
+					mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson, $
+					stereographic=stereographic,latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, $
 					limit = limit,format=bar_format,debug=verbose)
 				obj_destroy,m
 			end_save,save_as
@@ -3456,7 +3456,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			!p.multi= keyword_set(save_as1) ? 0 : [0,2,2]
 			dumdata = bild1 & minv = 0. & maxv = 100.
 			ititle = keyword_set(notitle) ? '' : datum+' '+longname
-			btitle = algon1+' '+longname+unit
+			btitle = algon1;+' '+longname+unit
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, $
@@ -3474,7 +3474,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		start_save, save_as2, thick = thick, size = [32,20]
 			dumdata = bild2 & minv = 0. & maxv = 100.
 			ititle = keyword_set(notitle) ? '' : datum+' '+longname2
-			btitle = algon2+' '+longname2+unit2
+			btitle = algon2;+' '+longname2+unit2
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle		, $
@@ -3525,13 +3525,16 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				h2_idx = where((bild1 ne -999.) and (bild2 ne -999.),h2_cnt )
 				regr   = h2_cnt gt 0 ? linfit(float(bild1[h2_idx]),float(bild2[h2_idx])) : [-999.,0.]
 			endelse
-			view2d,aa,xtitle=algon1+' '+longname+' '+unit,ytitle=algon2+' '+longname2+' '+unit2,$
+; 			view2d,aa,xtitle=algon1+' '+longname+' '+unit,ytitle=algon2+' '+longname2+' '+unit2,$
+; 			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
+			view2d,aa,xtitle=algon1,ytitle=algon2,$
+			title = (keyword_set(notitle) ? '':longname+' '+unit+' (Binsize='+string(bin,f='(f6.3)')+')'), $
+			bar_format='(i)',no_data_val=0,log=log,position=pos1,$
 			bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
-			xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize
+			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
 			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
 			oplot,!x.crange,!y.crange
 		end_save, save_as3
@@ -3999,7 +4002,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				if h2d_cnt eq 0 then dum[0]=1
 				view2d,dum,no_data_val=0,/log,xticks=5,xtickname=['0','20','40','60','80','100'],$
 				yticks=5,ytickname=['0','20','40','60','80','100'],bar_format='(i)',bar_title='# of occur.',$
-				xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize, $
+				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 				xtitle=algon1,ytitle=algon2
 				regr = linfit(cci[idx_h2d],gac[idx_h2d], YFIT=yfit)
 				oplot,!x.crange,[regr[1]*!x.crange+regr[0]],linestyle=2
@@ -4234,7 +4237,7 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		view2d, out,min=adv_keyword_set(mini) ? float(mini[0]):-100.,max=adv_keyword_set(maxi)? float(maxi[0]) : 100.,$
 		col_tab=4,no_data_idx=where(gesamt_ref le 0. or gesamt_cci le 0. or dem ne 1),xmargin=[8,9],ymargin=[3,3],$;xmargin=[8,8]$
 		xticks=6,xtickname=[' ','LWP',' ','IWP', ' ','CWP',' '],yticks=6,ytickname=[' ','LWP',' ','COT', ' ','CTT',' '],$
-		xcharsize = !m_xcharsize, ycharsize = !m_ycharsize, charthick = !m_charthick, charsize = !m_charsize, $
+		xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 		bar_title='Rel. Difference [%] '+f1str+algon1+' - '+f2str+algon2,bar_nlev=6;,charsize=1.5
 		axis,xaxis=1,xticks=6,xtickname=[' ','CTT',' ','CTP', ' ','CFC',' '],charsize=1.5
 		axis,yaxis=1,yticks=6,ytickname=[' ','CWP',' ','CPH', ' ','CFC',' '],charsize=1.5

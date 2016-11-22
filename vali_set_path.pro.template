@@ -15,28 +15,59 @@ END
 
 pro vali_set_charsize,white_bg=white_bg, save_as = save_as
 
-	;charsizes used for 2d plots
-	; map_image/view2d
-	DEFSYSV, '!m_charsize'	,(keyword_set(save_as) ? 3.0 : 1.5)
-	DEFSYSV, '!m_xcharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
-	DEFSYSV, '!m_ycharsize'	,(keyword_set(save_as) ? 1.7 : 1.2)
-	DEFSYSV, '!m_charthick'	,(keyword_set(save_as) ? 2.0 : 1.5)
+	;charsizes and charthicks used in vali_gui
 
 	; plots, zonal time series
 	if keyword_set(save_as) then begin
+		; map_image/view2d
+		DEFSYSV, '!m_charsize'	, 3.0
+		DEFSYSV, '!m_xcharsize'	, 1.7
+		DEFSYSV, '!m_ycharsize'	, 1.7
+		DEFSYSV, '!m_charthick'	, 2.0
+		; view2d
+		DEFSYSV, '!v_charsize'	, 3.0
+		DEFSYSV, '!v_xcharsize'	, 1.7
+		DEFSYSV, '!v_ycharsize'	, 1.7
+		DEFSYSV, '!v_charthick'	, 2.0
+		; plot
 		DEFSYSV, '!p_charthick'	, 1.5
-		DEFSYSV, '!p_xcharsize'	, 1.7 
+		DEFSYSV, '!p_xcharsize'	, 1.7
 		DEFSYSV, '!p_ycharsize'	, 1.7
+		; legend
 		DEFSYSV, '!l_charsize'	, 2.5
 	endif else if keyword_set(white_bg) then begin
+		; map_image
+		DEFSYSV, '!m_charsize'	, 3.0
+		DEFSYSV, '!m_xcharsize'	, 1.7
+		DEFSYSV, '!m_ycharsize'	, 1.7
+		DEFSYSV, '!m_charthick'	, 2.0
+		; view2d
+		DEFSYSV, '!v_charsize'	, 3.0
+		DEFSYSV, '!v_xcharsize'	, 1.7
+		DEFSYSV, '!v_ycharsize'	, 1.7
+		DEFSYSV, '!v_charthick'	, 2.0
+		; plot
 		DEFSYSV, '!p_charthick'	, 3.0
 		DEFSYSV, '!p_xcharsize'	, 2.5
 		DEFSYSV, '!p_ycharsize'	, 2.5
+		; legend
 		DEFSYSV, '!l_charsize'	, 3.0
 	endif else begin
+		; map_image
+		DEFSYSV, '!m_charsize'	, 1.5
+		DEFSYSV, '!m_xcharsize'	, 1.2
+		DEFSYSV, '!m_ycharsize'	, 1.2
+		DEFSYSV, '!m_charthick'	, 1.5
+		; view2d
+		DEFSYSV, '!v_charsize'	, 1.5
+		DEFSYSV, '!v_xcharsize'	, 1.2
+		DEFSYSV, '!v_ycharsize'	, 1.2
+		DEFSYSV, '!v_charthick'	, 1.5
+		; plot
 		DEFSYSV, '!p_charthick'	, 1.2
 		DEFSYSV, '!p_xcharsize'	, 1.2 
 		DEFSYSV, '!p_ycharsize'	, 1.2
+		; legend
 		DEFSYSV, '!l_charsize'	, 1.5
 	endelse
 
