@@ -3530,14 +3530,14 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 ; 			view2d,aa,xtitle=algon1,ytitle=algon2,$
 			view2d,aa,xtitle=algon1,ytitle=algon2,$
 			title = (keyword_set(notitle) ? '':longname+' '+unit+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-			bar_format='(i)',no_data_val=0,/log,position=pos1,$
+			bar_format='(i)',no_data_val=0,/log,position=pos1, xmargin=[8,3], ymargin=[3,4], $
 			bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
-			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
-			oplot,!x.crange,!y.crange
+			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2, thick=thick
+			oplot,!x.crange,!y.crange, thick=thick
 		end_save, save_as3
 	endif
 
