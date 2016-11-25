@@ -1726,6 +1726,83 @@ function pgrid,drange,interval,log=log
 	return,keyword_set(log) ? 10.^vec : vec
 end
 ;-------------------------------------------------------------------------------------------------------------------------
+function strreverse,in,found=found
+
+	found=1
+	if size(in,/type) ne 7 then begin
+		print,'We want only strings!'
+		found=0
+		return,-1
+	endif
+
+	len = strlen(in)
+
+	return, (len le 1 ? in : strjoin(reverse(strmid(in,findgen(len),fltarr(len)+1) )))
+
+end
+;-------------------------------------------------------------------------------------------------------------------------
+; removes leading and/or trailing "trims" from the input String Numbers.
+; trim can be any single character
+function adv_strtrim,in,flag,trim=trim
+
+; 	flags 0: remove trailing trims
+; 	flags 1: remove leading  trims
+; 	flags 2: remove leading and trailing trims
+
+	if size(in,/type) ne 7 then begin
+		print,'We want only strings!'
+		return,-1
+	endif
+
+	flag = keyword_set(flag) ? flag : 0
+
+	out = in
+
+	char = keyword_set(character) ? character[0] : '0' ; zero is default
+	if size(char,/type) ne 7 then begin
+		print,'character to remove needs to be a string or character.'
+		return,-1
+	endif
+	
+	for i = 0l,n_elements(in) -1 do begin
+		dum = in[i]
+		if is_number(char) and ~is_number(dum) then continue
+		len = strlen(dum)
+		case flag of
+			0	: begin
+					if len gt 1 then begin
+						if strmid(dum,len-1) eq char then begin
+							rev = strreverse(dum)
+							pos = stregex(rev,char+'+',length=len)
+							cut = strmid(rev,len)
+							if (strmid(cut,0,1) eq '.') and is_number(char) then cut = strmid(cut,1)
+							out[i]= strreverse(cut)
+						endif else if strmid(dum,len-1) eq '.' and is_number(char) then begin
+							out[i]= strmid(dum,0,len-1)
+						endif
+					endif
+				  end
+			1	: begin
+					if len gt 1 then begin 
+						if strmid(dum,0,1) eq char then begin
+							rev = dum
+							pos = stregex(rev,char+'+',length=len)
+							cut = strmid(rev,len)
+							out[i]=cut
+						endif
+					endif
+				  end
+			2	: begin
+					cut    = adv_strtrim(in[i],0,character=char)
+					out[i] = adv_strtrim(cut  ,1,character=char)
+				  end
+			else:
+		endcase
+	endfor
+
+	return,out
+end
+;-------------------------------------------------------------------------------------------------------------------------
 function zonal_average, bild, latitude, fillvalue = fillvalue, lat_res = lat_res, mean = mean, median = median,lat_zon=lat_zon,nan=nan,found=found
 
 	found=1
@@ -4935,6 +5012,7 @@ end
 ;------------------------------------------------------------------------------------------
 pro start_save, save_as, thick = thick, size = size, landscape = landscape, snapshot = snapshot
 	if keyword_set(save_as) then begin
+		save_as = strcompress(save_as,/rem)
 		if ~file_test( !SAVE_DIR ,/write) then begin
 			ok = dialog_message('The Standard Save Directory '+ !SAVE_DIR +' does not exists or is not writeable! First edit !SAVE_DIR in vali_set_path!')
 			free, save_as
@@ -4996,6 +5074,7 @@ end
 ;------------------------------------------------------------------------------------------
 pro end_save, save_as, verbose=verbose
 	if keyword_set(save_as) then begin
+		save_as = strcompress(save_as,/rem)
 		path    = file_dirname(save_as)+'/'
 		ext_pos = strpos(save_as,'.',/reverse_search)+1
 		ext     = ext_pos eq 0 ? '' : strmid(save_as,ext_pos)
@@ -6351,15 +6430,15 @@ pro set_algolist, algo_list, sat = sat, data = data, default = default, exclude 
 
 	if keyword_set(default) and keyword_set(sat) and keyword_set(data) then begin
 		dat = strlowcase(data)
-		co5 = (sat eq 'terra' or sat eq 'aqua' or sat eq 'aatme' or sat eq 'aatsr' or dat eq 'cwp' or dat eq 'ref')
+		co5 = (sat eq 'terra' or sat eq 'aqua' or sat eq 'aatme' or sat eq 'aatsr')
 		ampm  = noaa_ampm(sat)
 		; define algo_list
 		if ampm eq 'am' then begin
-			algo_list = co5 ? ['mod2','cci'] : ['pmx','gac2','cci','mod2','gac']
+			algo_list = co5 ? ['mod2','cci'] : ['pmx','gac2','cci','mod2','hec','era','cla']
 		endif else begin
-			algo_list = co5 ? ['myd2','cci'] : ['pmx','gac2','cci','myd2','gac']
+			algo_list = co5 ? ['myd2','cci'] : ['pmx','gac2','cci','myd2','hec','era','cla','cal']
 		endelse
-	endif else algo_list = ['cci','cci_old','pmx','myd','myd2','mod','mod2','gac','gac2','gwx','cla','isp','era','cal']
+	endif else algo_list = ['cci','cci_old','pmx','myd','myd2','mod','mod2','gac','gac2','gwx','cla','isp','era','cal','hec']
 
 	; now remove algo and reference from algo_list
 	if keyword_set(exclude) then begin
@@ -7616,10 +7695,17 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 		ytitle ='Relative Occurrence [%]'
 	endelse
 
-	form = stregex(data,'cla_vis',/fold,/bool) ?  '(f20.2)' : '(f20.1)'
-	idx = where(xtickname ge 10000.,idxcnt)
+	idx = where(xtickname ge 1000.,idxcnt)
+	if idxcnt gt 0 then begin
+		pot =fix(alog10(xtickname))
+		xtickname[idx] = xtickname[idx]/(10.^pot[idx])
+	end
+; stop
+	form = '(f20.2)'
 	xtickname = strcompress(string(xtickname,f=form),/rem)
-	if idxcnt gt 0 then xtickname[idx] = strcompress(string(xtickname[idx],f='(G20.1)'),/rem)
+	xtickname = adv_strtrim(xtickname,2,trim='0')
+	
+	if idxcnt gt 0 then xtickname[idx] += textoidl('10^'+strcompress(pot[idx],/rem))
 
 	return, bild
 

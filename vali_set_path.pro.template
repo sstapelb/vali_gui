@@ -42,10 +42,10 @@ pro vali_set_charsize,white_bg=white_bg, save_as = save_as
 		DEFSYSV, '!m_ycharsize'	, 1.7
 		DEFSYSV, '!m_charthick'	, 2.0
 		; view2d
-		DEFSYSV, '!v_charsize'	, 3.0
-		DEFSYSV, '!v_xcharsize'	, 1.7
-		DEFSYSV, '!v_ycharsize'	, 1.7
-		DEFSYSV, '!v_charthick'	, 2.0
+		DEFSYSV, '!v_charsize'	, 1.5
+		DEFSYSV, '!v_xcharsize'	, 1.2
+		DEFSYSV, '!v_ycharsize'	, 1.2
+		DEFSYSV, '!v_charthick'	, 1.5
 		; plot
 		DEFSYSV, '!p_charthick'	, 3.0
 		DEFSYSV, '!p_xcharsize'	, 2.5

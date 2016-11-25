@@ -83,8 +83,9 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 end
 ;------------------------------------------------------------------------------------------
 pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, brewer=brewer, mini = mini, maxi = maxi, save_as=save_as, $
-			difference = difference,notitle=notitle
+			difference = difference,notitle=notitle, appendix = appendix
 
+	apx = keyword_set(appendix) ? appendix : ''
 	xtickname = ['0.3','1.3','3.6','9.4','23','60','100'] ; tau
 	ytickname = reverse(['10','180','310','440','560','680','800','1100']) ; plev
 	if keyword_set(bild2) then begin
@@ -109,13 +110,13 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 				 save_as[0]+'_'+strcompress(name1,/rem)+'.eps'
 		endif
 	endelse
+
 	if keyword_set(difference) and keyword_set(bild2) then begin
 ;		!p.multi=0
 		if keyword_set(save_as) then start_save, save_d, thick = thick, size=[40,40] else thick = 2
 			view2d,bild1-bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
-			xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
-			title='Diff. '+name1+' - '+name2, $
-			mini = mini, maxi = maxi,$
+			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
+			title='Diff. '+name1+' - '+name2, mini = mini, maxi = maxi, $
 ; 			charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
@@ -133,7 +134,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 	endif else begin
 		if keyword_set(save_as) then start_save, save_1, thick = thick, size=[40,40] else thick = 2
 			view2d,bild1,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
-			xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name1, $
+			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name1+apx, $
 			mini = mini, maxi = maxi,$
 ; 			charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
@@ -152,7 +153,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 		if keyword_set(bild2) then begin
 			if keyword_set(save_as) then start_save, save_2, thick = thick, size=[40,40] else thick = 2
 				view2d,bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
-				xtitle='Cloud Optical Thickness',ytitle='Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name2, $
+				xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name2+apx, $
 				mini = mini, maxi = maxi,$
 ; 				charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
@@ -185,7 +186,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin
-			save_as = strcompress(!SAVE_DIR + datum+'_'+strupcase(varname)+'_taylor_diagram_'+algon1+'_vs_'+algon2+ '.eps',/rem)
+			save_as = !SAVE_DIR + datum+'_'+strupcase(varname)+'_taylor_diagram_'+algon1+'_vs_'+algon2+ '.eps'
 		endif
 	endif
 
@@ -374,6 +375,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	ref      = keyword_set(reference) ? strlowcase(reference) : ''
 	dat      = strsplit(strlowcase(data[0]),',',/ext)
 	if n_elements(dat) eq 1 then dat = [dat,dat]
+	dtn      = [appendix(dat[0]),appendix(dat[1])]
 	hct      = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
 	sat      = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
@@ -422,7 +424,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	if ~keyword_set(level) then level = keyword_set(day) ? 'l3u' : 'l3c'
 	bar_discontinous = 0
 
-	vollername = full_varname(dat[0],/universal)
+	vollername1 = full_varname(dat[0],/universal)
+	vollername2 = full_varname(dat[1],/universal)
 
 	case strmid(dat[0],0,3) of
 		'cot'	: begin & histv = [0.1,0.,50.]   & end
@@ -435,7 +438,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'cfc'	: begin & histv = [0.01,0.,1.]   & end
 		'cma'	: begin & histv = [1.,0.,1.]     & bar_discontinous = 1 & end
 		'cph'	: begin
-				if stregex(vollername,'Cloud Phase',/fold,/bool) then begin
+				if stregex(vollername1,'Cloud Phase',/fold,/bool) then begin
 					histv = [1.,1.,2.] 
 					bar_discontinous = 1
 				endif else begin
@@ -513,7 +516,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ok = dialog_message('compare_cci: sav_file1 not found! '+sav_file)
 			return
 		endif
-		struc2 = get_histo_time_series(algo2, dat, satgac, period = struc1.period, longname = longname, unit = unit, sav_file = sav_file, found = found,compare=algo1)
+		struc2 = get_histo_time_series(algo2, dat, satgac, period = struc1.period, longname = longname, unit = unit2, sav_file = sav_file, found = found,compare=algo1)
 		if not found then begin
 			ok = dialog_message('compare_cci: sav_file2 not found! '+sav_file)
 			return
@@ -525,6 +528,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		fillvalue2 = 0
 		longname = 'Histogram of '+strreplace(dat,'hist1d_','')
 		unit = ''
+		unit2 = ''
 		free, struc1
 		free, struc2
 	endif else begin 
@@ -545,7 +549,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		; ref l3u files
 		if level eq 'l3u' and ( algo1 eq 'clara' and (strmid(algo2,0,6) eq 'esacci' or algo2 eq 'patmos')) then join_nodes = 1
 		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=dat[1],sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level,dirname=dirname2, $
-			   longname=longname, unit=unit, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,$
+			   longname=longname, unit=unit2, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,$
 			   var_dim_names=var_dim_names_gac,print_filename=2,flag_meanings = flag_meanings2)
 		if not found then begin
 			if ~file_test(gac_nc_file) then return
@@ -624,6 +628,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				bild_gac = reform(float(bild_gac[*,*,*,0])/float((bild_gac[*,*,*,0]>0)+(bild_gac[*,*,*,1]>0)>1)) *100.
 				ndims = size(reform(bild_gac),/n_dim)
 				unit = textoidl(' [%]')
+				unit2 = textoidl(' [%]')
 			endif else begin
 				ok=dialog_message('Image has 4 Dimensions dont know what to do with it!')
 				return
@@ -683,6 +688,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			endelse
 			no_gridding = 1
 			unit = textoidl(' [%]')
+			unit2 = textoidl(' [%]')
 		endif
  	endif
 	;---------------------------------------------------------------------------------------------------------------------------------------
@@ -710,7 +716,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	minvalue = histv[1]
 	maxvalue = histv[2]
 	if ~keyword_set(no_gridding) then bring_to_same_grid_and_unit,dat[0],bild_cci,bild_gac,fillvalue1,fillvalue2,file1=ccifile,file2=gac_nc_file	, $
-					algo1,algo2,unit,unit,level=level,lon,lat,grid_res_out,verbose = verbose,flag_meanings1=flag_meanings1, $
+					algo1,algo2,unit,unit2,level=level,lon,lat,grid_res_out,verbose = verbose,flag_meanings1=flag_meanings1, $
 					flag_meanings2=flag_meanings2
 
 	lat_res = 1. > get_grid_res(bild_cci)
@@ -750,6 +756,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		void_index2 = where(bild_gac eq fillvalue2)
 	endelse
 	if total(strcompress(unit[0],/rem) eq ['[]','[[]]']) then unit = ''
+	if total(strcompress(unit2[0],/rem) eq ['[]','[[]]']) then unit2 = ''
 	;-------------------- plot with map_image ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
 	set_proj  ,globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar	, $
@@ -763,8 +770,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			m = obj_new("map_image",bild_cci,lat,lon,void_index=void_index1,box_axes=box_axes,n_lev=n_lev1				, $
 						min=(float(size(mini,/type)) ? mini : minvalue),max=(float(size(maxi,/type)) ? maxi : maxvalue)	, $
 						format=bar_format, title= keyword_set(title)? title : 						  $
-						algon_cci+' '+get_product_name(dat[0],algo=algo1,level=level,/upper)+unit				, $
-						charthick = !m_charthick, countries=countries,usa=countries		, $
+; 						algon_cci+' '+get_product_name(dat[0],algo=algo1,level=level,/upper)+unit				, $
+						algon_cci+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername1+dtn[0]+unit)				, $
+						charthick = !m_charthick, countries=countries,usa=countries					, $
 						charsize  = !m_charsize , bar_tickname=bar_tickname1, panoply = panoply			, $
 						limit = limit, figure_title = figure_title1,rainbow = rainbow, logarithmic=logarithmic		, $
 						ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel,lambert=lambert		, $
@@ -788,11 +796,15 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		if ~keyword_set(notitle) then begin
 			if strmatch(dat[0],dat[1]) then begin
 				figure_title2 = 'Difference '+ algon_cci + ' - ' + algon_gac
+				title2 = vollername2+dtn[1]+unit2
 			endif else begin
 				figure_title2 = 'Difference '+ algon_cci + ' '+strupcase(dat[0])+' - ' + algon_gac+ ' '+strupcase(dat[1])
+				title2 = strjoin(dat,' - ')
 			endelse
-		endif else figure_title2 = ''
-		title2 = vollername+' '+unit
+		endif else begin
+			figure_title2 = ''
+			title2 = vollername2+dtn[1]+unit2
+		endelse
 		out = {bild:bild_gac,lon:lon,lat:lat,unit:unit}
 		if cidx[0] ne -1 then begin
 			qw_cnt = n_elements(cidx)
@@ -804,7 +816,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			endif
 			if qw_cnt gt 0 then print,'Glob. Mean '+algon_cci+' - '+algon_gac+' : ',string(gmean((bild_gac[cidx])[qw],(lat[cidx])[qw]),f='(f11.4)')
 		endif
-	endif else title2 = keyword_set(title)? title : algon_gac+' '+get_product_name(dat[1],algo=algo2,level=level,/upper)+unit
+	endif else begin
+		title2 = keyword_set(title)? title : algon_gac+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername2+dtn[1]+unit2)
+	endelse
 
 	if ~keyword_set(zonal_only) then begin
 		start_save, save_as2, thick = thick, size = [32, 20]
@@ -886,7 +900,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if keyword_set(difference) then goto,ende
 
-	if ~keyword_set(save_dir) and ~keyword_set(notitle) then xyouts, 0.4, 0.98, datum+' '+longname, /norm
+	if ~keyword_set(save_dir) and ~keyword_set(notitle) then xyouts, 0.4, 0.98, datum+' '+(strmatch(dat[0],dat[1]) ? vollername2+dtn[1]+unit2:''), /norm
 
 	if limit_test or keyword_set(antarctic) or keyword_set(arctic) then begin
 		if keyword_set(antarctic) then qw = where(between(lon,-180,180) and between(lat,-90,-60),qw_cnt) else $
@@ -930,24 +944,33 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				aa = aa/total(aa)*100. ; prozente
 				bar_title= 'nr of occurrence [%]'
 				bar_format='(f5.2)'
-			endif
+			endif else begin
+				aa = float(aa)/max(float(aa)) *100.
+				bar_title= 'norm. to max. occurrence'
+				bar_format='(f7.3)'
+			endelse
 		endif
 
 		start_save, save_as3, thick = thick, size = [32, 20]
 			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1
 			if bar_discontinous then bar_tickname = string(aa[sort(aa)],f=bar_format)
-			view2d,aa,no_data_val=0,xtitle=algon_cci+' '+get_product_name(dat[0],algo=algo1,level=level,/upper),ytitle=algon_gac+' '+$
-			get_product_name(dat[1],algo=algo2,level=level,/upper),bar_title=bar_title, bar_discontinous = bar_discontinous, $
+; 			view2d,aa,no_data_val=0,xtitle=algon_cci+' '+get_product_name(dat[0],algo=algo1,level=level,/upper),ytitle=algon_gac+' '+$
+; 			ytitle=algon_gac+' '+get_product_name(dat[1],algo=algo2,level=level,/upper),$
+			view2d,aa,no_data_val=0,xtitle=algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit),$
+			ytitle=algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2),$
+			bar_title=bar_title, bar_discontinous = bar_discontinous, $
 			xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_format=bar_format,$
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 4, $
-			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,log=~bar_discontinous,$
+			log=~bar_discontinous,$
+; 			title = keyword_set(notitle)?'':'Binsize = '+string(bin,f='(f6.3)')+unit,$
+			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
 ; 			charthick = 1.2, xcharsize = 1.2,ycharsize = 1.2,$
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
-			bar_tickname = bar_tickname,xmargin=[7,3],ymargin=[3,2]+(savbg ? [2,1]:0)
+			bar_tickname = bar_tickname,xmargin=[7,3],ymargin=[3,2]+(keyword_set(save_dir) ? [0,2]:0)
 			if chk_idx gt 0 and total(size(aa,/dim)) gt 4 then begin
-				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2
-				oplot,!x.crange,!y.crange
+				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
+				oplot,!x.crange,!y.crange,thick=thick
 			endif
 		end_save, save_as3
 	endif
@@ -977,10 +1000,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = !p_charthick ;1.2
-		xcharsize = !p_xcharsize ;1.2 
-		ycharsize = !p_ycharsize ;1.2
-		lcharsize = !l_charsize  ;1.5
+		charthick = 1.2
+		xcharsize = 1.2 
+		ycharsize = 1.2
+		lcharsize = 1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -994,7 +1017,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 ; 	DEVICE, SET_FONT='-adobe-helvetica-medium-r-normal--10-100-75-75-p-56-iso8859-1'
 
-
 	start_save, save_as4, thick = thick, size = [32, 20]
 		title = keyword_set(notitle) ? '' : $
 		'bias: '+string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f7.2)')+ $
@@ -1002,7 +1024,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		' ; stdd: '+string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - gbias(bild_cci[idx],bild_gac[idx],lat[idx])^2),f='(f6.2)')+unit
 		yr = [(adv_keyword_set(mini) ? mini : (unit eq ' [K]' ? 200:0)),(adv_keyword_set(maxi) ? maxi : max([medi_c,medi_g])*1.05)] 
 		plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-		xtitle='latitude [degrees]',ytitle=vollername+unit,yr=yr,title=title, ylog=logarithmic,$
+		xtitle='latitude [degrees]',ytitle=vollername1+(strmatch(dat[0],dat[1]) ?dtn[0]:'')+unit,yr=yr,title=title, ylog=logarithmic,$
 		charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize, xmargin=xmargin,ymargin=ymargin
 
 		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
@@ -1026,15 +1048,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		oplot,lat1dc,medi_c,thick=thick,col=cgcolor(!compare_col1)
 		oplot,lat1dg,medi_g,thick=thick,col=cgColor(!compare_col2)
 		lnames = strmatch(dat[0],dat[1]) ? ['',''] : strupcase(' '+[dat[0],dat[1]]) 
-		if keyword_set(show_values) then begin
-			legend,[algon_cci,algon_gac]+lnames,thick=replicate(thick,2),spos='bot',charsize=lcharsize, $
-; 			color=[-1,cgColor("Red")]
-			color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
-		endif else begin
-			legend,[algon_cci,algon_gac]+lnames,thick=replicate(thick,2),spos='top',charsize=lcharsize, $
-			color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
-; 			color=[-1,cgColor("Red")]
-		endelse
+		legend,[algon_cci,algon_gac]+lnames,thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize=lcharsize, $
+; 		legend,[algon_cci,algon_gac]+dtn,thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize=lcharsize, $
+; 		color=[-1,cgColor("Red")]
+		color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
 	end_save, save_as4
 
 	ende :
@@ -1255,24 +1272,29 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if is_h1d(dat,/liquid) then apx = datum+' Liquid '
 			if is_h1d(dat,/ratio)  then apx = datum
 			zwi = (algo eq 'coll6' and stregex(dat,'ctt',/fold,/bool)) ? ' (Day only) ' : ' '
-			savbg = keyword_set(save_as) or keyword_set(white_bg)
-			start_save, save_dum, thick = thick
+			sav   = keyword_set(save_as)
+			wbg   = keyword_set(white_bg)
+			savbg = sav or wbg 
+			start_save, save_dum, thick = thick,size=[36,16]
 				if savbg then thick = 4
 				if savbg then symsize = 2
 				if opl eq 0 then begin
 					yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,max(bild)]
 					plot,[0,0],[1,1],yr=yrange,xr=[0,n_elements(bild)-1],xticks=n_elements(xtickname)-1,$
-					xtickname=xtickname, charthick = (savbg ? 2. : 1), $
-					xtitle=data_name,ytitle=ytitle,xminor=2,charsize = (savbg ? 2.5 : 1.5),title=keyword_set(notitle)?'':datum
+					xtickname=xtickname,xtitle=data_name,ytitle=ytitle,xminor=2, title=keyword_set(notitle)?'':datum, $
+					charthick = !p_charthick , $
+					xcharsize = !p_xcharsize , $
+					ycharsize = !p_ycharsize , $
+					xmargin   = [12,4] + ((wbg and ~sav) ? [6,3]:0), ymargin = [6,2] + ((wbg and ~sav) ? [3,1]:0)
 					idx = where(bild ge 0,idx_cnt)
 					if idx_cnt gt 0 then oplot,idx,bild[idx],thick=thick,psym=-8,symsize=symsize
-					legend,[algon+zwi+apx+adt],psym=[8],numsym=1,color=[-1],thick=2,spos='top', charsize=(savbg ? 2.:1.5)
+					legend,[algon+zwi+apx+adt],psym=[8],numsym=1,color=[-1],thick=2,spos='top', charsize= !l_charsize
 				endif else begin
 					define_oplots, opl, cols, spos, linestyle, psym, ystretch, error = error
 					idx = where(bild ge 0,idx_cnt)
 					if idx_cnt gt 0 then oplot,idx,bild[idx],thick=thick,psym=-8,color=cgcolor(cols),symsize=symsize,linestyle=linestyle
 					legend,algon+zwi+apx+adt,thick=thick,color=cgcolor(cols), $
-					spos=spos,ystretch=ystretch,charsize=(savbg ? 2.5:1.5),$
+					spos=spos,ystretch=ystretch,charsize= !l_charsize ,$
 					linestyle=linestyle,psym=-8;,numsym=1
 				endelse
 			end_save,save_dum
@@ -1375,6 +1397,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		return
 	endif
 	if histo2d then begin
+		apx = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
 		nv_cnt = 0
 		hct = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : 'cu'
 		if strmid(hct,0,2) eq '1d' then begin
@@ -1382,6 +1405,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			plot_cot = 0
 			sav = keyword_set(save_as) or keyword_set(white_bg)
 			symsize = sav ? 2 :1
+			if keyword_set(save_as) then !p.multi=0
 			if strlowcase(hct) eq '1d_cot' then plot_cot = 1
 			if strlowcase(hct) eq '1d_ctp' then plot_ctp = 1
 			if strlowcase(hct) eq '1d'     then begin 
@@ -1409,43 +1433,55 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				ytitle='Relative Occurrence [%]'
 			endelse
 			if found then begin
-				start_save, save_dum, thick = thick
-					if sav then thick = 4
-					apx = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
-					; CTP
-					if plot_ctp then begin
+				; CTP
+				if plot_ctp then begin
+					start_save, strreplace(save_dum,'.eps','_CTP.eps'), thick = thick, size = [32,16]
+						if sav then thick = 5
 						if opl eq 0 then begin
 							plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=xtickname.ctp, $
-							xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,charsize = (sav ? 2.5 : 1.5),$
-							charthick = (sav ? 2. : 1)
-							oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,thick=thick,psym=-8,symsize=symsize
-							legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top', charsize=(sav ? 2.5:1.5)
+							xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,$
+							charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+							xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+							ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+							xmargin   = [12,4],ymargin = [6,2]
+							oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,thick=thick,$
+							psym=-8,symsize=symsize
+							legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top', $
+							charsize=(sav ? !l_charsize : 1.5)
 						endif else begin
 							define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error
 							oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,thick=thick,psym=-8,$
 							color=cgcolor(cols),symsize=symsize,linestyle=linestyle
 							legend,algon+' '+apx+adt,thick=thick,color=cgcolor(cols),$
-							spos=spos,ystretch=ystretch,charsize=(sav ? 2.5:1.5),$
+							spos=spos,ystretch=ystretch,charsize=(sav ? !l_charsize : 1.5),$
 							linestyle=linestyle,psym=-8;,numsym=1
 						endelse
-					endif
-					; COT
-					if plot_cot then begin
+					end_save, strreplace(save_dum,'.eps','_CTP.eps')
+				endif
+				; COT
+				if plot_cot then begin
+					start_save, strreplace(save_dum,'.eps','_COT.eps'), thick = thick, size = [32,16]
+						if sav then thick = 5
 						if opl eq 0 then begin
 							plot,[0,0],[1,1],yr=yrange,xr=[0,5],xticks=6,xtickname=xtickname.cot, $
-							xtitle=apx+'Cloud optical Thickness',ytitle=ytitle,xminor=2,charsize = (sav ? 2.5 : 1.5),$
-							charthick = (sav ? 2 : 1)
+							xtitle=apx+'Cloud optical Thickness',ytitle=ytitle,xminor=2,$
+							charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+							xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+							ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+							xmargin   = [12,4],ymargin = [6,2]
 							oplot,histos.cot/total(histos.cot)*100.,thick=thick,psym=-8,symsize=symsize
-							legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top',charsize=(sav ? 2.5:1.5)
+							legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top',$
+							charsize=(sav ? !l_charsize : 1.5)
 						endif else begin
 							define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error
-							oplot,histos.cot/total(histos.cot)*100.,thick=thick,psym=-8,color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+							oplot,histos.cot/total(histos.cot)*100.,thick=thick,psym=-8,color=cgcolor(cols),$
+							symsize=symsize,linestyle=linestyle
 							legend,algon+' '+apx+adt,thick=thick,color=cgcolor(cols),$
-							spos=spos,ystretch=ystretch,charsize=(sav ? 2.5:1.5),$
+							spos=spos,ystretch=ystretch,charsize=(sav ? !l_charsize : 1.5),$
 							linestyle=linestyle,psym=-8;,numsym=1
 						endelse
-					endif
-				end_save,save_dum
+					end_save, strreplace(save_dum,'.eps','_COT.eps')
+				endif
 			endif
 			return
 		endif
@@ -1499,7 +1535,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			bild = get_2d_rel_hist_from_jch(bild, algo, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
 							lon = lon, lat = lat, fillvalue = fillvalue, found = found)
 			if not found then return
-			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum
+			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum, appendix = apx
 			return
 		endif else begin
 			if is_jch(dat,/ratio) then begin
@@ -2023,6 +2059,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			print,'we should not be here. Check!'
 			stop
 		endif
+		apx = is_jch(dat,/ice) ? 'Ice ' : (is_jch(dat,/liq) ? 'Liquid ' : '')
 		if total(strlowcase(htypes[0]) eq ['hist2d','hist_2d']) then begin
 			if is_jch(dat,/ratio) then begin
 				ok = dialog_message('plot_l2: '+htypes[0]+' not possible with hist2d_ratio!')
@@ -2033,7 +2070,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			bild2 = get_2d_rel_hist_from_jch(bild2, algo2, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
 							lon = lon, lat = lat, fillvalue = fillvalue2, found = found2)
 			plot_2d_rel_hist, bild1, f1str+satn1, bild2=bild2, name2=f2str+satn2, col_tab=col_tab, brewer=brewer, $
-			mini=mini, maxi=maxi, save_as=save_as, difference = diff_only
+			mini=mini, maxi=maxi, save_as=save_as, difference = diff_only, appendix = apx
 			bild=(bild1-bild2)
 			idx = where(bild1 eq fillvalue1 or bild eq fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild[idx]=fillvalue2
@@ -3295,11 +3332,12 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	single = strlowcase(single_var)
 	if single eq 'cc_total' then single = 'cfc'
 
-	if strmatch(algon1,algon2) then begin
-		varn = strcompress(strsplit(single,',',/ext),/rem)
+	varn = strcompress(strsplit(single,',',/ext),/rem)
+
+	if n_elements(varn) ge 2 then begin
 
 		if n_elements(varn) ne 2 then begin
-			ok = dialog_message('plot_cci_gac_time_series: Same file! , same variable? '+single)
+			ok = dialog_message('plot_cci_gac_time_series: Same file! , same variable? Too many Variables? '+single)
 			return
 		endif
 		single = strjoin(varn,'-')
@@ -3406,10 +3444,6 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			save_as3 = file_name_info(save_as,/path,/name) + '_2dhist_'+algon1+'_vs_'+algon2+'_'+file_name_info(save_as,/ext)
 			save_as4 = file_name_info(save_as,/path,/name) + '_zonal_mean_'+algon1+'_vs_'+algon2+'_'+file_name_info(save_as,/ext)
 		endelse
-		save_as1 = strcompress(save_as1,/rem)
-		save_as2 = strcompress(save_as2,/rem)
-		save_as3 = strcompress(save_as3,/rem)
-		save_as4 = strcompress(save_as4,/rem)
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200,title='CCI CLARA time series'
 
 	make_geo,lon,lat,grid = get_grid_res(bild1)
@@ -3455,8 +3489,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		start_save, save_as1, thick = thick, size = [32,20]
 			!p.multi= keyword_set(save_as1) ? 0 : [0,2,2]
 			dumdata = bild1 & minv = 0. & maxv = 100.
-			ititle = keyword_set(notitle) ? '' : datum+' '+longname
-			btitle = algon1;+' '+longname+unit
+			ititle = keyword_set(notitle) ? '' : datum+(strmatch(varn[0],varn[1]) ? ' '+longname+dtn[0]+unit:'')
+			btitle = algon1+(strmatch(varn[0],varn[1]) ? '': ' '+longname+dtn[0]+unit)
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, $
@@ -3473,8 +3507,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		end_save, save_as1
 		start_save, save_as2, thick = thick, size = [32,20]
 			dumdata = bild2 & minv = 0. & maxv = 100.
-			ititle = keyword_set(notitle) ? '' : datum+' '+longname2
-			btitle = algon2;+' '+longname2+unit2
+			ititle = keyword_set(notitle) ? '' : datum+(strmatch(varn[0],varn[1]) ? ' '+longname2+dtn[1]+unit : '')
+			btitle = algon2+(strmatch(varn[0],varn[1]) ? '': ' '+longname2+dtn[1]+unit2)
 			m = obj_new("map_image",dumdata,lat,lon,void_index=where(dumdata eq -999.),n_lev=4	, $
 				max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv)	, $
 				countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle		, $
@@ -3504,12 +3538,12 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		start_save, save_as3, thick = thick, size = [32,20]
 			; 2d hist
 			if no_trends_etc then begin
-				aa     = d.HIST_2D.data;/total(d.HIST_2D.data)*100.
+				aa     = d.HIST_2D.data
 				regr   = d.HIST_2D.linfit.regr
-				min_a  = d.HIST_2D.minvalue[0];/total(d.HIST_2D.data)*100.
-				max_a  = d.HIST_2D.maxvalue[0];/total(d.HIST_2D.data)*100.
+				min_a  = d.HIST_2D.minvalue[0]
+				max_a  = d.HIST_2D.maxvalue[0]
 				bin    = d.HIST_2D.bin
-			endif else if strmatch(algon1,algon2) then begin
+			endif else if ~strmatch(varn[0],varn[1]) then begin
 				bin    = d.HISTOGRAM.bin
 				min_a  = min([d.HISTOGRAM.minvalue[0],d1.HISTOGRAM.minvalue[0]])
 				max_a  = max([d.HISTOGRAM.maxvalue[0],d1.HISTOGRAM.maxvalue[0]])
@@ -3525,13 +3559,20 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				h2_idx = where((bild1 ne -999.) and (bild2 ne -999.),h2_cnt )
 				regr   = h2_cnt gt 0 ? linfit(float(bild1[h2_idx]),float(bild2[h2_idx])) : [-999.,0.]
 			endelse
-; 			view2d,aa,xtitle=algon1+' '+longname+' '+unit,ytitle=algon2+' '+longname2+' '+unit2,$
-; 			title = 'Binsize = '+string(bin,f='(f6.3)')+unit,bar_format='(i)',no_data_val=0,log=log,position=pos1,$
-; 			view2d,aa,xtitle=algon1,ytitle=algon2,$
-			view2d,aa,xtitle=algon1,ytitle=algon2,$
-			title = (keyword_set(notitle) ? '':longname+' '+unit+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-			bar_format='(i)',no_data_val=0,/log,position=pos1, xmargin=[8,3], ymargin=[3,4], $
-			bar_title= 'nr of occurrence', xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
+
+			bar_format='(i)' & bar_title= 'nr of occurrence'
+			if (1 eq 1) then begin
+				; normalize to maximum of occurrence
+				aa = float(aa)/max(float(aa)) *100. 
+				bar_format='(f7.3)' 
+				bar_title= 'norm. to max. occurrence'
+			endif
+
+			view2d,aa,xtitle=algon1+(strmatch(varn[0],varn[1]) ? '':' '+longname+dtn[0]+unit) , $
+			ytitle=algon2+(strmatch(varn[0],varn[1]) ? '':' '+longname2+dtn[1]+unit2) ,$
+			title = (keyword_set(notitle) ? '':(strmatch(varn[0],varn[1]) ? longname+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
+			bar_format=bar_format,no_data_val=0,/log,position=pos1, xmargin=[8,3],ymargin=[3,2]+(sav ? [0,2]:0),$
+			bar_title= bar_title, xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
@@ -3556,10 +3597,10 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		xmargin   = [20,6]
 		ymargin   =  [8,3] ;+ (keyword_set(notitle) ? 0 : [0,1])
 	endif else begin
-		charthick = !p_charthick ;1.2
-		xcharsize = !p_xcharsize ;1.2 
-		ycharsize = !p_ycharsize ;1.2
-		lcharsize = !l_charsize  ;1.5
+		charthick = 1.2
+		xcharsize = 1.2 
+		ycharsize = 1.2
+		lcharsize = 1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -3596,17 +3637,12 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		noerase=~zoo,ylog=logarithmic, title= keyword_set(notitle) ? '':'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+$
 		string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit,$
 		charthick=charthick,xcharsize=xcharsize,ycharsize=ycharsize,xmargin=xmargin,ymargin=ymargin
-; 		oplot,lat1d_c,medi_c,thick=thick
-; 		oplot,lat1d_g,medi_g,thick=thick,col=cgColor("Red")
 		oplot,lat1d_c,medi_c,thick=thick,col=cgColor(!compare_col1)
 		oplot,lat1d_g,medi_g,thick=thick,col=cgColor(!compare_col2)
 		if ~keyword_set(show_values) then begin
 			legend,[date+' '+algon2+dtn[1],date+' '+algon1+dtn[0]],thick=replicate(thick,2),spos='top',$
-; 			charsize=lcharsize,color=[cgColor("Red"),-1],charthick=charthick
 			charsize=lcharsize,color=[cgColor(!compare_col2) , cgColor(!compare_col1)] ,charthick=charthick
 		endif else begin
-; 			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor("Red"),spos='bl',charsize=lcharsize,charthick=charthick
-; 			legend,date+' '+algon1+dtn[0],thick=thick,color=-1,spos='br',charsize=lcharsize,charthick=charthick
 			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor(!compare_col2) ,spos='bl',charsize=lcharsize,charthick=charthick
 			legend,date+' '+algon1+dtn[0],thick=thick,color=cgColor(!compare_col1) ,spos='br',charsize=lcharsize,charthick=charthick
 		endelse
@@ -3635,6 +3671,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	ls    = ( keyword_set(land) or keyword_set(sea) ) ? 1:0
 	hct   = keyword_set(hist_cloud_type) ? hist_cloud_type : 'cu'
 	algo2 = keyword_set(reference) ? algo2ref(reference) : ''
+	apx   = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
 
 	if (hct eq 'hist2d' or hct eq 'hist_2d' or hct eq 'max') and is_jch(varname,/rat) then begin
 		ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: '+hct+' not possible with hist2d_ratio!')
@@ -3709,7 +3746,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		if keyword_set(limit)     then dumlimit = limit
 		if keyword_set(save_as)   then begin
 			!p.multi=0
-			save_dum = save_dir+strcompress('ctp_cot_histogram_'+datum+'_'+$
+			save_dum = save_dir+strcompress(data+'_'+datum+'_'+$
 			(keyword_set(hct) ? '_'+strupcase(hct) : '')+(keyword_set(dumlimit) ? '_limit_'+strjoin(strcompress(string(dumlimit,f='(i)'),/rem),'_'):'')+$
 			(keyword_set(land) ? '_land':'')+ (keyword_set(sea) ? '_sea':''),/rem)
 		endif else begin
@@ -3744,36 +3781,36 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			ytitle = 'Relative Occurrence [%]'
 		endelse
 		if found1 and found2 then begin
-			apx = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
+			thick = 2
 			; CTP
 			if hct eq '1d' or hct eq '1d_ctp' then begin
-				if keyword_set(save_as) then start_save, save_dum+'_'+algon1+'_-_'+algon2+'_CTP.eps', thick = thick else thick = 2
+				if keyword_set(save_as) then start_save, save_dum+'_'+algon1+'_-_'+algon2+'_CTP.eps', thick = thick, size = [32,16]
 					plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=xtickname.ctp, $
-					xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
-					charthick = (keyword_set(save_as) ? 2. : 1)
-; phere
-; 					oplot,cci_histos.ctp,thick=thick,col=cgcolor('Red'),psym=-8
-; 					oplot,gac_histos.ctp,thick=thick,psym=-8
-; 					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
-					oplot,cci_histos.ctp,thick=thick,col=cgcolor(!compare_col1) ,psym=-8
-					oplot,gac_histos.ctp,thick=thick,col=cgcolor(!compare_col2) ,psym=-8
+					xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,$
+					charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+					xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+					ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+					xmargin   = [12,4],ymargin = [6,2]
+					oplot,cci_histos.ctp,thick=thick+1,col=cgcolor(!compare_col1) ,psym=-8
+					oplot,gac_histos.ctp,thick=thick+1,col=cgcolor(!compare_col2) ,psym=-8
 					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2)],$
-					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? 2.5:1.5)
+					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? !l_charsize : 1.5)
 				if keyword_set(save_as) then end_save, save_dum+'_'+algon1+'_-_'+algon2+'_CTP.eps'
 			endif
 			; COT
+
 			if hct eq '1d' or hct eq '1d_cot' then begin
-				if keyword_set(save_as) then start_save, save_dum+'_'+algon1+'_-_'+algon2+'_COT.eps', thick = thick else thick = 2
+				if keyword_set(save_as) then start_save, save_dum+'_'+algon1+'_-_'+algon2+'_COT.eps', thick = thick, size = [32,16]
 					plot,[0,0],[1,1],yr=yrange,xr=[0,5],xticks=6,xtickname=xtickname.cot, $
-					xtitle=apx+'Cloud optical Thickness',ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
-						charthick = (keyword_set(save_as) ? 2. : 1)
-; 					oplot,cci_histos.cot,thick=thick,col=cgcolor('Red'),psym=-8
-; 					oplot,gac_histos.cot,thick=thick,psym=-8
-; 					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgColor('Red'),-1],$
-					oplot,cci_histos.cot,thick=thick,col=cgcolor(!compare_col1) ,psym=-8
-					oplot,gac_histos.cot,thick=thick,col=cgcolor(!compare_col2) ,psym=-8
+					xtitle=apx+'Cloud optical Thickness',ytitle=ytitle,xminor=2, $
+					charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+					xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+					ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+					xmargin   = [12,4],ymargin = [6,2]
+					oplot,cci_histos.cot,thick=thick+1,col=cgcolor(!compare_col1) ,psym=-8
+					oplot,gac_histos.cot,thick=thick+1,col=cgcolor(!compare_col2) ,psym=-8
 					legend,[algon1,algon2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2)],$
-					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? 2.5:1.5)
+					thick=replicate(thick,2),clrbox=clrbox,spos='tr', charsize=(keyword_set(save_as) ? !l_charsize : 1.5)
 				if keyword_set(save_as) then end_save, save_dum+'_'+algon1+'_-_'+algon2+'_COT.eps'
 			endif
 		endif
@@ -3829,7 +3866,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		if not found then return
 		if keyword_set(save_as) then begin
 			!p.multi=0
-			save_dum = save_dir+strcompress('ctp_cot_histogram_'+datum+'_'+$
+			save_dum = save_dir+strcompress(data+'_'+datum+'_'+$
 			(keyword_set(hct) ? '_'+strupcase(hct) : '')+(keyword_set(limit) ? '_limit_'+strjoin(strcompress(string(limit,f='(i)'),/rem),'_'):'')+$
 			(keyword_set(land) ? '_land':'')+ (keyword_set(sea) ? '_sea':''),/rem)
 		endif else begin
@@ -3837,7 +3874,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 ; 			if ~keyword_set(difference) then !p.multi=[0,2,1]
 		endelse
 		plot_2d_rel_hist, cci, algon1, bild2=gac, name2=algon2, col_tab=col_tab, brewer=brewer, $
-		mini=mini, maxi=maxi, save_as=save_dum, difference = difference
+		mini=mini, maxi=maxi, save_as=save_dum, difference = difference, appendix = apx
 		return
 	endif else begin
 		if is_jch(varname,/rat) then begin
@@ -3908,7 +3945,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 
 	if keyword_set(save_as) then begin
 		!p.multi=0
-		save_dum = save_dir+strcompress('ctp_cot_histogram_'+datum+'_'+$
+		save_dum = save_dir+strcompress(data+'_'+datum+'_'+$
 		(keyword_set(hct) ? '_'+strupcase(hct) : '')+(keyword_set(limit) ? '_ausschnitt':'')+(keyword_set(land) ? '_land':'')+ $
 		(keyword_set(sea) ? '_sea':''),/rem)
 	endif else begin
@@ -3931,7 +3968,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		start_save, save_as, thick = thick,size=[32,20]
 			m = obj_new("map_image",cci,lat_c,lon_c,void_index=void_index1,box_axes=box_axes,n_lev=9, $
 				magnify=magnify,  min=0,max=9,ctable = 13,discrete=findgen(10),$
-				figure_title = keyword_set(notitle) ? '' : adc+' '+algon1+' most frequent Cloud Type'	, $
+				figure_title = keyword_set(notitle) ? '' : adc+' '+algon1+' most frequent '+apx+'Cloud Type'	, $
 ; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				title= 'Cloud type',$
@@ -3946,7 +3983,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		start_save, save_as, thick = thick,size=[32,20]
 			m = obj_new("map_image",gac,lat_g,lon_g,void_index=void_index2,box_axes=box_axes,n_lev=9, $
 				magnify=magnify, min=0,max=9,ctable = 13,discrete=findgen(10),$
-				figure_title = keyword_set(notitle) ? '' : adg+' '+algon2+' most frequent Cloud Type'	, $
+				figure_title = keyword_set(notitle) ? '' : adg+' '+algon2+' most frequent '+apx+'Cloud Type'	, $
 ; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				title= 'Cloud type',$
@@ -3969,7 +4006,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					figure_title = keyword_set(notitle) ? '' : adc+' '+algon1+' '+lname, $
 ; 					charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 					charthick = !m_charthick, charsize  = !m_charsize,$
-					title= keyword_set(bar_title) ? bar_title : 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]' : ''),$
+					title= keyword_set(bar_title) ? bar_title : 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
 					limit = limit,countries=countries,usa=countries,$
 					format=bar_format,  logarithmic=logarithmic, $
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
@@ -3986,7 +4023,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					figure_title = keyword_set(notitle) ? '' : adg+' '+algon2+' '+lname,  $
 ; 					charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 					charthick = !m_charthick, charsize  = !m_charsize,$
-					title= keyword_set(bar_title) ? bar_title :'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]' : ''),$
+					title= keyword_set(bar_title) ? bar_title :'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
 					format=bar_format,  logarithmic=logarithmic, $
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
 					brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow ,label=label,horizon=horizon, $
@@ -4022,8 +4059,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				figure_title = keyword_set(notitle) ? '' : 'Diff. '+algon1+' - '+algon2+' '+lname, $
 ; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize , $
-				title= keyword_set(bar_title) ? bar_title:'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]' : ''),$
-				format=bar_format,  logarithmic=logarithmic, $
+				title= keyword_set(bar_title) ? bar_title:'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
+				format='(f6.2)',  logarithmic=logarithmic, $
 				bwr = (keyword_set(difference) ? bwr:1 ), elevation = elevation, extended_rainbow = extended_rainbow, flip_colours = flip_colours,$
 				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow ,label=label,horizon=horizon, $
 				p0lon = p0lon, p0lat = p0lat,lambert=lambert, panoply = panoply	, $
@@ -4880,7 +4917,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		ts_data = ts_data - ts_data1
 		dtn     = [dtn,appendix(dat[1],trend_corrected=tr_corr)]
 		dat     = strjoin(dat,' - ')
-		dtn     = strjoin(dtn,' - ')
+		dtn     = strjoin(dtn,' -')
 		free_reference = 1
 	endif else begin
 		d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = '1978-2016', $
@@ -4914,6 +4951,9 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	zeitraum = d.period
 	ori_period = fix(strsplit(d.period,'-',/ext))
 	longname = d.longname
+	if stregex(dat,'nretr',/fold,/bool) then begin
+		longname = '# of valid Retrievals'
+	endif
 
 	if stregex(d.coverage,'midlat_trop',/fold,/bool) then begin
 		coverage = string(177b)+'60'+string(176b)+' Lat'
@@ -4928,13 +4968,15 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	satn_background = (sat eq 'noaaam' or sat eq 'noaapm') and keyword_set(white_bg)
 
 	if keyword_set(free_reference) then begin
-		dtn   = ''
 		free, reference
-		if strmatch(algon,ref) then begin
-			algon = algon +' '+strupcase(dat)
-		endif else begin
-			algon = strjoin([' '+algon,ref] + ' '+strupcase(strsplit(dat,' - ',/ext)),' -!C ')
-		endelse
+		if ~keyword_set(only_sat) then begin
+			dtn   = ''
+			if strmatch(algon,ref) then begin
+				algon = algon +' '+strupcase(dat)
+			endif else begin
+				algon = strjoin([' '+algon,ref] + ' '+strupcase(strsplit(dat,' - ',/ext)),' -!C ')
+			endelse
+		endif
 	endif
 
 	; set all reflectance and brightness TS dots to NAN if Noaa15 and end of 2000 (very low coverage, orbit count s below 100)
@@ -5258,7 +5300,8 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 	is_new = stregex(pref,'new',/fold,/bool) ? 1 : (stregex(pref2,'new',/fold,/bool) ? 2 : 0)
 	ls     = keyword_set(land) or keyword_set(sea)
 	win_nr = adv_keyword_set(win_nr) ? win_nr : 1
-	dat    = 'cot_ctp_hist2d'+(keyword_set(liquid) ? '_liq' : '')+(keyword_set(ice) ? '_ice' : '')
+; 	dat    = 'cot_ctp_hist2d'+(keyword_set(liquid) ? '_liq' : '')+(keyword_set(ice) ? '_ice' : '')
+	dat    = 'hist2d_cot_ctp'+(keyword_set(liquid) ? '_liq' : '')+(keyword_set(ice) ? '_ice' : '')
 	apx    = keyword_set(liquid) ? 'Liquid ': (keyword_set(ice) ? 'Ice ' : '')
 	level  = 'l3c' ; this needs to be changed once l3s has histos too
 
@@ -5291,7 +5334,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 				cot_array  = dum.cot
 				ctp_array  = dum.ctp
 				name_arr   = pref+algon1
-				cci1_color = is_new eq 1 ? 'Red' : (keyword_set(save_as) ? 'Black':'White')
+				cci1_color = is_new eq 1 ? !compare_col2 : !compare_col1
 				col_arr    = cci1_color
 				lspos      = 'top'
 				lystr      = 0
@@ -5310,7 +5353,7 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 				cot_array  = is_defined(cot_array) ? [[cot_array],[dum.cot]] : dum.cot
 				ctp_array  = is_defined(ctp_array) ? [[ctp_array],[dum.ctp]] : dum.ctp
 				name_arr   = is_defined(name_arr)  ? [name_arr,pref2+algon2] : pref2+algon2
-				cci2_color = is_new ne 1 ? 'Red' : (keyword_set(save_as) ? 'Black':'White')
+				cci2_color = is_new ne 1 ? !compare_col2 : !compare_col1
 				col_arr    = is_defined(col_arr)   ? [col_arr,cci2_color] : cci2_color
 				lspos      = is_defined(lspos)     ? [lspos,'top'] : 'top'
 				lystr      = is_defined(lystr)     ? [lystr,1] : 1
@@ -5323,9 +5366,10 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 	endelse
 
 	; get all the rest of the data
-	annex = (sat1 eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
-	set_algolist, algo_list, sat = sat1, data = dat, exclude = [algo1,algo2],/default
-	struc = get_all_avail_data(year,month,day,data=dat+annex,sat=sat1,level=level,algo_list=algo_list,verbose=verbose)
+	dumsat = (sat1 eq '' ? sat2 : sat1)
+	annex = (dumsat eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
+	set_algolist, algo_list, sat = dumsat, data = dat, exclude = [algo1,algo2],/default
+	struc = get_all_avail_data(year,month,day,data=dat+annex,sat=dumsat,level=level,algo_list=algo_list,verbose=verbose)
 	if is_struct(struc) then begin
 		for i = 0,n_elements(struc.ref_names)-1 do begin
 			tag = struc.ref_names[i]
@@ -5350,31 +5394,39 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 
 	if hct eq '1d' or hct eq '1d_ctp' then begin
 		; ctp
-		start_save,save_as1,thick=thick
+		start_save,save_as1,thick=thick,size=[32,16]
 			plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=keyword_set(found) ? xtickname.ctp:'', $
-			xtitle=apx+'Cloud Top Pressure [hPa]',ytitle='Relative Occurrence [%]',xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
-			charthick = (keyword_set(save_as) ? 2. : 1)
+			xtitle=apx+'Cloud Top Pressure [hPa]',ytitle='Relative Occurrence [%]',xminor=2, $
+			charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+			xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+			ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+			xmargin   = [12,4],ymargin = [6,2]
+			legend,name_arr[0],color=cgcolor(col_arr[0]),thick=thick+1,spos='tl',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? !l_charsize :1.5)
+			legend,name_arr[1],color=cgcolor(col_arr[1]),thick=thick+1,spos='tr',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? !l_charsize :1.5)
 			for i = 0, n_elements(name_arr)-1 do begin & $
-				oplot,ctp_array[*,i]/total(ctp_array[*,i])*100.,thick=thick,color=cgcolor(col_arr[i]),psym=-8,linestyle=lstyle[i] & $
-				if i gt 1 then legend,name_arr[i],color=cgcolor(col_arr[i]),thick=thick,spos=lspos[i],ystretch=lystr[i],$
-				charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? 2.5:1.5),linestyle=lstyle[i] & $
+				oplot,ctp_array[*,i]/total(ctp_array[*,i])*100.,thick=thick+1,color=cgcolor(col_arr[i]),psym=-8,linestyle=lstyle[i] & $
+				if i gt 1 then legend,name_arr[i],color=cgcolor(col_arr[i]),thick=thick+1,spos=lspos[i],ystretch=lystr[i]+1,$
+				charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? !l_charsize : 1.5),linestyle=lstyle[i] & $
 			endfor
-			legend,name_arr[0:1],color=cgcolor(col_arr[0:1]),thick=replicate(thick,2),spos='top',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? 2.5:1.5)
 		end_save, save_as1
 	endif
 
 	if hct eq '1d' or hct eq '1d_cot' then begin
 		; cot
-		start_save,save_as2,thick=thick
+		start_save,save_as2,thick=thick,size = [32,16]
 			plot,[0,0],[1,1],xr=[0,5],yr=yrange,xticks=6,xtickname=keyword_set(found) ? xtickname.cot:'', $
-			xtitle=apx+'Cloud optical Thickness',ytitle='Relative Occurrence [%]',xminor=2,charsize = (keyword_set(save_as) ? 4 : 1.5),$
-			charthick = (keyword_set(save_as) ? 2. : 1)
+			xtitle=apx+'Cloud optical Thickness',ytitle='Relative Occurrence [%]',xminor=2, $
+			charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+			xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+			ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+			xmargin   = [12,4],ymargin = [6,2]
+			legend,name_arr[0],color=cgcolor(col_arr[0]),thick=thick+1,spos='tl',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? !l_charsize :1.5)
+			legend,name_arr[1],color=cgcolor(col_arr[1]),thick=thick+1,spos='tr',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? !l_charsize :1.5)
 			for i = 0, n_elements(name_arr)-1 do begin & $
-				oplot,cot_array[*,i]/total(cot_array[*,i])*100.,thick=thick,color=cgcolor(col_arr[i]),psym=-8 & $
-				if i gt 1 then legend,name_arr[i],color=cgcolor(col_arr[i]),thick=thick,spos=lspos[i],ystretch=lystr[i],$
-				charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? 2.5:1.5) & $
+				oplot,cot_array[*,i]/total(cot_array[*,i])*100.,thick=thick+1,color=cgcolor(col_arr[i]),psym=-8,linestyle=lstyle[i] & $
+				if i gt 1 then legend,name_arr[i],color=cgcolor(col_arr[i]),thick=thick+1,spos=lspos[i],ystretch=lystr[i]+1,$
+				charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? !l_charsize :1.5),linestyle=lstyle[i] & $
 			endfor
-			legend,name_arr[0:1],color=cgcolor(col_arr[0:1]),thick=replicate(thick,2),spos='top',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? 2.5:1.5)
 		end_save,save_as2
 	endif
 end
