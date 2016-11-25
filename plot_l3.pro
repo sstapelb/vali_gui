@@ -3974,7 +3974,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizon=horizon, $
 				format=bar_format, $
-				p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
+				p0lon = p0lon, p0lat = p0lat,lambert=lambert	, no_color_bar=no_color_bar,$
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 				globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 			obj_destroy,m
@@ -3989,7 +3989,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizon=horizon, $
 				format=bar_format,  $
-				p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
+				p0lon = p0lon, p0lat = p0lat,lambert=lambert	,no_color_bar=no_color_bar, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 				globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
@@ -4008,7 +4008,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					charthick = !m_charthick, charsize  = !m_charsize,$
 					title= keyword_set(bar_title) ? bar_title : 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
 					limit = limit,countries=countries,usa=countries,$
-					format=bar_format,  logarithmic=logarithmic, $
+					format=bar_format,  logarithmic=logarithmic,no_color_bar=no_color_bar, $
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
 					p0lon = p0lon, p0lat = p0lat,lambert=lambert,label=label,horizon=horizon, panoply = panoply	, $
 					mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
@@ -4024,7 +4024,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 ; 					charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 					charthick = !m_charthick, charsize  = !m_charsize,$
 					title= keyword_set(bar_title) ? bar_title :'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
-					format=bar_format,  logarithmic=logarithmic, $
+					format=bar_format,  logarithmic=logarithmic, no_color_bar=no_color_bar,$
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
 					brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow ,label=label,horizon=horizon, $
 					p0lon = p0lon, p0lat = p0lat,lambert=lambert, panoply = panoply, $
@@ -4041,7 +4041,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				view2d,dum,no_data_val=0,/log,xticks=5,xtickname=['0','20','40','60','80','100'],$
 				yticks=5,ytickname=['0','20','40','60','80','100'],bar_format='(i)',bar_title='# of occur.',$
 				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
-				xtitle=algon1,ytitle=algon2
+				xtitle=algon1,ytitle=algon2,color= ~keyword_set(no_color_bar)
 				regr = linfit(cci[idx_h2d],gac[idx_h2d], YFIT=yfit)
 				oplot,!x.crange,[regr[1]*!x.crange+regr[0]],linestyle=2
 				oplot,!x.crange,!y.crange
@@ -4060,7 +4060,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 ; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize , $
 				title= keyword_set(bar_title) ? bar_title:'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
-				format='(f6.2)',  logarithmic=logarithmic, $
+				format='(f6.2)',  logarithmic=logarithmic, no_color_bar=no_color_bar, $
 				bwr = (keyword_set(difference) ? bwr:1 ), elevation = elevation, extended_rainbow = extended_rainbow, flip_colours = flip_colours,$
 				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow ,label=label,horizon=horizon, $
 				p0lon = p0lon, p0lat = p0lat,lambert=lambert, panoply = panoply	, $

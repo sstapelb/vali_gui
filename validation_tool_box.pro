@@ -4191,7 +4191,7 @@ function get_histo_time_series, algo, data, satellite, period = period, this_per
 
 	if algo2ref(alg,sat=sat) eq 'gac2' and sat eq 'avhrrs'  then sat = 'allsat'
 	if algo2ref(alg,sat=sat) eq 'cci'  and sat eq 'envisat' then sat = 'aatsr' ; is this a good idea? I don't know.
-	era = alg eq 'era' ? '1.1':''
+	era = alg eq 'era' ? '1.2':''
 
 	satdum = (total(strmid(alg,0,3) eq ['myd','mod','cla','era']) ? '':sat)
 	found = 0.
