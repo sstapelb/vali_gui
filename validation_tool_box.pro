@@ -18,6 +18,9 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cfc'		: dat = 'cfc_allclouds'
 			'cfc_day'	: dat = 'cfc_allclouds_day'
 			'cfc_night'	: dat = 'cfc_allclouds_night'
+			'cfc_high'	: dat = 'cfc_allclouds_high'
+			'cfc_mid'	: dat = 'cfc_allclouds_mid'
+			'cfc_low'	: dat = 'cfc_allclouds_low'
 			'ctp'		: dat = 'ctp_mean_all'
 			'cph'		: dat = 'liq_cloud_fraction_all'
 			else		:
@@ -1592,7 +1595,7 @@ pro color_table_names, color_tbl_name, colors1_tbl = colors1_tbl, brewer_tbl=bre
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-pro define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error, timeseries=timeseries,compare=compare
+pro define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error, timeseries=timeseries,compare=compare,color=color
 	if keyword_set(error) then spos = ("tl"+strcompress(indgen(12)+1,/rem))[(opl-1) mod 12] else $
 	cb_tables = "CG"+strcompress([9,5,2,4,6,1,8,7,3,10,11,12],/rem)
 	spos      = (['tl1','tr1','tl2','tr2','tl3','tr3','tl4','tr4','tl5','tr5','tl6','tr6'])[(opl-1) mod 12]	
@@ -1612,7 +1615,7 @@ pro define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error, time
 		linestyle = even*2
 		col_idx   = ( (opl-1)/2 ) mod 12
 	endelse
-	cols      = cb_tables[col_idx]
+	cols      = keyword_set(color) ? color : cb_tables[col_idx]
 	psym      = keyword_set(timeseries) ? -8 : gt12 ? -8 : 0
 end
 ;-------------------------------------------------------------------------------------------------------------------------
@@ -1758,7 +1761,7 @@ function adv_strtrim,in,flag,trim=trim
 
 	out = in
 
-	char = keyword_set(character) ? character[0] : '0' ; zero is default
+	char = keyword_set(trim) ? trim[0] : '0' ; zero is default
 	if size(char,/type) ne 7 then begin
 		print,'character to remove needs to be a string or character.'
 		return,-1
@@ -1793,8 +1796,8 @@ function adv_strtrim,in,flag,trim=trim
 					endif
 				  end
 			2	: begin
-					cut    = adv_strtrim(in[i],0,character=char)
-					out[i] = adv_strtrim(cut  ,1,character=char)
+					cut    = adv_strtrim(in[i],0,trim=char)
+					out[i] = adv_strtrim(cut  ,1,trim=char)
 				  end
 			else:
 		endcase
@@ -4137,14 +4140,22 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-; 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/mstengel/ERA_Interim/ERA_simulator/MM2/'
-; 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/2_results_basedon_mlev/time_series/v1.1_DWDscops_MaxRand_MixedPase/'+yyyy+'/'
 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
 						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
 					endif
 					filen = dir + 'ERA_Interim_'+apx+yyyy+mm+'_cot-thv-0.15.nc'
+				endif
+				if alg eq 'ERA-I2' then begin
+					if lev eq 'l2' then goto, ende
+					if lev eq 'l3u' then goto, ende
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
+					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
+					if ~total(apx eq ['MM','MH']) then begin
+						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
+					endif
+					filen = dir + 'ERA_Interim_'+apx+yyyy+mm+'_cot-thv-1.00.nc'
 				endif
 			  end
 		else	:

@@ -442,7 +442,7 @@ endif else begin
       else : message,'check value of spos'
     endcase
 
-; print,'Vorher',x0,x1,y0,y1,sx1,sy1,xsz
+; print,'Vorher',x0,x1-x0,y0,y1-y0
 
     if not keyword_set(norm) then begin
       x0=sx0+x0*sx1         ;                    
@@ -483,11 +483,14 @@ endif
 
 xcharsize=(x1-x0)/xsize       ; find the largest charsize that will fit
 ycharsize=(y1-y0)/ysize       ; in the legend box
+
 if( xcharsize lt ycharsize ) then begin
   chrsz=xcharsize
 endif else begin
   chrsz=ycharsize
 endelse
+
+if keyword_set(charsize) then chrsz=charsize
 
 symsize=keyword_set(symsize) ? symsize : replicate(chrsz,n)
 dx=chrsz*cnvrtx

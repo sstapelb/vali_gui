@@ -4,6 +4,7 @@
 @/cmsaf/nfshome/sstapelb/idl/rene/rmse.pro
 @/cmsaf/nfshome/sstapelb/idl/doy.pro
 @./coyote/error_message.pro
+@./coyote/cgcolor.pro
 @./subtools/centertlb.pro
 @/cmsaf/nfshome/sstapelb/idl/trend/give_trend.pro
 @/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro

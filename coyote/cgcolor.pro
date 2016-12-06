@@ -196,7 +196,9 @@
 ;           Snow         Spring Green        Steel Blue               Tan              Teal              Text
 ;           Thistle            Tomato         Turquoise            Violet        Violet Red             Wheat
 ;           White              Yellow
-;
+; 
+;        stapel added  Dark Orange , Medium Slate Blue
+; 
 ;        Here are the Brewer color names::
 ;
 ;           WT1        WT2       WT3       WT4       WT5       WT6       WT7       WT8
@@ -628,26 +630,26 @@ FUNCTION cgColor, theColour, colorIndex, $
            rvalue = [ rvalue,    205,          210,          160,        233,          250,       255 ]
            gvalue = [ gvalue,     92,          105,           82,        150,          128,       160 ]
            bvalue = [ bvalue,     92,           30,           45,        122,          114,       122 ]
-           colors = [ colors,  'Orange',      'Coral', 'Light Coral',  'Firebrick', 'Dark Red', 'Brown',  'Hot Pink' ]
-           rvalue = [ rvalue,       255,         255,        240,          178,        139,       165,        255 ]
-           gvalue = [ gvalue,       165,         127,        128,           34,          0,        42,        105 ]
-           bvalue = [ bvalue,         0,          80,        128,           34,          0,        42,        180 ]
+           colors = [ colors,  'Orange', 'Dark Orange',      'Coral', 'Light Coral',  'Firebrick', 'Dark Red', 'Brown',  'Hot Pink' ]
+           rvalue = [ rvalue,       255,           255,         255,        240,          178,        139,       165,        255 ]
+           gvalue = [ gvalue,       165,           140,         127,        128,           34,          0,        42,        105 ]
+           bvalue = [ bvalue,         0,             0,          80,        128,           34,          0,        42,        180 ]
            colors = [ colors, 'Deep Pink',    'Magenta',   'Tomato', 'Orange Red',   'Red', 'Crimson', 'Violet Red' ]
            rvalue = [ rvalue,      255,          255,        255,        255,          255,      220,        208 ]
            gvalue = [ gvalue,       20,            0,         99,         69,            0,       20,         32 ]
            bvalue = [ bvalue,      147,          255,         71,          0,            0,       60,        144 ]
-           colors = [ colors,    'Maroon',    'Thistle',       'Plum',     'Violet',    'Orchid','Medium Orchid']
-           rvalue = [ rvalue,       176,          216,          221,          238,         218,        186 ]
-           gvalue = [ gvalue,        48,          191,          160,          130,         112,         85 ]
-           bvalue = [ bvalue,        96,          216,          221,          238,         214,        211 ]
+           colors = [ colors,    'Maroon',    'Thistle',       'Plum',     'Violet',     'Dark Violet',  'Orchid','Medium Orchid']
+           rvalue = [ rvalue,       176,          216,          221,          238,          148,       218,        186 ]
+           gvalue = [ gvalue,        48,          191,          160,          130,            0,       112,         85 ]
+           bvalue = [ bvalue,        96,          216,          221,          238,          211,       214,        211 ]
            colors = [ colors,'Dark Orchid','Blue Violet',  'Purple']
            rvalue = [ rvalue,      153,          138,       160]
            gvalue = [ gvalue,       50,           43,        32]
            bvalue = [ bvalue,      204,          226,       240]
-           colors = [ colors, 'Slate Blue',  'Dark Slate Blue']
-           rvalue = [ rvalue,      106,            72]
-           gvalue = [ gvalue,       90,            61]
-           bvalue = [ bvalue,      205,           139]
+           colors = [ colors, 'Slate Blue', 'Medium Slate Blue',  'Dark Slate Blue']
+           rvalue = [ rvalue,      106,          123           ,           72]
+           gvalue = [ gvalue,       90,          104           ,           61]
+           bvalue = [ bvalue,      205,          238           ,          139]
            colors = [ colors, 'WT1', 'WT2', 'WT3', 'WT4', 'WT5', 'WT6', 'WT7', 'WT8']
            rvalue = [ rvalue,  255,   255,   255,   255,   255,   245,   255,   250 ]
            gvalue = [ gvalue,  255,   250,   255,   255,   248,   245,   245,   240 ]
@@ -860,7 +862,7 @@ FUNCTION cgColor, theColour, colorIndex, $
     ; Find the asked-for color in the color names array.
     theIndex = Where(theNames EQ StrUpCase(StrCompress(theColor, /Remove_All)), foundIt)
     theIndex = theIndex[0]
-    
+
     ; If the color can't be found, report it and continue with the color set to "OPPOSITE."
     IF foundIt EQ 0 THEN BEGIN
        Message, "Can't find color " + theColor + ". Substituting 'OPPOSITE'.", /Informational

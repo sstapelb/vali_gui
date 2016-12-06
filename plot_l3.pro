@@ -2626,6 +2626,27 @@ bin= ( bin/100.) > 0.01
 			if win_nr ne -1 then win, win_nr
 		endif
 
+	if (2 eq 1) then begin
+		;include LWP_Allsky areas of JFM for PVIR
+		;SAF: 
+		brd = [-20, 0,-10,10]
+		plots,[brd[1],brd[1]],[brd[0],brd[2]],thick=3,color=cgcolor('black'); left
+		plots,[brd[3],brd[3]],[brd[0],brd[2]],thick=3,color=cgcolor('black'); right
+		plots,[brd[1],brd[3]],[brd[2],brd[2]],thick=3,color=cgcolor('black'); top
+		plots,[brd[1],brd[3]],[brd[0],brd[0]],thick=3,color=cgcolor('black'); bottom
+		;SAM: 
+		brd = [-26,-86,-16,-76]
+		plots,[brd[1],brd[1]],[brd[0],brd[2]],thick=3,color=cgcolor('black'); left
+		plots,[brd[3],brd[3]],[brd[0],brd[2]],thick=3,color=cgcolor('black'); right
+		plots,[brd[1],brd[3]],[brd[2],brd[2]],thick=3,color=cgcolor('black'); top
+		plots,[brd[1],brd[3]],[brd[0],brd[0]],thick=3,color=cgcolor('black'); bottom
+		;NAM:
+		brd = [ 20,-130,30,-120]
+		plots,[brd[1],brd[1]],[brd[0],brd[2]],thick=3,color=cgcolor('black'); left
+		plots,[brd[3],brd[3]],[brd[0],brd[2]],thick=3,color=cgcolor('black'); right
+		plots,[brd[1],brd[3]],[brd[2],brd[2]],thick=3,color=cgcolor('black'); top
+		plots,[brd[1],brd[3]],[brd[0],brd[0]],thick=3,color=cgcolor('black'); bottom
+	endif
 		if keyword_set(globe) and (keyword_set(diff_only) or keyword_set(maps_only)) then $
 		xyouts,(keyword_set(maps_only) ? 0.63:0.25 ),(keyword_set(maps_only) ? 0.9:0.95 ),figure_title,/norm,charsize=2
 
@@ -2951,9 +2972,26 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		 uncertainty = uncertainty,satnames = satnames, sum=sum, dtn=dtn		, $
 		 satn_background = satn_background
 
-	pinatubo = 0
+	;specials
+	pinatubo  = 0
+	mst_paper = 0
+	pvir      = 0
+
 	sav     = keyword_set(save_as)
 	wbg     = keyword_set(white_bg)
+
+	if mst_paper then begin
+		pvir   = 0
+		case algon1 of
+			'Cloud_cci AVHRR-AM'    : color = 'Dodger Blue'
+			'Cloud_cci AVHRR-PM'    : color = 'Navy'
+			'Cloud_cci MODIS-TERRA' : color = 'Dark Green'
+			'Cloud_cci MODIS-AQUA'  : color = 'Lime Green'
+			'Cloud_cci MERIS+AATSR' : color = 'Dark Violet'
+			'Cloud_cci ATSR2-AATSR' : color = 'Dark Orange'
+			else	:
+		endcase
+	endif
 
 	syms    = adv_keyword_set(symsize) ? symsize : 1.5
 	psym    = syms eq 0 ? 0 : -8 ; 8 :=circles, changes here will use cgsymcat() 
@@ -3005,7 +3043,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	title = longname + (keyword_set(anomalies) ? ' (Anomalies)' : '')+ $
 			   (stregex(dat,'_unc',/fold,/bool) ? ' Unc.' : '') + $
 			   (stregex(dat,'_std',/fold,/bool) ? ' Stdd.' : '')
-
+	if mst_paper then title = dat
+			   
 	if ~keyword_set(no_compare) then begin
 		start_save, save_as1, thick = thick, size = [42,22]
 			if wbg then thick=4
@@ -3020,8 +3059,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 ; 					xtitle    = ''
 ; 				endif else $
 				ymargin= [6,2]+(sav or wbg ? [2,1]:0)
-; for PVIR
-if keyword_set(nobar) and ~sav then ymargin += [18,0]
+				; for PVIR
+				if pvir then ymargin += [18,0]
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=(qu eq 0 ? 1:9),$
 				xticklen=0.01,ytitle=title+' '+unit,xminor=xminor, ylog = log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),(qu eq 0 ? 0:6)]:0),ymargin=ymargin,$
@@ -3037,8 +3076,6 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 						if dumidxcnt gt 1 then begin
 							print,'Glob. Mean1    '+dumname+'  : '+string(mean(ts_data[tsi.gm1,dumidx]),f='(f14.4)')
 							print,'Glob. Mean2    '+dumname+'  : '+string(mean(ts_data[tsi.gm2,dumidx]),f='(f14.4)')
-; 							col = (sn mod 2) eq 0 ? cgcolor('wheat') : !p.background
-; 							col = (sn mod 2) eq 0 ? cgcolor('medium gray') : !p.background
 							col = (sn mod 2) eq 0 ? cgcolor('lavender') : !p.background
 							polyfill,[min(dumidx),max(dumidx),max(dumidx),min(dumidx)],$
 							[pf_ycr[0],pf_ycr[0],pf_ycr[1],pf_ycr[1]],col=col
@@ -3075,9 +3112,6 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					ycharsize = !p_ycharsize, ytickformat="(A1)"
 					axis,yaxis=0,yr=yrange,ys=1,ylog=log, charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize
 				endif
-; 				if qu ne 0 then axis,yaxis=1,ys=1,yrange=yrange/qu,col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
-; 				charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize
-
 				if qu ne 0 then axis,yaxis=1,ystyle=1,yrange=[0,abs([yrange[1]-yrange[0]])],col = cgColor("Slate Gray"),ytitle='BC-RMSD'+' '+unit, $
 				charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize= !p_ycharsize
 				if keyword_set(coverage) then begin
@@ -3106,7 +3140,6 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=cgColor(!compare_col2) ,spos='tr',charsize=lcharsize-(wbg ? 0.5:0),charthick=!p_charthick,ystretch=1.5
 			endif
 
-; 			if qu ne 0 then oplot,ts_data[tsi.bcr,*]*qu,psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
 			if qu ne 0 then begin
 				if yrange[0] gt yrange[1] then $
 				oplot,yrange[0] - ts_data[tsi.bcr,*],psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms else $
@@ -3120,8 +3153,6 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 				dec1 = ' '+string(((yfit1[idx_cnt-1]-yfit1[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				dec2 = ' '+string(((yfit2[idx_cnt-1]-yfit2[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				dec3 = ' '+string(((yfit3[idx_cnt-1]-yfit3[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
-; 				oplot,idx,yfit1,col=opl eq 0 ? cgColor("Red") : cgcolor(cols)
-; 				oplot,idx,yfit2
 				oplot,idx,yfit1,col=opl eq 0 ? cgColor(!compare_col1) : cgcolor(cols)
 				oplot,idx,yfit2,col=cgColor(!compare_col2) 
 				if qu ne 0 then oplot,idx,yfit3*qu,col=cgColor("Gray")
@@ -3161,9 +3192,10 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 		nc     = stregex(dat,'_unc',/fold,/bool) ? tsi.unc1 : tsi.gm1
 		if keyword_set(sum) then begin
 			nc = tsi.sum1
-			ts_data[nc,*] /= 1000000. ; in millions
-			unit = textoidl('* 10^6')
-; 			unit = ' [millions]'
+			if max(ts_data[nc,*],/nan) gt 1000000l then begin
+				ts_data[nc,*] /= 1000000. ; in millions
+				unit = textoidl('* 10^6')
+			endif
 		endif
 		nc_unc = tsi.unc1 ;tsi.gm1_std
 		if keyword_set(standard) then begin nc = tsi.gm1_std & error = 0 & end
@@ -3181,8 +3213,10 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 ; 					xtitle    = ''
 ; 				endif else $
 				ymargin= [6,2]+(sav or wbg ? [2,1]:0)
-; for PVIR
-if keyword_set(nobar) and ~sav then ymargin += [18,0] 
+				; for PVIR
+				if pvir then ymargin += [18,0]
+				; for MST Paper
+				if mst_paper then ymargin += [40,0]
 				plot,[0,0],[1,1],xr=[anz[0],anz[1]],/xs,xticks=n_elements(xtickname)-1,xtickname=xtickname,yr=yrange,ys=1,xticklen=0.01,$
 				ytitle= title+' '+strcompress(unit,/rem),xminor=xminor,ylog=log,xtitle=xtitle, $
 				xmargin=[12,10]+(sav or wbg ? [(wbg ? 10:4),0]:0),ymargin=ymargin,$
@@ -3197,8 +3231,6 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 						dumidx = where(satnames eq dumname,dumidxcnt)
 						if dumidxcnt gt 1 then begin
 							print,'Glob. Mean    '+dumname+'  : '+string(mean(ts_data[nc,dumidx]),f='(f14.4)')
-; 							col = (sn mod 2) eq 0 ? cgcolor('wheat') : !p.background
-; 							col = (sn mod 2) eq 0 ? cgcolor('medium gray') : !p.background
 							col = (sn mod 2) eq 0 ? cgcolor('lavender') : !p.background
 							polyfill,[min(dumidx),max(dumidx),max(dumidx),min(dumidx)],$
 							[pf_ycr[0],pf_ycr[0],pf_ycr[1],pf_ycr[1]],col=col
@@ -3211,23 +3243,25 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 				div = ((anz[1]-anz[0]) le 12 ? 3. : 12.)
 				for i = 0, (anz[1]-anz[0])/div do oplot,anz[0]+[i*div,i*div],pf_ycr,linestyle=2
 				for i = 0, n_elements(lines)-1 do oplot,!x.crange,[lines[i],lines[i]],linestyle=1
+
 				if keyword_set(satn_background) then begin
 					eq_sn = ree(satnames)
-					for sn = 0,n_elements(eq_sn)-1 do begin
-						dumname = satnames[eq_sn[sn]]
-						if dumname eq '' then continue
-						dumidx = where(satnames eq dumname,dumidxcnt)
-						if dumidxcnt gt 1 then begin
-							dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)-14
-							if between(dum_xx,anz[0],anz[1]) then begin
-								xyouts, dum_xx,(keyword_set(log) ? $
-								10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
-								((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
-; 								dumname, charthick = charthick*1.3, charsize = xcharsize*1.3,font=1
-								dumname, charthick = !p_charthick, charsize = !p_xcharsize
+					if (mst_paper eq 0) or (mst_paper eq 1 and dat eq 'IWP') then begin
+						for sn = 0,n_elements(eq_sn)-1 do begin
+							dumname = satnames[eq_sn[sn]]
+							if dumname eq '' then continue
+							dumidx = where(satnames eq dumname,dumidxcnt)
+							if dumidxcnt gt 1 then begin
+								dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)-14
+								if between(dum_xx,anz[0],anz[1]) then begin
+									xyouts, dum_xx,(keyword_set(log) ? $
+									10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
+									((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
+									dumname, charthick = !p_charthick, charsize = !p_xcharsize
+								endif
 							endif
-						endif
-					endfor
+						endfor
+					endif
 					;polyfill plots over max yrange and yticks, set axes again 
 					axis,xaxis=1,xs=1,xr=[anz[0],anz[1]], charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = !p_ycharsize,$
 					xtickformat="(A1)",xticks=(anz[1]-anz[0])/12,xticklen=0.00001
@@ -3255,7 +3289,7 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					sm_idx = where(~finite(ts_data[nc,*]),sm_cnt)
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms
-					if keyword_set(coverage) then begin
+					if keyword_set(coverage) and ~mst_paper then begin
 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=!p_charthick, numsym=1
 					endif
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,symsize=syms
@@ -3272,7 +3306,7 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					endif
 					ts_data[nc,dumidx] = !values.f_nan
 				endif
-				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
+				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries, color = color
 				polyfill_ts_error,ts_data[nc,*],ts_data[nc_unc,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
 				if keyword_set(nobar) then begin
 					oplot,ts_data[nc,*],col=cgcolor(cols),linestyle=linestyle,thick=2
@@ -3281,11 +3315,12 @@ if keyword_set(nobar) and ~sav then ymargin += [18,0]
 					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
-				legend,algon1+dtn+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch*(opl le 2 ? 1.3 : 1.1),$
+				ystretch = mst_paper ? (0.8 * ystretch) : ystretch*(opl le 2 ? 1.3 : 1.1)
+				legend,algon1+dtn+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch,$
 				charsize=lcharsize,charthick=!p_charthick, linestyle = linestyle,psym=cgsymcat(psym)
 			endelse
 			if keyword_set(show_values) then begin
-				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
+				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries, color = color
 				res1=linfit(idx,ts_data[nc,idx],yfit=yfit1)
 				dec1 = ' '+string(((yfit1[idx_cnt-1]-yfit1[0])/float(idx_cnt)*120.),f='(f10.5)')+unit
 				if opl eq 0 then oplot,idx,yfit1 else oplot,idx,yfit1,col=cgcolor(cols)
@@ -4882,7 +4917,9 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 			if ~no_trend_found then ok = dialog_message("plot_simple_timeseries: Sav File not found! "+sav_file)
 			return
 		endif
-		ts_data  = d.stats ; stats = global mean (latitude weighted)
+
+		ts_data  = d.stats ; stats = global mean (latitude weighted) ;ts_data = d.STATS_NON_WEIGHTED
+; 		ts_data  = d.STATS_NON_WEIGHTED
 		if anomalies and is_tag(d,'TREND') then begin
 			ts_data = d.trend.stats_anom
 		endif else if anomalies and ~is_tag(d,'TREND') then begin
@@ -4891,18 +4928,20 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		if tr_corr and is_tag(d,'TREND') then begin
 			;replace gm1 with trend_corrected gm
 			ts_data = d.TREND.stats
+			dat[0]  = strreplace(dat[0],'_trend_corr','')
 		endif else if tr_corr and ~is_tag(d,'TREND') then begin
 			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
 		endif
-		dtn     = appendix(dat[0],trend_corrected=tr_corr)
-		d1 = get_available_time_series( keyword_set(reference) ? reference :algo, dat[1], sat, coverage = cov, period = '1978-2016', $
+		dtn = appendix(dat[0],trend_corrected=tr_corr)
+		d1  = get_available_time_series( keyword_set(reference) ? reference :algo, dat[1], sat, coverage = cov, period = '1978-2016', $
 						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
-						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
+						anomalies = anomalies, sum=sum1,no_trend_found = no_trend_found)
 		if not found then begin
 			if ~no_trend_found then ok = dialog_message("plot_simple_timeseries: Sav File not found! "+sav_file)
 			return
 		endif
 		ts_data1  = d1.stats ; stats = global mean (latitude weighted)
+; 		ts_data1  = d1.STATS_NON_WEIGHTED
 		if anomalies and is_tag(d1,'TREND') then begin
 			ts_data1 = d1.trend.stats_anom
 		endif else if anomalies and ~is_tag(d1,'TREND') then begin
@@ -4911,12 +4950,19 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		if tr_corr and is_tag(d1,'TREND') then begin
 			;replace gm1 with trend_corrected gm
 			ts_data1 = d1.TREND.stats
+			dat[1]   = strreplace(dat[1],'_trend_corr','')
 		endif else if tr_corr and ~is_tag(d1,'TREND') then begin
 			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
 		endif
-		ts_data = ts_data - ts_data1
 		dtn     = [dtn,appendix(dat[1],trend_corrected=tr_corr)]
-		dat     = strjoin(dat,' - ')
+		if stregex(dat[1],'nretr',/fold,/bool) and stregex(dat[0],'nobs',/fold,/bool) and keyword_set(sum1) and keyword_set(sum) then begin
+			dat = ''
+			d.longname = 'Rel. Diff NObs. - NRetr. [%]'
+			ts_data = (ts_data - ts_data1)/ts_data1 *100.
+		endif else begin
+			dat     = strjoin(dat,' - ')
+			ts_data = ts_data - ts_data1
+		endelse
 		dtn     = strjoin(dtn,' -')
 		free_reference = 1
 	endif else begin
@@ -4936,6 +4982,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		if tr_corr and is_tag(d,'TREND') then begin
 			;replace gm1 with trend_corrected gm
 			ts_data = d.TREND.stats
+			dat     = strreplace(dat,'_trend_corr','')
 		endif else if tr_corr and ~is_tag(d,'TREND') then begin
 			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
 		endif
@@ -4953,6 +5000,9 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	longname = d.longname
 	if stregex(dat,'nretr',/fold,/bool) then begin
 		longname = '# of valid Retrievals'
+	endif
+	if stregex(dat,'nobs',/fold,/bool) then begin
+		longname = '# of Observations'
 	endif
 
 	if stregex(d.coverage,'midlat_trop',/fold,/bool) then begin
@@ -4979,7 +5029,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		endif
 	endif
 
-	; set all reflectance and brightness TS dots to NAN if Noaa15 and end of 2000 (very low coverage, orbit count s below 100)
+	; set all reflectance and brightness TS dots to NAN if Noaa15 and end of 2000 (very low coverage, orbit counts below 100)
 	if only_sat and sat eq 'noaa15' or sat eq 'noaaam' then begin
 		print,'Remove NOAA-15 data from end of year 2000, because of very low observation.'
 		dumidx = indgen(5)+(2000-ori_period[0])*12 + 7
@@ -5068,6 +5118,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 
 	str_pholder = strjoin(replicate(' ',max([strlen(algon),strlen(ref)])))
 	print,'-------'+dat+'--------'
+
 	if trend then begin
 		make_geo,lon_d,lat_d,grid=([360.,180.]/size(d.trend.mean,/dim))[0]
 		idx = keyword_set(reference) ? where((d.trend.mean ne -999.) and (d.trend.mean2 ne -999.),md_cnt) : where((d.trend.mean ne -999.),md_cnt)
@@ -6197,7 +6248,7 @@ pro create_time_series,data,algon,coverage,period=period
 	if (first eq 0) then begin
 		mima = minmax(where(finite(stats[0,*,0])))/12 * 12
 		mima[1] = mima[1]+11
-		if total(cli eq ['cci','pmx','gac','gac2']) then begin 
+		if total(cli eq ['cci','pmx','gac','gac2','hec']) then begin 
 			ect = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/plot_monthly_ECTs_cci_primes_'+sat+'.sav',found=found)
 			if found then ect = ect[mima[0]:mima[1]] else free,ect
 		endif
@@ -6372,7 +6423,7 @@ pro do_create_all_single_time_series
 	; gac2 only
 ; 	data = ['refl1','refl2','rad3b','rad4','rad5','refl3a']
 	; cci only
-; 	data = ['nretr_cloudy_day','nobs_cloudy_day','nretr_cloudy_day_liq','nretr_cloudy_day_ice','nretr_cloudy','nobs','nobs_day','nobs_cloudy'];, $
+	data = ['nobs_cloudy','nretr_cloudy','nretr_cloudy_day','nobs_cloudy_day','nretr_cloudy_day_liq','nretr_cloudy_day_ice','nobs','nobs_day'];, $
 ; 		'cla_vis006','cla_vis008','cla_vis006_liq','cla_vis006_ice','cla_vis008_liq','cla_vis008_ice']
 
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
@@ -6400,7 +6451,7 @@ pro do_create_all_single_time_series
 	cla_list = ['cla-']
 
 	; combine all you need
-	algon_list = ['cci-atsrs']
+	algon_list = ['cci-atsrs','cci-aqua','cci-terra']
 
 	if is_defined(period) then begin
 		print,''
