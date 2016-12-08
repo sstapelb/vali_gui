@@ -3367,7 +3367,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	         self.refself  = Widget_Button(bla1, Value='Load:', UVALUE='SET_PLOT_DEFAULTS')
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
-			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','PATMOS-X',$
+			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','ERA-INTERIM2','PATMOS-X',$
 			  'PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','HECTOR','SELECT FILE']
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
@@ -3386,9 +3386,9 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refera    = Widget_Button(bla, Value='ERA-I'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcci2   = Widget_Button(bla, Value='ESACCI'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci    = Widget_Button(bla, Value='CCI-v1.0'    , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refgwx    = Widget_Button(bla, Value='CCI-GEWEX'   , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.refera2    = Widget_Button(bla, Value='ERA-I(1.0)' , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcci    = Widget_Button(bla, Value='CCI-v1'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refgwx    = Widget_Button(bla, Value='CCI-GWX'     , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refera2   = Widget_Button(bla, Value='ERA-(T1)'    , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcal    = Widget_Button(bla, Value='CALIPSO'     , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refselect = Widget_Button(bla, Value='Select File' , UVALUE='SET_PLOT_DEFAULTS')
 ;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS')
@@ -3618,6 +3618,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.refcla    , Set_Button=0
 		Widget_Control, self.refhec    , Set_Button=0
 		Widget_Control, self.refera    , Set_Button=0
+		Widget_Control, self.refera2   , Set_Button=0
 ; 		Widget_Control, self.loaded    , Set_Button=1
 		Widget_Control, self.pcsingle  , Set_Button=1
 		Widget_Control, self.pcmulti   , Set_Button=0
@@ -3794,7 +3795,7 @@ END ;---------------------------------------------------------------------------
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
-		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day, $
+		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
@@ -3920,6 +3921,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	cci2        = Widget_Info(self.refcci2, /BUTTON_SET)
 	cci         = Widget_Info(self.refcci, /BUTTON_SET) ; prototype
 	era         = Widget_Info(self.refera, /BUTTON_SET)
+	era2        = Widget_Info(self.refera2, /BUTTON_SET)
 	pmx         = Widget_Info(self.refpmx, /BUTTON_SET)
 	pmx2        = Widget_Info(self.refpmx2, /BUTTON_SET)
 ; 	l1g         = Widget_Info(self.refl1gac, /BUTTON_SET)
@@ -4210,7 +4212,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
+				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4278,6 +4280,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if myd    then ref = 'myd'
 			if myd2   then ref = 'myd2'
 			if era    then ref = 'era'
+			if era2   then ref = 'era2'
 			if gac    then ref = 'gac'
 			if gac2   then ref = 'gac2'
 			if pmx    then ref = 'pmx_old'
@@ -4474,7 +4477,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4543,6 +4546,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if myd    then begin & algo2 = 'coll5'      & satn = 'aqua' & end
 				if myd2   then begin & algo2 = 'coll6'      & satn = 'aqua' & end
 				if era    then begin & algo2 = 'era-i'      & satn = '' & end
+				if era2   then begin & algo2 = 'era-i2'     & satn = '' & end
 				if gac    then begin & algo2 = 'clara'      & satn = sat & end
 				if gac2   then begin & algo2 = 'clara2'     & satn = sat & end
 				if ccigwx then begin & algo2 = 'gewex'      & satn = sat & end
@@ -4688,7 +4692,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,pmx,pmx2,l1g,cla,hec,sel,pcms,$
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,$
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4711,6 +4715,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if myd    then begin & algo = 'coll5'       & sat = 'aqua'    & ref = 'myd'  & end
 			if myd2   then begin & algo = 'coll6'       & sat = 'aqua'    & ref = 'myd2' & end
 			if era    then begin & algo = 'era-i'       & ref = 'era'     & end
+			if era2   then begin & algo = 'era-i2'      & ref = 'era2'     & end
 			if gac    then begin & algo = 'clara'       & ref = 'gac'     & end
 			if gac2   then begin & algo = 'clara2'      & ref = 'gac2'    & end
 			if ccigwx then begin & algo = 'gewex'       & ref = 'gwx'     & end
@@ -5996,6 +6001,7 @@ PRO NCDF_DATA__DEFINE, class
              refcci2:0L,               $
              loaded:0l,                $
              refera:0l,                $
+             refera2:0l,               $
              refpmx:0L,                $
              refpmx2:0L,               $
              refl1gac:0L,              $
