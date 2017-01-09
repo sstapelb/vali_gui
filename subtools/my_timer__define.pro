@@ -28,7 +28,7 @@ pro my_timer::CLEANUP
 	hh   = string(fix(zeit/3600.),format='(i4.4)')
 	mn   = string((zeit mod 3600.)/60.,format='(i2.2)')
 	se   = string(round((zeit mod 3600.) mod 60.),format='(i2.2)')
-	zeitstr=hh+'h:'+mn+'m:'+se+'s'
+	zeitstr=hh+'h:'+mn+'m:'+se+'s                                   '
 	print,systime(0)+ ' duration: '+zeitstr
 end
 

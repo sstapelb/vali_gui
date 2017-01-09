@@ -7,7 +7,7 @@
 @./coyote/cgcolor.pro
 @./subtools/centertlb.pro
 @/cmsaf/nfshome/sstapelb/idl/trend/give_trend.pro
-@/cmsaf/nfshome/sstapelb/idl/get_grid_res.pro
+@./subtools/get_grid_res.pro
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
 @/cmsaf/nfshome/sstapelb/idl/file_name_info.pro
 @/cmsaf/nfshome/sstapelb/idl/win.pro

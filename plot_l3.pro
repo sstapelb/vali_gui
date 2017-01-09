@@ -3011,7 +3011,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	dec3 = ''
 
 	sn_cov = short_cov_name(coverage)
-	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) and ~keyword_set(satn_background) then dtn += ' ('+ sn_cov+')'
+	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) then dtn += ' ('+ sn_cov+')'
 
 	if sav then begin
 		charthick = !p_charthick ;1.5
@@ -3143,9 +3143,25 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 			endif
 
 			if qu ne 0 then begin
-				if yrange[0] gt yrange[1] then $
-				oplot,yrange[0] - ts_data[tsi.bcr,*],psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms else $
-				oplot,ts_data[tsi.bcr,*]+yrange[0],psym=cgsymcat(psym),col=cgColor("Slate Gray"),thick=thick,symsize=syms
+				if keyword_set(nobar) then begin
+					if yrange[0] gt yrange[1] then begin
+						oplot,yrange[0] - ts_data[tsi.bcr,*],col=cgColor("Slate Gray"), thick=2 
+						sm_data = smooth(reform(yrange[0] - ts_data[tsi.bcr,*]),8,/nan,/edge_truncate)
+						sm_idx  = where(~finite(yrange[0] - ts_data[tsi.bcr,*]),sm_cnt)
+					endif else begin
+						oplot,ts_data[tsi.bcr,*]+yrange[0],col=cgColor("Slate Gray"), thick=2
+						sm_data = smooth(reform(ts_data[tsi.bcr,*]+yrange[0]),8,/nan,/edge_truncate)
+						sm_idx  = where(~finite(ts_data[tsi.bcr,*]+yrange[0]),sm_cnt)
+					endelse
+					if sm_cnt gt 0 then sm_data[sm_idx] = !values.f_nan
+					oplot,sm_data,psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor("Slate Gray")
+				endif else begin
+					if yrange[0] gt yrange[1] then $
+					oplot,yrange[0] - ts_data[tsi.bcr,*],psym=cgsymcat(psym),col=cgColor("Slate Gray"), $
+					thick=thick,symsize=syms else $
+					oplot,ts_data[tsi.bcr,*]+yrange[0],psym=cgsymcat(psym),col=cgColor("Slate Gray"), $
+					thick=thick,symsize=syms
+				endelse
 			endif
 			if keyword_set(show_values) then begin
 				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
@@ -3157,7 +3173,11 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				dec3 = ' '+string(((yfit3[idx_cnt-1]-yfit3[0])/float(idx_cnt)*120.),f='(f10.5)')+unit+' / decade'
 				oplot,idx,yfit1,col=opl eq 0 ? cgColor(!compare_col1) : cgcolor(cols)
 				oplot,idx,yfit2,col=cgColor(!compare_col2) 
-				if qu ne 0 then oplot,idx,yfit3*qu,col=cgColor("Gray")
+				if qu ne 0 then begin
+				if yrange[0] gt yrange[1] then $
+					oplot,idx,yrange[0] - yfit3,col=cgColor("Slate Gray") else $
+					oplot,idx,yfit3+yrange[0],col=cgColor("Slate Gray")
+				endif
 				str_pholder = strjoin(replicate(' ',max([strlen(algon1),strlen(ref)])))
 				print,'Trend (ALG1)  '+str_pholder+' : '+dec1
 				print,'Trend (ALG2)  '+str_pholder+' : '+dec2
@@ -5485,11 +5505,14 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,coverage
+pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,coverage,period=period
 
 	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
 
-	years  = string(indgen(39)+1978,f='(i4.4)')
+	if keyword_set(period) then begin
+		yspl   = fix(strsplit(period,'-',/ext))
+		years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
+	endif else years  = string(indgen(39)+1978,f='(i4.4)')
 	months = string(indgen(12)+1,f='(i2.2)')
 
 	cov    = strlowcase(coverage)
@@ -5568,7 +5591,9 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
 
 	trend_sat = 1
-	if total(cli eq ['cci','gac','gac2','pmx']) and ~total(satcci eq ['noaaam','noaapm','aatme','aatsr','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
+	if total(cli eq ['cci','gac','gac2','pmx']) and $
+	  ~total(satcci eq ['noaaam','noaapm','aatme','aatsr','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
+	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
 
 	algon1 = sat_name(cli,satcci)
 	algon2 = sat_name(ref,satgac)
@@ -6373,29 +6398,39 @@ pro do_create_all_compare_time_series
 	starttime = systime(1)
 	mem_cur   = memory(/current)
 
-	cli      = 'era2'
+	period   = ['2003-2011']
+
+	cli      = 'cci'
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		    'metopa','metopb','allsat','noaaam','noaapm'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = 'cci';['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
-	data     = ['cfc','ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
-		    'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
-	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','metopa']
-	sat      = ['noaapm','noaaam'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
-; 	sat      = ['noaa7','noaapm','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18']
+	ref      = ['mod2','myd2'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
+; 	data     = ['cfc','ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
+; 		    'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
 
-	sat  = ['noaapm']
+	data     = ['cfc','ctp','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','cph','iwp_allsky','lwp_allsky']
+
+	sat      = ['noaapm','noaaam','aqua','terra','aatme','aatsr'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
+
+	if is_defined(period) then begin
+		print,''
+		print,'### Period Keyword is set! The new period will be '+period+'. Do you want to do this?'
+		stop
+	endif
+
 	for k=0,n_elements(ref)-1 do begin
 		for i= 0,n_elements(sat)-1 do begin
 			for l=0,n_elements(data)-1 do begin
 				do_it = 1
+				if strmid(ref[k],0,3) eq 'myd' and noaa_ampm(sat[i]) eq 'am' then do_it = 0
+				if strmid(ref[k],0,3) eq 'mod' and noaa_ampm(sat[i]) eq 'pm' then do_it = 0
 				if strmid(ref[k],0,3) eq 'myd' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12','noaa14','noaaam']) then do_it = 0
 				if strmid(ref[k],0,3) eq 'mod' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12','noaapm']) then do_it = 0
 				if ref[k] eq 'cal' and total(sat[i] eq ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaaam']) then do_it = 0
 				if strmid(ref[k],0,3) eq 'era' and ~total(sat[i] eq ['terra','aqua','noaapm']) then do_it = 0
-				if do_it then create_cci_vs_gac_or_aqua_time_series, data[l], cli, ref[k], sat[i], cov
+				if do_it then create_cci_vs_gac_or_aqua_time_series, data[l], cli, ref[k], sat[i], cov, period = period
 			endfor
 		endfor
 	endfor

@@ -976,7 +976,7 @@ function PlanckInv, input_platform, T
 
 end 
 ;------------------------------------------------------------------------------------------
-function bt37_to_ref37, doy, bt37, bt11, solzen, platform, no_data_value = no_data_value,emis_ch3b=emis_ch3b,true_reflectance = true_reflectance
+function bt37_to_ref37, doy, bt37, bt11, solzen, platform, no_data_value = no_data_value, emis_ch3b=emis_ch3b, true_reflectance = true_reflectance
 
 	fillv = keyword_set(no_data_value) ? no_data_value[0] : -999.
 	idx = where( (bt37 eq fillv) or (bt11 eq fillv) ,idxcnt) 
