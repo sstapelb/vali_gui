@@ -1324,7 +1324,8 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'esacci_old'	: ref = 'cci_old'
 		'esacci-pt'	: ref = 'cci_old'
 		'cci'		: ref = 'cci'
-		'esacci'		: ref = 'cci'
+		'esacci'	: ref = 'cci'
+		'cloud_cci'	: ref = 'cci'
 		'gac'		: ref = 'gac'
 		'clara'		: ref = 'gac'
 		'clara-a1'	: ref = 'gac'
@@ -2031,13 +2032,13 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		'gac2'	: algon = 'CLARA-A2'
 		'l1gac' : algon = 'L1-GAC'
 		'hec'	: algon = 'HECTOR'
-		'myd'	: return,'COLL5-AQUA'
-		'mod'	: return,'COLL5-TERRA'
-		'myd2'	: return,'COLL6-AQUA'
-		'mod2'	: return,'COLL6-TERRA'
+		'myd'	: return,'COLL5-Aqua'
+		'mod'	: return,'COLL5-Terra'
+		'myd2'	: return,'COLL6-Aqua'
+		'mod2'	: return,'COLL6-Terra'
 ; 		'gwx'	: algon = 'CC4CL-GEWEX'
 		'gwx'	: algon = 'Cloud_cci-GEWEX'
-		'cal'	: return,'CALIPSO-CALIOP'
+		'cal'	: return,'CALIPSO-Caliop'
 		'era'	: return,'ERA-INTERIM'
 		'era2'	: return,'ERA-INTERIM (Thr. 1.0)'
 		'cla'	: return,'CLAAS'
@@ -2073,9 +2074,12 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 	endif
 
 	;MODIS
-	if total(dumsat eq ['aqua','terra']) and strmid(algon,0,9) eq 'Cloud_cci' then dumsat = 'MODIS-'+dumsat
+	if total(dumsat eq ['aqua','terra']) and strmid(algon,0,9) eq 'Cloud_cci' then begin
+		if dumsat eq 'aqua'  then dumsat = 'MODIS-Aqua' else $
+		if dumsat eq 'terra' then dumsat = 'MODIS-Terra'
+	endif
 
-	if keyword_set(only_sat) then return, strupcase(dumsat)
+	if keyword_set(only_sat) then return, dumsat
 	return,algon+(keyword_set(dumsat) and keyword_set(algon) ? ' ':'') + $
 	strupcase(dumsat)+ (keyword_set(version) and strmid(algon,0,9) eq 'Cloud_cci' ? ' '+version : '')
 
@@ -4475,14 +4479,21 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	endelse
 end
 ;------------------------------------------------------------------------------------------
-function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = found, index = index, grid=grid, verbose = verbose, $
+function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = found, index = index, grid_res=grid_res, verbose = verbose, $
 	 only_hr = only_hr, no_hr = no_hr
 
 	found = 1.
 	error_status = 0
 	ecmwf_path = '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'
-	para = keyword_set(parameter) ? strlowcase(parameter) : 'stemp'
-; 	plot_l3
+
+	if n_params() ne 4 then begin
+		print,'Syntax: map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter ,/keywords'
+		found = 0
+		return,-1
+	endif
+
+	para = strlowcase(parameter)
+	grid = keyword_set(grid_res) ? grid_res : get_grid_res(orb_lon,cci_l3u_eu=cci_l3u_eu,claas=claas,found=found)
 
 	catch, error_status
 	if (error_status ne 0) then begin
@@ -4541,8 +4552,9 @@ function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = fo
 		return,-1
 	endif
 
-	if keyword_set(grid) then begin
-		sav_file = !SAVS_DIR + '/ecmwf/ECMWF_dimension_'+lon_dim1+'_'+lat_dim1+'_collocation_index_to_global_grid_'+string(grid,f='(f4.2)')+'.sav'
+	if keyword_set(grid) or keyword_set(cci_l3u_eu) then begin
+		grid_string = keyword_set(grid) ? string(grid,f='(f4.2)') : 'CCI_L3U_EU'
+		sav_file = !SAVS_DIR + '/ecmwf/ECMWF_dimension_'+lon_dim1+'_'+lat_dim1+'_collocation_index_to_global_grid_'+grid_string+'.sav'
 		index = restore_var(sav_file,found=found_idx)
 		if ~found_idx then begin
 			save_sav  = 1
@@ -4554,7 +4566,6 @@ function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = fo
 		; make geolocation
 		if keyword_set(verbose) then print,'map_ecmwf_to_orbit -> Geolocation.'
 		make_geo,lon,lat_ec,file=ecmwf_file1
-
 		; lon ist in 0-360 grad
 		bla = where(lon gt 180)
 		lon_ec=lon

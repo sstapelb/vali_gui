@@ -1666,7 +1666,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
 			~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and total(!p.multi) le 2
 
-	if opl le 1 or ~obj_valid(obj_out) then begin 
+	if opl le 1 or ~obj_valid(obj_out) then begin
 		if opl eq 0 then start_save, save_dum, thick = thick,size=[48,30]
 			m = obj_new("map_image",bild, lat, lon, void_index=void_index,n_lev=n_lev	, $
 				max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue, format=bar_format, $
@@ -2988,8 +2988,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 		case algon1 of
 			'Cloud_cci AVHRR-AM'    : color = 'Dodger Blue'
 			'Cloud_cci AVHRR-PM'    : color = 'Navy'
-			'Cloud_cci MODIS-TERRA' : color = 'Dark Green'
-			'Cloud_cci MODIS-AQUA'  : color = 'Lime Green'
+			'Cloud_cci MODIS-Terra' : color = 'Dark Green'
+			'Cloud_cci MODIS-Aqua'  : color = 'Lime Green'
 			'Cloud_cci MERIS+AATSR' : color = 'Dark Violet'
 			'Cloud_cci ATSR2-AATSR' : color = 'Dark Orange'
 			else	:
@@ -3051,7 +3051,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	if ~keyword_set(no_compare) then begin
 		start_save, save_as1, thick = thick, size = [42,22]
 			if wbg then thick=4
-			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
+; 			idx = where(finite(ts_data[tsi.gm1,*]) and finite(ts_data[tsi.gm2,*]),idx_cnt)
+			idx = where(finite(ts_data[tsi.gm1,*]) ,idx_cnt)
 			if idx_cnt eq 0 then return 
 			if opl eq 0 then begin
 				xtitle='Time [years]'
@@ -5053,9 +5054,13 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 
 	; set all reflectance and brightness TS dots to NAN if Noaa15 and end of 2000 (very low coverage, orbit counts below 100)
 	if only_sat and sat eq 'noaa15' or sat eq 'noaaam' then begin
-		print,'Remove NOAA-15 data from end of year 2000, because of very low observation.'
 		dumidx = indgen(5)+(2000-ori_period[0])*12 + 7
-		ts_data[*,dumidx] = !values.f_nan
+		bla = where(dumidx ge 0,blacnt)
+		if blacnt gt 0 then begin
+			dumidx= dumidx[bla]
+			print,'Remove NOAA-15 data from end of year 2000, because of very low observation.'
+			ts_data[*,dumidx] = !values.f_nan
+		endif
 	endif
 
 	count=0
@@ -5584,10 +5589,10 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	endcase
 
 	satcci = sat
-	satgac = ( total(satcci eq ['aatme','aatsr']) ? 'noaa17' : sat )
-	; fame-c only daytime, set ref dat to _day and compare if available
-	dt1 = (satgac eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) ? '_day':'')
-	dt2 = (satcci eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) ? '_day':'')
+	satgac = ( ( total(satcci eq ['aatme','aatsr']) and total(ref eq ['pmx','gac','gac2']) ) ? 'noaaam' : sat )
+	; fame-c only daytime, set ref dat to _day (!!but only if dat is not already a microphysical variable!!), and compare if available
+	dt1 = (satgac eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) and total(dat eq ['cfc','ctp','ctt','cth','cph']) ? '_day':'')
+	dt2 = (satcci eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) and total(dat eq ['cfc','ctp','ctt','cth','cph']) ? '_day':'')
 	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
 
 	trend_sat = 1
@@ -5628,7 +5633,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		if dat2 eq 'cot_ice' then dat2 = 'cot_37_ice'
 		if dat2 eq 'cer_ice' then dat2 = 'cer_37_ice'
 	endif
-	if (cli eq 'cci') and (satcci eq 'terra' or satcci eq 'aqua') and (ref eq 'myd2' or ref eq 'mod2') then begin
+	if (cli eq 'cci') and total(satcci eq ['terra','aqua','aatsr','aatme','atsrs']) and (ref eq 'myd2' or ref eq 'mod2') then begin
 		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_37_allsky'
 		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_37_allsky'
 		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_37_allsky'
@@ -5700,7 +5705,6 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 		yyyy=years[yy1]
 		mmmm=months[mm1]
-
 		cci_dum_file = get_filename(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,/silent,dirname=cci_dirname,/no_recursive)
 
 		if cli eq 'cci' and found_cci then begin
@@ -6406,13 +6410,13 @@ pro do_create_all_compare_time_series
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		    'metopa','metopb','allsat','noaaam','noaapm'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['mod2','myd2'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
+	ref      = ['mod2'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
 ; 	data     = ['cfc','ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
 ; 		    'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
 
-	data     = ['cfc','ctp','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','cph','iwp_allsky','lwp_allsky']
+	data     = ['cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky']
 
-	sat      = ['noaapm','noaaam','aqua','terra','aatme','aatsr'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
+	sat      = ['aatme'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
 
 	if is_defined(period) then begin
 		print,''
