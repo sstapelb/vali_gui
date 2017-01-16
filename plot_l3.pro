@@ -1593,12 +1593,20 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
 			if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0]) and bild ne 0]) lt mini[0] then l_eq = 1
 		endif else begin
-			if ls then begin
-				if keyword_set(land) then void_index = where(bild eq fillvalue[0] or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
-				if keyword_set(sea)  then void_index = where(bild eq fillvalue[0] or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
-			endif else void_index = where(bild eq fillvalue[0],complement = nv_idx,ncomplement=nv_cnt)
-			if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
-			if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0])]) lt mini[0] then l_eq = 1
+			; true_color_images only land / sea 
+			if t_c_i then begin
+				if ls then begin
+					if keyword_set(land) then void_index = where(dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
+					if keyword_set(sea)  then void_index = where(dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
+				endif else void_index = where(reform(bild[*,*,0]) lt 0,complement = nv_idx,ncomplement=nv_cnt) ; dummy
+			endif else begin
+				if ls then begin
+					if keyword_set(land) then void_index = where(bild eq fillvalue[0] or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
+					if keyword_set(sea)  then void_index = where(bild eq fillvalue[0] or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
+				endif else void_index = where(bild eq fillvalue[0],complement = nv_idx,ncomplement=nv_cnt)
+				if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
+				if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0])]) lt mini[0] then l_eq = 1
+			endelse
 		endelse
 
 		n_lev=6
@@ -6451,12 +6459,11 @@ pro do_create_all_single_time_series
 	starttime = systime(1)
 	mem_cur   = memory(/current)
 ; 	period    = ['2003-2011']
-	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
-		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
-		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
-	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
-		     'cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
-		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
+; 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
+; 		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
+; 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
+	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky',$ ;PVIR vars
+				 'cfc_low','cfc_mid','cfc_high','cph_day','ctt','cer','cot','cth','cth2','cwp','cwp_allsky']
 
 	; coll6 only
 ; 	data     = [	'iwp_16','lwp_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
@@ -6497,7 +6504,7 @@ pro do_create_all_single_time_series
 	cla_list = ['cla-']
 
 	; combine all you need
-	algon_list = ['era-']
+	algon_list = ['cci-atsrs']
 
 	if is_defined(period) then begin
 		print,''

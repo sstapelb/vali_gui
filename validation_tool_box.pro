@@ -725,8 +725,8 @@ function is_ncdf, filename
 	endif
 
 	; hier muss neuerdings auch noch der extension test hin, leider. hdf5 und ncdf4 sind absolut gleich ab idl8.3
-	if stregex((reverse(strsplit(file_basename(filename[0]),'.',/ext)))[0],'nc',/bool,/fold) then return,1
-	return, 0
+; ; 	if stregex((reverse(strsplit(file_basename(filename[0]),'.',/ext)))[0],'nc',/bool,/fold) then return,1
+	return, 1
 end
 ;----------------------------------------------------------------------------------------
 ; Taken from fileinfo.pro Liam.Gumley
@@ -2060,28 +2060,28 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		if n_elements(dum) gt 1 then begin
 			if (strlen(dum[1]) eq 1) and is_number(dum[1]) then dum[1] = string(dum[1],f='(i2.2)')
 		endif
-		dumsat = strjoin(dum,'-')
-	endif else dumsat = satn
+		dumsat = strupcase(strjoin(dum,'-'))
+	endif else dumsat = strupcase(satn)
 
 	;new datset names AVHRR AM,PM
-	if total(dumsat eq ['noaa-am','noaa-pm']) then begin
+	if total(dumsat eq ['NOAA-AM','NOAA-PM']) then begin
 		if keyword_set(year) and keyword_set(month) and algo ne 'pmx' then begin
 			dumsat = noaa_primes(year,month,ampm=noaa_ampm(dumsat,/ampm),which=which)
 		endif else begin
-			if dumsat eq 'noaa-am' then dumsat = 'AVHRR-AM'
-			if dumsat eq 'noaa-pm' then dumsat = 'AVHRR-PM'
+			if dumsat eq 'NOAA-AM' then dumsat = 'AVHRR-AM'
+			if dumsat eq 'NOAA-PM' then dumsat = 'AVHRR-PM'
 		endelse
 	endif
 
 	;MODIS
-	if total(dumsat eq ['aqua','terra']) and strmid(algon,0,9) eq 'Cloud_cci' then begin
-		if dumsat eq 'aqua'  then dumsat = 'MODIS-Aqua' else $
-		if dumsat eq 'terra' then dumsat = 'MODIS-Terra'
+	if total(dumsat eq ['AQUA','TERRA']) and strmid(algon,0,9) eq 'Cloud_cci' then begin
+		if dumsat eq 'AQUA'  then dumsat = 'MODIS-Aqua' else $
+		if dumsat eq 'TERRA' then dumsat = 'MODIS-Terra'
 	endif
 
 	if keyword_set(only_sat) then return, dumsat
-	return,algon+(keyword_set(dumsat) and keyword_set(algon) ? ' ':'') + $
-	strupcase(dumsat)+ (keyword_set(version) and strmid(algon,0,9) eq 'Cloud_cci' ? ' '+version : '')
+	return,	algon+(keyword_set(dumsat) and keyword_set(algon) ? ' ':'') + dumsat + $
+			(keyword_set(version) and strmid(algon,0,9) eq 'Cloud_cci' ? ' '+version : '')
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
@@ -3759,8 +3759,17 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 							endif else orbdum = ''
-							vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
-							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
+							if dat eq 'rgb' then begin
+								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/jpg/'
+								ampm  = noaa_ampm(sat)
+								; martin fragen rename "aft" in PM, etc 
+								if ampm eq 'pm' then ampm = 'aft'
+								if ampm eq 'am' then ampm = 'mor'
+								filen = 'Cloudcci_v2.0_'+ampm+'_*_rgb_'+yyyy+mm+dd+'*.jpg'
+							endif else begin
+								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
+								filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
+							endelse
 						  end
 					'ESACCI_v14': begin
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld6/esa_cci_cloud_data/data/'+lev+'/'+yyyy+'/'+mm+'/'+dd+'/'
@@ -5213,7 +5222,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 
 	if ( total(dat eq ['blue_marble','marble']) ) and not keyword_set(filename) then filename='dum'
 
-	need_filename = ~total(dat eq ['rgb','blue_marble','marble','usgs_dem','usgs_lus','usgs_ls','usgs_lsm', $
+	need_filename = ~total(dat eq ['blue_marble','marble','usgs_dem','usgs_lus','usgs_ls','usgs_lsm', $
 					'refl1','refl2','refl3a','rad3b','rad4','rad5'])
 
 	if not keyword_set(filename) and need_filename then begin
@@ -7895,34 +7904,46 @@ pro test_first_bits, file_type
 	ft = keyword_set(file_type) ? strlowcase(file_type) : 'ncdf4'
 
 	case ft of 
-		'eos'		: file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/esa_cld1/data/AUXDATA/MCD43C1_MODIS_BRDF/2000/02/18/MCD43C1.A2000049.005.2011206184931.hdf'
+		'eos'		: file = '/cmsaf/cmsaf-hcp1/osus/MODIS_BRDF/ladsftp.nascom.nasa.gov/allData/5/MCD43C1/2003/017/MCD43C1.A2003017.005.2007276124354.hdf'
 		; hdf4 eos point or grid file - braucht ca. 2 min zum einlesen; coll5 l3c
-		'hdf4'		: file = get_filename(2008,06,algo='coll5',sat='terra')
+		'hdf4'		: file = get_filename(2008,06,algo='coll5',sat='terra',found=found)
 		; hdf5 file - nur datsets  ; claas l2
-		'hdf5_data'	: file = get_filename(2008,06,06,orbit='1245',algo='claas',level='l2',data='cfc')
+		'hdf5_data'	: file = get_filename(2009,06,06,orbit='1245',algo='claas-1',level='l2',data='cmask',sat='msg',found=found)
 		; hdf5 files mit groups, datasets und datatypes ; l1_gac
-		'hdf5_group'	: file = '/cmsaf/cmsaf-cld1/sstapelb/gac/data/2008/06/noaa18/noaa18_20080601_0048_99999_satproj_00000_13110_avhrr.h5'
+		'hdf5_group': file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/l1/avhrr/noaa18_20080620_2256_99999_satproj_07638_12407_avhrr.h5'
 		; ncdf3 file ; cci_old l3c
-		'ncdf3'		: file = get_filename(2008,06,algo='cci_old',sat='noaa18')
+		'ncdf3'		: file = get_filename(2008,06,algo='cci_old',sat='noaa18',found=found)
 		; ncdf4 file; cci_new l3c
-		'ncdf4'		: file = get_filename(2008,06,algo='cci',sat='noaa18')
-		else:
+		'ncdf4'		: file = get_filename(2008,06,algo='cci',sat='noaa18',found=found)
+		else:	file = ''
 	endcase
 
-; Achtung wenn hdf4 oder hdf_eos mit is_ncdf getestet wird gibts segmentation fault ab IDL version 8.4!!!
-; 	if is_ncdf(file) then print, 'is ncdf file'
-; 	if is_hdf(file,version) then begin
-; 		print,'hdf'
-; 		if version eq 4 then print,'is hdf4 file'
-; 		if version eq 5 then print,'is hdf5 file'
-; 	endif
+	found = file_test(file)
 
-	dum=bytarr(10)
-	openr,lun,file,/get_lun
-	readu,lun,dum
-	free_lun,lun
+	; Achtung wenn hdf4 oder hdf_eos mit is_ncdf getestet wird gibts segmentation fault ab IDL version 8.4!!!
+	if found then begin
+		print,file[0]
+		if HDF_ISHDF(file) then begin
+			print,'HDF_ISHDF()  : Is HDF4 file' 
+		endif else if H5F_IS_HDF5(file) then begin
+			print,'H5F_IS_HDF5(): Is HDF5 file'
+			if is_ncdf(file) then $
+			print,'IS_NCDF()    : Is CDF4 file'
+		endif else if is_hdf(file,version) then begin
+			if version eq 4 then $
+			print,'IS_HDF()     : Is HDF4 file' else if version eq 5 then $
+			print,'IS_HDF()     : Is HDF5 file'
+		endif else if is_ncdf(file) then begin
+			print,'IS_NCDF()    : Is CDF3 file'
+		endif
 
-	print,dum
+		print,'Magic Numbers:'
+		dum=bytarr(4)
+		openr,lun,file,/get_lun
+		readu,lun,dum
+		free_lun,lun
+		print,dum , ': ',string(dum)
+	endif else print,'File with file_type '+ft+' not found!'
 
 end
 ;------------------------------------------------------------------------------------------
