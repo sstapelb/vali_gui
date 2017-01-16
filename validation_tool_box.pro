@@ -3759,13 +3759,13 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 							endif else orbdum = ''
-							if dat eq 'rgb' then begin
+							if strmid(dat,0,3) eq 'rgb' then begin
 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/jpg/'
 								ampm  = noaa_ampm(sat)
 								; martin fragen rename "aft" in PM, etc 
 								if ampm eq 'pm' then ampm = 'aft'
 								if ampm eq 'am' then ampm = 'mor'
-								filen = 'Cloudcci_v2.0_'+ampm+'_*_rgb_'+yyyy+mm+dd+'*.jpg'
+								filen = 'Cloudcci_v2.0_'+ampm+'_*_'+dat+'_'+yyyy+mm+dd+'*.jpg'
 							endif else begin
 								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 								filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
@@ -5261,7 +5261,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			longname = 'Cloud Fraction' + dat eq 'cfc_std' ? ' standard deviation' : ''
 			free,tmp
 		endif else return,-1
-	endif else if ( dat eq 'rgb' and total(lev eq ['l3u','l3ue'])) then begin
+	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue'])) then begin
 		found = file_test(filename[0])
 		if arg_present(finfo) then finfo = file_info(filename[0])
 		if found then begin
@@ -5272,7 +5272,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			endif
 			outdata = transpose(outdata,[1,2,0])
 			no_data_value = -999.
-			longname = 'True color image'
+			longname = 'True color image'+(keyword_set(strmid(dat,3)) ? ' + '+strupcase(strmid(dat,3)) : '')
 			minvalue = 0
 			maxvalue = 1
 			unit=''
