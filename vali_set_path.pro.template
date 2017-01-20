@@ -80,3 +80,9 @@ pro vali_set_plot_colors,white_bg=white_bg, save_as = save_as, reference = refer
 	DEFSYSV, '!compare_col2','red'
 
 end
+
+pro vali_set_defaults
+
+	DEFSYSV, '!era_threshold','0.15'
+
+end

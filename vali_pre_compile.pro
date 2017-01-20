@@ -5,6 +5,7 @@
 @/cmsaf/nfshome/sstapelb/idl/doy.pro
 @./coyote/error_message.pro
 @./coyote/cgcolor.pro
+@./coyote/themonths.pro
 @./subtools/centertlb.pro
 @/cmsaf/nfshome/sstapelb/idl/trend/give_trend.pro
 @./subtools/get_grid_res.pro

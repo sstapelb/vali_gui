@@ -1839,8 +1839,28 @@ function cci_name, sat, algoname_only = algoname_only
 	return, names
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-function atsr_prime,year,month,instrument=instrument
+function modis_sats,year,month,found=found
 
+	found = 1
+	aqua_start  = my_julday(2002,08,01)
+	terra_start = my_julday(2000,02,01)
+	if between(my_julday(year,month,01),terra_start,aqua_start,/not_include_upper ) then begin
+		return, 'TERRA'
+	endif else if my_julday(year,month,01) ge aqua_start then begin
+		return, 'TERRA,AQUA'
+	endif
+	found = 0
+	return,'No MODIS Sats Available'
+end
+;--------------------------------------------------------------------------------------------------------------------------
+function atsr_prime,year,month,instrument=instrument,found=found
+
+	found = 1
+	atsr2_start = my_julday(1995,08,01)
+	if my_julday(year,month,01) lt atsr2_start then begin
+		found = 0
+		return,'No A(A)TSR Sats Available'
+	endif
 	aatsr_start = my_julday(2002,07,24) ; at least RAL starts here with first L3U
 	if my_julday(year,month,01) lt aatsr_start then begin
 		return, keyword_set(instrument) ? 'ATSR2' : 'ERS2'
@@ -1850,16 +1870,18 @@ function atsr_prime,year,month,instrument=instrument
 end
 ;--------------------------------------------------------------------------------------------------------------------------
 function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
-				 node=node		, $ ; node of the specified sat (asc,des)
-				 which=which		, $ ; which file from database
-				 patmos=patmos		, $ ; Patmos (l3c, gewex, old) with different definition taken from ncdf_gewex__define.pro
-				 no_zero=no_zero	, $ ; No leading zero in Noaa number, e.g NOAA-7 not NOAA-07
+				 node=node						, $ ; node of the specified sat (asc,des)
+				 which=which					, $ ; which file from database
+				 patmos=patmos					, $ ; Patmos (l3c, gewex, old) with different definition taken from ncdf_gewex__define.pro
+				 no_zero=no_zero				, $ ; No leading zero in Noaa number, e.g NOAA-7 not NOAA-07
+				 include_all = include_all		, $ ; include also satellites not proccessed in cloud_cci 
 				 found = found
 
 	found = 1
 	ampm  = adv_keyword_set(ampm) ? ampm : 2 ; default ist am+pm
 	pmx   = keyword_set(patmos)
 	mm    = fix(month)
+	inc   = keyword_set(include_all)
 
 	;patmos l2b
 	; ;PM
@@ -1882,19 +1904,19 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 	; metop-01 2013_001 - 2014_220
 
 	case fix(year) of
-		1979: sats = pmx ? ['nn','nn']			: ['nn','05']
-		1980: sats = pmx ? ['nn','nn']			: [(mm le  6 ? 'nn':'06'),(mm le  1 ? '05':'nn')]
-		1981: sats = pmx ? ['nn','nn']			: ['06',(mm le  7 ? 'nn':'07')]
-		1982: sats = pmx ? ['nn','07']			: [(mm le  7 ? '06':'nn'),'07']
-		1983: sats = pmx ? ['nn','07']			: [(mm le  4 ? 'nn':'08'),'07']
-		1984: sats = pmx ? ['nn','07']			: ['08','07']
-		1985: sats = pmx ? ['nn',(mm le  2 ? 'nn':'09')]: [(mm le 10 ? '08':'nn'),(mm le  1 ? '07':'09')]
+		1979: sats = pmx ? ['nn','nn']			: ['nn',inc ? '05':'nn']
+		1980: sats = pmx ? ['nn','nn']			: [(mm le  6 or ~inc ? 'nn':'06'),(mm le  1 and inc ? '05':'nn')]
+		1981: sats = pmx ? ['nn','nn']			: [inc ? '06':'nn',(mm le  7 ? 'nn':'07')]
+		1982: sats = pmx ? ['nn','07']			: [(mm le  7 and inc ? '06':'nn'),'07']
+		1983: sats = pmx ? ['nn','07']			: [(mm le  4 or ~inc ? 'nn':'08'),'07']
+		1984: sats = pmx ? ['nn','07']			: [inc ? '08':'nn','07']
+		1985: sats = pmx ? ['nn',(mm le  2 ? 'nn':'09')]: [(mm le 10 and inc ? '08':'nn'),(mm le  1 ? '07':'09')]
 		1986: sats = pmx ? ['nn','09']			: ['nn','09']
-		1987: sats = pmx ? ['10','09']			: ['10','09']
-		1988: sats = pmx ? ['10',(mm le 10 ? '09':'nn')]: ['10',(mm le 10 ? '09':'11')]
-		1989: sats = pmx ? ['10','11']			: ['10','11']
-		1990: sats = pmx ? ['10','11']			: ['10','11']
-		1991: sats = pmx ? ['10','11']			: [(mm le  9 ? '10':'12'),'11']
+		1987: sats = pmx ? ['10','09']			: [inc ? '10':'nn','09']
+		1988: sats = pmx ? ['10',(mm le 10 ? '09':'nn')]: [inc ? '10':'nn',(mm le 10 ? '09':'11')]
+		1989: sats = pmx ? ['10','11']			: [inc ? '10':'nn','11']
+		1990: sats = pmx ? ['10','11']			: [inc ? '10':'nn','11']
+		1991: sats = pmx ? ['10','11']			: [(mm le  9 ? (inc ? '10':'nn'):'12'),'11']
 		1992: sats = pmx ? ['12','11']			: ['12','11']
 		1993: sats = pmx ? ['12','11']			: ['12','11']
 		1994: sats = pmx ? ['12',(mm le  9 ? '11':'nn')]: ['12',(mm le  9 ? '11':'nn')]
@@ -1916,10 +1938,10 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		2010: sats = pmx ? ['nn','nn']			: ['MA','19']
 		2011: sats = pmx ? ['nn','nn']			: ['MA','19']
 		2012: sats = pmx ? ['nn','nn']			: ['MA','19']
-		2013: sats = pmx ? ['nn','nn']			: ['MA','19'];[(mm le  4 ? 'MA':'MB'),'19'] 	; cci style wir haben noch kein metopb 
-		2014: sats = pmx ? ['nn','nn']			: ['MA','19'];['MB','19']			; aber metopa bis zum ende
-		2015: sats = pmx ? ['nn','nn']			: ['MA','19'];['MB','19']			; wenn vorhanden dann sofort ändern!!
-		2016: sats = pmx ? ['nn','nn']			: ['MA','19'];['MB','19']
+		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 or ~inc ? 'MA':'MB'),'19'] 	; cci style wir haben noch kein metopb 
+		2014: sats = pmx ? ['nn','nn']			: [inc ? 'MB':'MA','19'];['MB','19']			; aber metopa bis zum ende
+		2015: sats = pmx ? ['nn','nn']			: [inc ? 'MB':'MA','19'];['MB','19']			; wenn vorhanden dann sofort ändern!!
+		2016: sats = pmx ? ['nn','nn']			: [inc ? 'MB':'MA','19'];['MB','19']
 		else: sats = ['nn','nn']
 	endcase
 
@@ -2087,7 +2109,12 @@ end
 ;--------------------------------------------------------------------------------------------------------------------------
 function tag_name2num,struc,tag
 	all_names = tag_names(struc)
-	return, where(strlowcase(all_names) eq strlowcase(tag))
+	result = lonarr(n_elements(tag))
+	for i = 0l, n_elements(tag) -1 do begin
+		result[i] = where(strlowcase(all_names) eq strlowcase(tag[i]))
+	endfor
+	
+	return, n_elements(result) eq 1 ? result[0] : result
 end
 ;--------------------------------------------------------------------------------------------------------------------------
 pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
@@ -4143,7 +4170,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					thr = '0.15' 
+					thr = !ERA_THRESHOLD 
 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
@@ -4154,7 +4181,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I2' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					thr = '1.00' 
+					thr = !ERA_THRESHOLD 
 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
@@ -4301,34 +4328,37 @@ end
 ;------------------------------------------------------------------------------------------
 ; reads the plot, compare and hovmoeller time series savfiles.
 function get_available_time_series, algo, data, satellite, coverage = coverage, reference = reference, period = period	, $
-				longname = longname, unit = unit, sav_file = sav_file, found = found			, $
+				longname = longname, unit = unit, sav_file = sav_file, found = found				, $
 				hovmoeller = hovmoeller, trend = trend, tr_corr = tr_corr, anomalies = anomalies	, $
-				stddev = stddev, uncertainty = uncertainty, sum = sum, diff = diff			, $
-				no_trend_found = no_trend_found, silent=silent,pvir=pvir
+				stddev = stddev, uncertainty = uncertainty, sum = sum, diff = diff					, $
+				no_trend_found = no_trend_found, silent = silent, pvir = pvir, season = season
 
 	cov = keyword_set(coverage) ? strlowcase(coverage) : ''
 	sat = strlowcase(satellite)
 	dat = (strlowcase(data))[0]
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
-
+	if cov eq 'full' then cov = ''
+	
 	diff      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'diff',/fold,/bool)
 	if diff    	then dat = strreplace(dat,'_diff','',/fold)
 
-	pvir     	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'pvir',/fold,/bool)
+	pvir		= stregex((reverse(strsplit(dat,'_',/ext)))[0],'pvir',/fold,/bool)
 	if pvir 	then dat = strreplace(dat,'_pvir','',/fold)
-	tr_corr     	= stregex(dat,'_trend_corr',/fold,/bool) 	 			; TS: ECT,ENSO and seasonal Trend corrected
-	if tr_corr   	then dat = strreplace(dat,'_trend_corr','',/fold)
-	trend       	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'trend',/fold,/bool)	; 2D: ECT,ENSO and seasonal Trend 
-	anomalies   	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'anomalies',/fold,/bool)	; TS: ECT,ENSO and seasonal Anomalies
-	uncertainty 	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool)
-	stddev      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
-	sum        	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (algo2ref(algo,sat=sat) eq 'cci') and $
-			 (stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool))
+	tr_corr		= stregex(dat,'_trend_corr',/fold,/bool) 	 							; TS: ECT,ENSO and seasonal Trend corrected
+	if tr_corr  then dat = strreplace(dat,'_trend_corr','',/fold)
+	trend       = stregex((reverse(strsplit(dat,'_',/ext)))[0],'trend',/fold,/bool)		; 2D: ECT,ENSO and seasonal Trend 
+	anomalies   = stregex((reverse(strsplit(dat,'_',/ext)))[0],'anomalies',/fold,/bool)	; TS: ECT,ENSO and seasonal Anomalies
+	uncertainty = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool)
+	stddev      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
+	season      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'season',/fold,/bool)
+	sum			= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (algo2ref(algo,sat=sat) eq 'cci') and $
+				 (stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool))
 
 	if stddev    	then dat = strreplace(dat,'_std','',/fold)
 	if uncertainty 	then dat = strreplace(dat,'_unc','',/fold)
 	if anomalies 	then dat = strreplace(dat,'_anomalies','',/fold)
 	if trend     	then dat = strreplace(dat,'_trend','',/fold)
+	if season     	then dat = strreplace(dat,'_season','',/fold)
 	if sum		then dat = strreplace(dat,'_sum','',/fold) 
 
 	if algo2ref(algo,sat=sat) eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
@@ -4393,6 +4423,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		trend = 0
 		anomalies = 0
 		sum = 0
+		season = 0
 		return,-1
 	endif
 	if found gt 1 then begin
@@ -4444,6 +4475,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 			if tr_corr   and ~is_tag(struc,'TREND') then no_trend_found = 1
 			if trend     and ~is_tag(struc,'TREND') then no_trend_found = 1
 			if anomalies and ~is_tag(struc,'TREND') then no_trend_found = 1
+			if season    and ~is_tag(struc,'TREND') then no_trend_found = 1
 			if is_tag(struc,'TREND') then begin
 				if ~is_struct(struc.trend) and (tr_corr or trend or anomalies) then no_trend_found = 1
 			endif
@@ -4452,7 +4484,8 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				tr_corr = 0
 				trend = 0
 				anomalies = 0
-				sum=0
+				season = 0
+				sum = 0
 				found = 0
 				return,-1
 			endif
@@ -4483,6 +4516,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		tr_corr = 0
 		trend = 0
 		anomalies = 0
+		season = 0
 		no_trend_found = 0
 		return,-1
 	endelse
@@ -8070,7 +8104,6 @@ pro mach_zeitreihe,start_year,n_months,data=data
 	plot,x,100.*hist/total(hist),/xs
 
 end
-
 ;-----------------------------------------------------------------------------------------------------------------
 ;copied from map_image
 ;-----------------------------------------------------------------------------------------------------------------

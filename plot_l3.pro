@@ -1170,7 +1170,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = datum, $
 							sav_file = sfile, longname = longname, unit = unit, found = found, $
 							trend = trend, tr_corr = tr_corr, anomalies = anomalies, uncertainty = uncertainty, $
-							stddev = stddev, no_trend_found = no_trend_found, pvir=pvir)
+							stddev = stddev, no_trend_found = no_trend_found, pvir=pvir, season=season)
 
 			if not found then begin
 				trace = SCOPE_TRACEBACK( )
@@ -1194,6 +1194,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			endif else if stddev then begin
 				bild = d.STD 
 				longname = longname + ' - Standard Deviation'
+			endif else if season then begin
+				bild = reform(d.TREND.SEASONAL_MEAN2D[*,*,fix(month)-1])
+				longname = longname + ' - Seasonal Mean '+theMonths(month)
 			endif else bild = d.MEAN
 
 			datum  = d.actual_date
@@ -4914,7 +4917,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 			if ~keyword_set(nobar) then legend,date+satn+dtn+hct,thick=thick,spos='top',charsize=lcharsize,color =-1,charthick=charthick
 		endif else begin
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error,timeseries=nobar
-			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle
+			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[0],max_value=yr[1]
 			if ts then date = ''
 			legend,date+satn+dtn+hct,thick=thick,color=cgcolor(cols), spos=spos,ystretch=ystretch+0.5,charsize=lcharsize,$
 			linestyle=linestyle,charthick=charthick
@@ -5613,7 +5616,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 	dat1 = dat+dt1
 	dat2 = dat+dt2
-	if (cli eq 'gac2' or cli eq 'cci') and (satcci eq 'noaaam') and (ref eq 'mod2') then begin
+	if (cli eq 'gac2' or cli eq 'cci') and total(satcci eq ['noaaam','aatme']) and (ref eq 'mod2') then begin
 		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_16_allsky'
 		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_16_allsky'
 		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_16_allsky'
@@ -5641,7 +5644,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		if dat2 eq 'cot_ice' then dat2 = 'cot_37_ice'
 		if dat2 eq 'cer_ice' then dat2 = 'cer_37_ice'
 	endif
-	if (cli eq 'cci') and total(satcci eq ['terra','aqua','aatsr','aatme','atsrs']) and (ref eq 'myd2' or ref eq 'mod2') then begin
+	if (cli eq 'cci') and total(satcci eq ['terra','aqua','aatsr','atsrs']) and (ref eq 'myd2' or ref eq 'mod2') then begin
 		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_37_allsky'
 		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_37_allsky'
 		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_37_allsky'
@@ -6290,7 +6293,7 @@ pro create_time_series,data,algon,coverage,period=period
 	if (first eq 0) then begin
 		mima = minmax(where(finite(stats[0,*,0])))/12 * 12
 		mima[1] = mima[1]+11
-		if total(cli eq ['cci','pmx','gac','gac2','hec']) then begin 
+		if total(cli eq ['cci','pmx','gac','gac2','hec']) then begin
 			ect = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/plot_monthly_ECTs_cci_primes_'+sat+'.sav',found=found)
 			if found then ect = ect[mima[0]:mima[1]] else free,ect
 		endif
@@ -6305,6 +6308,8 @@ pro create_time_series,data,algon,coverage,period=period
 		anom_mean = mean(dumm,dim=3,/nan)
 		idx = where(~finite(anom_mean),idxcnt)
 		if idxcnt gt 0 then anom_mean[idx] = -999.
+		season_mean = fltarr([dim2d,12]) + !values.f_nan
+		for i = 0,11 do season_mean[*,*,i] = mean(trend_2d[*,*,i:*:12],dim=3,/nan)
 		free, trend_2d
 		free, dumm
 	endif
@@ -6345,7 +6350,9 @@ pro create_time_series,data,algon,coverage,period=period
 			area  = get_coverage( lon, lat, dem = dem, coverage = cov[ii],found = found)
 			trend = lfit * (area eq 1)  + (area eq 0) * (-999.) 
 			an_mean2d = anom_mean * (area eq 1)  + (area eq 0) * (-999.) 
-		
+			seasonal_mean2d = season_mean *0. -999.
+			for i = 0,11 do seasonal_mean2d[*,*,i] = reform(season_mean[*,*,i]) * (area eq 1)  + (area eq 0) * (-999.)
+
 			tr_dum_stats  = reform( stats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
 			tr_dum_gstats = reform(gstats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
 			anom_stats    = reform( stats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
@@ -6378,7 +6385,9 @@ pro create_time_series,data,algon,coverage,period=period
 			dum_anom_gstats                    = reform(gstats[*,*,ii])
 			dum_anom_gstats[*,mima[0]:mima[1]] = anom_gstats
 
-			trends = {mean:trend,anom_mean:an_mean2d,stats_non_weighted:dum_stats,stats:dum_gstats,stats_anom_non_weighted:dum_anom_stats,stats_anom:dum_anom_gstats}
+			trends = {	mean:trend,anom_mean:an_mean2d,stats_non_weighted:dum_stats,stats:dum_gstats,$
+						stats_anom_non_weighted:dum_anom_stats,stats_anom:dum_anom_gstats, $
+						seasonal_mean2d:seasonal_mean2d}
 		endif else trends = -1
 
 		str_cov = cov[ii]+'_'
@@ -6504,7 +6513,7 @@ pro do_create_all_single_time_series
 	cla_list = ['cla-']
 
 	; combine all you need
-	algon_list = ['cci-atsrs']
+	algon_list = ['cci-noaaam']
 
 	if is_defined(period) then begin
 		print,''

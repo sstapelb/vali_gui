@@ -205,7 +205,7 @@ PRO NCDF_DATA::Browse, $
     SUCCESS=success, $
     TITLE=title, $
     XOFFSET=xoffset, $
-    YOFFSET=yoffset
+    YOFFSET=yoffset, silent = silent
 
     ;
 ; NAME:
@@ -268,7 +268,7 @@ PRO NCDF_DATA::Browse, $
    ENDIF
 
    ; Make sure the file has been parsed.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    IF self.hasBeenParsed EQ 0 THEN BEGIN
         success = 0
         RETURN
@@ -658,7 +658,7 @@ RETURN, self.destroy_from_browser
 END ;---------------------------------------------------------------------------------------------
 
 
-FUNCTION NCDF_DATA::GetAttrNames
+FUNCTION NCDF_DATA::GetAttrNames, silent = silent
 
    ; Returns a list of the global attribute names.
     
@@ -671,7 +671,7 @@ FUNCTION NCDF_DATA::GetAttrNames
    ENDIF
     
    ; The file has to be parsed to carry this out.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    numAttrs = N_Elements(*self.theAttributes)
    attributeList = StrArr(numAttrs)
@@ -686,7 +686,7 @@ FUNCTION NCDF_DATA::GetAttrNames
 END ;---------------------------------------------------------------------------------------------
 
 
-PRO NCDF_DATA::ListAttrNames
+PRO NCDF_DATA::ListAttrNames, silent = silent
 
    ; Prints out the global attribute names found in the file.
     
@@ -699,7 +699,7 @@ PRO NCDF_DATA::ListAttrNames
    ENDIF
     
    ; The file has to be parsed to carry this out.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    numAttrs = N_Elements(*self.theAttributes)
    
@@ -714,7 +714,7 @@ PRO NCDF_DATA::ListAttrNames
 END ;---------------------------------------------------------------------------------------------
 
 
-FUNCTION NCDF_DATA::GetVarNames
+FUNCTION NCDF_DATA::GetVarNames, silent = silent
 
    ; This function returns a list of variable names found in the file.
     
@@ -727,7 +727,7 @@ FUNCTION NCDF_DATA::GetVarNames
    ENDIF
     
    ; The file has to be parsed to carry this out.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    numVars = N_Elements(*self.theVariables)
    varList = StrArr(numVars)
@@ -742,7 +742,7 @@ FUNCTION NCDF_DATA::GetVarNames
 END ;---------------------------------------------------------------------------------------------
 
 
-PRO NCDF_DATA::ListVarNames
+PRO NCDF_DATA::ListVarNames, silent = silent
 
    ; Prints out the variable names found in the file.
     
@@ -755,7 +755,7 @@ PRO NCDF_DATA::ListVarNames
    ENDIF
     
    ; The file has to be parsed to carry this out.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    numVars = N_Elements(*self.theVariables)
    
@@ -770,7 +770,7 @@ PRO NCDF_DATA::ListVarNames
 END ;---------------------------------------------------------------------------------------------
 
 
-FUNCTION NCDF_DATA::GetVarAttrNames, theVariable
+FUNCTION NCDF_DATA::GetVarAttrNames, theVariable, silent = silent
 
    ; This function returns a list of attribute names which it finds for a particular variable.
     
@@ -783,7 +783,7 @@ FUNCTION NCDF_DATA::GetVarAttrNames, theVariable
    ENDIF
     
    ; The file has to be parsed to carry this out.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    ; Get the variable list.
    theVarStructures = *self.theVariables
@@ -831,7 +831,7 @@ END ;---------------------------------------------------------------------------
 
 
 
-PRO NCDF_DATA::OpenFile, filename
+PRO NCDF_DATA::OpenFile, filename, silent = silent
 
 ;
 ; NAME:
@@ -887,7 +887,7 @@ PRO NCDF_DATA::OpenFile, filename
       
       ; Parse the new file.
       self.hasbeenParsed = 0
-      self -> ParseFile
+      self -> ParseFile, silent = silent
       
       ; If a browser is currently displayed, kill it and display
       ; a browser in the same location with new file information.
@@ -906,7 +906,7 @@ END ;---------------------------------------------------------------------------
 
 
 
-PRO NCDF_DATA::ParseFile
+PRO NCDF_DATA::ParseFile, silent = silent
 
 ; This internal method parses the new netCDF or HDF file initially, and creates 
    ; the IDL structures necessary for browsing the object.
@@ -915,7 +915,6 @@ PRO NCDF_DATA::ParseFile
    CATCH, theError
    IF theError NE 0 THEN BEGIN
       CATCH, /CANCEL
- print,'hallo'
       void = Error_Message()
       self.hasBeenParsed = 0
       IF N_Elements(fileID) NE 0 THEN NCDF_Close, fileID
@@ -967,7 +966,7 @@ PRO NCDF_DATA::ParseFile
    IF self.isHDF5 THEN BEGIN
 	; stapel
 	self -> Parse_HDF5_File
-        print,'Parse File: ',systime(1)-x
+        if ~keyword_set(silent) then print,'Parse File: ',systime(1)-x
 	return
    endif
 
@@ -1121,7 +1120,7 @@ PRO NCDF_DATA::ParseFile
    
    ; Close the file
    NCDF_Close, fileID
-   print,'Parse File: ',systime(1)-x
+   if ~keyword_set(silent) then print,'Parse File: ',systime(1)-x
 
 END ;---------------------------------------------------------------------------------------------
 
@@ -1850,7 +1849,7 @@ FUNCTION NCDF_DATA::ReadAttribute, theAttribute, SUCCESS=success, silent=silent
    ENDIF
    
    ; Make sure the file has been parsed.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
 
    ; Check again.
    success = 0
@@ -2590,7 +2589,7 @@ END ;---------------------------------------------------------------------------
 
 
 
-FUNCTION NCDF_DATA::ReadFile, theFile, SUCCESS=success
+FUNCTION NCDF_DATA::ReadFile, theFile, SUCCESS=success, silent = silent
 
 ;
 ; NAME:
@@ -2643,7 +2642,7 @@ FUNCTION NCDF_DATA::ReadFile, theFile, SUCCESS=success
        struct = Create_Struct('_filename', self.filename)
    
        ; Add the global attributes.
-       g_attributes = self -> ReadGlobalAttr(Success=success)
+       g_attributes = self -> ReadGlobalAttr(Success=success,silent=silent)
        IF success THEN struct = Create_Struct(struct, '_global_attr', Temporary(g_attributes))
 
        HDF_SD_Fileinfo, fileID, nvars, nattrs
@@ -2686,9 +2685,9 @@ FUNCTION NCDF_DATA::ReadFile, theFile, SUCCESS=success
 
        ; Create the initial structure.
        struct = Create_Struct('_filename', self.filename)
-       
+
        ; Add the global attributes.
-       g_attributes = self -> ReadGlobalAttr(Success=success)
+       g_attributes = self -> ReadGlobalAttr(Success=success,silent=silent)
        IF success THEN struct = Create_Struct(struct, '_global_attr', Temporary(g_attributes))
     
        ; Add the dimensions.
@@ -2775,7 +2774,7 @@ END ;---------------------------------------------------------------------------
 
 
 
-FUNCTION NCDF_DATA::ReadGlobalAttr, SUCCESS=success, infile=infile
+FUNCTION NCDF_DATA::ReadGlobalAttr, SUCCESS=success, infile=infile, silent = silent
 
 ;
 ; NAME:
@@ -2822,7 +2821,7 @@ FUNCTION NCDF_DATA::ReadGlobalAttr, SUCCESS=success, infile=infile
    endelse
    
    ; Make sure the file has been parsed.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    ; Check again.
    success = 0
@@ -3646,7 +3645,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 END ;---------------------------------------------------------------------------------------------
 
 
-FUNCTION NCDF_DATA::ReadVarAttr, theVariableName, theAttributeName
+FUNCTION NCDF_DATA::ReadVarAttr, theVariableName, theAttributeName, silent = silent
 
 ; This method reads and returns a particular variable attribute.
 ; Both the name of the variable and the name of the attribute are
@@ -3663,7 +3662,7 @@ FUNCTION NCDF_DATA::ReadVarAttr, theVariableName, theAttributeName
    IF N_Params() NE 2 THEN Message, 'Both the variable name and the attribute name must be present.'
 
    ; The file has to be parsed to carry this out.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    ; Get the variable list.
    theVarStructures = *self.theVariables
@@ -5020,7 +5019,7 @@ FUNCTION NCDF_DATA::filematch,file1,file2
 
 END ;---------------------------------------------------------------------------------------------
 
-FUNCTION NCDF_DATA::ReadVariableWithAttr, theVariable, SUCCESS=success
+FUNCTION NCDF_DATA::ReadVariableWithAttr, theVariable, SUCCESS=success, silent = silent
 ;
 ; NAME:
 ;       NCDF_DATA::ReadVariableWithAttr
@@ -5061,7 +5060,7 @@ FUNCTION NCDF_DATA::ReadVariableWithAttr, theVariable, SUCCESS=success
    ENDIF
    
    ; Make sure the file has been parsed.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile
+   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
    
    ; Check again.
    success = 0
