@@ -5078,7 +5078,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	satnames = strarr(n_elements(ts_data[0,*]))
 	for y=ori_period[0],ori_period[1] do begin & $
 		for m=1,12 do begin & $
-			satnames[count] = noaa_primes(y,m,ampm=noaa_ampm(sat,/ampm),/no_zero) & $
+			satnames[count] = noaa_primes(y,m,ampm=noaa_ampm(sat,/ampm),/no_zero,/short) & $
 			count ++ & $
 		endfor & $
 	endfor
@@ -6419,21 +6419,19 @@ pro do_create_all_compare_time_series
 	starttime = systime(1)
 	mem_cur   = memory(/current)
 
-	period   = ['2003-2011']
+; 	period   = ['2003-2011']
 
-	cli      = 'cci'
+	cli      = 'era'
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
-		    'metopa','metopb','allsat','noaaam','noaapm'];,'aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['mod2'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
-; 	data     = ['cfc','ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
-; 		    'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
+		        'metopa','metopb','allsat','noaaam','noaapm','aqua','terra','aatme','aatsr','avhrrs','modises']
+	ref      = ['cci'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
+	data     = ['cfc','ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
+				'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
 
-	data     = ['cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky']
-
-	sat      = ['aatme'] ; 'allsat','noaaam','noaapm' später wenn cci alles hat
+	sat      = ['noaapm']
 
 	if is_defined(period) then begin
 		print,''
@@ -6472,7 +6470,7 @@ pro do_create_all_single_time_series
 ; 		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
 ; 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky',$ ;PVIR vars
-				 'cfc_low','cfc_mid','cfc_high','cph_day','ctt','cer','cot','cth','cth2','cwp','cwp_allsky']
+				 'cfc_low','cfc_mid','cfc_high','cph_day','ctt','cer','cot','cth','cwp','cwp_allsky']
 
 	; coll6 only
 ; 	data     = [	'iwp_16','lwp_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
@@ -6513,7 +6511,7 @@ pro do_create_all_single_time_series
 	cla_list = ['cla-']
 
 	; combine all you need
-	algon_list = ['cci-noaaam']
+	algon_list = era_list
 
 	if is_defined(period) then begin
 		print,''
@@ -6554,7 +6552,7 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
  	era_list = ['era-','era2-']
 
 	; combine all you need
-	algon_list = ['era2-']
+	algon_list = era_list
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -6650,13 +6648,11 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 	; coll5
 	coll5_list = ['myd-','mod-']
 	; era-interim
-	era_list = ['era-','era_1.00-']
-
-	algon_list = 'cci-aatme'
+	era_list = ['era-','era2-']
 
 	prod_list  = ['ctp','ctt','cwp','cot','cer']
 
-	algon_list = ['era_1.00-']
+	algon_list = era_list
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -6898,10 +6894,10 @@ end
 pro do_all_time_series
 
 ; 	do_create_all_single_time_series
-	do_create_hovmoeller
+ 	do_create_all_compare_time_series
 	do_hist_cloud_type_time_series, /compare_to_cci
 	do_1d_hist_time_series, /compare_to_cci
-; 	do_create_all_compare_time_series
+	do_create_hovmoeller
 ; 	do_hist_cloud_type_time_series
 ; 	do_1d_hist_time_series
 end

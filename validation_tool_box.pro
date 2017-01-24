@@ -1875,6 +1875,7 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 				 patmos=patmos					, $ ; Patmos (l3c, gewex, old) with different definition taken from ncdf_gewex__define.pro
 				 no_zero=no_zero				, $ ; No leading zero in Noaa number, e.g NOAA-7 not NOAA-07
 				 include_all = include_all		, $ ; include also satellites not proccessed in cloud_cci 
+				 short_names = short_names		, $
 				 found = found
 
 	found = 1
@@ -1882,6 +1883,7 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 	pmx   = keyword_set(patmos)
 	mm    = fix(month)
 	inc   = keyword_set(include_all)
+	sht   = keyword_set(short_names)
 
 	;patmos l2b
 	; ;PM
@@ -1959,7 +1961,16 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 			return,'No NOAA Sats Available'
 		endelse
 		for i = 0, idxcnt -1 do begin
-			sats[i] = strmid(sats[i],0,1) eq 'M' ? 'METOP'+strmid(sats[i],1,1) : 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats[i]),/rem) : sats[i])
+; 			sats[i] = strmid(sats[i],0,1) eq 'M' ? 'METOP'+strmid(sats[i],1,1) : 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats[i]),/rem) : sats[i])
+			if strmid(sats[i],0,1) eq 'M' then begin
+				sats[i] = (sht ? 'M' : 'METOP')+strmid(sats[i],1,1)
+			endif else begin
+				if keyword_set(no_zero) then begin
+					sats[i] = (sht ? 'N': 'NOAA-')+strcompress(fix(sats[i]),/rem)
+				endif else begin
+					sats[i] = (sht ? 'N': 'NOAA-')+sats[i]
+				endelse
+			endelse
 		endfor
 		return, strjoin(sats,',')
 	endif else begin
@@ -1972,8 +1983,11 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 		found = 0
 		return, 'No NOAA '+which+' Sat Available'
 	endif
-	if sats[0] eq 'MA' then return, 'METOPA'
-	if sats[0] eq 'MB' then return, 'METOPB'
+
+	if sht then return, (strmid(sats[0],0,1) eq 'M') ? sats[0] : 'N'+(keyword_set(no_zero) ? strcompress(fix(sats),/rem) : sats[0])
+	
+	if sats[0] eq 'MA' and ~sht then return, 'METOPA'
+	if sats[0] eq 'MB' and ~sht then return, 'METOPB'
 
 	return, 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats),/rem) : sats[0])
 
@@ -4160,8 +4174,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				endcase
 			  end  
 		'ALL'	: begin
-				if strmid(alg,0,6) eq 'ESACCI' then begin
-					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/data/l3s/'+yyyy+'/'+mm+'/'+dd+'/'
+				if alg eq 'ESACCI' then begin
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3S/'+yyyy+'/'+mm+'/'
 					vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 					filen = dir+yyyy+mm+dd+'*ESACCI-L3S_CLOUD-CLD_PRODUCTS-MERGED-f'+vers+'.nc'
 				endif
@@ -4170,8 +4184,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					thr = !ERA_THRESHOLD 
-					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
+					thr = '0.15' ;!ERA_THRESHOLD 
+					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
+; 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
 						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
@@ -4181,8 +4196,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I2' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					thr = !ERA_THRESHOLD 
-					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
+					thr = '1.00'; !ERA_THRESHOLD 
+					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
+; 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
 						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
@@ -7758,11 +7774,13 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 	end
 	if stregex(data,'cla_vis006',/fold,/bool) then begin
 		bin_border = '0.00,0.10,0.20,0.30,0.40,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.90,1.00'
-		hist_name  = 'Cloud Albedo Channel1'
+; 		hist_name  = 'Cloud Albedo Channel1'
+		hist_name  = textoidl('Cloud Albedo at 0.6\mum')
 	end
 	if stregex(data,'cla_vis008',/fold,/bool) then begin
 		bin_border = '0.00,0.10,0.20,0.30,0.40,0.50,0.55,0.60,0.65,0.70,0.75,0.80,0.90,1.00'
-		hist_name  = 'Cloud Albedo Channel2'
+; 		hist_name  = 'Cloud Albedo Channel2'
+		hist_name  = textoidl('Cloud Albedo at 0.8\mum')
 	end
 
 	if keyword_set(file) and keyword_set(var_dim_names) then begin
@@ -7828,12 +7846,25 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 		pot =fix(alog10(xtickname))
 		xtickname[idx] = xtickname[idx]/(10.^pot[idx])
 	end
-; stop
+
 	form = '(f20.2)'
 	xtickname = strcompress(string(xtickname,f=form),/rem)
-	xtickname = adv_strtrim(xtickname,2,trim='0')
-	
-	if idxcnt gt 0 then xtickname[idx] += textoidl('10^'+strcompress(pot[idx],/rem))
+	xtickname = adv_strtrim(xtickname,0,trim='0')
+
+	if idxcnt gt 0 then begin
+		for i = 0,idxcnt -1 do begin
+			if fix(xtickname[idx[i]]) ne float(xtickname[idx[i]]) then begin
+				xtickname[idx[i]] = strcompress(string(float(xtickname[idx[i]])*10.^pot[idx[i]],f=form),/rem)
+				xtickname[idx[i]] = adv_strtrim(xtickname[idx[i]],2,trim='0')
+			endif else begin
+				if xtickname[idx[i]] eq '1' then begin
+					xtickname[idx[i]] = textoidl('10^'+strcompress(pot[idx[i]],/rem))
+				endif else begin
+					xtickname[idx[i]] += textoidl('*10^'+strcompress(pot[idx[i]],/rem))
+				endelse
+			endelse
+		endfor
+	endif
 
 	return, bild
 

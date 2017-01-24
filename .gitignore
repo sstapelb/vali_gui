@@ -2,3 +2,4 @@
 *.pro.bck*
 *.pro.orig
 vali_set_path.pro
+vali_gui_routines.pro
