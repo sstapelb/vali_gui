@@ -3714,13 +3714,15 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						dn = node eq 'asc' ? 'D' : 'N' ; asc:daylight,desc:night
 					endif else dn = '*'
 					orbdum = strlen(orb) eq 4 ? strjoin(strmid(orb,[0,2],[2,2]),'-') : '*'
-					zwischdir = km1 ? '1kmClay/' : ''
-					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld1/thanschm/VALIDATION/DATASETS/CALIOP/'+zwischdir+yyyy+'/'+mm+'/'+dd+'/'
+					zwischdir = km1 ? '1km' : '5km'
+; 					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld1/thanschm/VALIDATION/DATASETS/CALIOP/'+zwischdir+yyyy+'/'+mm+'/'+dd+'/'
+					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/EXTERNAL_DATA/CALIPSO/LEVEL2/'+zwischdir+'/'+yyyy+'/'+mm+'/'+dd+'/'
 					filen = dir+'CAL_LID_L2_0?kmCLay-*-V3-01.'+yyyy+'-'+mm+'-'+dd+'T'+orbdum+'-*Z'+dn+'.hdf'
 				endif else if alg eq 'CALIPSO' and (lev eq 'l3c' or lev eq 'l3s') then begin
 ; 					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/mstengel/data/Calipso/CLIM/'+yyyy+'/'
 ; 					filen = dir+'CALIPSO_CTPCFC_climatology_deg2.0_'+yyyy+mm+'.nc'
-					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/thanschm/DATASET/CALIPSO_L3/'+yyyy+'/'
+; 					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/thanschm/DATASET/CALIPSO_L3/'+yyyy+'/'
+					dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/EXTERNAL_DATA/CALIPSO/LEVEL3/'+yyyy+'/'
 					filen = dir+'CPRmm'+yyyy+mm+'01000000120CALIP01GL.nc'
 				endif
 			   end
@@ -3941,7 +3943,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 								if found then begin
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
+; 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
+										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/EXTERNAL_DATA/PATMOS_X/LEVEL3/'+yyyy+'/'
 										dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 										if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
 										if dat eq 'COD_CP' then dat = 'CODW_CP'
@@ -4184,7 +4187,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-; 					thr = !ERA-I1_THRESHOLD 
+; 					thr = !ERA_I1_THRESHOLD 
 ; 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
 					thr = '0.15'
 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
@@ -4197,7 +4200,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I2' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-; 					thr = !ERA-I2_THRESHOLD 
+; 					thr = !ERA_I2_THRESHOLD 
 					thr = '1.00' 
 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'

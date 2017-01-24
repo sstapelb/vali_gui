@@ -83,7 +83,7 @@ end
 
 pro vali_set_defaults
 
-	DEFSYSV, '!era-i1_threshold','0.15'
-	DEFSYSV, '!era-i2_threshold','0.15'
+	DEFSYSV, '!era_i1_threshold','0.15'
+	DEFSYSV, '!era_i2_threshold','0.15'
 
 end

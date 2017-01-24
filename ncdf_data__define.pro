@@ -4305,7 +4305,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 
 			varname = strjoin(names,',')
-			
+
 			if is_jch(varname) then begin
 				vergleiche_ctp_cot_histogram_cci_mit_clara,file,varname = varname, mini = mini, maxi = maxi, limit=limit, zoom=zoom, sat=sat,$
 				win_nr = win_nr, save_as= save_as,land = land, sea = sea,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$
