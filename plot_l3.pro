@@ -5,6 +5,7 @@ pro plot_l3, save_as = save_as, white_bg = white_bg, reference = reference
 	vali_set_path
 	vali_set_charsize, white_bg = white_bg, save_as = save_as
 	vali_set_plot_colors, white_bg = white_bg, save_as = save_as, reference = reference
+	vali_set_defaults
 
 	symball,/filled
 
