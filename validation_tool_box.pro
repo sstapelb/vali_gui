@@ -599,7 +599,7 @@ function full_varname, varname, unit = unit, universal = universal
 	if stregex(dat,'_asc',/fold,/bool)  and ~stregex(vollername,'_asc',/fold,/bool)  then  vollername = vollername + ' - Ascending'
 	if stregex(dat,'_desc',/fold,/bool) and ~stregex(vollername,'_desc',/fold,/bool) then  vollername = vollername + ' - Descending'
 	if stregex(dat,'_std',/fold,/bool) and ~stregex(vollername,'_std',/fold,/bool) then  vollername = vollername + ' - Standard Deviation'
-	if stregex(dat,'_log',/fold,/bool)  and ~stregex(vollername,'_log',/fold,/bool)  then  vollername = vollername + ' (logarithmic Averaged)'
+	if stregex(dat,'_log',/fold,/bool)  and ~stregex(vollername,'_log',/fold,/bool)  then  vollername = vollername + ' (log. Averaged)'
 	if stregex(dat,'_day',/fold,/bool)  and ~stregex(vollername,'_day',/fold,/bool)  then  vollername = vollername + ' - Day'
 	if stregex(dat,'_twl',/fold,/bool)  and ~stregex(vollername,'_twl',/fold,/bool)  then  vollername = vollername + ' - Twilight'
 	if stregex(dat,'_night',/fold,/bool)  and ~stregex(vollername,'_night',/fold,/bool)  then  vollername = vollername + ' - Night'
@@ -1266,7 +1266,7 @@ function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = 
 
 	case strlowcase(ref[0]) of 
 		'cci_old'	: alg = 'esacci_old'
-		'esacci_old'	: alg = 'esacci_old'
+		'esacci_old': alg = 'esacci_old'
 		'cci'		: alg = 'esacci'
 		'esacci'	: alg = 'esacci'
 		'gac'		: alg = 'clara'
@@ -1281,22 +1281,22 @@ function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = 
 		'mod2'		: begin & alg = 'coll6' & sat = 'terra' & end
 		'coll6'		: alg = 'coll6'
 		'myd2'		: begin & alg = 'coll6' & sat = 'aqua' & end
-		'cal'		: alg = 'calipso'
-		'calipso'	: alg = 'calipso'
+		'cal'		: begin & alg = 'calipso' & sat = 'calipso' & end
+		'calipso'	: begin & alg = 'calipso' & sat = 'calipso' & end
 		'gwx'		: alg = 'gewex'
 		'gewex'		: alg = 'gewex'
 		'pmx'		: alg = 'patmos'
 		'patmos'	: alg = 'patmos'
 		'pmx_old'	: alg = 'patmos_old'
-		'patmos_old'	: alg = 'patmos_old'
-		'cla'		: alg = 'claas'
-		'claas'		: alg = 'claas'
+		'patmos_old': alg = 'patmos_old'
+		'cla'		: begin & alg = 'claas' & sat = 'msg' & end
+		'claas'		: begin & alg = 'claas' & sat = 'msg' & end
 		'isp'		: alg = 'isccp'
 		'isccp'		: alg = 'isccp'
-		'era'		: alg = 'era-i'
-		'era-i'		: alg = 'era-i'
-		'era2'		: alg = 'era-i2'
-		'era-i2'	: alg = 'era-i2'
+		'era'		: begin & alg = 'era-i' & sat = '' & end
+		'era-i'		: begin & alg = 'era-i' & sat = '' & end
+		'era2'		: begin & alg = 'era-i2' & sat = '' & end
+		'era-i2'	: begin & alg = 'era-i2' & sat = '' & end
 		else		: alg = ref[0]
 	endcase
 
@@ -4128,7 +4128,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								zwisch = alg eq 'ESACCI_OLD' ? '' : '-'
 								filen = dir+yyyy+mm+dd+'-ESACCI-'+strupcase(lev)+'_CLOUD-CLD_PRODUCTS-MERIS'+zwisch+'AATSR_ENVISAT-f'+vers+'.nc'
 							endelse
-						  end
+						end
 					else:
 				endcase
 			  end
@@ -4137,7 +4137,6 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					'HECTOR': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
-; 								if found_prime then satellite = sat
 							endif
 							dumdat = dat
 							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
@@ -4163,7 +4162,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								'ALLS'	: satn = 'HIPOS'
 								else	: satn = 'NN'
 							endcase
-							dumlevel = '';apx eq 'in' ? 'LEVEL2B' : 'LEVEL3'
+							dumlevel = 'V1_2'
 							if din then begin
 								last_subdir = (reverse(strsplit(dirname,'/',/ext)))[0]
 								if is_number(last_subdir) and strlen(last_subdir) eq 4 then begin

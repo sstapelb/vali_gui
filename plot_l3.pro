@@ -391,32 +391,14 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	opl      = keyword_set(oplots) ? fix(oplots) : 0
 	savbg    = keyword_set(save_dir) or keyword_set(white_bg)
 
-	case ref of
-		'gac'	: begin
-				satgac = total(sat eq ['terra','aqua','modises','avhrrs']) ? 'allsat' : sat
-				if sat eq 'aatme' or sat eq 'aatsr' then satgac = 'noaa17'
-			  end
-		'gac2'	: begin
-				satgac = total(sat eq ['terra','aqua','modises','avhrrs']) ? 'allsat' : sat
-				if sat eq 'aatme' or sat eq 'aatsr' then satgac = 'noaa17'
-			  end
-		'myd'	: satgac = 'aqua'
-		'mod'	: satgac = 'terra'
-		'myd2'	: satgac = 'aqua'
-		'mod2'	: satgac = 'terra'
-		'cla'	: satgac = 'msg'
-		'gwx'	: satgac = sat
-		'cal'	: satgac = 'calipso'
-		'era'	: satgac = ''
-		'era2'	: satgac = ''
-		'pmx'	: satgac = sat
-		'pmx_old': satgac = sat
-		'isp'	: satgac = sat
-		'cci'	: satgac = sat
-		'cci_old': satgac = sat
-		else	: begin & ok = dialog_message('compare_cci : Unknown reference algoname "'+ref+'"') & return & end
+	case strmid(ref,0,3) of
+		'gac': 	begin
+					satgac = sat eq 'avhrrs' ? 'allsat' : sat
+					if total(sat eq ['aatme','aatsr','atsrs']) then satgac = 'noaaam'
+				end
+		else: 	satgac = sat
 	endcase
-	algo2     = ref2algo(ref)
+	algo2     = ref2algo(ref,sat=satgac)
 	algon_cci = sat_name(algo1,sat   , year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
 	algon_gac = sat_name(algo2,satgac, year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
 
@@ -3780,13 +3762,15 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		adc=''
 		cci = get_data(file=ccifile,year,month,sat=sat,algo=algo1,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,/print_filename)
 		if not found then begin
-			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: File does not contain wanted data.')
+			if ~file_test(ccifile) then return
+			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Data '+data+' not found in '+algo1+' file!')
 			return
 		endif
 		adg=''
 		gac = get_data(file=gacfile,year,month,sat=sat,algo=algo2,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,print_filename=2)
 		if not found then begin
-			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Reference file does not contain wanted data.')
+			if ~file_test(gacfile) then return
+			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Data '+data+' not found in Reference ('+algo2+') file!')
 			return
 		endif
 	endelse
