@@ -2318,7 +2318,13 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 			bar_format = '(f'+strcompress(form_len+3+plus,/rem)+'.'+string(1+plus,f='(i1)')+')'
 		endelse
 	endif
-	if keyword_set(nobar) then no_color_bar = 1
+
+	if adv_keyword_set(nobar) then begin
+		if nobar eq 1 then no_color_bar = 1 ; no color bar
+		if nobar eq 2 then begin & no_color_bar = 0 & horizon = 1 & end ; force horizontal colorbar
+		if nobar eq 3 then begin & no_color_bar = 0 & horizon = 0 & end ; force vertical colorbar
+; 	no_color_bar = 1
+	endif
 
 	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'
 

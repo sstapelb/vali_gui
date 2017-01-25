@@ -3285,7 +3285,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=35,/Editable)
 	    label = Widget_Label(leftrow,Value='ISCCP-CT  Color Tables                    ', SCR_XSIZE=270)
 	    bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
-	      histlist = strupcase(['--','h_1d','-cot','-ctp','h_2d','low','cu','sc','st','mid','ac','as','ns','high','ci','cs','cb','max','ovw','hcb','vcb'])
+	      histlist = strupcase(['--','h_1d','-cot','-ctp','h_2d','low','cu','sc','st','mid','ac','as','ns','high','ci','cs','cb','max','ovw'])
 	      self.histct= Widget_combobox(bla, Value=histlist,UVALUE=histlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_HISTCTLIST')
 	      color_table_names,color_tbl_name
 	      self.ctlistID= Widget_combobox(bla, Value=[color_tbl_name],UVALUE=[color_tbl_name],Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_CTLIST')
@@ -3393,7 +3393,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
 	  rightrow = Widget_Base(tlb2, ROW=3,/base_align_center)
-            topright = Widget_Base(rightrow,column=4,/base_align_center)
+        topright = Widget_Base(rightrow,column=6,/base_align_center)
 	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
 	        self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
 	        self.oplotID   = Widget_Button(bla, Value='Oplot'     , UVALUE='SET_PLOT_DEFAULTS')
@@ -3402,7 +3402,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	        self.verbID    = Widget_Button(bla, Value='Verbose'   , UVALUE='SET_PLOT_DEFAULTS')
 	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
 	        self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
-	        self.noBarID   = Widget_Button(bla, Value='No Bar'    , UVALUE='SET_PLOT_DEFAULTS')
+		  bla = Widget_Base(topright,row=1,Frame=0)
+	        barlist = strupcase(['CBar','No Bar','Horizon.','Vertical','HCB Only','VCB Only'])
+	        self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_BARLIST')
+; 	        self.noBarID   = Widget_Button(bla, Value='Bar'    , UVALUE='SET_PLOT_DEFAULTS')
+	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
 	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
 	        self.logID     = Widget_Button(bla, Value='Log-Plot'  , UVALUE='SET_PLOT_DEFAULTS')
 	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
@@ -3410,7 +3414,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
 	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
 	        self.wbgrID    = Widget_Button(bla, Value='White-BG'  , UVALUE='SET_PLOT_DEFAULTS')
-;removed , lets see if someone misses this, grep for selftxt and uncomment to re instate this
  	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 ; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
@@ -3490,6 +3493,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.ctab = 'Default (Rainbow)'
 	; projection
 	self.proj = 'Default'
+	; colorbar
+	self.handlebar = barlist[0]
 	; day,month,year
 	yy_idx = where(self.year eq yy_list,yy_cnt)
 ; 	self.yy = ([yy_list,''])[yy_idx]; does not work with IDL versions below 8
@@ -3565,7 +3570,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.zoomID    , Set_Button=0
 		Widget_Control, self.oplotID   , Set_Button=0
 		Widget_Control, self.errID     , Set_Button=0
-		Widget_Control, self.noBarID   , Set_Button=0
+; 		Widget_Control, self.noBarID   , Set_Button=0
+		Widget_Control, self.noBarID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.noTitleID , Set_Button=0
 ;  		Widget_Control, self.noaa5     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
@@ -3883,9 +3889,19 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	save_as     = Widget_Info(self.saveID, /BUTTON_SET)
 	zoom        = Widget_Info(self.zoomID, /BUTTON_SET)
 	error       = Widget_Info(self.errID, /BUTTON_SET)
-	nobar       = Widget_Info(self.noBarID, /BUTTON_SET)
+; 	nobar       = Widget_Info(self.noBarID, /BUTTON_SET)
 	notitle     = Widget_Info(self.noTitleID, /BUTTON_SET)
 	log         = Widget_Info(self.logID, /BUTTON_SET)
+
+	case strlowcase(self.handlebar) of 
+		'cbar'		: nobar = 0
+		'no bar'	: nobar = 1
+		'horizon.'	: nobar = 2
+		'vertical'	: nobar = 3
+		'hcb only'	: nobar = 4
+		'vcb only'	: nobar = 5
+		else		: nobar = 0
+	endcase
 
 	if Widget_Info(self.oplotID, /BUTTON_SET) then begin
 		self.oplotnr++
@@ -4815,7 +4831,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,coverage=cov,$
 				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc
 				if show_values and is_defined(out) then begin
-					if ~keyword_set(nobar) then begin
+					if nobar ne 1 then begin
 						print,'Set "No Bar" to get Pixel Values'
 					endif else show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
 				endif
@@ -4898,89 +4914,91 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
     END
 
     'WIDGET_COMBOBOX': BEGIN
-	; The name of the variable to write has to be changed when the droplist value changes.
-	Widget_Control, event.id, Get_UVALUE=list
-	theName = Widget_Info(event.id, /UNAME)
-	if theName eq 'PLOTS_PROJLIST' then begin
-		self.proj = list[event.index]
-	endif else if theName eq 'PLOTS_SYMSIZELIST' then begin
-		self.PsymSize=list[event.index]
-	endif else if theName eq 'PLOTS_MAGNIFYLIST' then begin
-		self.magnify=list[event.index]
-	endif else if theName eq 'PLOTS_CTLIST' then begin
-		self.ctab=list[event.index]
-	endif else if theName eq 'PLOTS_YEARLIST' then begin
-		self.yy=list[event.index]
-		ndays = ['--', (self.yy ne '--' and self.mm ne '--' ? dom(self.yy,self.mm) : string(indgen(31)+1,f='(i2.2)'))]
-		widget_control,self.dayID, set_uvalue = ndays, set_value=ndays,Scr_XSize=47,Scr_YSize=28
-		widget_Control,self.dayID, SET_COMBOBOX_SELECT=where(self.dd eq ndays)
-	endif else if theName eq 'PLOTS_MONTHLIST' then begin
-		self.mm=list[event.index]
-		ndays = ['--', (self.yy ne '--' and self.mm ne '--' ? dom(self.yy,self.mm) : string(indgen(31)+1,f='(i2.2)'))]
-		widget_control,self.dayID, set_uvalue = ndays, set_value=ndays,Scr_XSize=47,Scr_YSize=28
-		Widget_Control,self.dayID, SET_COMBOBOX_SELECT=where(self.dd eq ndays)
-	endif else if theName eq 'PLOTS_DAYLIST' then begin
-		self.dd=list[event.index]
-		self -> SetLevel
-	endif else if theName eq 'PLOTS_PMULTILIST' then begin
-		self.pmulti=list[event.index]
-	endif else if theName eq 'PLOTS_ZLIST' then begin
-		self.dim3=list[event.index]
-	endif else if theName eq 'PLOTS_HISTCTLIST' then begin
-		self.hct=list[event.index]
-	endif else if theName eq 'PLOTS_ROTATELIST' then begin
-		self.rot=list[event.index]
-	endif else if theName eq 'PLOTS_DAYTYPELIST' then begin
-		self.leveltype=list[event.index]
-		if total(self.leveltype eq ['L3C','L3S']) then begin
-			Widget_Control, self.dayID     , SET_COMBOBOX_SELECT=0
-			self.dd='--'
-		endif
-	endif else if theName eq 'PLOTS_LOAD_ALGO_LIST' then begin
-		self.compare_algo1 = event.index eq 0 ? self.algoname : algo2ref(event.str)
-		if self.compare_algo1 eq 'unknown' then self.compare_algo1 = event.str
-	endif else if theName eq 'PLOTS_VARLIST' then begin
-; 		Widget_Control, self.varname_plotID, Set_Value=list[event.index]
-; 		self.varname_plotID=event.str
-		self.varname_plotID=strreplace(event.str,['_liq','_ice','_ratio'],['','',''])
-		keep_mima = ( Widget_Info(self.enablemima,/BUTTON_SET) )
-		if ~keep_mima then begin
-; 			read_data,self.directory+'/'+self.filename, self.varname_plotID, theData, found = success, algo = self.algoname, fillvalue, minvalue, maxvalue
-			thedata = get_data(self.year,self.month,self.day,file=self.directory+'/'+self.filename,data=self.varname_plotID, $
-					  algo=self.algoname,level=self.level,/keep_data_name,sat=self.satname,minvalue=minvalue,$
-					  maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success,/silent)
-
-			; avoid converting byte into strings (ascii code!)
-			if size(minvalue,/type) eq 1 then minvalue = fix(minvalue)
-			if size(maxvalue,/type) eq 1 then maxvalue = fix(maxvalue)
-			if success then begin;and event.index ge 0 then begin
-				if stregex(event.str,'_ratio',/bool,/fold) then begin
-					minvalue = 0
-					maxvalue = 100
-				endif
-				if is_string(thedata) then begin
-					Widget_Control, self.minimumID, Set_Value=''
-					Widget_Control, self.maximumID, Set_Value=''
-				endif else begin
-					Widget_Control, self.minimumID, Set_Value=strcompress(minvalue,/rem)
-					Widget_Control, self.maximumID, Set_Value=strcompress(maxvalue,/rem)
-					si = [size(thedata,/dim),1,1]
-					if keyword_set(var_dim_names) and n_elements(si) ge 5 then begin
-						binval = get_ncdf_data_by_name(self.directory+'/'+self.filename,var_dim_names[2])
-						widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(string(binval,f='(f20.2)'),/rem)
-					endif else begin
-						widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
-					endelse
-				endelse
-; 			endif else if success then begin
-; 				si = [size(thedata,/dim),1,1]
-; 				widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
+		; The name of the variable to write has to be changed when the droplist value changes.
+		Widget_Control, event.id, Get_UVALUE=list
+		theName = Widget_Info(event.id, /UNAME)
+		if theName eq 'PLOTS_PROJLIST' then begin
+			self.proj = list[event.index]
+		endif else if theName eq 'PLOTS_SYMSIZELIST' then begin
+			self.PsymSize=list[event.index]
+		endif else if theName eq 'PLOTS_BARLIST' then begin
+			self.handlebar=list[event.index]
+		endif else if theName eq 'PLOTS_MAGNIFYLIST' then begin
+			self.magnify=list[event.index]
+		endif else if theName eq 'PLOTS_CTLIST' then begin
+			self.ctab=list[event.index]
+		endif else if theName eq 'PLOTS_YEARLIST' then begin
+			self.yy=list[event.index]
+			ndays = ['--', (self.yy ne '--' and self.mm ne '--' ? dom(self.yy,self.mm) : string(indgen(31)+1,f='(i2.2)'))]
+			widget_control,self.dayID, set_uvalue = ndays, set_value=ndays,Scr_XSize=47,Scr_YSize=28
+			widget_Control,self.dayID, SET_COMBOBOX_SELECT=where(self.dd eq ndays)
+		endif else if theName eq 'PLOTS_MONTHLIST' then begin
+			self.mm=list[event.index]
+			ndays = ['--', (self.yy ne '--' and self.mm ne '--' ? dom(self.yy,self.mm) : string(indgen(31)+1,f='(i2.2)'))]
+			widget_control,self.dayID, set_uvalue = ndays, set_value=ndays,Scr_XSize=47,Scr_YSize=28
+			Widget_Control,self.dayID, SET_COMBOBOX_SELECT=where(self.dd eq ndays)
+		endif else if theName eq 'PLOTS_DAYLIST' then begin
+			self.dd=list[event.index]
+			self -> SetLevel
+		endif else if theName eq 'PLOTS_PMULTILIST' then begin
+			self.pmulti=list[event.index]
+		endif else if theName eq 'PLOTS_ZLIST' then begin
+			self.dim3=list[event.index]
+		endif else if theName eq 'PLOTS_HISTCTLIST' then begin
+			self.hct=list[event.index]
+		endif else if theName eq 'PLOTS_ROTATELIST' then begin
+			self.rot=list[event.index]
+		endif else if theName eq 'PLOTS_DAYTYPELIST' then begin
+			self.leveltype=list[event.index]
+			if total(self.leveltype eq ['L3C','L3S']) then begin
+				Widget_Control, self.dayID     , SET_COMBOBOX_SELECT=0
+				self.dd='--'
 			endif
-		endif
-	endif else begin
-		print,'Unknown List '+theName
-		stop
-	endelse
+		endif else if theName eq 'PLOTS_LOAD_ALGO_LIST' then begin
+			self.compare_algo1 = event.index eq 0 ? self.algoname : algo2ref(event.str)
+			if self.compare_algo1 eq 'unknown' then self.compare_algo1 = event.str
+		endif else if theName eq 'PLOTS_VARLIST' then begin
+	; 		Widget_Control, self.varname_plotID, Set_Value=list[event.index]
+	; 		self.varname_plotID=event.str
+			self.varname_plotID=strreplace(event.str,['_liq','_ice','_ratio'],['','',''])
+			keep_mima = ( Widget_Info(self.enablemima,/BUTTON_SET) )
+			if ~keep_mima then begin
+	; 			read_data,self.directory+'/'+self.filename, self.varname_plotID, theData, found = success, algo = self.algoname, fillvalue, minvalue, maxvalue
+				thedata = get_data(self.year,self.month,self.day,file=self.directory+'/'+self.filename,data=self.varname_plotID, $
+						algo=self.algoname,level=self.level,/keep_data_name,sat=self.satname,minvalue=minvalue,$
+						maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success,/silent)
+
+				; avoid converting byte into strings (ascii code!)
+				if size(minvalue,/type) eq 1 then minvalue = fix(minvalue)
+				if size(maxvalue,/type) eq 1 then maxvalue = fix(maxvalue)
+				if success then begin;and event.index ge 0 then begin
+					if stregex(event.str,'_ratio',/bool,/fold) then begin
+						minvalue = 0
+						maxvalue = 100
+					endif
+					if is_string(thedata) then begin
+						Widget_Control, self.minimumID, Set_Value=''
+						Widget_Control, self.maximumID, Set_Value=''
+					endif else begin
+						Widget_Control, self.minimumID, Set_Value=strcompress(minvalue,/rem)
+						Widget_Control, self.maximumID, Set_Value=strcompress(maxvalue,/rem)
+						si = [size(thedata,/dim),1,1]
+						if keyword_set(var_dim_names) and n_elements(si) ge 5 then begin
+							binval = get_ncdf_data_by_name(self.directory+'/'+self.filename,var_dim_names[2])
+							widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(string(binval,f='(f20.2)'),/rem)
+						endif else begin
+							widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
+						endelse
+					endelse
+	; 			endif else if success then begin
+	; 				si = [size(thedata,/dim),1,1]
+	; 				widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
+				endif
+			endif
+		endif else begin
+			print,'Unknown List '+theName
+			stop
+		endelse
     END
 
     'WIDGET_TEXT': ; Nothing to do here. We just want to read the value. Don't care what it is.
@@ -5901,10 +5919,13 @@ PRO NCDF_DATA__DEFINE, class
              dayID:'',                 $
              levelID:'',               $
              symsizeID:'',             $
-             PsymSize:0.,               $
+             PsymSize:0.,              $
              symbolID:'',              $
              axquotID:'',              $
              lalgID:'',                $
+             handlebar:'',             $   
+             horizontal:'',            $    
+             vertical:'',              $  
              year_idx:0L,              $
              month_idx:0L,             $
              day_idx:0L,               $

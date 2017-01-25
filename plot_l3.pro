@@ -1637,11 +1637,11 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if maxi eq mini then maxi = mini +1
 	endif
 	if total(strcompress(unit[0],/rem) eq ['[]','[[]]']) then unit = ''
-
-	if strupcase(hct) eq 'HCB' or strupcase(hct) eq 'VCB' then begin
+; 	if strupcase(hct) eq 'HCB' or strupcase(hct) eq 'VCB' then begin
+	if between(nobar,4,5) then begin
 		plot_only_color_bar,(adv_keyword_set(mini) ? mini[0]:minvalue),$
 		(adv_keyword_set(maxi) ? maxi[0]:maxvalue), dat, unit, logarithmic=logarithmic, $
-			horizon = (strupcase(hct) eq 'HCB'), ctable = ctable, other = other, save_as = save_as,bar_format=bar_format,$
+			horizon = (nobar eq 4), ctable = ctable, other = other, save_as = save_as,bar_format=bar_format,$
 			n_lev=n_lev,g_eq=g_eq,l_eq =l_eq, flip_colours = flip_colours,rainbow = rainbow,discrete =discrete, bar_tickname=bar_tickname,$
 			bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, brewer = brewer, greyscale = greyscale
 		return
