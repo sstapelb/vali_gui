@@ -2816,16 +2816,14 @@ FUNCTION NCDF_DATA::ReadGlobalAttr, SUCCESS=success, infile=infile, silent = sil
 	filen = file_basename(infile)
 	pathn = file_dirname(infile)
    endif else begin
-	filen = self.filename
-	pathn = self.directory
+		filen = self.filename
+		pathn = self.directory
+		; Make sure the file has been parsed.
+		IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
+		; Check again.
+		success = 0
+		IF self.hasBeenParsed EQ 0 THEN RETURN, -1
    endelse
-   
-   ; Make sure the file has been parsed.
-   IF self.hasBeenParsed EQ 0 THEN self -> ParseFile, silent = silent
-   
-   ; Check again.
-   success = 0
-   IF self.hasBeenParsed EQ 0 THEN RETURN, -1
 
    ; Determine if this is a netCDF or HDF file.
    isHDF  = HDF_ISHDF(Filepath(ROOT_DIR=pathn, filen))

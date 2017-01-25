@@ -388,7 +388,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	fidx     = keyword_set(orbit) ? orbit : 0 
 	algo1    = keyword_set(algo1) ? strlowcase(algo1) : ''
 	datum    = yyyy+(mm eq '??' ? '' : mm)+dd
+	datum2   = datum
 	opl      = keyword_set(oplots) ? fix(oplots) : 0
+	wbg      = keyword_set(white_bg)
+	sav      = keyword_set(save_dir)
 	savbg    = keyword_set(save_dir) or keyword_set(white_bg)
 
 	case strmid(ref,0,3) of
@@ -507,7 +510,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ok = dialog_message('compare_cci: sav_file2 not found! '+sav_file)
 			return
 		endif
-		datum = strmatch(struc1.actual_date,struc2.actual_date) ? struc1.actual_date : 'F1-'+struc1.actual_date+' F2-'+struc2.actual_date
+; 		datum = strmatch(struc1.actual_date,struc2.actual_date) ? struc1.actual_date : 'F1-'+struc1.actual_date+' F2-'+struc2.actual_date
+		datum  = struc1.actual_date
+		datum2 = struc2.actual_date
 		bild_cci = struc1.bild
 		bild_gac = struc2.bild
 		fillvalue1 = 0
@@ -517,7 +522,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		unit2 = ''
 		free, struc1
 		free, struc2
-	endif else begin 
+	endif else begin
 		; cci l3u files
 		if level eq 'l3u' and ref eq 'gac' and (strmid(algo1,0,6) eq 'esacci' or algo1 eq 'patmos') then join_nodes = 1
 		bild_cci = get_data(yyyy,mm,dd,file=ccifile[0], data = dat[0],sat=sat, no_data_value = fillvalue1, longname = longname, unit = unit, found = found,$
@@ -533,6 +538,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		endif
 		free, join_nodes
 		; ref l3u files
+		select = strlowcase(algo2) eq 'select'
 		if level eq 'l3u' and ( algo1 eq 'clara' and (strmid(algo2,0,6) eq 'esacci' or algo2 eq 'patmos')) then join_nodes = 1
 		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=dat[1],sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level,dirname=dirname2, $
 			   longname=longname, unit=unit2, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,$
@@ -541,8 +547,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			if ~file_test(gac_nc_file) then return
 			ok = dialog_message('compare_cci: Data '+dat[1]+' not found in '+level+' '+algo2+' file. Right product name? e.g. cc_mask_asc')
 			return
+		endif else if select then begin
+			algon_gac = sat_name(algo2,satgac, year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
+			datum2    = yyyy+(mm eq '??' ? '' : mm)+dd
 		endif
-; 		if is_defined(gac_nc_file) then print,'File2: '+gac_nc_file
+
 		if (strmid(dat[1],0,3) eq 'cph') and (level eq 'l3u' or level eq 'l2') and (n_elements(join_nodes) eq 0) then begin
 			ncs = where(bild_gac eq 0,ncs_cnt)
 			if ncs_cnt gt 0 then bild_gac[ncs] = fillvalue2[0]
@@ -572,24 +581,24 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				if opl eq 0 then begin
 					yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini[0],maxi[0]] : [0,max([bild_gac,bild_cci])]
 					plot,[0,0],[1,1],yr=yrange,xr=[0,n_elements(bild_gac)-1],xticks=n_elements(xtickname)-1, xtickname = xtickname, $
-					xtitle=data_name,ytitle=ytitle,xminor=2,charsize = (savbg ? 2.5 : 1.5),$
-					charthick = (savbg ? 2. : 1),/ys
+					xtitle=data_name,ytitle=ytitle,xminor=2,/ys, $
+					charthick = !p_charthick , $
+					xcharsize = !p_xcharsize , $
+					ycharsize = !p_ycharsize , $
+					xmargin   = [12,4] + ((wbg and ~sav) ? [6,3]:0), ymargin = [6,2] + ((wbg and ~sav) ? [3,1]:0)
+; 					charsize = (savbg ? 2.5 : 1.5),$
+; 					charthick = (savbg ? 2. : 1)
 					idx = where(bild_cci ge 0,idx_cnt)
-; phere
-; 					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=-8,linestyle=linestyle,symsize=2
 					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=-8,color=cgcolor(!compare_col1) ,linestyle=linestyle,symsize=2
 					idx = where(bild_gac ge 0,idx_cnt)
-; 					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=-8,color = cgcolor('Red'),linestyle=linestyle,symsize=2
 					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=-8,color=cgcolor(!compare_col2) ,linestyle=linestyle,symsize=2
 					if keyword_set(show_values) then begin
 						legend,'Coverage '+(keyword_set(coverage) ? coverage : 'Global'),spos='top',charsize=(savbg ? 2.:1.5),numsym=1,$
-; 						color=-1
 						color=cgcolor(!compare_col1)
 					endif else begin
 						legend,[algon_cci+zwi1+apx,algon_gac+zwi2+apx],psym=[8,8],numsym=1,$
-; ; 						color=[-1,cgcolor('Red')],$
 						color=[cgcolor(!compare_col1) , cgcolor(!compare_col2) ] , $
-						thick=[thick,thick],spos='top',charsize=(savbg ? 2.:1.5)
+						thick=[thick,thick],spos='top', charsize=!l_charsize, charthick=!p_charthick
 					endelse
 				endif else begin
 					psym      = (keyword_set(show_values) and (opl eq 1) ? -8 : -1*(opl*2))
@@ -597,14 +606,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 					idx = where(bild_cci ge 0,idx_cnt)
 					if idx_cnt gt 0 then oplot,idx,bild_cci[idx],thick=thick,psym=psym,color=cgcolor(!compare_col1) ,linestyle=linestyle,symsize=2
 					idx = where(bild_gac ge 0,idx_cnt)
-; 					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=psym,color = cgcolor('Red'),linestyle=linestyle,symsize=2
 					if idx_cnt gt 0 then oplot,idx,bild_gac[idx],thick=thick,psym=psym,color=cgcolor(!compare_col2) ,linestyle=linestyle,symsize=2
-; 					legend,algon_cci+zwi1+apx,psym=psym,color=-1,thick=thick,spos='tl',charsize=(savbg ? 2.:1.5),$
-					legend,algon_cci+zwi1+apx,psym=psym,color=cgcolor(!compare_col1) ,thick=thick,spos='tl',charsize=(savbg ? 2.:1.5),$
-					ystretch=opl+1,linestyle=linestyle
-; 					legend,algon_gac+zwi2+apx,psym=psym,color=cgcolor('Red'),thick=thick,spos='tr',charsize=(savbg ? 2.:1.5),$
-					legend,algon_gac+zwi2+apx,psym=psym,color=cgcolor(!compare_col2) ,thick=thick,spos='tr',charsize=(savbg ? 2.:1.5),$
-					ystretch=opl+1,linestyle=linestyle
+					legend,algon_cci+zwi1+apx,psym=psym,color=cgcolor(!compare_col1) ,thick=thick,spos='tl',charsize=!l_charsize , $
+					ystretch=opl+2,linestyle=linestyle,charthick=!p_charthick
+					legend,algon_gac+zwi2+apx,psym=psym,color=cgcolor(!compare_col2) ,thick=thick,spos='tr',charsize=!l_charsize , $
+					ystretch=opl+2,linestyle=linestyle,charthick=!p_charthick
 				endelse
 			end_save,save_as5
 			return
@@ -752,14 +758,14 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		   maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert
 
 	if ~keyword_set(difference) and ~keyword_set(zonal_only) then begin
+		figure_title1 = keyword_set(notitle) ? '' : datum + ' ' + vollername1
 		start_save, save_as1, thick = thick, size = [32, 20]
 			m = obj_new("map_image",bild_cci,lat,lon,void_index=void_index1,box_axes=box_axes,n_lev=n_lev1				, $
 						min=(float(size(mini,/type)) ? mini : minvalue),max=(float(size(maxi,/type)) ? maxi : maxvalue)	, $
 						format=bar_format, title= keyword_set(title)? title : 						  $
-; 						algon_cci+' '+get_product_name(dat[0],algo=algo1,level=level,/upper)+unit				, $
-						algon_cci+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername1+dtn[0]+unit)				, $
-						charthick = !m_charthick, countries=countries,usa=countries					, $
-						charsize  = !m_charsize , bar_tickname=bar_tickname1, panoply = panoply			, $
+						algon_cci+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername1+dtn[0]+unit)						, $
+						charthick = !m_charthick, countries=countries,usa=countries									, $
+						charsize  = !m_charsize , bar_tickname=bar_tickname1, panoply = panoply						, $
 						limit = limit, figure_title = figure_title1,rainbow = rainbow, logarithmic=logarithmic		, $
 						ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel,lambert=lambert		, $
 						noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,g_eq=g_eq,l_eq=l_eq	, $
@@ -804,6 +810,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		endif
 	endif else begin
 		title2 = keyword_set(title)? title : algon_gac+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername2+dtn[1]+unit2)
+		figure_title2 = keyword_set(notitle) ? '' : datum2 + ' ' + vollername2
 	endelse
 
 	if ~keyword_set(zonal_only) then begin
@@ -886,7 +893,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if keyword_set(difference) then goto,ende
 
-	if ~keyword_set(save_dir) and ~keyword_set(notitle) then xyouts, 0.4, 0.98, datum+' '+(strmatch(dat[0],dat[1]) ? vollername2+dtn[1]+unit2:''), /norm
+; 	if ~keyword_set(save_dir) and ~keyword_set(notitle) then xyouts, 0.4, 0.98, datum+' '+(strmatch(dat[0],dat[1]) ? vollername2+dtn[1]+unit2:''), /norm
 
 	if limit_test or keyword_set(antarctic) or keyword_set(arctic) then begin
 		if keyword_set(antarctic) then qw = where(between(lon,-180,180) and between(lat,-90,-60),qw_cnt) else $
@@ -914,6 +921,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	if keyword_set(land) then idx  = where(bild_cci ne fillvalue1 and bild_gac ne fillvalue2 and dem ne 0, chk_idx)
 	if keyword_set(sea)  then idx  = where(bild_cci ne fillvalue1 and bild_gac ne fillvalue2 and dem eq 0, chk_idx)
 
+	ed = strmatch(datum,datum2)
+
 	if ~keyword_set(zonal_only) then begin
 		bin   = histv[0]
 		min_a = histv[1]
@@ -940,18 +949,15 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		start_save, save_as3, thick = thick, size = [32, 20]
 			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1
 			if bar_discontinous then bar_tickname = string(aa[sort(aa)],f=bar_format)
-; 			view2d,aa,no_data_val=0,xtitle=algon_cci+' '+get_product_name(dat[0],algo=algo1,level=level,/upper),ytitle=algon_gac+' '+$
-; 			ytitle=algon_gac+' '+get_product_name(dat[1],algo=algo2,level=level,/upper),$
-			view2d,aa,no_data_val=0,xtitle=algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit),$
-			ytitle=algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2),$
+			view2d,aa,no_data_val=0,$
+			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum )),$
+			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2)),$
 			bar_title=bar_title, bar_discontinous = bar_discontinous, $
 			xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_format=bar_format,$
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 4, $
 			log=~bar_discontinous,$
-; 			title = keyword_set(notitle)?'':'Binsize = '+string(bin,f='(f6.3)')+unit,$
 			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-; 			charthick = 1.2, xcharsize = 1.2,ycharsize = 1.2,$
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
 			bar_tickname = bar_tickname,xmargin=[7,3],ymargin=[3,2]+(keyword_set(save_dir) ? [0,2]:0)
 			if chk_idx gt 0 and total(size(aa,/dim)) gt 4 then begin
@@ -1029,14 +1035,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 								   strcompress(string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx])^2.,f='(f11.4)'),/rem)+')'
 		print,'----------------------------------'
 		thick = savbg ? thick + 2 : thick
-; 		oplot,lat1dc,medi_c,thick=thick
-; 		oplot,lat1dg,medi_g,thick=thick,col=cgColor("Red")
 		oplot,lat1dc,medi_c,thick=thick,col=cgcolor(!compare_col1)
 		oplot,lat1dg,medi_g,thick=thick,col=cgColor(!compare_col2)
-		lnames = strmatch(dat[0],dat[1]) ? ['',''] : strupcase(' '+[dat[0],dat[1]]) 
-		legend,[algon_cci,algon_gac]+lnames,thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize=lcharsize, $
-; 		legend,[algon_cci,algon_gac]+dtn,thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize=lcharsize, $
-; 		color=[-1,cgColor("Red")]
+ 		lnames = strmatch(dat[0],dat[1]) ? ['',''] : strupcase(' '+[dat[0],dat[1]]) 
+		legend,[(ed ? '': datum +' ') +algon_cci,(ed ? '': datum2 +' ')+algon_gac]+lnames,$
+		thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize=lcharsize, $
 		color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
 	end_save, save_as4
 
@@ -4902,6 +4905,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 			if ~keyword_set(nobar) then legend,date+satn+dtn+hct,thick=thick,spos='top',charsize=lcharsize,color =-1,charthick=charthick
 		endif else begin
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error,timeseries=nobar
+; spos='tl' & ystretch = opl
 			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[0],max_value=yr[1]
 			if ts then date = ''
 			legend,date+satn+dtn+hct,thick=thick,color=cgcolor(cols), spos=spos,ystretch=ystretch+0.5,charsize=lcharsize,$
@@ -6537,7 +6541,7 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
  	era_list = ['era-','era2-']
 
 	; combine all you need
-	algon_list = era_list
+	algon_list = 'era2-'
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -6560,7 +6564,7 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
 				mm = months[j]
 				if keyword_set(compare_to_cci) then begin
 					dsat = sat
-					if ref eq 'era' then dsat = 'noaapm'
+					if strmid(ref,0,3) eq 'era' then dsat = 'noaapm'
 					if strmid(ref,0,3) eq 'myd' then dsat = 'aqua'
 					if strmid(ref,0,3) eq 'mod' then dsat = 'terra'
 					ff =get_filename(yyyy,mm,sat=dsat,algo='cci',level='l3c',found=ccifound,/silent)
@@ -6637,7 +6641,7 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 
 	prod_list  = ['ctp','ctt','cwp','cot','cer']
 
-	algon_list = era_list
+	algon_list = 'era2-'
 
 	years      = string(indgen(39)+1978,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
@@ -6662,7 +6666,7 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 					mm = months[j]
 					if keyword_set(compare_to_cci) then begin
 						dsat = sat
-						if ref eq 'era' then dsat = 'noaapm'
+						if strmid(ref,0,3) eq 'era' then dsat = 'noaapm'
 						if strmid(ref,0,3) eq 'myd' then dsat = 'aqua'
 						if strmid(ref,0,3) eq 'mod' then dsat = 'terra'
 						ff =get_filename(yyyy,mm,sat=dsat,algo='cci',level='l3c',found=ccifound,/silent)
@@ -6879,10 +6883,12 @@ end
 pro do_all_time_series
 
 ; 	do_create_all_single_time_series
- 	do_create_all_compare_time_series
-	do_hist_cloud_type_time_series, /compare_to_cci
+;  	do_create_all_compare_time_series
 	do_1d_hist_time_series, /compare_to_cci
-	do_create_hovmoeller
+	do_hist_cloud_type_time_series, /compare_to_cci
+	do_hist_cloud_type_time_series
+	do_1d_hist_time_series
+; 	do_create_hovmoeller
 ; 	do_hist_cloud_type_time_series
 ; 	do_1d_hist_time_series
 end

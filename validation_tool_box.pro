@@ -3683,6 +3683,30 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 	if strmid(alg,0,6) eq 'ESACCI' and total(sat eq ['AVHRRS','MODISES','ALLSAT']) then lev = 'l3s'
 	if alg eq 'CALIPSO' then sat = 'CALIPSO'
 
+	if alg eq 'SELECT' then begin
+		DEFSYSV,'!SELECTED_FILE', exists = select_file_exists
+		filename = dialog_pickfile(	path = (select_file_exists ? file_dirname ( !SELECTED_FILE ) : !STD_DIR ) , $
+									file = (select_file_exists ? file_basename( !SELECTED_FILE ) : '' ) , $
+									filter = '*.nc;*.ncd;*.ncdf;*.hdf,*.h5')
+		if file_test(filename) then begin 
+			DEFSYSV,'!SELECTED_FILE' , filename
+			obj = obj_new('ncdf_data')
+			ok     = obj -> get_file_infos(infile=filename[0])
+			obj_destroy, obj
+			satellite	= ok.SATNAME
+			year 		= ok.YEAR
+			month 		= ok.MONTH
+			day 		= ok.DAY
+			algo 		= ok.ALGONAME
+			level 		= ok.LEVEL
+			version 	= ok.VERSION
+			datum 		= ok.DATUM
+			orbit 		= ok.ORBIT
+			reference	= ok.REFERENCE
+		endif
+		return,filename
+	endif
+
 	if not keyword_set(instrument) then begin
 		inst = 'no_Instrument_defined'
 		if stregex(sat,'CALIPSO',/bool) then inst = 'CALIPSO'
@@ -5290,8 +5314,14 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			found = 0.
 			return, -1
 		endif
+		select = strlowcase(alg) eq 'select'
 		filename = get_filename(year,month,day,data=data,satellite=sat,level=lev,algo=alg,found=found,instrument=instrument,$
 					orbit=orbit,silent=silent,dirname=dirname,node=node,no_recursive_search=no_recursive_search )
+		if select then begin
+			satellite = sat
+			level     = lev
+			algo      = alg
+		endif
 		if found gt 1 then print,'Found more than one file!'
 	endif
 
