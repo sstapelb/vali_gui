@@ -3391,7 +3391,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
 	  rightrow = Widget_Base(tlb2, ROW=3,/base_align_center)
-        topright = Widget_Base(rightrow,column=6,/base_align_center)
+        topright = Widget_Base(rightrow,column=5,/base_align_center)
 	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
 	        self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
 	        self.oplotID   = Widget_Button(bla, Value='Oplot'     , UVALUE='SET_PLOT_DEFAULTS')
@@ -3400,11 +3400,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	        self.verbID    = Widget_Button(bla, Value='Verbose'   , UVALUE='SET_PLOT_DEFAULTS')
 	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
 	        self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
-		  bla = Widget_Base(topright,row=1,Frame=0)
-	        barlist = strupcase(['CBar','No Bar','Horizon.','Vertical','HCB Only','VCB Only'])
-	        self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_BARLIST')
-; 	        self.noBarID   = Widget_Button(bla, Value='Bar'    , UVALUE='SET_PLOT_DEFAULTS')
-	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
 	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
 	        self.logID     = Widget_Button(bla, Value='Log-Plot'  , UVALUE='SET_PLOT_DEFAULTS')
 	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
@@ -3412,6 +3407,9 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
 	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
 	        self.wbgrID    = Widget_Button(bla, Value='White-BG'  , UVALUE='SET_PLOT_DEFAULTS')
+		  bla = Widget_Base(topright,row=1,Frame=0)
+	        barlist = strupcase(['Color Bar','No Bar','Horiz. CB','Verti. CB','HCB Only','VCB Only'])
+	        self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=28,UNAME='PLOTS_BARLIST')
  	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 ; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
@@ -3887,15 +3885,14 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	save_as     = Widget_Info(self.saveID, /BUTTON_SET)
 	zoom        = Widget_Info(self.zoomID, /BUTTON_SET)
 	error       = Widget_Info(self.errID, /BUTTON_SET)
-; 	nobar       = Widget_Info(self.noBarID, /BUTTON_SET)
 	notitle     = Widget_Info(self.noTitleID, /BUTTON_SET)
 	log         = Widget_Info(self.logID, /BUTTON_SET)
 
-	case strlowcase(self.handlebar) of 
-		'cbar'		: nobar = 0
+	case strlowcase(self.handlebar) of
+		'color bar'	: nobar = 0
 		'no bar'	: nobar = 1
-		'horizon.'	: nobar = 2
-		'vertical'	: nobar = 3
+		'horiz. cb'	: nobar = 2
+		'verti. cb'	: nobar = 3
 		'hcb only'	: nobar = 4
 		'vcb only'	: nobar = 5
 		else		: nobar = 0
@@ -4257,37 +4254,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				varname2 = names[1]
 			endif else varname2 = varname
 
-			if pcmult then begin
-				file  = ''
-				found = 1
-				datum = ''
-			endif else if algo eq 'SELECT FILE' then begin
-				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
-				; following needs to be done for filenames that include white spaces
-					file =	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
-					filter=self.extension)
-				file = 	self.file2
-				if file eq '' then return
-				if ~is_hdf(file) then begin
-					if ~is_ncdf(file) then begin
-						ok = dialog_message('The file '+file+' is neither a netcdf nor a hdf file. '+$
-								'Note netcdf4 files are not supported in IDL versions below 8!')
-						return
-					endif
-				endif
-				ok     = self -> get_file_infos(infile=file)
-				algo   = ok.algoname eq '' ? self.algoname : ok.algoname
-				satn   = ok.satname  eq '' ? '' : ok.satname
-				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
-			endif else begin
-				if sel and (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
-				print,'Load button is checked! Search for file in loaded directory!'
-				file = self -> get_new_filename( sat, year, month, day, orbit, algo, varname2, level = level, found = found,$
-								 dirname = (sel ? self.directory:0))
-				datum=strjoin([year,month,day,orbit])
-			endelse
-			if ~found then return
-
 			if modi   then ref = 'mod'
 			if modi2  then ref = 'mod2'
 			if myd    then ref = 'myd'
@@ -4309,6 +4275,37 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			;set System Variables
 			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),reference = ref
+
+			if pcmult then begin
+				file  = ''
+				found = 1
+				datum = ''
+			endif else if algo eq 'SELECT FILE' then begin
+				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
+							; following needs to be done for filenames that include white spaces
+							file =	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
+							filter=self.extension)
+				file = 	self.file2
+				if file eq '' then return
+				if ~is_hdf(file) then begin
+					if ~is_ncdf(file) then begin
+						ok = dialog_message('The file '+file+' is neither a netcdf nor a hdf file. '+$
+								'Note netcdf4 files are not supported in IDL versions below 8!')
+						return
+					endif
+				endif
+				ok     = self -> get_file_infos(infile=file)
+				algo   = ok.algoname eq '' ? self.algoname : ok.algoname
+				satn   = ok.satname  eq '' ? '' : ok.satname
+				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
+			endif else begin
+				if sel and (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
+				print,'Load button is checked! Search for file in loaded directory!'
+				file = self -> get_new_filename( sat, year, month, day, orbit, algo, varname2, level = level, found = found,$
+								 dirname = (sel ? self.directory:0))
+				datum=strjoin([year,month,day,orbit])
+			endelse
+			if ~found then return
 
 			if not keyword_set(maxi) then free,maxi
 			if not keyword_set(mini) then free,mini
@@ -4537,9 +4534,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					self.file2 = file1
 				endif else begin
 					self.file2 = dialog_pickfile(path=(self.file2 eq '' ? file_dirname(file1):file_dirname(self.file2)),$
-					; following needs to be done for filenames that include white spaces
-					file = 	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? file_basename(file1):file_basename(self.file2),/ext)),2),$
-						filter=self.extension)
+								; following needs to be done for filenames that include white spaces
+								file = 	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? file_basename(file1):file_basename(self.file2),/ext)),2),$
+								filter=self.extension)
 					if self.file2 eq '' then return
 					if ~is_hdf(self.file2) then begin
 						if ~is_ncdf(self.file2) then begin
@@ -4745,11 +4742,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			;set System Variables
 			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),reference = ref
 
-			if select then begin
+			if select and ~pcmult then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
-				; following needs to be done for filenames that include white spaces
-				file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
-				filter=self.extension)
+							; following needs to be done for filenames that include white spaces
+							file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
+							filter=self.extension)
 				if self.file2 eq '' then return
 				ok     = self -> get_file_infos(infile=self.file2)
 				sat    = ok.satname ne '' ? ok.satname : sat
@@ -4762,13 +4759,15 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				orbit  = ok.orbit
 				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 				file   = self.file2
+				if algo eq 'ERA-I' then get_era_info, self.file2, /set_as_sysvar
 				found  = 1
 			endif else begin
 				if pcmult then begin
 					file  = ''
 					found = 1
 					datum = ''
-					level   = self.level
+					level = self.level
+					if select then algo = 'select'
 				endif else if sel and none then begin
 					file    = self.directory+'/'+self.filename
 					year    = self.year

@@ -80,4 +80,5 @@
 @/cmsaf/nfshome/sstapelb/idl/calc_rgb.pro
 @vali_set_path.pro
 @validation_tool_box.pro
+@/cmsaf/nfshome/sstapelb/idl/read_aatsr_data.pro
 

@@ -182,8 +182,8 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 	datum = keyword_set(time_series) ? 'time_series' : string(year,f='(i4.4)')+string(month,f='(i2.2)')+string(day,f='(i2.2)')
 	ts    = keyword_set(time_series)
 
-	algon1 = sat_name(algo,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
-	algon2 = sat_name(reference,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
+	algon1 = sat_name(algo,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level,file=file1)
+	algon2 = sat_name(reference,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level,file=file2)
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin
@@ -524,7 +524,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		free, struc2
 	endif else begin
 		; cci l3u files
-		if level eq 'l3u' and ref eq 'gac' and (strmid(algo1,0,6) eq 'esacci' or algo1 eq 'patmos') then join_nodes = 1
 		bild_cci = get_data(yyyy,mm,dd,file=ccifile[0], data = dat[0],sat=sat, no_data_value = fillvalue1, longname = longname, unit = unit, found = found,$
 		verbose = verbose, level=level, algo = algo1,join_nodes=join_nodes,error=error,dim3=dim3,var_dim_names=var_dim_names_cci,/print_filename,$
 		flag_meanings = flag_meanings1)
@@ -539,7 +538,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		free, join_nodes
 		; ref l3u files
 		select = strlowcase(algo2) eq 'select'
-		if level eq 'l3u' and ( algo1 eq 'clara' and (strmid(algo2,0,6) eq 'esacci' or algo2 eq 'patmos')) then join_nodes = 1
 		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=dat[1],sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level,dirname=dirname2, $
 			   longname=longname, unit=unit2, found=found, verbose=verbose,join_nodes=join_nodes,orbit=orbit,error=error,dim3=dim3,$
 			   var_dim_names=var_dim_names_gac,print_filename=2,flag_meanings = flag_meanings2)
@@ -548,6 +546,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ok = dialog_message('compare_cci: Data '+dat[1]+' not found in '+level+' '+algo2+' file. Right product name? e.g. cc_mask_asc')
 			return
 		endif else if select then begin
+			if algo2 eq 'era-i' then get_era_info, gac_nc_file, /set_as_sysvar
 			algon_gac = sat_name(algo2,satgac, year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
 			datum2    = yyyy+(mm eq '??' ? '' : mm)+dd
 		endif
@@ -1157,6 +1156,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 							sav_file = sfile, longname = longname, unit = unit, found = found, $
 							trend = trend, tr_corr = tr_corr, anomalies = anomalies, uncertainty = uncertainty, $
 							stddev = stddev, no_trend_found = no_trend_found, pvir=pvir, season=season)
+			algon = sat_name(algo,sat)
 
 			if not found then begin
 				trace = SCOPE_TRACEBACK( )
@@ -1165,7 +1165,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				for i = 0,n_elements(trace)-1 do print,trace[i]
 				return
 			endif
-			
+
 			if pvir then save_dir += 'PVIR/'
 
 			if trend then begin
@@ -6410,15 +6410,15 @@ pro do_create_all_compare_time_series
 
 ; 	period   = ['2003-2011']
 
-	cli      = 'era'
+	cli      = 'gac2'
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		        'metopa','metopb','allsat','noaaam','noaapm','aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['cci'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
-	data     = ['cfc','ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
-				'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
+	ref      = ['gac'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
+	data     = ['cfc'];,'ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
+; 				'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
 
 	sat      = ['noaapm']
 

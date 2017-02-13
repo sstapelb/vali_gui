@@ -878,6 +878,24 @@ function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=
 
 end
 ;------------------------------------------------------------------------------------------
+pro get_era_info, file, version, threshold , set_as_sysvar = set_as_sysvar
+
+		filen = file_basename(file)
+		pathn = file_dirname(file)
+
+		pos = STREGEX(pathn, '_DWDscops',/fold,length=len)
+		version = strmid(pathn,pos-4,4)
+
+		pos = STREGEX(filen, 'cot-thv-' ,/fold,length=len)
+		threshold = strmid(filen,pos+len,4)
+
+		if keyword_set(set_as_sysvar) then begin
+			DEFSYSV, '!era_i_threshold', threshold
+			DEFSYSV, '!era_i_version'  , version
+		endif
+
+end
+;------------------------------------------------------------------------------------------
 function low_pass_filtering,array,no_data_value=no_data_value,fill_index=fill_index
 
 	ndv = keyword_set(no_data_value) ? no_data_value[0] : -999.
@@ -1397,8 +1415,8 @@ function sat_node,lon,diff=diff,vector=vector
 		min_satzen_line = si[0]/2
 		bla = min([min_satzen_line,si[0]-min_satzen_line])
 		for i=1,bla do begin
-			lon1 = lon[min_satzen_line-i,jdim]
-			lon2 = lon[min_satzen_line+i,jdim]
+			lon1 = lon[0        > (min_satzen_line-i),jdim]
+			lon2 = lon[(si[0]-1)< (min_satzen_line+i),jdim]
 			if (lon1 ge (real_fill_value+1.0)  and lon2 ge (real_fill_value+1.0) )  then break
 		endfor
 
@@ -2048,12 +2066,13 @@ function noaa_ampm, satellite, ampm = ampm
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,version=version,level=level
+function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=version,level=level
 
-	; e.g. convert noaa18 -> CC4CL-NOAA-18
+	; e.g. convert noaa18 -> Cloud_cci-NOAA-18
 	satn  = keyword_set(sat)       ? strlowcase(sat)   : ''
 	lev   = keyword_set(level)     ? strlowcase(level) : ''
 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
+	ver   = keyword_set(version)
 
 	if total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) then satn = 'MERIS+AATSR'
 	if total(satn eq ['atsr','atsr2','ers','ers2']) then satn = 'ATSR2'
@@ -2072,11 +2091,10 @@ function sat_name, algoname, sat, only_sat=only_sat, year = year, month=month,ve
 		'mod'	: return,'COLL5-Terra'
 		'myd2'	: return,'COLL6-Aqua'
 		'mod2'	: return,'COLL6-Terra'
-; 		'gwx'	: algon = 'CC4CL-GEWEX'
 		'gwx'	: algon = 'Cloud_cci-GEWEX'
 		'cal'	: return,'CALIPSO-Caliop'
-		'era'	: return,'ERA-INTERIM'
-		'era2'	: return,'ERA-INTERIM (Thr. 1.0)'
+		'era'	: return,'ERA-INTERIM '+ !ERA_I_VERSION +' (Thr. '+ !ERA_I_THRESHOLD +')'
+		'era2'	: return,'ERA-INTERIM v2.0 (Thr. 1.00)'
 		'cla'	: return,'CLAAS'
 		'pmx'	: begin
 				algon = 'PATMOS-X'
@@ -2518,7 +2536,7 @@ function read_modis_obj_val, stringname, group, value = value,found=found
 end
 ;------------------------------------------------------------------------------------------
 pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, msg = msg, $
-		nise = nise,nsidc=nsidc,pick_file=pick_file,osisaf=osisaf,algo=algo
+		nise = nise,nsidc=nsidc,pick_file=pick_file,osisaf=osisaf,algo=algo,offsets = offsets
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
 	if keyword_set(algo) then begin
@@ -2552,8 +2570,13 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		return
 	endif
 	if keyword_set(grid_res) then begin
-		lon_dum = findgen(360./grid_res) * grid_res - (180.- grid_res/2.)
-		lat_dum = findgen(180./grid_res) * grid_res - ( 90.- grid_res/2.)
+		if keyword_set(offsets) then begin
+			lon_dum = findgen((offsets.ELON-offsets.SLON)/grid_res) * grid_res - (((-1) * offsets.SLON) - grid_res/2.)
+			lat_dum = findgen((offsets.ELAT-offsets.SLAT)/grid_res) * grid_res - (((-1) * offsets.SLAT) - grid_res/2.)
+		endif else begin
+			lon_dum = findgen(360./grid_res) * grid_res - (180.- grid_res/2.)
+			lat_dum = findgen(180./grid_res) * grid_res - ( 90.- grid_res/2.)
+		endelse
 		found = 1
 	endif else begin
 		if keyword_set(nise) then begin
@@ -3688,21 +3711,22 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 		filename = dialog_pickfile(	path = (select_file_exists ? file_dirname ( !SELECTED_FILE ) : !STD_DIR ) , $
 									file = (select_file_exists ? file_basename( !SELECTED_FILE ) : '' ) , $
 									filter = '*.nc;*.ncd;*.ncdf;*.hdf,*.h5')
-		if file_test(filename) then begin 
+		if file_test(filename) then begin
 			DEFSYSV,'!SELECTED_FILE' , filename
 			obj = obj_new('ncdf_data')
-			ok     = obj -> get_file_infos(infile=filename[0])
+			ok  = obj -> get_file_infos(infile=filename[0])
 			obj_destroy, obj
-			satellite	= ok.SATNAME
-			year 		= ok.YEAR
-			month 		= ok.MONTH
-			day 		= ok.DAY
-			algo 		= ok.ALGONAME
-			level 		= ok.LEVEL
-			version 	= ok.VERSION
-			datum 		= ok.DATUM
-			orbit 		= ok.ORBIT
-			reference	= ok.REFERENCE
+			satellite	= strlowcase(ok.SATNAME)
+			year 		= strlowcase(ok.YEAR)
+			month 		= strlowcase(ok.MONTH)
+			day 		= strlowcase(ok.DAY)
+			algo 		= strlowcase(ok.ALGONAME)
+			level 		= strlowcase(ok.LEVEL)
+			version 	= strlowcase(ok.VERSION)
+			datum 		= strlowcase(ok.DATUM)
+			orbit 		= strlowcase(ok.ORBIT)
+			reference	= strlowcase(ok.REFERENCE)
+			if algo eq 'ERA-I' then get_era_info, filename[0], /set_as_sysvar
 		endif
 		return,filename
 	endif
@@ -3833,7 +3857,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 							endif else orbdum = ''
 							if strmid(dat,0,3) eq 'rgb' then begin
-								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/jpg/'
+								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/v2.0/jpg/'
 								ampm  = noaa_ampm(sat)
 								; martin fragen rename "aft" in PM, etc 
 								if ampm eq 'pm' then ampm = 'aft'
@@ -4216,9 +4240,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-; 					thr = !ERA_I1_THRESHOLD 
-; 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v1.2_DWDscops_MaxRand_MixedPase/timeseries/'
-					thr = '0.15'
+					thr = !ERA_I_THRESHOLD 
 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
@@ -4229,8 +4251,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I2' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-; 					thr = !ERA_I2_THRESHOLD 
-					thr = '1.00' 
+					thr = !ERA_I2_THRESHOLD 
 					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
@@ -4387,7 +4408,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	dat = (strlowcase(data))[0]
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
 	if cov eq 'full' then cov = ''
-	
+
 	diff      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'diff',/fold,/bool)
 	if diff    	then dat = strreplace(dat,'_diff','',/fold)
 
@@ -4408,7 +4429,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	if anomalies 	then dat = strreplace(dat,'_anomalies','',/fold)
 	if trend     	then dat = strreplace(dat,'_trend','',/fold)
 	if season     	then dat = strreplace(dat,'_season','',/fold)
-	if sum		then dat = strreplace(dat,'_sum','',/fold) 
+	if sum			then dat = strreplace(dat,'_sum','',/fold) 
 
 	if algo2ref(algo,sat=sat) eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
 	if algo2ref(algo,sat=sat) eq 'cci' and sat eq 'envisat' then sat = 'aatsr' ; is this a good idea? I don't know.
@@ -4447,25 +4468,52 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 
 	if stregex(dat,'ref',/fold,/bool) and ~stregex(dat,'refl',/fold,/bool) then dat = strreplace(dat,'ref','cer')
 
-	longname = full_varname(dat, unit=unit)
-
-	if keyword_set(hovmoeller) then begin
-		sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+'_'+sat+'.sav'
-		sfile    = file_search( sav_file ,count = found)
-		if found eq 0 and keyword_set(period) then begin
-			sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_????-????_'+cli+'_'+sat+'.sav'
-			sfile    = file_search( sav_file ,count = found)
-		endif
+	if algo eq 'select' and ~keyword_set(hovmoeller) then begin
+		DEFSYSV,'!SELECTED_SAV_FILE', exists = select_file_exists
+		sfile = dialog_pickfile(	path = (select_file_exists ? file_dirname ( !SELECTED_SAV_FILE ) : !SAVS_DIR +'time_series/' ) , $
+									file = (select_file_exists ? file_basename( !SELECTED_SAV_FILE ) : '' ) , $
+									filter = '*.sav')
+		if file_test(sfile) then begin
+			filen = file_basename(sfile,'.sav')
+			if strmid(filen,0,8) eq 'compare_' then begin
+				print,'This is only allowed on Single Time Series not Compare Time series!'
+				found=0
+			endif else begin
+				DEFSYSV,'!SELECTED_SAV_FILE' , sfile
+				data     = strlowcase((restore_var(sfile)).VARNAME)
+				dat      = data
+				coverage = strlowcase((restore_var(sfile)).COVERAGE)
+				filen = file_basename(sfile,'.sav')
+				per   = strmid(filen,8,9,/reverse)
+				rest  = 	strreplace(filen,[per,dat+'_',coverage+'_','plot_','time_series_'],['','','','',''])
+				dum   = strsplit(rest,'_',/ext)
+				algo  = dum[0]
+				if n_elements(dum) gt 1 then sat = dum[1] else sat = ''
+				satellite = sat
+				cli  = algo2ref(algo,sat=sat)
+				found = 1
+			endelse
+		endif else found=0
 	endif else begin
-		sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_'+per+'.sav'
-		sfile    = file_search( sav_file ,count = found)
-		if found eq 0 and keyword_set(period) then begin
-			if ~pvir then begin 
-				sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_????-????.sav'
+		if keyword_set(hovmoeller) then begin
+			sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_'+per+'_'+cli+'_'+sat+'.sav'
+			sfile    = file_search( sav_file ,count = found)
+			if found eq 0 and keyword_set(period) then begin
+				sav_file = !SAVS_DIR + 'time_series/hovmoeller/'+dat+'_hovmoeller_????-????_'+cli+'_'+sat+'.sav'
 				sfile    = file_search( sav_file ,count = found)
 			endif
-		endif
+		endif else begin
+			sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_'+per+'.sav'
+			sfile    = file_search( sav_file ,count = found)
+			if found eq 0 and keyword_set(period) then begin
+				if ~pvir then begin 
+					sav_file = !SAVS_DIR + 'time_series/'+pref+dat+'_'+dumalgo+'_time_series_'+sat+(cov eq '' ? '':'_')+cov+'_????-????.sav'
+					sfile    = file_search( sav_file ,count = found)
+				endif
+			endif
+		endelse
 	endelse
+
 	if found eq 0 then begin
 		no_trend_found = 0
 		tr_corr = 0
@@ -4487,7 +4535,8 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	endif else idx = 0
 	sav_file = sfile[idx]
 
-	datum = stregex(file_basename(sav_file),'[0-9]+-[0-9]+',/ext)
+	datum    = stregex(file_basename(sav_file),'[0-9]+-[0-9]+',/ext)
+	longname = full_varname(dat, unit=unit)
 
 	struc = restore_var(sav_file,found=found)
 
@@ -4585,7 +4634,7 @@ function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = fo
 	endif
 
 	para = strlowcase(parameter)
-	grid = keyword_set(grid_res) ? grid_res : get_grid_res(orb_lon,cci_l3u_eu=cci_l3u_eu,claas=claas,found=found)
+	grid = keyword_set(grid_res) ? grid_res : get_grid_res(orb_lon,cci_l3u_eu=cci_l3u_eu,cci_l3u_af = cci_l3u_af,claas=claas,found=found)
 
 	catch, error_status
 	if (error_status ne 0) then begin
@@ -4644,8 +4693,8 @@ function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = fo
 		return,-1
 	endif
 
-	if keyword_set(grid) or keyword_set(cci_l3u_eu) then begin
-		grid_string = keyword_set(grid) ? string(grid,f='(f4.2)') : 'CCI_L3U_EU'
+	if keyword_set(grid) or keyword_set(cci_l3u_eu) or keyword_set(cci_l3u_af) then begin
+		grid_string = keyword_set(grid) ? string(grid,f='(f4.2)') : (keyword_set(cci_l3u_eu) ? 'CCI_L3U_EU' : 'CCI_L3U_AF')
 		sav_file = !SAVS_DIR + '/ecmwf/ECMWF_dimension_'+lon_dim1+'_'+lat_dim1+'_collocation_index_to_global_grid_'+grid_string+'.sav'
 		index = restore_var(sav_file,found=found_idx)
 		if ~found_idx then begin
@@ -5288,16 +5337,16 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	vali_set_path
 
 	sil = keyword_set(silent)
-	if keyword_set(satellite) then sat = strlowcase(satellite)
-	if not keyword_set(sat) then sat = ''
-	alg    = keyword_set(algo)      ? ref2algo(algo,sat=sat)      : ''
+	sat = keyword_set(satellite) 	? strlowcase(satellite) 	: ''
+	lev = keyword_set(level) 		? strlowcase(level) 		: 'l3c'
+	alg = keyword_set(algo)   		? ref2algo(algo,sat=sat)	: ''
+
 	if alg eq 'myd'  then begin & alg = 'coll5' & sat = 'aqua' & end
 	if alg eq 'mod'  then begin & alg = 'coll5' & sat = 'terra' & end
 	if alg eq 'myd2' then begin & alg = 'coll6' & sat = 'aqua' & end
 	if alg eq 'mod2' then begin & alg = 'coll6' & sat = 'terra' & end
 	if alg eq 'claas' then sat = 'msg'
 	if alg eq 'clara' and ( sat eq 'aatme' or sat eq 'aatsr') then sat = 'noaa17'
-	lev = keyword_set(level) ? strlowcase(level) : 'l3c'
 
 	pmxgwx = (total(lev eq ['l3c','l3s']) and strmid(alg,0,6) eq 'patmos')
 
@@ -6309,13 +6358,15 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else if total(datd eq ['scanline_time_asc','scanline_time_desc','time_asc','time_desc']) then begin
 			if total(alg eq ['esacci']) then begin
 				idx = where(outdata ne no_data_value,idxcnt)
-				if idxcnt gt 0 then minzeit = rnd(min(outdata[idx]))
+				minzeit = get_ncdf_data_by_name(filename[0],datd,attr='add_offset',found = found_offset)
+				if idxcnt gt 0 and not found_offset then minzeit = rnd(min(outdata[idx]),/down)
 				if idxcnt gt 0 then outdata[idx] = (outdata[idx] - minzeit)*24d
 				if keyword_set(minvalue) then minvalue =  0d
 				if keyword_set(maxvalue) then maxvalue = 24d
 				unit = textoidl(' [ hours]')
 			endif
 		endif
+
 		if is_stdd then datd = datd + '_std'
 		if size(outdata,/type) ne 5 then begin ; dont do this on double precision data type
 			iidx = where(outdata eq no_data_value,iidxcnt)

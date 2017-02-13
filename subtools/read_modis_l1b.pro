@@ -81,6 +81,7 @@ function read_modis_l1b, filename, satellite, channel,radiance=radiance, found =
 	if index eq -1 then begin
 		if para_name eq 'EV_250_Aggr1km_RefSB' and ~keyword_set(radiance) then begin & minvalue = 0. & maxvalue=100. & end
 		if para_name eq 'EV_1KM_Emissive' then begin & minvalue = 180. & maxvalue=340. & end
+		no_data_value = is_tag(att,'_FILLVALUE') ? att._FILLVALUE[0] : -999.
 		return,dum
 	endif
 	if refl eq 1 then begin 		; reflectance
