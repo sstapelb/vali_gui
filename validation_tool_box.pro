@@ -6343,7 +6343,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				unit = ' '
 			endif
 		endif else if total(datd eq ['cph','cph_day','a_cawr','a_cawdr']) and total(lev eq ['l3c','l3s']) then begin
-			if total(alg eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old','hector']) then begin
+			if total(alg eq ['clara2','clara','claas','isccp','gewex','gac2-gewex','patmos','patmos_old','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] /= 100.
@@ -6988,7 +6988,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 													 flag_meanings2[[2,3,4,6,7,8,9]]
 			endif
 	endif else if total(dat eq ['cph','cph_day']) then begin
-		if total(alg1 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old','hector']) then begin
+		if total(alg1 eq ['clara2','clara','claas','isccp','gewex','gac2-gewex','patmos','patmos_old','hector']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] /= 100.
@@ -6997,7 +6997,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = ' '
 			if verb then print,'Divide now '+dat+' of '+alg1+' by 100.'
 		endif
-		if total(alg2 eq ['clara2','clara','claas','isccp','gewex','patmos','patmos_old','hector']) then begin
+		if total(alg2 eq ['clara2','clara','claas','isccp','gewex','gac2-gewex','patmos','patmos_old','hector']) then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] /= 100.
@@ -7418,6 +7418,28 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 					else	: idxse = [0,2,5,6] ; 'cu'
 				endcase
 			  end
+		'gac2-gewex'	: begin
+				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
+				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
+				case strlowcase(hist_cloud_type) of
+					; low
+					'cu'	: idxse = [0,2,5,6]
+					'sc'	: idxse = [3,4,5,6]
+					'st'	: idxse = [5,6,5,6]
+					'low'	: idxse = [0,6,5,6]
+					; mid level
+					'ac'	: idxse = [0,2,3,4]
+					'as'	: idxse = [3,4,3,4]
+					'ns'	: idxse = [5,6,3,4]
+					'mid'	: idxse = [0,6,3,4]
+					; high
+					'ci'	: idxse = [0,2,0,2]
+					'cs'	: idxse = [3,4,0,2]
+					'cb'	: idxse = [5,6,0,2]
+					'high'	: idxse = [0,6,0,2]
+					else	: idxse = [0,2,5,6] ; 'cu'
+				endcase
+			  end
 		'patmos_old'	: begin
 				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
 				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
@@ -7709,7 +7731,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 		;Ziel:	tau_isccp  = ['0.3','1.3','3.6','9.4','23','60','100']
 		;	tau_cci  = [0.3,1.3,3.6,9.4,23.,60.,100.]
 		;	tau_coll5_gewex_patmos  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
-		if alg eq 'coll5' or alg eq 'gewex' or strmid(alg,0,6) eq 'patmos' then begin
+		if total(alg eq ['coll5','gewex','patmos','patmos_old','gac2-gewex']) then begin
 			cci_hist_cot[1]+=cci_hist_cot[0]
 			cci_hist_cot=cci_hist_cot[1:*]
 		endif
@@ -7796,7 +7818,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 			for i = 1,6 do qwe[*,i] = bild[*,(2*i)+1] + bild[*,(2*i)+2]
 		endif else for i = 0,6 do qwe[*,i] = bild[*,2*i] + bild[*,(2*i)+1]
 		bild = temporary(qwe)
-	endif else if alg eq 'coll5' or alg eq 'gewex' or strmid(alg,0,6) eq 'patmos' then begin
+	endif else if total(alg eq ['coll5','gewex','patmos','patmos_old','gac2-gewex']) then begin
 		; plev = reverse([0.,180.,310.,440.,560.,680.,800.,1100.])
 		; tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
 		bild = rotate(bild,7)
