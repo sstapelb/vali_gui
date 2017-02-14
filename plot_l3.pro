@@ -182,8 +182,8 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 	datum = keyword_set(time_series) ? 'time_series' : string(year,f='(i4.4)')+string(month,f='(i2.2)')+string(day,f='(i2.2)')
 	ts    = keyword_set(time_series)
 
-	algon1 = sat_name(algo,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level,file=file1)
-	algon2 = sat_name(reference,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level,file=file2)
+	algon1 = sat_name(algo,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
+	algon2 = sat_name(reference,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin

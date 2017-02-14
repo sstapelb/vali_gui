@@ -8,6 +8,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	if keyword_set(level) then begin
 		if (strmid(alg,0,6) eq 'patmos' or strmid(alg,0,3) eq 'pmx') and (lev eq 'l3c' or lev eq 'l3s') then alg = 'gewex'
 	endif
+
+	if alg eq 'gac2-gewex' or alg eq 'g2_gwx' then alg = 'gewex'
 	dat = strlowcase(data[0])
 
 	is_stdd = (reverse(strsplit(dat,'_',/ext)))[0] eq 'std'
@@ -1251,6 +1253,7 @@ function is_the_same,algo,reference,satellite=satellite
 		'pmx'	: result = alg eq 'patmos' 
 		'cla'	: result = alg eq 'claas' 
 		'gwx'	: result = alg eq 'gewex' 
+		'g2_gwx': result = alg eq 'gac2-gewex' 
 		'cal'	: result = alg eq 'calipso'
 		'era'	: result = alg eq 'era-i' 
 		'era2'	: result = alg eq 'era-i2' 
@@ -1267,6 +1270,7 @@ function is_the_same,algo,reference,satellite=satellite
 		'patmos_old': result = alg eq 'pmx_old' 
 		'claas'	: result = alg eq 'cla' 
 		'gewex'	: result = alg eq 'gwx' 
+		'gac2-gewex': result = alg eq 'g2_gwx' 
 		'calipso': result = alg eq 'cal'
 		'era-i'	: result = alg eq 'era' 
 		'era-i2': result = alg eq 'era2' 
@@ -1303,6 +1307,8 @@ function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = 
 		'calipso'	: begin & alg = 'calipso' & sat = 'calipso' & end
 		'gwx'		: alg = 'gewex'
 		'gewex'		: alg = 'gewex'
+		'g2_gwx'	: alg = 'gac2-gewex'
+		'gac2-gewex': alg = 'gac2-gewex'
 		'pmx'		: alg = 'patmos'
 		'patmos'	: alg = 'patmos'
 		'pmx_old'	: alg = 'patmos_old'
@@ -1364,6 +1370,8 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'calipso'	: ref = 'cal'
 		'gwx'		: ref = 'gwx'
 		'gewex'		: ref = 'gwx'
+		'g2_gwx'	: ref = 'g2_gwx'
+		'gac2-gewex': ref = 'g2_gwx'
 		'cci-gewex'	: ref = 'gwx'
 		'pmx'		: ref = 'pmx'
 		'patmos'	: ref = 'pmx'
@@ -2092,6 +2100,7 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 		'myd2'	: return,'COLL6-Aqua'
 		'mod2'	: return,'COLL6-Terra'
 		'gwx'	: algon = 'Cloud_cci-GEWEX'
+		'g2_gwx': algon = 'CLARA-A2-GEWEX'
 		'cal'	: return,'CALIPSO-Caliop'
 		'era'	: return,'ERA-INTERIM '+ !ERA_I_VERSION +' (Thr. '+ !ERA_I_THRESHOLD +')'
 		'era2'	: return,'ERA-INTERIM v2.0 (Thr. 1.00)'
@@ -4037,6 +4046,20 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								endelse
 							endif
 						 end
+					'GAC2-GEWEX': begin
+						if ~total(lev eq ['l3c','l3s']) then goto, ende
+							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+							if found then begin
+								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
+									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/bwuerzle/data/GEWEX_OUT/'+yyyy+'/'
+									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
+									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
+									filen = dir+dat+'_CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
+								endif else begin
+									addon = ' - Choose right Satellite!'
+								endelse
+							endif
+						 end
 					'ISCCP': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld4/ISCCP_mjerg/complete_clouds/'
@@ -5437,7 +5460,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		maxvalue = 5
 		unit = ''
-	endif else if ( (total(alg eq ['clara2','clara','claas','gewex','patmos']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
+	endif else if ( (total(alg eq ['clara2','clara','claas','gewex','gac2-gewex','patmos']) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
 			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
@@ -5458,7 +5481,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
-		cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex','gac2-gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
@@ -5524,10 +5547,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, set_fillvalue = set_fillvalue,$
 			verbose = verbose, found = found, silent=silent
-			if total(alg eq ['patmos','gewex']) and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
+			if total(alg eq ['patmos','gewex','gac2-gewex']) and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
 		endelse
 		if not found then return,-1
-		if ~sil and total(alg eq ['clara2','clara','claas','gewex','patmos']) then print,'cfc_file: ',dumdat,': ',cfc_file
+		if ~sil and total(alg eq ['clara2','clara','claas','gewex','gac2-gewex','patmos']) then print,'cfc_file: ',dumdat,': ',cfc_file
 		; cwp_allsky=cwp*cfc_day
 		no_idx_ice = where(cfc eq no_data_valuei[0],cnt_il)
 		if total(alg eq ['clara2','clara','claas','isccp']) then cfc = cfc/100.
@@ -5535,7 +5558,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'All Sky '+longname
 		if ~sil then print,''
-	endif else if ( total(alg eq ['coll5','coll6','gewex','patmos']) and $
+	endif else if ( total(alg eq ['coll5','coll6','gewex','gac2-gewex','patmos']) and $
 			total(dat eq ['iwp_allsky','lwp_allsky','iwp_16_allsky','lwp_16_allsky','iwp_37_allsky','lwp_37_allsky']) $ 
 			and (lev eq 'l3c' or lev eq 'l3s') ) then begin
 		ch = ''
@@ -5556,7 +5579,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
-		if total(alg eq ['patmos','gewex']) then begin
+		if total(alg eq ['patmos','gewex','gac2-gewex']) then begin
 			cph_file = get_filename(year,month,day,data='cph_day', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			if not found then return,-1
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
@@ -5571,7 +5594,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		; lwp_allsky=lwp*cfc_day*cph_day
 		; iwp_allsky=iwp*cfc_day*(1.-cph_day)
 		no_idx_ice = where(cph eq no_data_valuec[0] and cfc eq no_data_valuei[0] and cwp eq no_data_value[0],cnt_il)
-		if total(alg eq ['patmos','gewex']) then cph = cph/100.
+		if total(alg eq ['patmos','gewex','gac2-gewex']) then cph = cph/100.
 		if stregex(dat,'iwp',/fold,/bool) then begin
 			if ~sil then print,'Calculating '+dat+' for '+alg+' with: iwp_allsky=iwp*cfc_day*(1.-cph_day)'
 			outdata = ( (temporary(cwp) > 0.) * (temporary(cfc)>0.) * (1- (temporary(cph)>0.)) )
@@ -5701,7 +5724,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if stregex(dat,'cot',/fold,/bool) then longname = ch+'monthly mean cloud optical thickness'
 		if stregex(dat,'cer',/fold,/bool) then longname = ch+'monthly mean cloud effective radius'
 	endif else if ( ( ( total(alg eq ['claas','clara2']) and total(dat eq ['cot','ref','cot_error','ref_error']) )  $
-			  or ( total(alg eq ['patmos','gewex']) and total(dat eq ['cer','ref']) ) ) and (lev eq 'l3c' or lev eq 'l3s') ) then begin
+			  or ( total(alg eq ['patmos','gewex','gac2-gewex']) and total(dat eq ['cer','ref']) ) ) and (lev eq 'l3c' or lev eq 'l3s') ) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: ice*(1.-cph_day)+liq*cph_day'
 		err = stregex(dat,'_error',/bool) ? '_error' : ''
 		; 1) iwp
@@ -5721,7 +5744,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		verbose = verbose, found = found, silent=silent
 		if not found then return,-1
 		; 3) cph
-		cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		cph_file = get_filename(year,month,day,data=(total(alg eq ['patmos','gewex','gac2-gewex']) ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
@@ -5730,7 +5753,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		; cwp = lwp * cph + iwp* (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
-		if total(alg eq ['claas','clara2','gewex','patmos']) then cph = cph/100.
+		if total(alg eq ['claas','clara2','gewex','gac2-gewex','patmos']) then cph = cph/100.
 		outdata = ( (temporary(ice) > 0.) * (1. - (cph)) ) + ( (temporary(liq) > 0.) * (temporary(cph)) )
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if dat eq 'cot' then longname = 'monthly mean cloud optical thickness'
@@ -6264,7 +6287,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		print,'conversion of claas histos to global grid took [seconds]:', systime(1)-x
 	endif
 
-	if (alg eq 'gewex' or pmxgwx) and keyword_set(month) then begin
+	if (total(alg eq ['gewex','gac2-gewex']) or pmxgwx) and keyword_set(month) then begin
 		case size(outdata,/n_dim) of
 			3	: outdata = reform(outdata[*,*,fix(month)-1])
 			4	: outdata = reform(outdata[*,*,*,fix(month)-1])

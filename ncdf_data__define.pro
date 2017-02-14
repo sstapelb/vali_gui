@@ -2073,7 +2073,14 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		endif
 		; Gewex
 		if stregex(tcd,'GEWEX',/bool,/fold) then begin
-			algoname = 'GEWEX'
+			if where(tag_names(theglobattr) eq 'CLIMATOLOGY') ge 0 then begin
+				tcd = (theglobattr).climatology
+				if stregex(tcd,'CLARA-A2',/fold,/bool) then algoname = 'GAC2-GEWEX'
+				if stregex(tcd,'CLARA_A2',/fold,/bool) then algoname = 'GAC2-GEWEX'
+				if stregex(tcd,'PATMOSX',/bool,/fold)  then algoname = 'PATMOS'
+				if stregex(tcd,'ESACCI',/bool,/fold)  then algoname = 'GEWEX'
+				if stregex(tcd,'CLOUD_CCI',/bool,/fold)  then algoname = 'GEWEX'
+			endif else algoname = 'GEWEX'
 			year     = (reverse(strsplit((file_basename(filen,is_compressed(file) ? 'nc.gz':'.nc')),'_',/ext)))[0]
 			month    = '01'
 			level    = 'l3c'
@@ -2155,7 +2162,16 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 				'metop'		: dumsatn = (strsplit(satname,'>',/ext))[1]
 				else		:
 			endcase
-			satname = dumsatn
+			satname = strlowcase(dumsatn)
+		endif
+		if algoname eq 'GAC2-GEWEX' then begin
+			case strupcase(strmid(satname,0,3)) of
+				'AVN'	: dumsatn = 'noaa'+(strsplit(strmid(satname,3),',',/ext))[0]
+				'AVM'	: dumsatn = 'metop'+(strsplit(strmid(satname,4),',',/ext))[0]
+				'AVP'	: dumsatn = 'allsat'
+				else	: dumsatn = satname
+			endcase
+			satname = strlowcase(dumsatn)
 		endif
 		if algoname eq 'ESACCI' and level eq '' then begin
 			if stregex(filen,'L2',/fold,/bool) then level = 'l2'
@@ -2185,14 +2201,14 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		if verb then print,'PRODUCT_LEVEL: ',tcd
 		level = strlowcase(tcd)
 	endif
-	if where(tag_names(theglobattr) eq 'CLIMATOLOGY') ge 0 then begin
-		tcd = (theglobattr).CLIMATOLOGY
-		if verb then print,'CLIMATOLOGY: ',tcd
-		if stregex(tcd,'patmosx',/bool,/fold) then begin
-			algoname = 'PATMOS'
-			level    = 'l3c'
-		endif
-	endif
+; 	if where(tag_names(theglobattr) eq 'CLIMATOLOGY') ge 0 then begin
+; 		tcd = (theglobattr).CLIMATOLOGY
+; 		if verb then print,'CLIMATOLOGY: ',tcd
+; 		if stregex(tcd,'patmosx',/bool,/fold) then begin
+; 			algoname = 'PATMOS'
+; 			level    = 'l3c'
+; 		endif
+; 	endif
 	; patmos l3c has misspelled global attribute!!!
 	if where(tag_names(theglobattr) eq 'CLIMATOLOY') ge 0 then begin
 		tcd = (theglobattr).CLIMATOLOY
@@ -2304,6 +2320,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		'clara'	: reference = 'gac'
 		'clara2': reference = 'gac2'
 		'gewex'	: reference = 'gwx'
+		'gac2-gewex': reference = 'g2_gwx'
 		'esacci': reference = 'cci'
 		'patmos': reference = 'pmx'
 		'claas'	: reference = 'cla'
@@ -3365,7 +3382,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
 			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','ERA-INTERIM2','PATMOS-X',$
-			  'PATMOS_OLD','CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','HECTOR','SELECT FILE']
+			  'CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','SELECT FILE'];'PATMOS_OLD'
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
@@ -3380,7 +3397,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.refcla    = Widget_Button(bla, Value='CLAAS'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refhec    = Widget_Button(bla, Value='HECTOR'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS')
+; 	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refg2gwx  = Widget_Button(bla, Value='GAC2-GWX'    , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refera    = Widget_Button(bla, Value='ERA-I'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcci2   = Widget_Button(bla, Value='ESACCI'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcci    = Widget_Button(bla, Value='CCI-v1'      , UVALUE='SET_PLOT_DEFAULTS')
@@ -3613,7 +3631,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.refisp    , Set_Button=0
 		Widget_Control, self.refcci2   , Set_Button=0
 		Widget_Control, self.refcci    , Set_Button=0
-		Widget_Control, self.refpmx    , Set_Button=0
+; 		Widget_Control, self.refpmx    , Set_Button=0
+		Widget_Control, self.refg2gwx  , Set_Button=0
 		Widget_Control, self.refpmx2   , Set_Button=0
 ; 		Widget_Control, self.refl1gac  , Set_Button=0
 		Widget_Control, self.refcla    , Set_Button=0
@@ -3796,7 +3815,7 @@ END ;---------------------------------------------------------------------------
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
-		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day, $
+		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
@@ -3932,7 +3951,8 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	cci         = Widget_Info(self.refcci, /BUTTON_SET) ; prototype
 	era         = Widget_Info(self.refera, /BUTTON_SET)
 	era2        = Widget_Info(self.refera2, /BUTTON_SET)
-	pmx         = Widget_Info(self.refpmx, /BUTTON_SET)
+	g2gwx		= Widget_Info(self.refg2gwx, /BUTTON_SET)
+; 	pmx         = Widget_Info(self.refpmx, /BUTTON_SET)
 	pmx2        = Widget_Info(self.refpmx2, /BUTTON_SET)
 ; 	l1g         = Widget_Info(self.refl1gac, /BUTTON_SET)
 l1g = 0
@@ -4222,7 +4242,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
+				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4262,13 +4282,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if era2   then ref = 'era2'
 			if gac    then ref = 'gac'
 			if gac2   then ref = 'gac2'
-			if pmx    then ref = 'pmx_old'
+; 			if pmx    then ref = 'pmx_old'
 			if pmx2   then ref = 'pmx'
 			if l1g    then ref = 'l1gac'
 			if cla    then ref = 'cla'
 			if cci    then ref = 'cci_old'
 			if cci2   then ref = 'cci'
 			if ccigwx then ref = 'gwx'
+			if g2gwx  then ref = 'g2_gwx'
 			if syn    then ref = 'cal'
 			if isp    then ref = 'isp'
 			if hec    then ref = 'hec'
@@ -4487,7 +4508,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4564,7 +4585,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if isp    then begin & algo2 = 'isccp'      & satn = sat & end
 				if cci    then begin & algo2 = 'esacci_old' & satn = sat & end
 				if cci2   then begin & algo2 = 'esacci'     & satn = sat & end
-				if pmx    then begin & algo2 = 'patmos_old' & satn = sat & end
+				if g2gwx  then begin & algo2 = 'gac2-gewex' & satn = sat & end
+; 				if pmx    then begin & algo2 = 'patmos_old' & satn = sat & end
 				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
 				if l1g    then begin & algo2 = 'l1gac'      & satn = sat & end
 				if cla    then begin & algo2 = 'claas'      & satn = 'msg' & end
@@ -4702,7 +4724,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,pmx,pmx2,l1g,cla,hec,sel,pcms,$
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,$
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4725,15 +4747,16 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if myd    then begin & algo = 'coll5'       & sat = 'aqua'    & ref = 'myd'  & end
 			if myd2   then begin & algo = 'coll6'       & sat = 'aqua'    & ref = 'myd2' & end
 			if era    then begin & algo = 'era-i'       & ref = 'era'     & end
-			if era2   then begin & algo = 'era-i2'      & ref = 'era2'     & end
+			if era2   then begin & algo = 'era-i2'      & ref = 'era2'    & end
 			if gac    then begin & algo = 'clara'       & ref = 'gac'     & end
 			if gac2   then begin & algo = 'clara2'      & ref = 'gac2'    & end
+			if g2gwx  then begin & algo = 'gac2-gewex'  & ref = 'g2_gwx'  & end
 			if ccigwx then begin & algo = 'gewex'       & ref = 'gwx'     & end
 			if syn    then begin & algo = 'calipso'     & ref = 'cal'     & end
 			if isp    then begin & algo = 'isccp'       & ref = 'isp'     & end
 			if cci    then begin & algo = 'esacci_old'  & ref = 'cci_old' & end
 			if cci2   then begin & algo = 'esacci'      & ref = 'cci'     & end
-			if pmx    then begin & algo = 'patmos_old'  & ref = 'pmx_old' & end
+; 			if pmx    then begin & algo = 'patmos_old'  & ref = 'pmx_old' & end
 			if pmx2   then begin & algo = 'patmos'      & ref = 'pmx'     & end
 			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
 			if cla    then begin & algo = 'claas'       & sat = 'msg'     & ref = 'cla'  & end
@@ -6019,6 +6042,7 @@ PRO NCDF_DATA__DEFINE, class
              loaded:0l,                $
              refera:0l,                $
              refera2:0l,               $
+             refg2gwx:0L,              $
              refpmx:0L,                $
              refpmx2:0L,               $
              refl1gac:0L,              $
