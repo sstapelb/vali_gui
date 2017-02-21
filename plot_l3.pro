@@ -1099,8 +1099,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	; next ones only valid if not keyword_set(file)
 ; 	sat      = keyword_set(sat)     ? sat    : 'noaa18'
-	year     = keyword_set(year)    ? year   : '2008'
-	month    = keyword_set(month)   ? month  : '06'
+	year     = keyword_set(year)    ? year   : '';'2008'
+	month    = keyword_set(month)   ? month  : '';'06'
 	day      = keyword_set(day)     ? day    : ''
 ; 	algo     = keyword_set(algo)    ? strlowcase(algo)   : 'esacci'
 	algo     = keyword_set(algoname) ? ref2algo(algoname) : ''
@@ -5539,7 +5539,8 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if cli eq 'era'  then gridc = 0.5
 	if cli eq 'era2' then gridc = 0.5
 	if cli eq 'cla'  then gridc = 0.25
-	if cli eq 'isp'  then gridc = 2.5
+	if cli eq 'isp'  then gridc = 1.0
+	if cli eq 'isp_old'  then gridc = 2.5
 	if cli eq 'cal'  then gridc = 2.0
 	if cli eq 'hec'  then gridc = 0.5
 	if ~keyword_set(gridc) then begin
@@ -5558,7 +5559,8 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if ref eq 'era2' then gridr = 0.5
 	if ref eq 'cci'  then gridr = 0.5
 	if ref eq 'cla'  then gridr = 0.25
-	if ref eq 'isp'  then gridr = 2.5
+	if ref eq 'isp'  then gridr = 1.0
+	if ref eq 'isp_old'  then gridr = 2.5
 	if ref eq 'cal'  then gridr = 2.0
 	if ref eq 'hec'  then gridr = 0.5
 	if ~keyword_set(gridc) then begin
@@ -6119,7 +6121,8 @@ pro create_time_series,data,algon,coverage,period=period
 	if cli eq 'era2' then grid = 0.5
 	if cli eq 'cal'  then grid = 2.0
 	if cli eq 'cla'  then grid = 0.05
-	if cli eq 'isp'  then grid = 2.5
+	if cli eq 'isp'  then grid = 1.0
+	if cli eq 'isp_old'  then grid = 2.5
 	if cli eq 'hec'  then grid = 0.5
 	if ~keyword_set(grid) then begin
 		print,'Grid not defined! Unknown Climatology?'
@@ -6158,6 +6161,8 @@ pro create_time_series,data,algon,coverage,period=period
 	endif else sum_up = 0
 	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
 
+	if cli eq 'isp' and total(sat eq ['avhrrs','allsat']) then sat = ''
+	
 	nyears  = n_elements(years)
 	nmonths = n_elements(months)
 	dim_cov = n_elements(cov)
@@ -6454,12 +6459,12 @@ pro do_create_all_single_time_series
 
 	starttime = systime(1)
 	mem_cur   = memory(/current)
-; 	period    = ['2003-2011']
+	period    = ['2003-2011']
 ; 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
 ; 		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
 ; 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky',$ ;PVIR vars
-				 'cfc_low','cfc_mid','cfc_high','cph_day','ctt','cer','cot','cth','cwp','cwp_allsky']
+				'cfc_high','cfc_low','cfc_mid'];,'cph_day','ctt','cer','cot','cth','cwp','cwp_allsky']
 
 	; coll6 only
 ; 	data     = [	'iwp_16','lwp_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
@@ -6498,9 +6503,11 @@ pro do_create_all_single_time_series
 	cal_list = ['cal-']
 	; claas
 	cla_list = ['cla-']
+	; isccp list ; isp- = Gewex AMPM (avhrrs,allsat)
+	isp_list = ['isp-','isp-noaapm','isp-noaaam','isp_old-']
 
 	; combine all you need
-	algon_list = era_list
+	algon_list = ['isp-noaapm']
 
 	if is_defined(period) then begin
 		print,''

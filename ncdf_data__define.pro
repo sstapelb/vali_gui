@@ -1931,7 +1931,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	reference = ''
 	version   = ''
 	satnode   = ''
-
+; stop
 	verb = keyword_set(verbose)
 	; hier mal ein versuch für die L1 avhrr dateien
 	if H5F_IS_HDF5(pathn+'/'+filen) and stregex(filen,'99999_satproj',/bool) then begin
@@ -1971,14 +1971,14 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		month    = stregex(strmid(filen,strpos(filen,year)+4),'[0-9]{2}',/ext)
 		datum    = year+month
 	endif
-
-	if stregex(filen,'patmosx',/fold,/bool) then begin
-		algoname = 'PATMOS'
-		level    = stregex(pathn,'gewex',/fold,/bool) ? 'l3c' : ''
-		year     = stregex(filen,'[0-9]{4}',/ext)
-		month    = stregex(strmid(filen,strpos(filen,year)+4),'[0-9]{2}',/ext)
-		datum    = year+month
-	endif
+; stop
+; 	if stregex(filen,'patmosx',/fold,/bool) then begin
+; 		algoname = 'PATMOS'
+; 		level    = stregex(pathn,'gewex',/fold,/bool) ? 'l3c' : ''
+; 		year     = stregex(filen,'[0-9]{4}',/ext)
+; 		month    = stregex(strmid(filen,strpos(filen,year)+4),'[0-9]{2}',/ext)
+; 		datum    = year+month
+; 	endif
 
 	if stregex(pathn+'/'+filen,'apollo',/fold,/bool) then begin
 		if where(tag_names(theglobattr) eq 'ORIGINATOR_LONG') ge 0 then begin
@@ -2347,7 +2347,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	endif
 
 	out = {satname:satname[0],algoname:algoname,level:level,year:year,month:month,day:day,orbit:orbit,datum:datum,reference:reference,version:version}
-
+; stop
 	if verb then begin
 		print,'Set Satname to   : '+satname[0]
 		print,'Set Algoname to  : '+algoname
@@ -3306,7 +3306,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.ctlistID= Widget_combobox(bla, Value=[color_tbl_name],UVALUE=[color_tbl_name],Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_CTLIST')
 	    label = Widget_Label(leftrow, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270)
 	    bla = Widget_Base(leftrow, Column=5,Frame=0, Scr_XSize=270)
-	      yy_list        = reverse(string(indgen(38)+1978,f='(i4.4)'))
+	      yy_list        = reverse(string(indgen(40)+1978,f='(i4.4)'))
 	      self.yearID    = Widget_combobox(bla,VALUE=['--',yy_list],UVALUE=['--',yy_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_YEARLIST')
 	      mm_list        = string(indgen(12)+1,f='(i2.2)')
 	      self.monthID   = Widget_combobox(bla,VALUE=['--',mm_list],UVALUE=['--',mm_list],Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_MONTHLIST')
