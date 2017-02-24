@@ -1789,8 +1789,8 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 			oplots=oplots,error=error,dim3=dim3,rot=rot,datum=datum, $
 			addtext=addtext,countries=countries,notitle=notitle,save_as=save_as
 
-	pug  = 1
-	pvir = 0
+	pug  = 0
+	pvir = 1
 	
 	if pug then begin
 		if level eq 'l3c' then begin
@@ -1822,7 +1822,7 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 			varnames  = [varnames1,varnames2]
 			minv      = [minv1,minv2]
 			maxv      = [maxv1,maxv2]
-			magnify   = total(algo2ref(algoname,sat=sat) eq ['myd2','mod2','pmx']) ? 1 : -1
+			magnify   = total(algo2ref(algoname,sat=sat) eq ['myd2','mod2','pmx','isp']) ? 1 : -1
 			robinson  = 1
 			nobar     = 1
 			timeseries= 1
@@ -2975,7 +2975,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	;specials
 	pinatubo  = 0
 	mst_paper = 0
-	pvir      = 0
+	pvir      = 1
 
 	sav     = keyword_set(save_as)
 	wbg     = keyword_set(white_bg)
@@ -4905,8 +4905,11 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 			if ~keyword_set(nobar) then legend,date+satn+dtn+hct,thick=thick,spos='top',charsize=lcharsize,color =-1,charthick=charthick
 		endif else begin
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error,timeseries=nobar
-; spos='tl' & ystretch = opl
-			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[0],max_value=yr[1]
+			if yr[0] lt yr[1] then begin
+				if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[0],max_value=yr[1]
+			endif else begin
+				if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[1],max_value=yr[0]
+			endelse
 			if ts then date = ''
 			legend,date+satn+dtn+hct,thick=thick,color=cgcolor(cols), spos=spos,ystretch=ystretch+0.5,charsize=lcharsize,$
 			linestyle=linestyle,charthick=charthick
@@ -5067,7 +5070,8 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	satnames = strarr(n_elements(ts_data[0,*]))
 	for y=ori_period[0],ori_period[1] do begin & $
 		for m=1,12 do begin & $
-			satnames[count] = noaa_primes(y,m,ampm=noaa_ampm(sat,/ampm),/no_zero,/short) & $
+			short=0 & $
+			satnames[count] = noaa_primes(y,m,ampm=noaa_ampm(sat,/ampm),/no_zero,short=short) & $
 			count ++ & $
 		endfor & $
 	endfor
@@ -6648,9 +6652,10 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 
 	prod_list  = ['ctp','ctt','cwp','cot','cer']
 
-	algon_list = 'era2-'
+	algon_list = 'isp-noaapm'
 
-	years      = string(indgen(39)+1978,f='(i4.4)')
+; 	years      = string(indgen(39)+1978,f='(i4.4)')
+	years      = string(indgen(9)+2003,f='(i4.4)')
 	months     = string(indgen(12)+1,f='(i2.2)')
 ; 	plot_l3
 	datestr = years[0]+'-'+(reverse(years))[0]

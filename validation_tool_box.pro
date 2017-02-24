@@ -104,6 +104,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'refl1_asc'		then datd = 'cac'
 			if dat eq 'refl2_asc'		then datd = 'cac'
 			if dat eq 'refl3a_asc'		then datd = 'cac'
+			if dat eq 'refl3b_asc'		then datd = 'cac'
 			if dat eq 'rad3b_asc'		then datd = 'cac'
 			if dat eq 'rad4_asc'		then datd = 'cac'
 			if dat eq 'rad5_asc'		then datd = 'cac'
@@ -116,6 +117,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'refl1_desc'		then datd = 'cac'
 			if dat eq 'refl2_desc'		then datd = 'cac'
 			if dat eq 'refl3a_desc'		then datd = 'cac'
+			if dat eq 'refl3b_desc'		then datd = 'cac'
 			if dat eq 'rad3b_desc'		then datd = 'cac'
 			if dat eq 'rad4_desc'		then datd = 'cac'
 			if dat eq 'rad5_desc'		then datd = 'cac'
@@ -926,8 +928,11 @@ function PlanckInv, input_platform, T
     Planck_C1 = 1.19104E-5 ; 2hc^2 in mW m-2 sr-1 (cm-1)-4
     Planck_C2 = 1.43877 ; hc/k  in K (cm-1)-1
 
-   ; select approproate row of coefficient values
-	case strlowcase(input_platform) of
+    ; remove leading zero as well
+    platform = strlowcase(strjoin(strsplit(input_platform,'-',/ext)))
+
+    ; select approproate row of coefficient values
+	case platform of
 		"noaa5"		: index = 0
 		"noaa6"		: index = 1
 		"noaa7"		: index = 2
@@ -992,6 +997,9 @@ function PlanckInv, input_platform, T
          2670.000,  0.998000,  1.75000, 5.000  $ ;default
          ], 4, 22 )
 
+;     print,index
+; 	print,coefficients[ * , index ]
+
     PlanckInv = Planck_C1 * coefficients[ 0 , index ]^3 / $
          ( exp( Planck_C2 * coefficients[ 0 , index] / $
          ( coefficients[ 1 , index ] * T $
@@ -1029,14 +1037,20 @@ function bt37_to_ref37, doy, bt37, bt11, solzen, platform, no_data_value = no_da
 
 end
 ;------------------------------------------------------------------------------------------
-function false_color_max, filter, ref06, ref08, bt37, bt11, bt12, solzen, longname=longname,$
+function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen, longname=longname,$
 			no_hist_equal=no_hist_equal,no_byte_scale=no_byte_scale
 
-	description =	[	'00) ir108 [DAY/NIGHT - cold->white, warm->black]', $
+	description =	[	'00) ir108 [DAY/NIGHT - warm->white, cold->black]', $
 				'01) ir108-ir039 [NIGHT ONLY - fog->white, cirrus -> black]', $
 				'02) ir120-ir108/ir108-ir039/ir108 [NIGHT ONLY - fog,contr.->green, ground->pink, ice->red, thin c.->dark]', $
 				'03) vi006 [DAY ONLY - high reflectance->white, low reflectance->black]', $
-				'04) rgb [DAY ONLY - true clolor image]']	
+				'04) rgb [DAY ONLY - true clolor image]', $
+				'05) vi006, vi006, BTnir37 , Ice clouds yellow', $
+				'06) vi006/vi008,ref37/vi008,bt11-bt12', $
+				'07) vi006,vi008,bt11, High-clouds -> yellow, low clouds -> pale yellow shade; vegetated land -> purple, water -> blue.',$
+				'08) vi008,vi006,vi006',$
+				'09) vi008,bt11,bt12', $
+				'10) ref37,vi008,vi006']
 
 	longname = description[filter]
 	print,longname
@@ -1073,6 +1087,52 @@ function false_color_max, filter, ref06, ref08, bt37, bt11, bt12, solzen, longna
 			data = calc_rgb(ref06, ref08, bt37, bt11, solzen,0)
 			data = byte(data*1.3 < 255.)
 ; 			return,transpose(data,[1,2,0])
+		end
+		5:begin
+			c1 = ref06
+			c2 = ref06
+			c3 = ref37
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0), data_anz)
+			data     = transpose([[[c1]],[[c2]],[[c3]]], [2, 0, 1])
+		end
+		6:begin
+			c1 = ref06
+			c2 = ref08
+			c3 = ref37
+			c4 = bt11
+			c5 = bt12
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0) and (c4 gt 0) and (c5 gt 0), data_anz)
+			data     = transpose([[[c1]],[[c1/c2]],[[c3/c2]]], [2, 0, 1])
+		end
+		7:begin
+			c1 = ref06/mu0
+			c2 = ref08/mu0
+; 			c3 = bt11
+			c3 = bt11/max(bt11) *100.
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0) , data_anz)
+			data     = transpose([[[c2]],[[c1]],[[c3]]], [2, 0, 1])
+; 			data     = transpose([[[c1]],[[c2]],[[c3]]], [2, 0, 1])
+		end
+		8:begin
+			c1 = ref08
+			c2 = ref06
+ 			c3 = ref06
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0) , data_anz)
+ 			data     = transpose([[[c1]],[[c2]],[[c3]]], [2, 0, 1])
+		end
+		9:begin
+			c1 = ref08
+			c2 = bt11
+ 			c3 = bt12
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0) , data_anz)
+			data     = transpose([[[c1]],[[c2]],[[c3]]], [2, 0, 1])
+		end
+		10:begin
+			c1 = ref37;*mu0
+			c2 = ref08;*mu0
+			c3 = ref06;*mu0
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0), data_anz)
+			data     = transpose([[[c1]],[[c2]],[[c3]]], [2, 0, 1])
 		end
 	endcase
 
@@ -3898,12 +3958,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 							endif else orbdum = ''
 							if strmid(dat,0,3) eq 'rgb' then begin
-								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/v2.0/jpg/'
+								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/v2.0/jpg/'+yyyy+'/'
 								ampm  = noaa_ampm(sat)
-								; martin fragen rename "aft" in PM, etc 
-								if ampm eq 'pm' then ampm = 'aft'
-								if ampm eq 'am' then ampm = 'mor'
-								filen = 'Cloudcci_v2.0_'+ampm+'_*_'+dat+'_'+yyyy+mm+dd+'*.jpg'
+								filen = dir + 'Cloudcci_v2.0_'+strupcase(ampm)+'_*_'+dat+'_'+yyyy+mm+dd+'*.jpg'
 							endif else begin
 								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
 								filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
@@ -3990,7 +4047,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif
 							if dat eq 'RGB' then begin
 								dir   = din ? dirname+'/' : '/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/'
-								filen = 'CLARA_A2_*_rgb_'+satn+'_'+yyyy+mm+dd+'*.jpg'
+								filen = dir + 'CLARA_A2_*_rgb_'+satn+'_'+yyyy+mm+dd+'*.jpg'
 							endif else begin
 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/AVHRR_GAC_2/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
 								filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
@@ -4071,8 +4128,14 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
-									filen = dir+dat+'_ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
+									case which of 
+										'AMPM'	: style = 'AMPM'
+										'AM'	: style = '0730AMPM'
+										'PM'	: style = '0130AMPM'
+										else	: style = 'AMPM'
+									endcase
+; 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
+									filen = dir+dat+'_AVHRR-ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
 									addon = ' - Choose right Satellite!'
 								endelse
@@ -4085,6 +4148,13 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/bwuerzle/data/GEWEX_OUT/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
+; 									case which of 
+; 										'AMPM'	: style = 'AMPM'
+; 										'AM'	: style = '0730AMPM'
+; 										'PM'	: style = '0130AMPM'
+; 										else	: style = 'AMPM'
+; 									endcase
+; 									filen = dir+dat+'_AVHRR-CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
 									filen = dir+dat+'_CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
@@ -4152,8 +4222,15 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/MODIS/'+yyyy+'/'
+							which  = strupcase(noaa_ampm(sat))
+							case which of 
+								'AMPM'	: style = 'AMPM'
+								'AM'	: style = '1030AMPM'
+								'PM'	: style = '0130AMPM'
+								else	: style = 'AMPM'
+							endcase
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-							filen = dir+dat+'_ESACCI_*_'+strupcase(noaa_ampm(sat))+'_'+yyyy+'.nc'
+							filen = dir+dat+'_MODIS-ESACCI_*_'+style+'_'+yyyy+'.nc'
 						 end
 					'COLL5' : begin
 							doy   = string(doy(yyyy,mm,dd eq '' ? 1:dd),f='(i3.3)')
@@ -4214,7 +4291,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					if ~total(lev eq ['l3c','l3s']) then goto, ende
 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/ATSR/'+yyyy+'/'
 					dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-					filen = dir+dat+'_ESACCI_AATSR_AM_'+yyyy+'.nc'
+					filen = dir+dat+'_AATSR-ESACCI_ENVISAT_1030AMPM_'+yyyy+'.nc'
 				endif
 			  end
 		'ATSR2'	: begin
@@ -4229,7 +4306,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					if ~total(lev eq ['l3c','l3s']) then goto, ende
 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/ATSR/'+yyyy+'/'
 					dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-					filen = dir+dat+'_ESACCI_AATSR_AM_'+yyyy+'.nc'
+					filen = dir+dat+'_ATSR2-ESACCI_ERS2_1030AMPM_'+yyyy+'.nc'
 				endif
 			  end
 		'MERISAATSR': begin
@@ -4238,7 +4315,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/FAMEC/'+yyyy+'/'
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-							filen = dir+dat+'_ESACCI_MERIS-AATSR_1030AM_'+yyyy+'.nc'
+							filen = dir+dat+'_MERIS+AATSR-ESACCI_ENVISAT_1030AM_'+yyyy+'.nc'
 						end
 					'ESACCI': begin
 							if lev eq 'l2' then begin
@@ -4286,19 +4363,19 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								'ALLS'	: satn = 'HIPOS'
 								else	: satn = 'NN'
 							endcase
-							dumlevel = 'V1_2'
+; 							dumlevel = 'V1_2'
 							if din then begin
 								last_subdir = (reverse(strsplit(dirname,'/',/ext)))[0]
 								if is_number(last_subdir) and strlen(last_subdir) eq 4 then begin
 									dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
 								endif
 							endif
-							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld2/thanschm/DATASET/HECTOR_L3_DWD_PROCESSING/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
+							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/HECTOR/BETA_withIASI/LEVEL3/'+dat+'/'+satn+'/'+yyyy+'/'
 							filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
 						end
 					else:
 				endcase
-			  end  
+			  end
 		'ALL'	: begin
 				if alg eq 'ESACCI' then begin
 					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3S/'+yyyy+'/'+mm+'/'
@@ -5433,7 +5510,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	if ( total(dat eq ['blue_marble','marble']) ) and not keyword_set(filename) then filename='dum'
 
 	need_filename = ~total(dat eq ['blue_marble','marble','usgs_dem','usgs_lus','usgs_ls','usgs_lsm', $
-					'refl1','refl2','refl3a','rad3b','rad4','rad5'])
+					'refl1','refl2','refl3a','refl3b','rad3b','rad4','rad5'])
 
 	if not keyword_set(filename) and need_filename then begin
 		if n_params() eq 0 then begin
@@ -5493,7 +5570,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
-        endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
+	endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
 		; die neuen patmos l2b haben kein cloud_phase mehr -> berechne alte cloud_phase definition aus cloud_type (auch für die alten l2b's)
 		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, flag_meanings, set_fillvalue = set_fillvalue,$
 		verbose = verbose, found = found, silent=silent
@@ -5660,13 +5737,15 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if ~sil then print,''
-	endif else if total(dat eq ['rad3b','rad4','rad5','refl1','refl2','refl3a']) and alg eq 'clara2' and lev eq 'l3c' then begin
+	endif else if total(dat eq ['rad3b','rad4','rad5','refl1','refl2','refl3a','refl3b']) and alg eq 'clara2' and lev eq 'l3c' then begin
 		ref = algo2ref(alg)
 		filename = !SAVS_DIR + ref+'_rad_mm/'+string(year,f='(i4.4)')+string(month,f='(i2.2)')+'_'+strlowcase(sat)+'_'+ref+'_radiances_L3c.sav'
 		d = restore_var(filename,found=found)
 		if found then begin
 			if arg_present(finfo) then finfo = file_info(filename[0])
 			if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
+print,'please include refl3b'
+stop
 			strucname = stregex(dat,'refl',/bool,/fold) ? strupcase('rad'+strmid(dat,4)) : strupcase(dat)
 			strucidx  = where(tag_names(d) eq strucname,idxcnt)
 			if idxcnt gt 0 then begin
@@ -6273,6 +6352,35 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			outdata = mean(dummy,dimension=3,/nan)
 			if idxcnt gt 0 then outdata[idx] = no_data_value[0]
 		endif else found = 0
+	endif else if total(dat eq ['refl3b_asc','refl3b_desc']) and (lev eq 'l3u') then begin
+		nd = stregex(dat,'asc',/fold,/bool) ? '_asc' : '_desc'
+		read_data, filename[0], 'bt_nir037'+nd, rad3b, no_data_value3b, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+if found then begin
+		read_data, filename[0], 'bt_tir108'+nd, rad4, no_data_value4, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+endif
+if found then begin
+		ang_file = strreplace(filename,'CAC','CAA')
+		read_data, ang_file[0], 'sunzen'+nd, sunza, no_data_values, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+		noaasat = noaa_primes(year,month,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+; 		idx = where(rad3b eq no_data_value3b[0] or rad4 eq no_data_value4[0] or sunza eq no_data_values[0],idxcnt)
+		idx = where(rad3b eq no_data_value3b[0] or rad4 eq no_data_value4[0] or ~between(sunza,0.,80.),idxcnt)
+		no_data_value = -999.
+		if idxcnt gt 0 then begin
+			rad3b[idx] = no_data_value[0]
+			rad4 [idx] = no_data_value[0]
+			sunza[idx] = no_data_value[0]
+		endif
+		outdata = bt37_to_ref37( doy(year,month,day), rad3b, rad4, sunza, noaasat,no_data_val=no_data_value)
+		idx = where(outdata eq -999.,idxcnt)
+		outdata *= 100.
+		if idxcnt gt 0 then outdata[idx] = no_data_value[0]
+endif
+		minvalue = 0
+		maxvalue =100
+		longname = textoidl('Reflectance at 3.7 \mum , ')+(stregex(dat,'asc',/fold,/bool) ? 'ascending' : 'descending' )
 	endif else begin
 		if size(filename,/type) eq 0 then begin
 			found = 0
@@ -7936,6 +8044,7 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 		; hier gibts zu wenig übereinstimmung mit CC4CL-> getrennt plotten
 		if algo eq 'coll5' then bin_border = '1,100,200,300,400,500,600,700,800,900,1000,1100'
 		if algo eq 'coll6' then bin_border = '0,80,200,320,440,560,680,800,920,1040,1100'
+		if algo eq 'isccp' then bin_border = strjoin(strcompress(100 + (indgen(11) * 100),/rem),',')
 	endif
 	if stregex(data,'ctt',/fold,/bool) then begin
 		bin_border = '200,210,220,230,235,240,245,250,255,260,265,270,280,290,300,310,350'
@@ -8016,6 +8125,10 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 	if stregex(data,'ctp',/fold,/bool) then begin
 		pos_h = where(xtickname eq 440.,h_cnt)
 		pos_m = where(xtickname eq 680.,m_cnt)
+		; if algo eq 'isccp' then begin
+		; 		pos_h = where(xtickname eq 500.,h_cnt)
+		; 		pos_m = where(xtickname eq 700.,m_cnt)
+		; endif
 		if h_cnt eq 1 and m_cnt eq 1 then begin
 			sum_h = string(total(bild[0:pos_h-1])/total(bild) * 100.,f='(f6.2)')+'%'
 			sum_m = string(total(bild[pos_h:pos_m-1])/total(bild) * 100.,f='(f6.2)')+'%'
