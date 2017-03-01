@@ -4148,14 +4148,14 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/bwuerzle/data/GEWEX_OUT/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-; 									case which of 
-; 										'AMPM'	: style = 'AMPM'
-; 										'AM'	: style = '0730AMPM'
-; 										'PM'	: style = '0130AMPM'
-; 										else	: style = 'AMPM'
-; 									endcase
+									case which of 
+										'AMPM'	: style = 'AMPM'
+										'AM'	: style = '0730AMPM'
+										'PM'	: style = '0130AMPM'
+										else	: style = 'AMPM'
+									endcase
 ; 									filen = dir+dat+'_AVHRR-CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
-									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
+; 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
 									filen = dir+dat+'_CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
 									addon = ' - Choose right Satellite!'
