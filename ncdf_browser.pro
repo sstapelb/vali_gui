@@ -136,6 +136,8 @@ PRO NCDF_BROWSER, filename, $
     XOFFSET=xoffset, $
     YOFFSET=yoffset, $
     here=here, $
+    l3c_default=l3c_default,$
+    l3u_default=l3u_default,$
     default=default,$
     fromECMWF=fromECMWF, $
     debug=debug
@@ -149,7 +151,9 @@ PRO NCDF_BROWSER, filename, $
    ENDIF
 
    vali_set_path
-   if keyword_set(default) then filename = !DEFAULT_FILE
+   if keyword_set(default)     then filename = !L3C_DEFAULT_FILE
+   if keyword_set(l3c_default) then filename = !L3C_DEFAULT_FILE
+   if keyword_set(l3u_default) then filename = !L3U_DEFAULT_FILE
 
    IF N_Elements(extension) EQ 0 THEN extension = '*.nc;*.nc3;*.ncd;*.ncdf;*.hdf;*.h5'
    IF N_Elements(no_read_on_parse) EQ 0 THEN no_read_on_parse = 1

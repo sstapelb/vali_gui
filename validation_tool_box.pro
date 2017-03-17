@@ -601,6 +601,8 @@ function full_varname, varname, unit = unit, universal = universal
 		else : vollername = varname
 	endcase
 
+	if stregex(dat,'ctp2',/bool,/fold) then vollername = 'Cloud Top Pressure (MERIS only)'
+
 	if stregex(dat,'cph_extended',/bool,/fold) then vollername = 'Cloud Type'
 	if stregex(dat,'cloud_type',/bool,/fold) then vollername = 'Cloud Type'
 	if stregex(dat,'prop_unc',/bool,/fold) then vollername = vollername + ' - propagated Uncertainty' else $
@@ -615,7 +617,7 @@ function full_varname, varname, unit = unit, universal = universal
 	if stregex(dat,'_night',/fold,/bool)  and ~stregex(vollername,'_night',/fold,/bool)  then  vollername = vollername + ' - Night'
 
 	return,vollername
-	
+
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function is_jch, name, liquid = liquid, ice = ice, combined = combined, ratio=ratio, mixed = mixed
@@ -1415,9 +1417,10 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 	endif
 	case alg of 
 		'cci_old'	: ref = 'cci_old'
-		'esacci_old'	: ref = 'cci_old'
+		'esacci_old': ref = 'cci_old'
 		'esacci-pt'	: ref = 'cci_old'
 		'cci'		: ref = 'cci'
+		'cciv3'		: ref = 'cciv3'
 		'esacci'	: ref = 'cci'
 		'cloud_cci'	: ref = 'cci'
 		'gac'		: ref = 'gac'
@@ -2437,9 +2440,13 @@ end
 ; 
 ; All nan's will always be treated as fillvalue
 ; 
-function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sample = sample, found = found, nan_fillv = nan_fillv
+function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, found = found, nan_fillv = nan_fillv, $
+						  sample = sample, stddev = stddev, variance = variance
  
-	fillvalue    = keyword_set(no_data_value) ? double(no_data_value[0]) : -999d0
+	fillvalue = keyword_set(no_data_value) ? double(no_data_value[0]) : -999d0
+	std = keyword_set(stddev)
+	var = keyword_set(variance)
+
 	if ~finite(fillvalue) then begin
 		fillvalue = -999d0
 		nan_fillv = 1
@@ -2468,19 +2475,25 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, sam
 	endif else begin
 		N       = double(product(size(array,/dim)/([360.,180.]/gres))) ; number of elements of new grid
 		avg_all = rebin(array,360./gres,180./gres)  ; average over new grid
+		if (std or var) then avg_all2 = rebin(array^2.,360./gres,180./gres) ; mean of squares
 
 		; fillvalues included?
 		dum = array eq fillvalue
 
-		if total(dum) eq 0. then return, avg_all
+		if total(dum) eq 0. and ~(std or var) then return, avg_all
 
 		anz_fv  = round(rebin(double(temporary(dum)),360./gres,180./gres) * N) ; number of fillvalues
 		tot_fv  = anz_fv * fillvalue
 
 		divisor = double( N - anz_fv)
-		fvidx   = where(temporary(anz_fv) eq N,fvcnt)
+		fvidx   = where(anz_fv eq N,fvcnt)
 		if fvcnt gt 0 then divisor[fvidx] = 1.
-		result  = ( temporary(avg_all) * N - temporary(tot_fv) ) / temporary(divisor)
+		if (std or var) then begin
+			avg_all = ( avg_all * N - temporary(tot_fv) ) / divisor
+			sum2    = ( temporary(avg_all2) * N - temporary(anz_fv) * (fillvalue)^2. )
+			result  = ( (temporary(sum2) - (divisor) * temporary(avg_all)^2) > 0.) / ((temporary(divisor-1)) > 1.) ; variance
+			if std then result = sqrt(result > 0.)
+		endif else result  = ( temporary(avg_all) * N - temporary(tot_fv) ) / temporary(divisor)
 		if fvcnt gt 0 then result[fvidx] = keyword_set(nan_fillv) ? !values.f_nan : fillvalue
 	endelse
 
@@ -4129,12 +4142,16 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 									case which of 
-										'AMPM'	: style = 'AMPM'
-										'AM'	: style = '0730AMPM'
-										'PM'	: style = '0130AMPM'
-										else	: style = 'AMPM'
+										'AMPM'		: style = 'AMPM'
+										'AM'		: style = '0730AMPM'
+										'PM'		: style = '0130AMPM'
+										'AM_DAY'	: style = '0730AM'
+										'AM_NIGHT'	: style = '0730AM'
+										'PM_DAY'	: style = '0130PM'
+										'PM_NIGHT'	: style = '0130AM'
+										else		: style = 'AMPM'
 									endcase
-; 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
+; 									style = '0130PM'
 									filen = dir+dat+'_AVHRR-ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
 									addon = ' - Choose right Satellite!'
@@ -4142,7 +4159,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif
 						 end
 					'GAC2-GEWEX': begin
-						if ~total(lev eq ['l3c','l3s']) then goto, ende
+							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
@@ -4154,14 +4171,12 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 										'PM'	: style = '0130AMPM'
 										else	: style = 'AMPM'
 									endcase
-; 									filen = dir+dat+'_AVHRR-CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
-; 									style = keyword_set(gewex_style) ? strupcase(gewex_style) : which
 									filen = dir+dat+'_CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
 									addon = ' - Choose right Satellite!'
 								endelse
 							endif
-						 end
+						end
 					'ISCCP_OLD': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld4/ISCCP_mjerg/complete_clouds/'

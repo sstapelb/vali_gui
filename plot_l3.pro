@@ -1254,7 +1254,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	;------------------------------------------------------------------------------------------------------------------------------
 
 	if histo1d and keyword_set(hct) then begin
-		if hct eq '1d' then begin
+		if strmid(hct,0,2) eq '1d' then begin
 			bild = get_1d_rel_hist_from_1d_hist( bild, dat, algo = algo, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
 							     xtickname=xtickname, ytitle=ytitle, hist_name = data_name, file=file[fidx], $
 							     var_dim_names=var_dim_names, bin_val=bin_val, found=found)
@@ -1263,7 +1263,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if is_h1d(dat,/ice)    then apx = datum+' Ice ' 
 			if is_h1d(dat,/liquid) then apx = datum+' Liquid '
 			if is_h1d(dat,/ratio)  then apx = datum
-			zwi = (algo eq 'coll6' and stregex(dat,'ctt',/fold,/bool)) ? ' (Day only) ' : ' '
+			hori  = stregex(get_product_name(dat,algo ='cci'),'ctp',/fold,/bool)
+			zwi   = (algo eq 'coll6' and stregex(dat,'ctt',/fold,/bool)) ? ' (Day only) ' : ' '
 			sav   = keyword_set(save_as)
 			wbg   = keyword_set(white_bg)
 			savbg = sav or wbg 
@@ -1271,20 +1272,37 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				if savbg then thick = 4
 				if savbg then symsize = 2
 				if opl eq 0 then begin
-					yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,max(bild)]
-					plot,[0,0],[1,1],yr=yrange,xr=[0,n_elements(bild)-1],xticks=n_elements(xtickname)-1,$
-					xtickname=xtickname,xtitle=data_name,ytitle=ytitle,xminor=2, title=keyword_set(notitle)?'':datum, $
-					charthick = !p_charthick , $
-					xcharsize = !p_xcharsize , $
-					ycharsize = !p_ycharsize , $
-					xmargin   = [12,4] + ((wbg and ~sav) ? [6,3]:0), ymargin = [6,2] + ((wbg and ~sav) ? [3,1]:0)
-					idx = where(bild ge 0,idx_cnt)
-					if idx_cnt gt 0 then oplot,idx,bild[idx],thick=thick,psym=-8,symsize=symsize
-					legend,[algon+zwi+apx+adt],psym=[8],numsym=1,color=[-1],thick=2,spos='top', charsize= !l_charsize
+					if (hori eq 0) then begin
+						yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,max(bild)]
+						plot,[0,0],[1,1],yr=yrange,xr=[0,n_elements(bild)-1],xticks=n_elements(xtickname)-1,$
+						xtickname=xtickname,xtitle=data_name,ytitle=ytitle,xminor=2, title=keyword_set(notitle)?'':datum, $
+						charthick = !p_charthick , $
+						xcharsize = !p_xcharsize , $
+						ycharsize = !p_ycharsize , $
+						xmargin   = [12,4] + ((wbg and ~sav) ? [6,3]:0), ymargin = [6,2] + ((wbg and ~sav) ? [3,1]:0)
+						idx = where(bild ge 0,idx_cnt)
+						if idx_cnt gt 0 then oplot,idx,bild[idx],thick=thick,psym=-8,symsize=symsize
+						legend,[algon+zwi+apx+adt],psym=[8],numsym=1,color=[-1],thick=2,spos='top', charsize= !l_charsize
+					endif
+					if ( hori eq 1) then begin
+						yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,max(bild)]
+						plot,[0,0],[1,1],xr=yrange,yr=[0,n_elements(bild)-1],yticks=n_elements(xtickname)-1,$
+						ytickname=reverse(xtickname),ytitle=data_name,xtitle=ytitle,yminor=2, title=keyword_set(notitle)?'':datum, $
+						charthick = !p_charthick , $
+						xcharsize = !p_xcharsize , $
+						ycharsize = !p_ycharsize , $
+						xmargin   = [12,4] + ((wbg and ~sav) ? [6,3]:0), ymargin = [6,2] + ((wbg and ~sav) ? [3,1]:0)
+						idx = where(bild ge 0,idx_cnt)
+						if idx_cnt gt 0 then oplot,reverse(bild[idx]),idx,thick=thick,psym=-8,symsize=symsize
+						legend,[algon+zwi+apx+adt],psym=[8],numsym=1,color=[-1],thick=2,spos='top', charsize= !l_charsize
+					endif
 				endif else begin
 					define_oplots, opl, cols, spos, linestyle, psym, ystretch, error = error
 					idx = where(bild ge 0,idx_cnt)
-					if idx_cnt gt 0 then oplot,idx,bild[idx],thick=thick,psym=-8,color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+					if idx_cnt gt 0 then begin
+						if hori eq 0 then oplot,idx,bild[idx],thick=thick,psym=-8,color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+						if hori eq 1 then oplot,reverse(bild[idx]),idx,thick=thick,psym=-8,color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+					endif
 					legend,algon+zwi+apx+adt,thick=thick,color=cgcolor(cols), $
 					spos=spos,ystretch=ystretch,charsize= !l_charsize ,$
 					linestyle=linestyle,psym=-8;,numsym=1
@@ -1426,24 +1444,44 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			endelse
 			if found then begin
 				; CTP
+; 				stop
 				if plot_ctp then begin
 					start_save, strreplace(save_dum,'.eps','_CTP.eps'), thick = thick, size = [32,16]
 						if sav then thick = 5
 						if opl eq 0 then begin
-							plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=xtickname.ctp, $
-							xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,$
-							charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
-							xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
-							ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
-							xmargin   = [12,4],ymargin = [6,2]
-							oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,thick=thick,$
-							psym=-8,symsize=symsize
-							legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top', $
-							charsize=(sav ? !l_charsize : 1.5)
+							if (1 eq 2) then begin
+								plot,[0,0],[1,1],yr=yrange,xr=[0,6],xticks=7,xtickname=xtickname.ctp, $
+								xtitle=apx+'Cloud Top Pressure [hPa]',ytitle=ytitle,xminor=2,$
+								charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+								xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+								ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+								xmargin   = [12,4],ymargin = [6,2]
+								oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,thick=thick,$
+								psym=-8,symsize=symsize
+								legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top', $
+								charsize=(sav ? !l_charsize : 1.5)
+							endif else begin
+								plot,[0,0],[1,1],xr=yrange,yr=[0,6],yticks=7,ytickname=reverse(xtickname.ctp), $
+								ytitle=apx+'Cloud Top Pressure [hPa]',xtitle=ytitle,yminor=2,$
+								charthick = (keyword_set(save_as) ? !p_charthick  : 1.7), $
+								xcharsize = (keyword_set(save_as) ? !p_xcharsize  : 1.4), $
+								ycharsize = (keyword_set(save_as) ? !p_ycharsize  : 1.4), $
+								xmargin   = [12,4],ymargin = [6,2]
+								oplot,is_jch(dat,/ratio) ? reverse(histos.ctp) : reverse(histos.ctp/total(histos.ctp)*100.),$
+								findgen(n_elements(histos.ctp)),thick=thick,psym=-8,symsize=symsize
+								legend,[algon+' '+apx+adt],psym=[8],numsym=1,color=[-1],thick=thick,spos='top', $
+								charsize=(sav ? !l_charsize : 1.5)
+							endelse
 						endif else begin
 							define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error
-							oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,thick=thick,psym=-8,$
-							color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+							if (1 eq 2) then begin
+								oplot,is_jch(dat,/ratio) ? histos.ctp : histos.ctp/total(histos.ctp)*100.,$
+								thick=thick,psym=-8,color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+							endif else begin
+								oplot,is_jch(dat,/ratio) ? reverse(histos.ctp) : reverse(histos.ctp/total(histos.ctp)*100.),$
+								findgen(n_elements(histos.ctp)),thick=thick,psym=-8,$
+								color=cgcolor(cols),symsize=symsize,linestyle=linestyle
+							endelse
 							legend,algon+' '+apx+adt,thick=thick,color=cgcolor(cols),$
 							spos=spos,ystretch=ystretch,charsize=(sav ? !l_charsize : 1.5),$
 							linestyle=linestyle,psym=-8;,numsym=1
@@ -2132,7 +2170,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	endif
 
 	if histo1d then begin
-		if hct eq '1d' then begin
+		if strmid(hct,0,2) eq '1d' then begin
 			bild1 = get_1d_rel_hist_from_1d_hist( bild1, dat1, algo=algo1, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
 				xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found1,file=file1,var_dim_names=var_dim_names1,bin_val=bin_val)
 			bild2 = get_1d_rel_hist_from_1d_hist( bild2, dat2, algo=algo2, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
@@ -2975,7 +3013,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	;specials
 	pinatubo  = 0
 	mst_paper = 0
-	pvir      = 1
+	pvir      = 0
 
 	sav     = keyword_set(save_as)
 	wbg     = keyword_set(white_bg)
@@ -5526,10 +5564,16 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 	cov    = strlowcase(coverage)
 	sat    = strlowcase(satellite)
-	apxc   = '' ; appendix to climatology name
-	apxr   = '' ; appendix to rference name
-	ref    = algo2ref(reference)
-	cli    = algo2ref(climatology)
+	apxc   = '' ; appendix to climatology name, e.g. version
+	apxr   = '' ; appendix to reference name, e.g. version
+	if reference eq 'cciv3' then begin
+		ref = 'cci'
+		apxr = 'v3'
+	endif else ref = algo2ref(reference)
+	if climatology eq 'cciv3' then begin
+		cli = 'cci'
+		apxc = 'v3'
+	endif else 	cli    = algo2ref(climatology)
 	dat    = strlowcase(data)
 
 	if cli eq 'mod'  then gridc = 1.0
@@ -5605,6 +5649,11 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if total(cli eq ['cci','gac','gac2','pmx']) and $
 	  ~total(satcci eq ['noaaam','noaapm','aatme','aatsr','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
 	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
+	if apxc ne '' or apxr ne '' then begin
+		trend_sat = 0
+		if cli eq 'cci' and apxc eq 'v3' then cci_dirname = '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.2/L3C/cmask_testreihe/'
+		if ref eq 'cci' and apxr eq 'v3' then gac_dirname = '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.2/L3C/cmask_testreihe/'
+	endif
 
 	algon1 = sat_name(cli,satcci)
 	algon2 = sat_name(ref,satgac)
@@ -6109,7 +6158,10 @@ pro create_time_series,data,algon,coverage,period=period
 
 	dat    = strlowcase(data)
 	dum    = strsplit(strlowcase(algon[0]),'-',/ext)
-	cli    = algo2ref(dum[0])
+	if dum[0] eq 'cciv3' then begin
+		cli = 'cci'
+		apx = 'v3'
+	endif else cli = algo2ref(dum[0])
 	sat    = n_elements(dum) eq 2 ? dum[1] : ''
 	algon1 = sat_name(cli,sat)
 
@@ -6160,13 +6212,15 @@ pro create_time_series,data,algon,coverage,period=period
 	if total(cli eq ['cci','gac','gac2','pmx']) and ~total(sat eq ['noaaam','noaapm','aatme','atsrs','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
 	if total(strmid(dat,0,4) eq ['nobs','nret']) then begin
 		trend_sat = 0
-		sum_up    = 1 	;use total() instead of mean ???? not necassray, I guess spatial avergae = total / number of area 
-				; num of area should be equal the whole time series 
+		sum_up    = 1
 	endif else sum_up = 0
 	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
 
 	if cli eq 'isp' and total(sat eq ['avhrrs','allsat']) then sat = ''
-	
+	if apx ne '' then begin
+		trend_sat = 0
+		if cli eq 'cci' and apx eq 'v3' then dirname = '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.2/L3C/cmask_testreihe/'
+	endif
 	nyears  = n_elements(years)
 	nmonths = n_elements(months)
 	dim_cov = n_elements(cov)
@@ -6419,13 +6473,13 @@ pro do_create_all_compare_time_series
 
 ; 	period   = ['2003-2011']
 
-	cli      = 'gac2'
+	cli      = 'cciv3'
 	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		        'metopa','metopb','allsat','noaaam','noaapm','aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['gac'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
+	ref      = ['cci','pmx','myd2','gac2','cal'];['mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
 	data     = ['cfc'];,'ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
 ; 				'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
 
@@ -6463,7 +6517,7 @@ pro do_create_all_single_time_series
 
 	starttime = systime(1)
 	mem_cur   = memory(/current)
-	period    = ['2003-2011']
+; 	period    = ['2003-2011']
 ; 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
 ; 		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
 ; 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
@@ -6511,7 +6565,8 @@ pro do_create_all_single_time_series
 	isp_list = ['isp-','isp-noaapm','isp-noaaam','isp_old-']
 
 	; combine all you need
-	algon_list = ['isp-noaapm']
+	algon_list = ['cciv3-noaapm']
+data='cfc'
 
 	if is_defined(period) then begin
 		print,''

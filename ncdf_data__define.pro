@@ -3382,7 +3382,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
 			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','ERA-INTERIM2','PATMOS-X',$
-			  'CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','SELECT FILE'];'PATMOS_OLD'
+			  'CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','CCIV3','SELECT FILE'];'PATMOS_OLD'
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
@@ -4106,8 +4106,9 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 	;check for patmos l3u node
 	if algo eq 'PATMOS' and level eq 'l3u' then begin
 		last = strlowcase(strmid((reverse(strsplit(varname,'_',/ext)))[0],0,3))
-		if last eq 'asc' then node = 'asc'  else $
-		if last eq 'des' then node = 'desc' else $
+		if last eq 'asc'  then node = 'asc'  else $
+		if last eq 'des'  then node = 'desc' else $
+		if last eq 'desc' then node = 'desc' else $
 		node = self.satnode
 	endif
 

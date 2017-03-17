@@ -4,7 +4,9 @@ PRO vali_set_path
 	DEFSYSV,'!SAVE_DIR', '/cmsaf/cmsaf-cld1/sstapelb/bilder/'		; directory to store and find images
 	DEFSYSV,'!STD_DIR' , '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/'	; standard data directory used in ncdf_browser.pro
 	DEFSYSV,'!ECMWF_DIR' , '/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/temp/fromECMWF/'	; standard ECTRANS downloadpath used in ncdf_browser.pro
-	DEFSYSV,'!DEFAULT_FILE', '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C/1982/01/198201-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-7-fv2.0.nc'
+	DEFSYSV,'!DEFAULT_FILE', '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C/2008/07/200807-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-18-fv2.0.nc'
+	DEFSYSV,'!L3C_DEFAULT_FILE', '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C/2008/07/200807-ESACCI-L3C_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-18-fv2.0.nc'
+	DEFSYSV,'!L3U_DEFAULT_FILE', '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3U/2008/07/20080701-ESACCI-L3U_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-18-fv2.0.nc'
 
 	;CHANGE THIS ONLY IF YOU KNOW WHAT YOU ARE DOING
 	DEFSYSV,'!SAVS_DIR', '/cmsaf/cmsaf-cld1/sstapelb/savs/'			; directory to store and find IDL sav files
