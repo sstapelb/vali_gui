@@ -3843,7 +3843,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					 silent = silent, orbit = orbit, dirname = dirname	, $
 					 filename = filename, version = version, $
 					 no_recursive_search = no_recursive_search,$
-					 gewex_style = gewex_style ; gewex_style = [0130PM,0130AM,0730PM,0730AM,AM,PM,AMPM]
+					 gewex_style = gewex_style ; gewex_style = [0130PM,0130AM,0730PM,0730AM,0130AMPM,0730AMPM,AMPM]
 
 	filen = '-1'
 	addon = ''
