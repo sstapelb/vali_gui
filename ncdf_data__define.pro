@@ -4597,7 +4597,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					found = 1
 					datum2 = ''
 				endif else begin
-					self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, found = found, orbit=orbit))[0]
+					if strlowcase(algo) eq 'gewex' then gewex_style = (strsplit(file1,'_',/ext))[3]
+					self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, $
+								  found=found, orbit=orbit,gewex_style=gewex_style))[0]
 					if not found then begin
 						self.file2 = self.directory+'/'+self.filename
 						sat  = self.satname
@@ -5532,7 +5534,7 @@ PRO NCDF_DATA::SelectionInTree, event
             FOR j=0,N_Elements(attr)-1 DO BEGIN
                thisAttr = attr[j]
                IF thisAttr.dataType EQ 'STRING' OR thisAttr.dataType EQ 'CHAR' THEN BEGIN
-                  str = TextLineFormat(*thisAttr.value, LENGTH=80)
+                  str = TextLineFormat(strjoin(*thisAttr.value), LENGTH=80)
                   lines = N_Elements(str)
                   text = [text, StrArr(2 + lines)]
                   text[si] = StrUpCase(thisAttr.name) + ':'

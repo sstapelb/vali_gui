@@ -890,6 +890,20 @@ function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=
 
 end
 ;------------------------------------------------------------------------------------------
+;returns histogram with irregular bin sizes
+function ihistogram,data,bin_borders
+
+; 	bins     = [1.,90.,180.,245.,310.,375.,440.,500.,560.,620.,680.,740.,800.,875.,950.,1100.]
+	n_bins   = n_elements(bin_borders)
+	bins     = bin_borders
+	histo    = lonarr(n_bins-1)
+	dum_hist = histogram(ctp,min=0,max=max(bins))
+	for i = 0,n_bins-2 do histo[i] = total(dum_hist[bins[i]:bins[i+1]-1])
+
+	return,histo
+
+end
+;------------------------------------------------------------------------------------------
 pro get_era_info, file, version, threshold , set_as_sysvar = set_as_sysvar
 
 		filen = file_basename(file)
@@ -2502,7 +2516,9 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, fou
 end
 ;------------------------------------------------------------------------------------------
 ; stapel with main part taken from lonlat2reg.pro [P. Albert]
-function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_res = grid_res, verbose = verbose, found = found, nan_fillv = nan_fillv
+function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_res = grid_res, $
+					verbose = verbose, found = found, nan_fillv = nan_fillv,$
+					skill_ref_data = skill_ref_data ; add reference data for 2D skill analysis
 
 	found = 1
 	lon = dlon
@@ -2513,6 +2529,13 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 		nan_fillv   = 1
 	endif
 	data = in_data
+	if keyword_set(skill_ref_data) then begin
+		data2 = skill_ref_data
+		if n_elements(data) ne n_elements(data2) then begin
+			print,'Skill Reference data needs to be of same dimension as input data'
+			free,data2
+		endif
+	endif
 
 	idx = where(lon gt 180,idxcnt)
 	if idxcnt gt 0 then begin
@@ -2552,6 +2575,7 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 	lat_sum = fltarr(arr_dim)
 
 	xdata = data[idx]
+	if is_defined(data2) then xdata2= data2[idx]
 	view  = fltarr(arr_dim) + ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
 	nnn   = lonarr(arr_dim)
 	sum   = fltarr(arr_dim)
@@ -2559,6 +2583,11 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 	nul   = fltarr(arr_dim)
 	sam   = fltarr(arr_dim)
 	med   = fltarr(arr_dim)
+	if is_defined(data2) then begin
+		tss_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		pec_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		bias_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+	endif
 	min_x = min(x_model[idx], max = max_x)
 	xxx   = max_x - min_x + 1
 	s     = x_model[idx] - min_x + y_model[idx] * xxx
@@ -2581,6 +2610,12 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 			sum2[ix, iy]    = nnn[ix, iy] gt 1 ? total((xdata[ri[ri[i]: ri[i+1]-1]])^2) : xdata[ri[ri[i]]]^2
 			lon_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( lodata[ri[ri[i]: ri[i+1]-1]])   : lodata[ri[ri[i]]]
 			lat_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( ladata[ri[ri[i]: ri[i+1]-1]])   : ladata[ri[ri[i]]]
+			if is_defined(data2) and nnn[ix, iy] gt 1 then begin
+				skills_n_scores,xdata2[ri[ri[i]: ri[i+1]-1]],xdata[ri[ri[i]: ri[i+1]-1]],tss=tss,pec=pec
+				tss_data[ix, iy] = tss
+				pec_data[ix, iy] = pec
+				bias_data[ix, iy] = bias(xdata[ri[ri[i]: ri[i+1]-1]],xdata2[ri[ri[i]: ri[i+1]-1]])
+			endif
 		endif
 	endfor
 
@@ -2601,11 +2636,18 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 		med[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		var[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		sum[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then tss_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then pec_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then bias_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		if do_it then view[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 	endif
 
+	if is_defined(data2) then begin
+		skills = {tss:tss_data,pec:pec_data,bias:bias_data}
+	endif else skills =-1
+
 	return, { sum : sum, mean: avg,mean_lat: alat,mean_lon: alon, median:med, random_sample : sam, null_sample : nul, $
-	stddev: sdv, variance: var, count: nnn, lon: glon, lat: glat, nearest_nadir:view ,s:s,min_x:min_x,xxx:xxx}
+	stddev: sdv, variance: var, count: nnn, lon: glon, lat: glat, nearest_nadir:view ,s:s,min_x:min_x,xxx:xxx,skills:skills}
 end
 ;------------------------------------------------------------------------------------------
 function read_modis_obj_val, stringname, group, value = value,found=found
@@ -2718,12 +2760,13 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 				read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_nh.hdf5','/Data/data[01]',lon_dum,fillv,found=found,verbose = verbose
 			endelse
 		endif else if keyword_set(file) then begin
-			read_data, filen[0],'longitude',lon_dum,fillv,verbose = verbose, found = found, attribute = att_lon
-			if not found then read_data, filen[0],'lon',lon_dum,fillv,verbose = verbose, found = found, attribute = att_lon
-			if not found and is_hdf5(filen[0]) then read_data, filen[0],'/where/lon/data',lon_dum,fillv,verbose = verbose, found = found, attribute = att_lon
-			read_data, filen[0],'latitude',lat_dum,fillv,verbose = verbose, found = found, attribute = att_lat
-			if not found then read_data, filen[0],'lat',lat_dum,fillv,verbose = verbose, found = found, attribute = att_lat
-			if not found and is_hdf5(filen[0]) then read_data, filen[0],'/where/lat/data',lat_dum,fillv,verbose = verbose, found = found, attribute = att_lat
+			read_data, filen[0],'longitude',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
+			if not found_lon then read_data, filen[0],'lon',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
+			if not found_lon and is_hdf5(filen[0]) then read_data, filen[0],'/where/lon/data',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
+			read_data, filen[0],'latitude',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
+			if not found_lat then read_data, filen[0],'lat',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
+			if not found_lat and is_hdf5(filen[0]) then read_data, filen[0],'/where/lat/data',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
+			found = found_lon and found_lat
 		endif else found=0
 	endelse
 
@@ -2784,8 +2827,16 @@ end
 pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = algoname, set_fillvalue = set_fillvalue , $		;input 
 		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw, attributes = attributes, var_dim_names = var_dim_names	;output
 
-	ff = nc_file[0]
+	if ~file_test(nc_file[0],/read) then begin
+		if keyword_set(verbose) then begin
+			print,'File not found or not readable! ',nc_file[0]
+		endif
+		found = 0.
+		return
+	endif
 
+	ff = nc_file[0]
+	
 	bild_raw = get_ncdf_data_by_name(ff, data, found = found, verbose = verbose, var_dim_names = var_dim_names, data_type=data_type)
 	if not found then begin
 		if keyword_set(verbose) then print, data+' not found!'
@@ -3501,9 +3552,10 @@ END
 pro read_hdf, 	hdf_file, data, verbose = verbose ,find_tagnames=find_tagnames, algoname = algoname, set_fillvalue = set_fillvalue, $	;input
 		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, found = found , raw=raw, attribute = attribute	;output
 
-	check = is_hdf(hdf_file, version)
+	check = is_hdf(hdf_file, version) or H5F_IS_HDF5(hdf_file)
 
 	if check then begin
+		version = H5F_IS_HDF5(hdf_file) ? 5 : 4
 		if version eq 4 then begin
 			if keyword_set(verbose) then print, 'Found hdf4 file'
 			read_hdf4, hdf_file, data, verbose=verbose,find_tagnames=find_tagnames,raw=raw,algoname=algoname,set_fillvalue=set_fillvalue,$
@@ -3542,7 +3594,7 @@ pro read_hdf, 	hdf_file, data, verbose = verbose ,find_tagnames=find_tagnames, a
 			minvalue = make_array(1,val=0,type=raw_type)
 
 			maxvalue = max(bild_raw)
-
+stop
 			if ~is_struct(att) then begin
 				; is dataset member of a group?  
 				dum  = strsplit(data,'/',/ext)
@@ -3749,7 +3801,7 @@ pro read_data, 	filename, data, verbose = verbose, found = found, algoname = alg
 		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw,attribute = attribute, var_dim_names = var_dim_names;output
 	if keyword_set(verbose) then z=systime(1)
 
-	file = filename
+	file = filename[0]
 
 	if is_compressed(file) then begin
 		ff = adv_tempname('dummy')
@@ -3766,6 +3818,8 @@ pro read_data, 	filename, data, verbose = verbose, found = found, algoname = alg
 	found = 0
 	if is_hdf(file)  then read_hdf ,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname, set_fillvalue = set_fillvalue, $
 					bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, attribute = attribute else   $
+; 	if is_hdf(file) or H5F_IS_HDF5(file) then read_hdf ,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname, set_fillvalue = set_fillvalue, $
+; 					bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, attribute = attribute else   $
 	if is_ncdf(file) then read_ncdf,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname, set_fillvalue = set_fillvalue, $
 					bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, attribute = attribute, $
 					var_dim_names = var_dim_names else   $
@@ -4141,16 +4195,18 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-									case which of 
-										'AMPM'		: style = 'AMPM'
-										'AM'		: style = '0730AMPM'
-										'PM'		: style = '0130AMPM'
-										'AM_DAY'	: style = '0730AM'
-										'AM_NIGHT'	: style = '0730AM'
-										'PM_DAY'	: style = '0130PM'
-										'PM_NIGHT'	: style = '0130AM'
-										else		: style = 'AMPM'
-									endcase
+									if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
+										case which of
+											'AMPM'		: style = 'AMPM'
+											'AM'		: style = '0730AMPM'
+											'PM'		: style = '0130AMPM'
+											'AM_DAY'	: style = '0730AM'
+											'AM_NIGHT'	: style = '0730AM'
+											'PM_DAY'	: style = '0130PM'
+											'PM_NIGHT'	: style = '0130AM'
+											else		: style = 'AMPM'
+										endcase
+									endelse
 ; 									style = '0130PM'
 									filen = dir+dat+'_AVHRR-ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
@@ -4165,12 +4221,14 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/bwuerzle/data/GEWEX_OUT/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-									case which of 
-										'AMPM'	: style = 'AMPM'
-										'AM'	: style = '0730AMPM'
-										'PM'	: style = '0130AMPM'
-										else	: style = 'AMPM'
-									endcase
+									if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
+										case which of 
+											'AMPM'	: style = 'AMPM'
+											'AM'	: style = '0730AMPM'
+											'PM'	: style = '0130AMPM'
+											else	: style = 'AMPM'
+										endcase
+									endelse
 									filen = dir+dat+'_CLARA_A2_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
 									addon = ' - Choose right Satellite!'
@@ -4188,12 +4246,14 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if found then begin
 								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/EXTERNAL_DATA/ISCCP/GEWEX/'+yyyy+'/'
 								dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-								case which of 
-									'AMPM'	: style = 'AMPM'
-									'AM'	: style = '0900AMPM'
-									'PM'	: style = '0300AMPM'
-									else	: style = 'AMPM'
-								endcase
+								if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
+									case which of 
+										'AMPM'	: style = 'AMPM'
+										'AM'	: style = '0900AMPM'
+										'PM'	: style = '0300AMPM'
+										else	: style = 'AMPM'
+									endcase
+								endelse
 								filen = dir+dat+'_ISCCP_D1_'+style+'_'+yyyy+'.nc'
 							endif
 							end
@@ -4238,12 +4298,14 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/MODIS/'+yyyy+'/'
 							which  = strupcase(noaa_ampm(sat))
-							case which of 
-								'AMPM'	: style = 'AMPM'
-								'AM'	: style = '1030AMPM'
-								'PM'	: style = '0130AMPM'
-								else	: style = 'AMPM'
-							endcase
+							if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
+								case which of 
+									'AMPM'	: style = 'AMPM'
+									'AM'	: style = '1030AMPM'
+									'PM'	: style = '0130AMPM'
+									else	: style = 'AMPM'
+								endcase
+							endelse
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 							filen = dir+dat+'_MODIS-ESACCI_*_'+style+'_'+yyyy+'.nc'
 						 end
