@@ -2705,8 +2705,58 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		free, lat_dum
 		found = 1
 		return
-	endif
-	if keyword_set(grid_res) then begin
+	endif else if keyword_set(nise) then begin
+		lon_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_nhk.sav')
+		lat_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_nhk.sav')
+		lon_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_shk.sav')
+		lat_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_shk.sav')
+		lon_dum = [[[lon_nhk]],[[lon_shk]]]
+		lat_dum = [[[lat_nhk]],[[lat_shk]]]
+		found =1
+	endif else if keyword_set(nsidc) then begin
+		if strcompress(nsidc,/rem) eq 'south' then begin
+			;print,'south'
+			lat_dum=lonarr(316, 332, /NOZERO)
+			openr,lun,'/cmsaf/nfshome/sstapelb/idl/pss25lats_v3.dat',/get_lun             
+			READU, lun, lat_dum
+			free_lun,lun
+			lat_dum = rotate(lat_dum/100000.,7)
+			lon_dum=lonarr(316, 332, /NOZERO)
+			openr,lun,'/cmsaf/nfshome/sstapelb/idl/pss25lons_v3.dat',/get_lun             
+			READU, lun, lon_dum
+			free_lun,lun
+			lon_dum = rotate(lon_dum/100000.,7)
+		endif else begin
+			;print,'north'
+			lat_dum=lonarr(304, 448, /NOZERO)
+			openr,lun,'/cmsaf/nfshome/sstapelb/idl/psn25lats_v3.dat',/get_lun             
+			READU, lun, lat_dum
+			free_lun,lun
+			lat_dum = rotate(lat_dum/100000.,7)
+			lon_dum=lonarr(304, 448, /NOZERO)
+			openr,lun,'/cmsaf/nfshome/sstapelb/idl/psn25lons_v3.dat',/get_lun             
+			READU, lun, lon_dum
+			free_lun,lun
+			lon_dum = rotate(lon_dum/100000.,7)
+		endelse
+		found =1
+	endif else if keyword_set(osisaf) then begin
+		if strcompress(osisaf,/rem) eq 'south' then begin
+			read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_sh.hdf5','/Data/data[00]',lat_dum,fillv,found=found,verbose = verbose
+			read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_sh.hdf5','/Data/data[01]',lon_dum,fillv,found=found,verbose = verbose
+		endif else begin
+			read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_nh.hdf5','/Data/data[00]',lat_dum,fillv,found=found,verbose = verbose
+			read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_nh.hdf5','/Data/data[01]',lon_dum,fillv,found=found,verbose = verbose
+		endelse
+	endif else if keyword_set(file) then begin
+		read_data, filen[0],'longitude',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
+		if not found_lon then read_data, filen[0],'lon',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
+		if not found_lon and is_hdf5(filen[0]) then read_data, filen[0],'/where/lon/data',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
+		read_data, filen[0],'latitude',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
+		if not found_lat then read_data, filen[0],'lat',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
+		if not found_lat and is_hdf5(filen[0]) then read_data, filen[0],'/where/lat/data',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
+		found = found_lon and found_lat
+	endif else if keyword_set(grid_res) then begin
 		if keyword_set(offsets) then begin
 			lon_dum = findgen((offsets.ELON-offsets.SLON)/grid_res) * grid_res - (((-1) * offsets.SLON) - grid_res/2.)
 			lat_dum = findgen((offsets.ELAT-offsets.SLAT)/grid_res) * grid_res - (((-1) * offsets.SLAT) - grid_res/2.)
@@ -2715,60 +2765,7 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 			lat_dum = findgen(180./grid_res) * grid_res - ( 90.- grid_res/2.)
 		endelse
 		found = 1
-	endif else begin
-		if keyword_set(nise) then begin
-			lon_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_nhk.sav')
-			lat_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_nhk.sav')
-			lon_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_shk.sav')
-			lat_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_shk.sav')
-			lon_dum = [[[lon_nhk]],[[lon_shk]]]
-			lat_dum = [[[lat_nhk]],[[lat_shk]]]
-			found =1
-		endif else if keyword_set(nsidc) then begin
-			if strcompress(nsidc,/rem) eq 'south' then begin
-				;print,'south'
-				lat_dum=lonarr(316, 332, /NOZERO)
-				openr,lun,'/cmsaf/nfshome/sstapelb/idl/pss25lats_v3.dat',/get_lun             
-				READU, lun, lat_dum
-				free_lun,lun
-				lat_dum = rotate(lat_dum/100000.,7)
-				lon_dum=lonarr(316, 332, /NOZERO)
-				openr,lun,'/cmsaf/nfshome/sstapelb/idl/pss25lons_v3.dat',/get_lun             
-				READU, lun, lon_dum
-				free_lun,lun
-				lon_dum = rotate(lon_dum/100000.,7)
-			endif else begin
-				;print,'north'
-				lat_dum=lonarr(304, 448, /NOZERO)
-				openr,lun,'/cmsaf/nfshome/sstapelb/idl/psn25lats_v3.dat',/get_lun             
-				READU, lun, lat_dum
-				free_lun,lun
-				lat_dum = rotate(lat_dum/100000.,7)
-				lon_dum=lonarr(304, 448, /NOZERO)
-				openr,lun,'/cmsaf/nfshome/sstapelb/idl/psn25lons_v3.dat',/get_lun             
-				READU, lun, lon_dum
-				free_lun,lun
-				lon_dum = rotate(lon_dum/100000.,7)
-			endelse
-			found =1
-		endif else if keyword_set(osisaf) then begin
-			if strcompress(osisaf,/rem) eq 'south' then begin
-				read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_sh.hdf5','/Data/data[00]',lat_dum,fillv,found=found,verbose = verbose
-				read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_sh.hdf5','/Data/data[01]',lon_dum,fillv,found=found,verbose = verbose
-			endif else begin
-				read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_nh.hdf5','/Data/data[00]',lat_dum,fillv,found=found,verbose = verbose
-				read_data,'/cmsaf/nfshome/sstapelb/idl/osisaf_latlon_nh.hdf5','/Data/data[01]',lon_dum,fillv,found=found,verbose = verbose
-			endelse
-		endif else if keyword_set(file) then begin
-			read_data, filen[0],'longitude',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
-			if not found_lon then read_data, filen[0],'lon',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
-			if not found_lon and is_hdf5(filen[0]) then read_data, filen[0],'/where/lon/data',lon_dum,fillv,verbose = verbose, found = found_lon, attribute = att_lon
-			read_data, filen[0],'latitude',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
-			if not found_lat then read_data, filen[0],'lat',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
-			if not found_lat and is_hdf5(filen[0]) then read_data, filen[0],'/where/lat/data',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
-			found = found_lon and found_lat
-		endif else found=0
-	endelse
+	endif else found = 0
 
 	if ~found then begin
 		if keyword_set(pick_file) then begin
