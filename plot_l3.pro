@@ -1373,7 +1373,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	endif else geo_file = file[fidx]
 	make_geo, file = geo_file, lon,lat, verbose = verbose, dimension = size(bild,/dim), $
 ; 	grid=get_grid_res(algo eq '' ? 0:bild[*,*,0,0,0]), found = found_geo, msg=msg
-	grid=get_grid_res(bild[*,*,0,0,0]), found = found_geo, msg=msg,/ pick_file,algo=algo
+; 	grid=get_grid_res(bild[*,*,0,0,0]), found = found_geo, msg=msg,/ pick_file,algo=algo
+	found = found_geo, msg=msg,/ pick_file,algo=algo
 
 	if keyword_set(rot) then begin
 		if size(reform(bild),/n_dim) eq 2 then begin

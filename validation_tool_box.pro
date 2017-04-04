@@ -4193,21 +4193,17 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
-									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/'+yyyy+'/'
+									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/AVHRR/'+yyyy+'/'
+; 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/AVHRR/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 									if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
 										case which of
 											'AMPM'		: style = 'AMPM'
 											'AM'		: style = '0730AMPM'
 											'PM'		: style = '0130AMPM'
-											'AM_DAY'	: style = '0730AM'
-											'AM_NIGHT'	: style = '0730AM'
-											'PM_DAY'	: style = '0130PM'
-											'PM_NIGHT'	: style = '0130AM'
 											else		: style = 'AMPM'
 										endcase
 									endelse
-; 									style = '0130PM'
 									filen = dir+dat+'_AVHRR-ESACCI_NOAA_'+style+'_'+yyyy+'.nc'
 								endif else begin
 									addon = ' - Choose right Satellite!'
@@ -4296,7 +4292,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						  end
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/MODIS/'+yyyy+'/'
+							stop
+; 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/MODIS/'+yyyy+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/MODIS/'+yyyy+'/'
 							which  = strupcase(noaa_ampm(sat))
 							if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
 								case which of 
@@ -4366,7 +4364,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				endif
 				if alg eq 'GEWEX' then begin
 					if ~total(lev eq ['l3c','l3s']) then goto, ende
-					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/ATSR/'+yyyy+'/'
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/ATSR/'+yyyy+'/'
 					dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 					filen = dir+dat+'_AATSR-ESACCI_ENVISAT_1030AMPM_'+yyyy+'.nc'
 				endif
@@ -4381,7 +4379,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				endif
 				if alg eq 'GEWEX' then begin
 					if ~total(lev eq ['l3c','l3s']) then goto, ende
-					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/ATSR/'+yyyy+'/'
+					dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/ATSR/'+yyyy+'/'
 					dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 					filen = dir+dat+'_ATSR2-ESACCI_ERS2_1030AMPM_'+yyyy+'.nc'
 				endif
@@ -4390,7 +4388,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				case alg of 
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/FAMEC/'+yyyy+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/FAMEC/'+yyyy+'/'
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 							filen = dir+dat+'_MERIS+AATSR-ESACCI_ENVISAT_1030AM_'+yyyy+'.nc'
 						end
