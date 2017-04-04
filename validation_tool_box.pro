@@ -2756,19 +2756,19 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		if not found_lat then read_data, filen[0],'lat',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
 		if not found_lat and is_hdf5(filen[0]) then read_data, filen[0],'/where/lat/data',lat_dum,fillv,verbose = verbose, found = found_lat, attribute = att_lat
 		found = found_lon and found_lat
-	endif else if keyword_set(grid_res) then begin
-		if keyword_set(offsets) then begin
-			lon_dum = findgen((offsets.ELON-offsets.SLON)/grid_res) * grid_res - (((-1) * offsets.SLON) - grid_res/2.)
-			lat_dum = findgen((offsets.ELAT-offsets.SLAT)/grid_res) * grid_res - (((-1) * offsets.SLAT) - grid_res/2.)
-		endif else begin
-			lon_dum = findgen(360./grid_res) * grid_res - (180.- grid_res/2.)
-			lat_dum = findgen(180./grid_res) * grid_res - ( 90.- grid_res/2.)
-		endelse
-		found = 1
 	endif else found = 0
 
 	if ~found then begin
-		if keyword_set(pick_file) then begin
+		if keyword_set(grid_res) then begin
+			if keyword_set(offsets) then begin
+				lon_dum = findgen((offsets.ELON-offsets.SLON)/grid_res) * grid_res - (((-1) * offsets.SLON) - grid_res/2.)
+				lat_dum = findgen((offsets.ELAT-offsets.SLAT)/grid_res) * grid_res - (((-1) * offsets.SLAT) - grid_res/2.)
+			endif else begin
+				lon_dum = findgen(360./grid_res) * grid_res - (180.- grid_res/2.)
+				lat_dum = findgen(180./grid_res) * grid_res - ( 90.- grid_res/2.)
+			endelse
+			found = 1
+		endif else if keyword_set(pick_file) then begin
 			ok = dialog_message('No LON/LAT info found. Press ok if you wanna choose a file.',/cancel)
 			if ok eq 'OK' then begin
 				filen = dialog_pickfile(path=file_dirname(filen),file=file_basename(filen))
