@@ -2455,11 +2455,12 @@ end
 ; All nan's will always be treated as fillvalue
 ; 
 function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, found = found, nan_fillv = nan_fillv, $
-						  sample = sample, stddev = stddev, variance = variance
+						  sample = sample, stddev = stddev, variance = variance, total = total
  
 	fillvalue = keyword_set(no_data_value) ? double(no_data_value[0]) : -999d0
 	std = keyword_set(stddev)
 	var = keyword_set(variance)
+	sum = keyword_set(total)
 
 	if ~finite(fillvalue) then begin
 		fillvalue = -999d0
@@ -2490,11 +2491,11 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, fou
 		N       = double(product(size(array,/dim)/([360.,180.]/gres))) ; number of elements of new grid
 		avg_all = rebin(array,360./gres,180./gres)  ; average over new grid
 		if (std or var) then avg_all2 = rebin(array^2.,360./gres,180./gres) ; mean of squares
-
+		
 		; fillvalues included?
 		dum = array eq fillvalue
 
-		if total(dum) eq 0. and ~(std or var) then return, avg_all
+		if total(dum) eq 0. and ~(std or var or sum) then return, avg_all
 
 		anz_fv  = round(rebin(double(temporary(dum)),360./gres,180./gres) * N) ; number of fillvalues
 		tot_fv  = anz_fv * fillvalue
@@ -2507,11 +2508,14 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, fou
 			sum2    = ( temporary(avg_all2) * N - temporary(anz_fv) * (fillvalue)^2. )
 			result  = ( (temporary(sum2) - (divisor) * temporary(avg_all)^2) > 0.) / ((temporary(divisor-1)) > 1.) ; variance
 			if std then result = sqrt(result > 0.)
-		endif else result  = ( temporary(avg_all) * N - temporary(tot_fv) ) / temporary(divisor)
+		endif else begin
+			summe   = ( temporary(avg_all) * N - temporary(tot_fv) )
+			result  = summe / temporary(divisor)
+		endelse
 		if fvcnt gt 0 then result[fvidx] = keyword_set(nan_fillv) ? !values.f_nan : fillvalue
 	endelse
 
-	return, float(result)
+	return, sum ? float(summe) : float(result)
 
 end
 ;------------------------------------------------------------------------------------------
