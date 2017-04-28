@@ -4365,7 +4365,6 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								endcase
 							endelse
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-stop
 							filen = dir+dat+'_MODIS-ESACCI_*_'+style+'_'+yyyy+'.nc'
 						 end
 					'COLL5' : begin
