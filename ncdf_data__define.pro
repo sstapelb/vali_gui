@@ -4597,7 +4597,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					found = 1
 					datum2 = ''
 				endif else begin
-					if strlowcase(algo) eq 'gewex' then gewex_style = (strsplit(file1,'_',/ext))[3]
+					if strlowcase(algo) eq 'gewex' then gewex_style = (reverse((strsplit(file_basename(file1),'_',/ext))))[1]
 					self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, $
 								  found=found, orbit=orbit,gewex_style=gewex_style))[0]
 					if not found then begin
@@ -4785,7 +4785,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				orbit  = ok.orbit
 				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 				file   = self.file2
-				if algo eq 'ERA-I' then get_era_info, self.file2, /set_as_sysvar
+				if algo eq 'ERA-I' then get_era_info, self.file2, algo = algo, /set_as_sysvar
 				found  = 1
 			endif else begin
 				if pcmult then begin
@@ -4805,7 +4805,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					version = self.version
 				endif else begin
 					if none and algo eq 'GEWEX' and algo eq self.algoname then begin
-						gewex_style = (strsplit(self.filename,'_',/ext))[3]
+						gewex_style = (reverse((strsplit(self.filename,'_',/ext))))[1]
 						help,gewex_style
 					endif
 					file  = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, found = found, level=level, $

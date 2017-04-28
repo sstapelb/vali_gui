@@ -715,9 +715,48 @@ pro symball,filled=filled,thick=thick
 end
 ;------------------------------------------------------------------------------------------
 ; (c) by David N. Bresch, 960116
-PRO free, var
-	var=fltarr(2)
-	dummy=0.*total(temporary(var))
+PRO free, var, var1, var2, var3, var4, var5, var6, var7, var8, var9
+
+	if n_params() gt 0 then begin
+		var=fltarr(2)
+		dummy=0.*total(temporary(var))
+		if n_params() gt 1 then begin
+			var1=fltarr(2)
+			dummy=0.*total(temporary(var1))
+		endif
+		if n_params() gt 2 then begin
+			var2=fltarr(2)
+			dummy=0.*total(temporary(var2))
+		endif
+		if n_params() gt 3 then begin
+			var3=fltarr(2)
+			dummy=0.*total(temporary(var3))
+		endif
+		if n_params() gt 4 then begin
+			var4=fltarr(2)
+			dummy=0.*total(temporary(var4))
+		endif
+		if n_params() gt 5 then begin
+			var5=fltarr(2)
+			dummy=0.*total(temporary(var5))
+		endif
+		if n_params() gt 6 then begin
+			var6=fltarr(2)
+			dummy=0.*total(temporary(var6))
+		endif
+		if n_params() gt 7 then begin
+			var7=fltarr(2)
+			dummy=0.*total(temporary(var7))
+		endif
+		if n_params() gt 8 then begin
+			var8=fltarr(2)
+			dummy=0.*total(temporary(var8))
+		endif
+		if n_params() gt 9 then begin
+			var9=fltarr(2)
+			dummy=0.*total(temporary(var9))
+		endif
+	endif
 END
 ;------------------------------------------------------------------------------------------
 ; Taken from fileinfo.pro Liam.Gumley
@@ -904,7 +943,7 @@ function ihistogram,data,bin_borders
 
 end
 ;------------------------------------------------------------------------------------------
-pro get_era_info, file, version, threshold , set_as_sysvar = set_as_sysvar
+pro get_era_info, file, version, threshold , algo = algo, set_as_sysvar = set_as_sysvar
 
 		filen = file_basename(file)
 		pathn = file_dirname(file)
@@ -916,8 +955,14 @@ pro get_era_info, file, version, threshold , set_as_sysvar = set_as_sysvar
 		threshold = strmid(filen,pos+len,4)
 
 		if keyword_set(set_as_sysvar) then begin
-			DEFSYSV, '!era_i_threshold', threshold
-			DEFSYSV, '!era_i_version'  , version
+			if algo2ref(algo) eq 'era' then begin
+				DEFSYSV, '!era_i1_threshold', threshold
+				DEFSYSV, '!era_i1_version'  , version
+			endif
+			if algo2ref(algo) eq 'era2' then begin
+				DEFSYSV, '!era_i2_threshold', threshold
+				DEFSYSV, '!era_i2_version'  , version
+			endif
 		endif
 
 end
@@ -2192,8 +2237,8 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 		'gwx'	: algon = 'Cloud_cci-GEWEX'
 		'g2_gwx': algon = 'CLARA-A2-GEWEX'
 		'cal'	: return,'CALIPSO-Caliop'
-		'era'	: return,'ERA-INTERIM '+ !ERA_I_VERSION +' (Thr. '+ !ERA_I_THRESHOLD +')'
-		'era2'	: return,'ERA-INTERIM v2.0 (Thr. 1.00)'
+		'era'	: return,'ERA-INTERIM '+ !ERA_I1_VERSION +' (Thr. '+ !ERA_I1_THRESHOLD +')'
+		'era2'	: return,'ERA-INTERIM '+ !ERA_I1_VERSION +' (Thr. '+ !ERA_I2_THRESHOLD +')'
 		'cla'	: return,'CLAAS'
 		'pmx'	: begin
 				algon = 'PATMOS-X'
@@ -2590,7 +2635,8 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 	if is_defined(data2) then begin
 		tss_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
 		pec_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
-		bias_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		pod_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		bias_data = fltarr(arr_dim)+( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
 	endif
 	min_x = min(x_model[idx], max = max_x)
 	xxx   = max_x - min_x + 1
@@ -2615,9 +2661,10 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 			lon_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( lodata[ri[ri[i]: ri[i+1]-1]])   : lodata[ri[ri[i]]]
 			lat_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( ladata[ri[ri[i]: ri[i+1]-1]])   : ladata[ri[ri[i]]]
 			if is_defined(data2) and nnn[ix, iy] gt 1 then begin
-				skills_n_scores,xdata2[ri[ri[i]: ri[i+1]-1]],xdata[ri[ri[i]: ri[i+1]-1]],tss=tss,pec=pec
+				skills_n_scores,xdata2[ri[ri[i]: ri[i+1]-1]],xdata[ri[ri[i]: ri[i+1]-1]],tss=tss,pec=pec,pod=pod
 				tss_data[ix, iy] = tss
 				pec_data[ix, iy] = pec
+				pod_data[ix, iy] = pod
 				bias_data[ix, iy] = bias(xdata[ri[ri[i]: ri[i+1]-1]],xdata2[ri[ri[i]: ri[i+1]-1]])
 			endif
 		endif
@@ -2642,12 +2689,13 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 		sum[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		if is_defined(data2) then tss_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		if is_defined(data2) then pec_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then pod_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		if is_defined(data2) then bias_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 		if do_it then view[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 	endif
 
 	if is_defined(data2) then begin
-		skills = {tss:tss_data,pec:pec_data,bias:bias_data}
+		skills = {tss:tss_data,pec:pec_data,pod:pod_data,bias:bias_data}
 	endif else skills =-1
 
 	return, { sum : sum, mean: avg,mean_lat: alat,mean_lon: alon, median:med, random_sample : sam, null_sample : nul, $
@@ -2830,7 +2878,9 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 end
 ;---------------------------------------------------------------------------------------------
 pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = algoname, set_fillvalue = set_fillvalue , $		;input 
-		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw, attributes = attributes, var_dim_names = var_dim_names	;output
+				count = count, offset=offset, stride = stride, $
+				bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw, $
+				attributes = attributes, var_dim_names = var_dim_names	;output
 
 	if ~file_test(nc_file[0],/read) then begin
 		if keyword_set(verbose) then begin
@@ -2842,7 +2892,8 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 
 	ff = nc_file[0]
 	
-	bild_raw = get_ncdf_data_by_name(ff, data, found = found, verbose = verbose, var_dim_names = var_dim_names, data_type=data_type)
+	bild_raw = 	get_ncdf_data_by_name(ff, data, count = count, offset=offset, stride = stride, $
+				found = found, verbose = verbose, var_dim_names = var_dim_names, data_type=data_type)
 	if not found then begin
 		if keyword_set(verbose) then print, data+' not found!'
 		return
@@ -2883,10 +2934,10 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	if not found_scl then scale  = get_ncdf_data_by_name(ff,data,attr='gain',verbose=verbose,found=found_scl) 
 	scale  = found_scl ? scale : make_array(1,val=1,type=raw_type)
 
-	offset = get_ncdf_data_by_name(ff,data,attr='add_offset',verbose=verbose,found=found_ofs)
-	if not found_ofs then offset = get_ncdf_data_by_name(ff,data,attr='offset',verbose=verbose,found=found_ofs)
-	if not found_ofs then offset = get_ncdf_data_by_name(ff,data,attr='intercept',verbose=verbose,found=found_ofs)
-	offset = found_ofs ? offset : make_array(1,val=0,type=raw_type)
+	add_offset = get_ncdf_data_by_name(ff,data,attr='add_offset',verbose=verbose,found=found_ofs)
+	if not found_ofs then add_offset = get_ncdf_data_by_name(ff,data,attr='offset',verbose=verbose,found=found_ofs)
+	if not found_ofs then add_offset = get_ncdf_data_by_name(ff,data,attr='intercept',verbose=verbose,found=found_ofs)
+	add_offset = found_ofs ? add_offset : make_array(1,val=0,type=raw_type)
 
 	; find fillvalue if not defined set attribute fillvalue to -999. 
 	dum_fv  = get_ncdf_data_by_name(ff,data,attr='_fillvalue',verbose=verbose,found=found_fvattr)
@@ -2897,7 +2948,7 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	if found_fvattr then begin
 		fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : raw_fill_value[0]),type=size(scale,/type))
 	endif else begin
-		fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : -999),type=size(scale,/type))
+		fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : size(scale,/type) eq 1 ? 255 : -999),type=size(scale,/type))
 	endelse
 
 	if patmos then begin
@@ -2922,7 +2973,7 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		;--- unscale data if necessary
 		if (scaling_method[0] eq 1) then begin
 			index = where(bild_raw eq raw_fill_value[0],n_miss)
-			bild = bild_raw * scale[0] + offset[0]
+			bild = bild_raw * scale[0] + add_offset[0]
 			if (n_miss gt 0) then bild[index] = fillvalue[0]
 		endif
 		if (scaling_method[0] eq 0) then begin
@@ -2937,10 +2988,10 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	endif else begin
 		if found_fvattr then begin
 			idx_miss  = where(bild_raw EQ raw_fill_value[0], n_miss)
-			bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + offset[0]) : bild_raw
+			bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + add_offset[0]) : bild_raw
 			IF n_miss GT 0 then bild[idx_miss] = fillvalue[0]
 		endif else begin
-			bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + offset[0]) : bild_raw
+			bild      = (found_scl or found_ofs) ? (bild_raw * scale[0] + add_offset[0]) : bild_raw
 			n_miss    = 0
 		endelse
 	endelse
@@ -3024,7 +3075,7 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 		print,'Fill Value Raw   : ', raw_fill_value
 		print,'MIN Max Bild     : ', minmax(bild)
 		print,'Scale            : ', scale
-		print,'Offset           : ', offset
+		print,'Offset           : ', add_offset
 		print,'Fill Value       : ', fillvalue
 		print,'Min value        : ', minvalue
 		print,'Max value        : ', maxvalue
@@ -3413,7 +3464,7 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 
 ; 	fillvalue = (make_array(1,val=-999,type=size(scale,/type)))[0]
 	if strcompress(raw_fill_value[0],/rem) eq 'not_defined' then begin
-		fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : -999),type=size(scale,/type))
+		fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : size(scale,/type) eq 1 ? 255:-999),type=size(scale,/type))
 	endif else begin
 		fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : raw_fill_value[0]),type=size(scale,/type))
 	endelse
@@ -3802,8 +3853,12 @@ function read_cmsaf_seviri, file, cloud_data, fillvalue = fillvalue, longname = 
 
 end
 ;-----------------------------------------------------------------------------------------------------
-pro read_data, 	filename, data, verbose = verbose, found = found, algoname = algoname, silent = silent, set_fillvalue = set_fillvalue	, $	;input 
-		bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, raw=raw,attribute = attribute, var_dim_names = var_dim_names;output
+pro read_data, 	filename, data, verbose = verbose, found = found, $;input 
+				algoname = algoname, silent = silent, set_fillvalue = set_fillvalue, $;input 
+				count = count, offset = offset, stride = stride, $;input 
+				bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, $	;output
+				raw=raw,attribute = attribute, var_dim_names = var_dim_names 	;output
+
 	if keyword_set(verbose) then z=systime(1)
 
 	file = filename[0]
@@ -3821,13 +3876,14 @@ pro read_data, 	filename, data, verbose = verbose, found = found, algoname = alg
 	endif else rm_comressed_file = 0
 
 	found = 0
+
 	if is_hdf(file)  then read_hdf ,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname, set_fillvalue = set_fillvalue, $
 					bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, attribute = attribute else   $
 ; 	if is_hdf(file) or H5F_IS_HDF5(file) then read_hdf ,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname, set_fillvalue = set_fillvalue, $
 ; 					bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, attribute = attribute else   $
 	if is_ncdf(file) then read_ncdf,file, data, verbose = verbose, found = found, raw=raw, algoname = algoname, set_fillvalue = set_fillvalue, $
 					bild, fillvalue, minvalue, maxvalue, longname, unit, flag_meanings, attribute = attribute, $
-					var_dim_names = var_dim_names else   $
+					var_dim_names = var_dim_names, count = count, offset = offset, stride = stride else   $
 	if ~keyword_set(silent) then $
 	ok = dialog_message('The file '+file+' is neither a netcdf nor a hdf file. Note netcdf4 files are not supported in IDL versions below 8!')
 
@@ -3898,7 +3954,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 			datum 		= strlowcase(ok.DATUM)
 			orbit 		= strlowcase(ok.ORBIT)
 			reference	= strlowcase(ok.REFERENCE)
-			if algo eq 'ERA-I' then get_era_info, filename[0], /set_as_sysvar
+			if algo eq 'ERA-I' then get_era_info, filename[0],algo = algo, /set_as_sysvar
 		endif
 		return,filename
 	endif
@@ -4297,9 +4353,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						  end
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							stop
-; 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/MODIS/'+yyyy+'/'
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/MODIS/'+yyyy+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/MODIS/'+yyyy+'/'
+; 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/MODIS/'+yyyy+'/'
 							which  = strupcase(noaa_ampm(sat))
 							if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
 								case which of 
@@ -4310,6 +4365,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								endcase
 							endelse
 							dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
+stop
 							filen = dir+dat+'_MODIS-ESACCI_*_'+style+'_'+yyyy+'.nc'
 						 end
 					'COLL5' : begin
@@ -4429,7 +4485,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								'l3dh'	:	apx = 'dh'
 								'l3dm'	:	apx = 'dm'
 								'l3pm'	:	apx = 'pm'
-								else 	: 	apx=(dd ? 'in' : 'mm')
+								else 	: 	apx = (dd ? 'in' : 'mm')
 							endcase
 
 							if ( (dat eq 'JCH' or is_h1d(dumdat)) and apx eq 'mm' ) then apx = 'mh'
@@ -4467,8 +4523,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					thr = !ERA_I_THRESHOLD 
-					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
+					thr = !ERA_I1_THRESHOLD 
+					ver = !ERA_I1_VERSION
+					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/'+ver+'_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
 						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
@@ -4478,8 +4535,9 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				if alg eq 'ERA-I2' then begin
 					if lev eq 'l2' then goto, ende
 					if lev eq 'l3u' then goto, ende
-					thr = !ERA_I2_THRESHOLD 
-					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/v2.0_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
+					thr = !ERA_I2_THRESHOLD
+					ver = !ERA_I2_VERSION
+					dir = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/cschlund/output/simulator/'+ver+'_DWDscops_MaxRand_SeparPhase_OriCWC/timeseries/'
 					apx = keyword_set(filename) ? strmid(filename,12,2) : 'MM'
 					if ~total(apx eq ['MM','MH']) then begin
 						apx = stregex(dat,'hist',/fold,/bool) ? 'MH' : 'MM'
@@ -5558,8 +5616,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			dirname = dirname,error=error,node=node,dim3=dim3	, $
 			print_filename=print_filename,keep_data_name=keep_data_name, $
 			var_dim_names=var_dim_names,flag_meanings=flag_meanings	,$
-			no_recursive_search=no_recursive_search			, $
-			set_fillvalue = set_fillvalue,threshold = threshold
+			no_recursive_search=no_recursive_search, $
+			set_fillvalue = set_fillvalue,threshold = threshold, $
+			offset = offset, count=count, stride=stride
 
 	if keyword_set(verbose) then x=systime(1)
 
@@ -5653,7 +5712,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
 		; die neuen patmos l2b haben kein cloud_phase mehr -> berechne alte cloud_phase definition aus cloud_type (auch für die alten l2b's)
 		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, flag_meanings, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		outdata = cty * 0 + no_data_value[0]
 		idx = where(between(cty,0,1),idxcnt)
 		if idxcnt gt 0 then outdata[idx]	=0 ; 0=clear,1=probably clear
@@ -5682,7 +5741,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		dumdat = get_product_name('iwp'+err,algo=alg,level=lev)
 		if ~sil then print,'ice_file: ',dumdat,'    : ',ice_file
 		read_data, ice_file[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 2) lwp
 		liq_file = get_filename(year,month,day,data='lwp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
@@ -5690,7 +5749,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		dumdat = get_product_name('lwp'+err,algo=alg,level=lev)
 		if ~sil then print,'liq_file: ',dumdat,'    : ',liq_file
 		read_data, liq_file, dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 3) cph
 		cph_file = get_filename(year,month,day,data=(is_gewex ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
@@ -5698,7 +5757,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
 		read_data, cph_file, dumdat, cph, no_data_valuec, verbose = verbose, found = found, set_fillvalue = set_fillvalue,$
-		silent=silent
+		silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; cwp = lwp * cph + iwp * (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
@@ -5714,12 +5773,12 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		; 1) iwp
 		dumdat = get_product_name('iwp'+ch,algo=alg,level=lev)
 		read_data, filename[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 2) lwp
 		dumdat = get_product_name('lwp'+ch,algo=alg,level=lev)
 		read_data, filename[0], dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 3) cph
 		if alg eq 'coll6' then begin
@@ -5728,7 +5787,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif else begin
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
 			read_data, filename[0], dumdat, cph, no_data_valuec, verbose = verbose, set_fillvalue = set_fillvalue,$
-			found = found, silent=silent
+			found = found, silent=silent, count = count, offset = offset, stride = stride
 		endelse
 		if not found then return,-1
 		; cwp = lwp * cph + iwp * (1-cph)
@@ -5747,9 +5806,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if alg eq 'esacci' then begin
 			; this is the actual microphysical daytime cloud fraction of cc4cl based on same datset as lwp,iwp,cph_day
 			read_data, filename[0], 'nobs_clear_day'  , nclear, no_data_valuei, minvalue, maxvalue, longnamei, set_fillvalue = set_fillvalue,$
-			uniti, verbose = verbose, found = found, silent=silent
+			uniti, verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 			read_data, filename[0], 'nretr_cloudy_day', ncloudy, no_data_valuei, minvalue, maxvalue, longnamei, set_fillvalue = set_fillvalue,$
-			uniti, verbose = verbose, found = found, silent=silent
+			uniti, verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 			cfc = ncloudy/float((nclear+ncloudy)>1)
 			idx = where(((nclear>0)+(ncloudy>0)) eq 0,idxcnt)
 			if idxcnt gt 0 then cfc[idx] = -999.
@@ -5758,7 +5817,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if alg eq 'coll6' then dumdat = 'CFC_DAY_MICRO'
 			cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 			read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, set_fillvalue = set_fillvalue,$
-			verbose = verbose, found = found, silent=silent
+			verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 			if is_gewex and keyword_set(month) then cfc = reform(cfc[*,*,fix(month)-1])
 		endelse
 		if not found then return,-1
@@ -5779,7 +5838,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		; 1) iwp oder lwp
 		dumdat = get_product_name(strmid(dat,0,3),algo=alg,level=lev)
 		read_data, filename[0], dumdat+ch, cwp, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found
+		verbose = verbose, found = found, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 2) cloud fraction
 		; for coll6 use 'CFC_DAY_MICRO' !!!
@@ -5788,7 +5847,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if alg eq 'coll6' then dumdat = 'CFC_DAY_MICRO'
 		cfc_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		read_data, cfc_file[0], dumdat, cfc, no_data_valuei, minvalue, maxvalue, longnamei, uniti, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 3) cph
 		if is_gewex then begin
@@ -5797,7 +5856,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			dumdat = get_product_name('cph_day',algo=alg,level=lev)
 			if ~sil then print,'cph_file: ',dumdat,': ',cph_file
 			read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, set_fillvalue = set_fillvalue,$
-			found = found, silent=silent
+			found = found, silent=silent, count = count, offset = offset, stride = stride
 		endif else begin
 			cph = get_data(year,month,day,file=filename[0],data='cph'+ch+'_day', satellite=sat, level=lev, verbose = verbose,$
 				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valuec,found=found)
@@ -5858,7 +5917,7 @@ stop
 			ls = 0
 		endelse
 		if keyword_set(error) and dumdat eq 'lus' then begin
-			usgs_file       = !SAVS_DIR + 'usgs/USGS_0.5km_MODIS_based_Land_Cover_Type_2_0.05_degree_regular.sav'
+			usgs_file   = !SAVS_DIR + 'usgs/USGS_0.5km_MODIS_based_Land_Cover_Type_2_0.05_degree_regular.sav'
 			dum 		= restore_var(usgs_file[0],found=found)
 			outdata 	= dum.sampled ; dum.averaged
 			minvalue 	= dum.minvalue
@@ -5872,7 +5931,7 @@ stop
 			usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_ori_0.05deg.nc'
 			if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(usgs_file[0],/rem)
 			read_data, usgs_file, dumdat, outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-			unit, verbose = verbose,found = found
+			unit, verbose = verbose,found = found, count = count, offset = offset, stride = stride
 			if dumdat eq 'lus' then flag_meanings = ['URBAN','DRYLAND','IRRIGATED','MIXED_DRYLAND_IRRIGATED','CROPLAND_GRASSLAND','CROPLAND_WOODLAND',$
 								'GRASSLAND','SHRUBLAND','SHRUBLAND_GRASSLAND','SAVANNA','FOREST_DDS_BROADLEAF'		,$
 								'FOREST_DDS_NEEDLELEAF','FOREST_EVG_BROADLEAF','FOREST_EVG_NEEDLELEAF'	,$
@@ -5898,11 +5957,11 @@ stop
 		if stregex(dat,'_37_',/fold,/bool) and alg eq 'coll6' then ch = '37_'
 		dumdat = alg eq 'coll6' ? 'CLOUD_RETRIEVAL_FRACTION_'+ch+'ICE_PIXEL_COUNTS' : 'Cloud_Fraction_Ice_Pixel_Counts'
 		read_data, filename[0],dumdat,ice_cnt, verbose = verbose,found = found, set_fillvalue = set_fillvalue,$
-		silent=silent
+		silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		dumdat = alg eq 'coll6' ? 'CLOUD_RETRIEVAL_FRACTION_'+ch+'LIQUID_PIXEL_COUNTS' : 'Cloud_Fraction_Liquid_Pixel_Counts'
 		read_data, filename[0],dumdat,liq_cnt, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose,found = found, silent=silent
+		verbose = verbose,found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cph_day= '+ch+'Liquid_Pixel_Counts/('+ch+'Ice_Pixel_Counts+'+ch+'Liquid_Pixel_Counts)'
 		outdata = LIQ_CNT/(ICE_CNT+LIQ_CNT)
@@ -5920,11 +5979,11 @@ stop
 		if stregex(dat,'_37',/fold,/bool) and alg eq 'coll6' then ch = '37_'
 		; 1) ice
 		read_data, filename[0], dat+'_ice', ice, no_data_valuei, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, verbose = verbose, found = found, silent=silent
+		unit, verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 2) liq
 		read_data, filename[0], dat+'_liq', liq, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, verbose = verbose, found = found, silent=silent
+		unit, verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 3) phase
 		cph = 	get_data(year,month,day,file=filename[0],data='cph_'+ch+'day', satellite=sat, level=lev, verbose = verbose,$
@@ -5947,7 +6006,7 @@ stop
 		if not found then return,-1
 		if ~sil then print,'ice_file: ',dumdat,': ',ice_file
 		read_data, ice_file[0], dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 2) lwp
 		dumdat = get_product_name(strmid(dat,0,3)+'_liq'+err,algo=alg,level=lev)
@@ -5955,7 +6014,7 @@ stop
 		if not found then return,-1
 		if ~sil then print,'liq_file: ',dumdat,': ',liq_file
 		read_data, liq_file[0], dumdat, liq, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; 3) cph
 		cph_file = get_filename(year,month,day,data=(is_gewex ? 'cph_day':'cph'), satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
@@ -5963,7 +6022,7 @@ stop
 		dumdat = get_product_name('cph_day',algo=alg,level=lev)
 		if ~sil then print,'cph_file: ',dumdat,': ',cph_file
 		read_data, cph_file[0], dumdat, cph, no_data_valuec, verbose = verbose, found = found, set_fillvalue = set_fillvalue,$
-		silent=silent
+		silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; cwp = lwp * cph + iwp* (1-cph)
 		no_idx_ice = where((ice eq no_data_valuei[0] and liq eq no_data_value[0]) or cph eq no_data_valuec[0],cnt_il)
@@ -5981,13 +6040,13 @@ stop
 		; level2 only
 		node   = strmid(lev,0,3) eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
 		read_data, filename[0],'stemp'+node, stemp, no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then begin
 			ok=dialog_message('get_data: Stemp not found! Make sure file is an ESA CCI Cloud l2 file.')
 			return,-1
 		endif
 		read_data, filename[0] , 'ctt'+node, ctt, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		idx  = where(stemp eq no_data_value1[0] or ctt eq no_data_value[0],idx_cnt)
 		outdata = temporary(stemp)-temporary(ctt)
@@ -6003,21 +6062,21 @@ stop
 		endif
 		dumdat = strmid(lev,0,3) eq 'l3u' ? get_product_name('solzen_'+node,algo=alg) : 'solar_zenith_view_no1'
 		read_data, filename[0],dumdat, solza, no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Solar Zenith angle not found! Make sure file is an ESACCI l2/l3u (clara2[l2b]) file.')
 			return,-1
 		endif
 		dumdat = strmid(lev,0,3) eq 'l3u' ? get_product_name('satzen_'+node,algo=alg) : 'satellite_zenith_view_no1'
 		read_data, filename[0],dumdat, satza, no_data_value2, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Sensor Zenith angle not found! Make sure file is an ESACCI l2/l3u (clara2[l2b]) file.')
 			return,-1
 		endif
 		dumdat = strmid(lev,0,3) eq 'l3u' ? get_product_name('relazi_'+node,algo=alg) : 'rel_azimuth_view_no1'
 		read_data, filename[0],dumdat, relazi, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then begin
 			if ~keyword_set(silent) then ok=dialog_message('get_data: Relative Azimuth Angle not found! Make sure file is an ESACCI l2/l3u (clara2[l2b]) file.')
 			return,-1
@@ -6036,10 +6095,10 @@ stop
 		if strmid(dat,0,8) eq 'sunglint' then flag_meanings =  ['No','Yes']
 	endif else if (total(alg eq ['clara']) and (is_jch(dat,/combined) or is_jch(dat,/ratio)) ) then begin
 		read_data, filename[0] , 'jch_liq', liq, no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		read_data, filename[0] , 'jch_ice', ice, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		if is_jch(dat,/ratio) then begin
 			si = size(ice,/dim)
@@ -6058,13 +6117,13 @@ stop
 		if not found then return,-1
 		if ~sil then print,'liq_file: h_codw_cp: ',liq_file
 		read_data, liq_file[0] , 'h_codw_cp', liq, no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		ice_file = get_filename(year,month,day,data='h_codi_cp', satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
 		if not found then return,-1
 		if ~sil then print,'ice_file: h_codi_cp: ',ice_file
 		read_data, ice_file[0] , 'h_codi_cp', ice, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		if is_jch(dat,/ratio) then begin
 			si = size(ice,/dim)
@@ -6080,9 +6139,9 @@ stop
 	endif else if (total(alg eq ['coll5','coll6']) and  is_jch(dat,/ratio)) then begin
 		if ~sil then print,'Combine '+dat+' for '+alg
 		read_data, filename[0] , 'cot_ctp_hist2d_liq', liq, no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-				unit, found = found, verbose = verbose , silent=silent
+				unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		read_data, filename[0] , 'cot_ctp_hist2d_ice', ice, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue ,$
-				unit, found = found1, verbose = verbose , silent=silent
+				unit, found = found1, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if found and found1 then begin
 			si  = size(ice,/dim)
 			si1 = size(liq,/dim)
@@ -6105,7 +6164,7 @@ stop
 		endelse
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
 		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose, var_dim_names=var_dim_names , silent=silent
+		unit, found = found, verbose = verbose, var_dim_names=var_dim_names , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		; total ist "total" langsam ca. 0.95 sek im vergleich zu 0.15 sek!!!
 ;   		outdata  = total(outdata>0,5)
@@ -6127,36 +6186,36 @@ stop
 		endelse
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_jch(dat,/liquid)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,0])
 		longname = longname+' liquid only'
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_jch(dat,/ice)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,1])
 		longname = longname+' ice only'
 	endif else if (total(alg eq ['calipso']) and is_jch(dat,/mixed)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,2])
 		longname = longname+' mixed / unknown'
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/combined)) then begin
 		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata = reform(outdata[*,*,*,*,0])
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/liquid)) then begin
 		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata = reform(outdata[*,*,*,*,1])
 		longname = longname+' liquid only'
 	endif else if ((alg eq 'esacci_old') and is_jch(dat,/ice)) then begin
 		read_data, filename[0] , 'cot_ctp_hist2d', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata = (reform(outdata[*,*,*,*,0] - outdata[*,*,*,*,1]))
 		longname = longname+' ice only'
@@ -6166,12 +6225,14 @@ stop
 			liq_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,$
 						found=foundl,instrument=instrument,silent=silent,dirname=dirname)
 			if foundl then read_data, liq_file[0] , dumdat, liq, no_data_value, minvalue, maxvalue, longname1, $
-						  set_fillvalue = set_fillvalue,unit, found = found, verbose = verbose , silent=silent
+						  set_fillvalue = set_fillvalue,unit, found = found, verbose = verbose , silent=silent, $
+						  count = count, offset = offset, stride = stride
 			dumdat   = get_product_name(dat+'_ice',algo='gwx')
 			ice_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,$
 						found=foundi,instrument=instrument,silent=silent,dirname=dirname)
 			if foundi then read_data, ice_file[0] , dumdat, ice, no_data_valuei, minvalue, maxvalue, longname, $
-						  set_fillvalue = set_fillvalue, unit, found = found1, verbose = verbose , silent=silent
+						  set_fillvalue = set_fillvalue, unit, found = found1, verbose = verbose , silent=silent,$
+						  count = count, offset = offset, stride = stride
 			if found and found1 then begin
 				si  = size(ice,/dim)
 				si1 = size(liq,/dim)
@@ -6193,15 +6254,16 @@ stop
 			endelse
 		endif else begin
 			read_data, filename[0], dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-			flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+			flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
+			count = count, offset = offset, stride = stride
 		endelse
 	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i','era-i2','calipso','hector']) and is_h1d(dat,/combined)) then begin
 		if total(alg eq ['coll5','coll6']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or $
 			stregex(dat,'cwp',/fold,/bool) or stregex(dat,'cer',/fold,/bool) ) then begin
 			read_data, filename[0] , dat+'_liq', ice, no_data_valuei, minvalue, maxvalue, longname1, set_fillvalue = set_fillvalue,$
-			unit, found = found, verbose = verbose , silent=silent
+			unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 			read_data, filename[0] , dat+'_ice', liq, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-			unit, found = found1, verbose = verbose , silent=silent
+			unit, found = found1, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 			if found1 and found then begin
 				outdata = (ice>0) + (liq>0) 
 				idx  = where(ice eq no_data_valuei[0] and liq eq no_data_value[0],idxcnt)
@@ -6215,7 +6277,7 @@ stop
 			if alg eq 'coll6' then begin
 				; is actually not the same!!! daytime only
 				read_data, filename[0],dat, outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-				unit, found = found, verbose = verbose , silent=silent
+				unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 				if not found then return,-1
 				if stregex(dat,'ctt',/fold,/bool) then begin
 					liq  = reform(outdata[*,*,0,*])
@@ -6228,7 +6290,7 @@ stop
 			endif else begin
 				read_data, filename[0] , dat, outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 				unit,var_dim_names=var_dim_names, $
-				found = found, verbose = verbose , silent=silent
+				found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 				if not found then return,-1
 				if ~total(alg eq ['coll5']) then begin
 					if alg eq 'calipso' then begin
@@ -6246,16 +6308,17 @@ stop
 		endelse
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_h1d(dat,/liquid) ) then begin
 		read_data, filename[0] , strreplace(dat,'_liq',''), outdata, no_data_value, minvalue, maxvalue, set_fillvalue = set_fillvalue,$
-		longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+		longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent,$
+		count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata = reform(outdata[*,*,*,0])
 		longname = longname+' liquid only'
 	endif else if (total(alg eq ['coll5']) and is_h1d(dat,/liquid) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; only for coll5 not for coll6 anymore
 		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found1, verbose = verbose , silent=silent
+		unit, found = found1, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if found and found1 then begin
 			nig = reform(nig[*,*,0,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain) 
 			day = reform(day[*,*,0,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain) 
@@ -6270,30 +6333,30 @@ stop
 	endif else if (total(alg eq ['coll6']) and is_h1d(dat,/liquid) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; ist actually not the same!!! daytime only
 		read_data, filename[0],strreplace(dat,'_liq',''), outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose 
+		unit, found = found, verbose = verbose , count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,0,*])
 		longname = 'Cloud Top Temperature (Day) liquid only'
 	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_h1d(dat,/ice)) then begin
 		read_data, filename[0] , strreplace(dat,'_ice',''), outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit,var_dim_names=var_dim_names, $
-		found = found, verbose = verbose , silent=silent
+		found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,1])
 		longname = longname+' ice only'
 	endif else if (total(alg eq ['calipso']) and is_h1d(dat,/mixed)) then begin
 		read_data, filename[0] , strreplace(dat,'_mixed',''), outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit,var_dim_names=var_dim_names, $
-		found = found, verbose = verbose , silent=silent
+		found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,2])
 		longname = longname+' mixed / unknown'
 	endif else if (total(alg eq ['coll5']) and is_h1d(dat,/ice) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; only for coll5 not for coll6 anymore
 		read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose , silent=silent
+		unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found1, verbose = verbose , silent=silent
+		unit, found = found1, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if found and found1 then begin
 			nig = reform(nig[*,*,1,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain)
 			day = reform(day[*,*,1,*]) ; [360, 180, 4, 17], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain)
@@ -6308,14 +6371,15 @@ stop
 	endif else if (total(alg eq ['coll6']) and is_h1d(dat,/ice) and stregex(dat,'ctt',/fold,/bool)) then begin
 		; ist actually not the same!!! daytime only
 		read_data, filename[0],strreplace(dat,'_ice',''), outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-		unit, found = found, verbose = verbose 
+		unit, found = found, verbose = verbose , count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,1,*])
 		longname = 'Cloud Top Temperature (Day) ice only'
 	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i','era-i2','calipso','patmos']) and is_h1d(dat,/ratio)) then begin
 		if total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) then begin
 			read_data, filename[0] , strreplace(dat,'_ratio',''), outdata, no_data_value, set_fillvalue = set_fillvalue,$
-			minvalue, maxvalue, longname, unit, var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent
+			minvalue, maxvalue, longname, unit, var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent,$
+			count = count, offset = offset, stride = stride
 			if alg eq 'calipso' then outdata = outdata[*,*,*,0:1]
 			if not found then return,-1
 		endif else if total(alg eq ['coll5','coll6','patmos']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or $
@@ -6324,12 +6388,13 @@ stop
 			liq_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,$
 				found=foundl,instrument=instrument,silent=silent,dirname=dirname)
 			if foundl then read_data, liq_file[0] , dumdat, liq, no_data_value, minvalue, maxvalue, longname1, $
-						  set_fillvalue = set_fillvalue,unit, found = found, verbose = verbose , silent=silent
+						  set_fillvalue = set_fillvalue,unit, found = found, verbose = verbose , silent=silent,$
+						  count = count, offset = offset, stride = stride
 			dumdat   = get_product_name(strreplace(dat,'_ratio','')+'_ice',algo=(is_gewex ? 'gwx' : alg))
 			ice_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,$
 				found=foundi,instrument=instrument,silent=silent,dirname=dirname)
 			if foundi then read_data, ice_file[0] , dumdat, ice, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-						  unit, found = found1, verbose = verbose , silent=silent
+						  unit, found = found1, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 			if found and found1 and size(ice,/n_dim) eq 3 then begin
 				si  = size(ice,/dim)
 				si1 = size(liq,/dim)
@@ -6357,9 +6422,9 @@ stop
 		endif else if total(alg eq ['coll5']) and (stregex(dat,'ctt',/fold,/bool)) then begin
 			; only for coll5 not for coll6 anymore
 			read_data, filename[0] , 'HIST2D_CTT_CPH_DAY'  , day, no_data_valued, minvalue, maxvalue, set_fillvalue = set_fillvalue,$
-			longname, unit, found = found, verbose = verbose , silent=silent
+			longname, unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 			read_data, filename[0] , 'HIST2D_CTT_CPH_NIGHT', nig, no_data_value , minvalue, maxvalue, set_fillvalue = set_fillvalue,$
-			longname, unit, found = found1, verbose = verbose , silent=silent
+			longname, unit, found = found1, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 			if found and found1 then begin
 				nig = (transpose(nig,[0,1,3,2]))[*,*,*,0:1] ; [360, 180, 4, 17] -> [360, 180, 17, 2], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain) 
 				day = (transpose(day,[0,1,3,2]))[*,*,*,0:1] ; [360, 180, 4, 17] -> [360, 180, 17, 2], cph bin=4 (0:water,1:ice,2:mixed,3:uncertain)
@@ -6373,7 +6438,7 @@ stop
 		endif else if total(alg eq ['coll6']) and (stregex(dat,'ctt',/fold,/bool)) then begin
 			; ist actually not the same!!! daytime only
 			read_data, filename[0],strreplace(dat,'_ratio',''), outdata, no_data_value, minvalue, maxvalue, set_fillvalue = set_fillvalue,$
-			longname, unit, found = found, verbose = verbose , silent=silent
+			longname, unit, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 			if not found then return,-1
 			outdata  = (transpose(outdata,[0,1,3,2]))[*,*,*,0:1]
 			longname = 'Cloud Top Temperature (Day)'
@@ -6381,11 +6446,13 @@ stop
 			liq_file = get_filename(year,month,day,data='h_ctw', satellite=sat, level=lev,algo=alg,$
 				found=foundl,instrument=instrument,silent=silent,dirname=dirname)
 			if foundl then read_data, liq_file[0] , 'h_ctw', liq, no_data_value, minvalue, maxvalue, longname1, $
-						  set_fillvalue = set_fillvalue,unit, found = found, verbose = verbose , silent=silent
+						  set_fillvalue = set_fillvalue,unit, found = found, verbose = verbose , silent=silent, $
+						  count = count, offset = offset, stride = stride
 			ice_file = get_filename(year,month,day,data='h_cti', satellite=sat, level=lev,algo=alg,$
 				found=foundi,instrument=instrument,silent=silent,dirname=dirname)
 			if foundi then read_data, ice_file[0] , 'h_cti', ice, no_data_value, minvalue, maxvalue, longname, $
-						  set_fillvalue = set_fillvalue,unit, found = found1, verbose = verbose , silent=silent
+						  set_fillvalue = set_fillvalue,unit, found = found1, verbose = verbose , silent=silent, $
+						  count = count, offset = offset, stride = stride
 			if found and found1 then begin
 				si = size(ice,/dim)
 				outdata = fltarr([si[0:2],2,si[3]])
@@ -6410,15 +6477,15 @@ stop
 				files = stregex(files[0],'asc',/bool,/fold) ? [files[0],strreplace(filename[0],'asc','des')] : [files[0],strreplace(filename[0],'des','asc')]
 			endif
 			read_data, files[0], dumdat, bild_asc , no_data_value1, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-			unit, verbose = verbose, raw=raw,found = found1, algo =alg, silent=silent
+			unit, verbose = verbose, raw=raw,found = found1, algo =alg, silent=silent, count = count, offset = offset, stride = stride
 			read_data, files[1], dumdat, bild_desc, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
-			unit, verbose = verbose, raw=raw,found = found2, algo =alg, silent=silent
+			unit, verbose = verbose, raw=raw,found = found2, algo =alg, silent=silent, count = count, offset = offset, stride = stride
 		endif else begin
 			files = [filename[0],filename[0]] 
 			read_data, files[0], dumdat+'_asc' , bild_asc , no_data_value1, minvalue, maxvalue, set_fillvalue = set_fillvalue,$
-			longname, unit, verbose = verbose, raw=raw,found = found1, algo =alg, silent=silent
+			longname, unit, verbose = verbose, raw=raw,found = found1, algo =alg, silent=silent, count = count, offset = offset, stride = stride
 			read_data, files[1], dumdat+'_desc', bild_desc, no_data_value, minvalue, maxvalue, set_fillvalue = set_fillvalue,$
-			longname, unit, verbose = verbose, raw=raw,found = found2, algo =alg, silent=silent
+			longname, unit, verbose = verbose, raw=raw,found = found2, algo =alg, silent=silent, count = count, offset = offset, stride = stride
 		endelse
 		if found1 and found2 then begin
 			if keyword_set(verbose) then print,'Ascending and Descending are now joined together.'
@@ -6435,15 +6502,18 @@ stop
 	endif else if total(dat eq ['refl3b_asc','refl3b_desc']) and (lev eq 'l3u') then begin
 		nd = stregex(dat,'asc',/fold,/bool) ? '_asc' : '_desc'
 		read_data, filename[0], 'bt_nir037'+nd, rad3b, no_data_value3b, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
+		count = count, offset = offset, stride = stride
 if found then begin
 		read_data, filename[0], 'bt_tir108'+nd, rad4, no_data_value4, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
+		count = count, offset = offset, stride = stride
 endif
 if found then begin
 		ang_file = strreplace(filename,'CAC','CAA')
 		read_data, ang_file[0], 'sunzen'+nd, sunza, no_data_values, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
+		count = count, offset = offset, stride = stride
 		noaasat = noaa_primes(year,month,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
 ; 		idx = where(rad3b eq no_data_value3b[0] or rad4 eq no_data_value4[0] or sunza eq no_data_values[0],idxcnt)
 		idx = where(rad3b eq no_data_value3b[0] or rad4 eq no_data_value4[0] or ~between(sunza,0.,80.),idxcnt)
@@ -6467,7 +6537,8 @@ endif
 			return,-1
 		endif
 		read_data, filename[0], dat, outdata, no_data_value, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names
+		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
+		count = count, offset = offset, stride = stride
 		; specials for testing etc, remove if not needed anymore
 		if keyword_set(error) then begin
 			if strmid(alg,0,6) eq 'esacci' and strmid(dat,0,5) eq 'cccot' and lev eq 'l3u' then begin
@@ -8349,6 +8420,24 @@ pro test_ncdf_browser, file_type
 	dat_str	= string(da, mo, ye, ho, mi, format = '(i2.2,".",i2.2,".",i4.4," ",i2.2,":",i2.2,"[UTC] / ")')
 	print, dat_str + 'TEST_NCDF_BROWSER -> '+string(systime(1)-starttime,f='("Duration        : ", f7.3, " Sec")')
 	print, dat_str + 'TEST_NCDF_BROWSER -> '+string(float(memory(/highwater)-mem_cur)/1024.^2,f='("Memory required : ", f7.3, " MB")')
+
+end
+;------------------------------------------------------------------------------------------
+pro find_corrupt_cci_files,l3u=l3u
+
+	lev = keyword_set(l3u) ? 'L3U' : 'L3C'
+
+	files = file_search('/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+lev+'/','*.nc',count=fcount)
+
+	check = strarr(fcount)
+	o_mytimer = obj_new('my_timer',fcount)
+	for i = 0,fcount -1 do begin
+		if ~is_ncdf(files[i]) then check[i] = files[i]
+		o_mytimer -> wie_lang_noch
+	endfor
+	obj_destroy, o_mytimer
+
+	stop
 
 end
 ;------------------------------------------------------------------------------------------

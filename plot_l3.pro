@@ -546,7 +546,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ok = dialog_message('compare_cci: Data '+dat[1]+' not found in '+level+' '+algo2+' file. Right product name? e.g. cc_mask_asc')
 			return
 		endif else if select then begin
-			if algo2 eq 'era-i' then get_era_info, gac_nc_file, /set_as_sysvar
+			if algo2 eq 'era-i' then get_era_info, gac_nc_file, algo = algo2, /set_as_sysvar
 			algon_gac = sat_name(algo2,satgac, year=(ts ? 0:year), month=(ts ? 0:month),version=version,level=level)
 			datum2    = yyyy+(mm eq '??' ? '' : mm)+dd
 		endif

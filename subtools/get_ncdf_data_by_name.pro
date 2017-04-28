@@ -4,7 +4,8 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 						global_attribute = global_attribute, $
 						found = found, verbose = verbose, $
 						var_dim_names = var_dim_names, $
-						data_type = data_type
+						data_type = data_type,$
+						count = count, offset = offset, stride = stride
 
 	verb = keyword_set(verbose)
 
@@ -68,7 +69,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 	end
 	if tag then begin
 		if keyword_set(all_attributes) then begin
-			ncdf_varget,id,tag,dum
+			ncdf_varget,id,tag,dum,count = count, offset=offset, stride = stride
 			erg = ncdf_varinq(id,tag)
 			for j = 0ul, erg.natts -1 do begin
 				attname = ncdf_attname(id,tag,j)
@@ -98,7 +99,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 				found =  0.
 			endif else dum = attval
 		endif else begin
-			ncdf_varget,id,tag,dum
+			ncdf_varget,id,tag,dum,count = count, offset=offset, stride = stride
 			var_dim_names = strarr(n_elements(dimi))
 			for j=0,n_elements(dimi) -1 do begin
 				ncdf_diminq, id, dimi[j], dimension_name, dimension_size
