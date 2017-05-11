@@ -3136,12 +3136,12 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 						if dumname eq '' then continue
 						dumidx = where(satnames eq dumname,dumidxcnt)
 						if dumidxcnt gt 1 then begin
-							dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)-14
+							dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)
 							if between(dum_xx,anz[0],anz[1]) then begin
 								xyouts, dum_xx,(keyword_set(log) ? $
 								10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
 								((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
-								dumname, charthick = charthick, charsize = xcharsize
+								dumname, charthick = charthick, charsize = xcharsize,align=0.5
 							endif
 						endif
 					endfor
@@ -3312,12 +3312,12 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 							if dumname eq '' then continue
 							dumidx = where(satnames eq dumname,dumidxcnt)
 							if dumidxcnt gt 1 then begin
-								dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)-14
+								dum_xx = (max(dumidx)-min(dumidx))/2 + min(dumidx)
 								if between(dum_xx,anz[0],anz[1]) then begin
-									xyouts, dum_xx,(keyword_set(log) ? $
+								xyouts, dum_xx,(keyword_set(log) ? $
 									10^(((!y.crange)[1]-(!y.crange)[0])*0.02 + (!y.crange)[0]) : $
 									((pf_ycr[1]-pf_ycr[0])*0.02) + pf_ycr[0]), $
-									dumname, charthick = charthick, charsize = xcharsize
+									dumname, charthick = charthick, charsize = xcharsize,align=0.5
 								endif
 							endif
 						endfor
@@ -5111,7 +5111,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	for y=ori_period[0],ori_period[1] do begin & $
 		for m=1,12 do begin & $
 			short=0 & $
-			satnames[count] = noaa_primes(y,m,ampm=noaa_ampm(sat,/ampm),/no_zero,short=short) & $
+			satnames[count] = noaa_primes(y,m,ampm=noaa_ampm(sat,/ampm),/no_zero,short=short,hirs=(algo2ref(algo) eq 'hec')) & $
 			count ++ & $
 		endfor & $
 	endfor
@@ -6567,8 +6567,8 @@ pro do_create_all_single_time_series
 	isp_list = ['isp-','isp-noaapm','isp-noaaam','isp_old-']
 
 	; combine all you need
-	algon_list = ['cciv3-noaapm']
-data='cfc'
+	algon_list = ['hec-noaaam']
+	data=['cfc','cfc_low','cfc_high','cfc_mid','cth','ctt','ctp']
 
 	if is_defined(period) then begin
 		print,''

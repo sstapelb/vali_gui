@@ -1918,7 +1918,7 @@ function adv_strtrim,in,flag,trim=trim
 		print,'character to remove needs to be a string or character.'
 		return,-1
 	endif
-	
+
 	for i = 0l,n_elements(in) -1 do begin
 		dum = in[i]
 		if is_number(char) and ~is_number(dum) then continue
@@ -2030,80 +2030,60 @@ function atsr_prime,year,month,instrument=instrument,found=found
 end
 ;--------------------------------------------------------------------------------------------------------------------------
 function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
-				 node=node						, $ ; node of the specified sat (asc,des)
 				 which=which					, $ ; which file from database
-				 patmos=patmos					, $ ; Patmos (l3c, gewex, old) with different definition taken from ncdf_gewex__define.pro
+				 hirs=hirs						, $ ; Search for HIRS primes intead of AVHRR
 				 no_zero=no_zero				, $ ; No leading zero in Noaa number, e.g NOAA-7 not NOAA-07
+				 no_minus=no_minus				, $ ; Not NOAA-17 but NOAA17
 				 include_all = include_all		, $ ; include also satellites not proccessed in cloud_cci 
 				 short_names = short_names		, $
 				 found = found
 
 	found = 1
 	ampm  = adv_keyword_set(ampm) ? ampm : 2 ; default ist am+pm
-	pmx   = keyword_set(patmos)
+	hir   = keyword_set(hirs)
 	mm    = fix(month)
 	inc   = keyword_set(include_all)
 	sht   = keyword_set(short_names)
 
-	;patmos l2b
-	; ;PM
-	; noaa-05  1979_001 - 1980_030                                                                                                                 
-	; noaa-07  1981_236 - 1985_032                                                                                                                 
-	; noaa-09  1985_056 - 1988_311                                                                                                                 
-	; noaa-11  1988_313 - 1994_243                                                                                                                 
-	; noaa-14  1995_040 - 2002_206                                                                                                                 
-	; noaa-16  2001_079 - 2006_200                                                                                                                 
-	; noaa-18  2005_200 - 2014_260                                                                                                                 
-	; noaa-19  2009_109 - 2015_365
-	; ;AM
-	; noaa-06  1980_182 - 1982_215                                                                                                                 
-	; noaa-08  1983_124 - 1985_287                                                                                                                 
-	; noaa-10  1987_321 - 1990_259                                                                                                                 
-	; noaa-12  1991_259 - 1998_348                                                                                                                 
-	; noaa-15  1998_299 - 2014_260                                                                                                                 
-	; noaa-17  2002_236 - 2009_010                                                                                                                 
-	; metop-02 2007_179 - 2015_365
-	; metop-01 2013_001 - 2014_220
-
-	case fix(year) of
-		1979: sats = pmx ? ['nn','nn']			: ['nn',inc ? '05':'nn']
-		1980: sats = pmx ? ['nn','nn']			: [(mm le  6 or ~inc ? 'nn':'06'),(mm le  1 and inc ? '05':'nn')]
-		1981: sats = pmx ? ['nn','nn']			: [inc ? '06':'nn',(mm le  7 ? 'nn':'07')]
-		1982: sats = pmx ? ['nn','07']			: [(mm le  7 and inc ? '06':'nn'),'07']
-		1983: sats = pmx ? ['nn','07']			: [(mm le  4 or ~inc ? 'nn':'08'),'07']
-		1984: sats = pmx ? ['nn','07']			: [inc ? '08':'nn','07']
-		1985: sats = pmx ? ['nn',(mm le  2 ? 'nn':'09')]: [(mm le 10 and inc ? '08':'nn'),(mm le  1 ? '07':'09')]
-		1986: sats = pmx ? ['nn','09']			: ['nn','09']
-		1987: sats = pmx ? ['10','09']			: [inc ? '10':'nn','09']
-		1988: sats = pmx ? ['10',(mm le 10 ? '09':'nn')]: [inc ? '10':'nn',(mm le 10 ? '09':'11')]
-		1989: sats = pmx ? ['10','11']			: [inc ? '10':'nn','11']
-		1990: sats = pmx ? ['10','11']			: [inc ? '10':'nn','11']
-		1991: sats = pmx ? ['10','11']			: [(mm le  9 ? (inc ? '10':'nn'):'12'),'11']
-		1992: sats = pmx ? ['12','11']			: ['12','11']
-		1993: sats = pmx ? ['12','11']			: ['12','11']
-		1994: sats = pmx ? ['12',(mm le  9 ? '11':'nn')]: ['12',(mm le  9 ? '11':'nn')]
-		1995: sats = pmx ? ['12',(mm le  6 ? 'nn':'14')]: ['12',(mm le  1 ? 'nn':'14')]
-		1996: sats = pmx ? ['12','14']			: ['12','14']
-		1997: sats = pmx ? ['12','14']			: ['12','14']
-		1998: sats = pmx ? [(mm le  9 ? 'nn':'15'),'14']: ['12','14']
-		1999: sats = pmx ? ['15','14']			: ['15','14']
-		2000: sats = pmx ? ['15','14']			: ['15','14']
-		2001: sats = pmx ? ['15','16']			: ['15',(mm le  3 ? '14':'16')]
-		2002: sats = pmx ? ['15','16']			: [(mm le 10 ? '15':'17'),'16']
-		2003: sats = pmx ? ['15','16']			: ['17','16']
-		2004: sats = pmx ? ['15','16']			: ['17','16']
-		2005: sats = pmx ? ['15','16']			: ['17',(mm le  8 ? '16':'18')]
-		2006: sats = pmx ? ['15','18']			: ['17','18']
-		2007: sats = pmx ? ['15','18']			: [(mm le  6 ? '17':'MA'),'18']
-		2008: sats = pmx ? ['15','18']			: ['MA','18']
-		2009: sats = pmx ? ['15','18']			: ['MA',(mm le  5 ? '18':'19')]
-		2010: sats = pmx ? ['nn','nn']			: ['MA','19']
-		2011: sats = pmx ? ['nn','nn']			: ['MA','19']
-		2012: sats = pmx ? ['nn','nn']			: ['MA','19']
-		2013: sats = pmx ? ['nn','nn']			: [(mm le  4 or ~inc ? 'MA':'MB'),'19'] 	; cci style wir haben noch kein metopb 
-		2014: sats = pmx ? ['nn','nn']			: [inc ? 'MB':'MA','19'];['MB','19']			; aber metopa bis zum ende
-		2015: sats = pmx ? ['nn','nn']			: [inc ? 'MB':'MA','19'];['MB','19']			; wenn vorhanden dann sofort ändern!!
-		2016: sats = pmx ? ['nn','nn']			: [inc ? 'MB':'MA','19'];['MB','19']
+	case fix(year) of	;   HIRS (Hector)								AVHRR (CCI,CLARA,PATMOS)
+		1979: sats = hir ? [mm le 6 ? 'nn':'06','05']				: ['nn',inc ? '05':'nn']
+		1980: sats = hir ? ['06','05']								: [(mm le  6 or ~inc ? 'nn':'06'),(mm le  1 and inc ? '05':'nn')]
+		1981: sats = hir ? ['06','07']								: [inc ? '06':'nn',(mm le  7 ? 'nn':'07')]
+		1982: sats = hir ? ['06','07']								: [(mm le  7 and inc ? '06':'nn'),'07']
+		1983: sats = hir ? [mm le 4 ? '06':'08','07']				: [(mm le  4 or ~inc ? 'nn':'08'),'07']
+		1984: sats = hir ? [mm le 6 ? '08':'nn','07']				: [inc ? '08':'nn','07']
+		1985: sats = hir ? ['nn','09']								: [(mm le 10 and inc ? '08':'nn'),(mm le  1 ? '07':'09')]
+		1986: sats = hir ? ['nn','09']								: ['nn','09']
+		1987: sats = hir ? ['10','09']								: [inc ? '10':'nn','09']
+		1988: sats = hir ? ['10',(mm le 10 ? '09':'11')]			: [inc ? '10':'nn',(mm le 10 ? '09':'11')]
+		1989: sats = hir ? ['10','11']								: [inc ? '10':'nn','11']
+		1990: sats = hir ? ['10','11']								: [inc ? '10':'nn','11']
+		1991: sats = hir ? [mm le 9 ? '10':'12','11']				: [(mm le  9 ? (inc ? '10':'nn'):'12'),'11']
+		1992: sats = hir ? ['12','11']								: ['12','11']
+		1993: sats = hir ? ['12','11']								: ['12','11']
+		1994: sats = hir ? ['12','11']								: ['12',(mm le  9 ? '11':'nn')]
+		1995: sats = hir ? ['12','14']								: ['12',(mm le  1 ? 'nn':'14')]
+		1996: sats = hir ? ['12','14']								: ['12','14']
+		1997: sats = hir ? ['12','14']								: ['12','14']
+		1998: sats = hir ? [(mm le  9 ? '12':'15'),'14']			: ['12','14']
+		1999: sats = hir ? ['15','14']								: ['15','14']
+		2000: sats = hir ? ['15','14']								: ['15','14']
+		2001: sats = hir ? ['15',mm le 3 ? '14':'16']				: ['15',(mm le  3 ? '14':'16')]
+		2002: sats = hir ? ['15','16']								: [(mm le 10 ? '15':'17'),'16']
+		2003: sats = hir ? ['17','16']								: ['17','16']
+		2004: sats = hir ? ['17','16']								: ['17','16']
+		2005: sats = hir ? ['17','16']								: ['17',(mm le  8 ? '16':'18')]
+		2006: sats = hir ? ['17','16']								: ['17','18']
+		2007: sats = hir ? [mm le 6 ? '17':'MA',mm le 5 ? '16':'nn']: [(mm le  6 ? '17':'MA'),'18']
+		2008: sats = hir ? ['MA','nn']								: ['MA','18']
+		2009: sats = hir ? ['MA',mm le 3 ? 'nn':'18']				: ['MA',(mm le  5 ? '18':'19')]
+		2010: sats = hir ? ['MA','19']								: ['MA','19']
+		2011: sats = hir ? ['MA','19']								: ['MA','19']
+		2012: sats = hir ? ['MA','19']								: ['MA','19']
+		2013: sats = hir ? ['MA','19']								: [(mm le  4 or ~inc ? 'MA':'MB'),'19'] ; cci style so far no metopb, 
+		2014: sats = hir ? ['MA','19']								: [inc ? 'MB':'MA','19'];['MB','19']	; but metopa till end.
+		2015: sats = hir ? ['MA','19']								: [inc ? 'MB':'MA','19'];['MB','19']	; change it if MB is avail.
+		2016: sats = hir ? ['MA','19']								: [inc ? 'MB':'MA','19'];['MB','19']
 		else: sats = ['nn','nn']
 	endcase
 
@@ -2121,7 +2101,6 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 			return,'No NOAA Sats Available'
 		endelse
 		for i = 0, idxcnt -1 do begin
-; 			sats[i] = strmid(sats[i],0,1) eq 'M' ? 'METOP'+strmid(sats[i],1,1) : 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats[i]),/rem) : sats[i])
 			if strmid(sats[i],0,1) eq 'M' then begin
 				sats[i] = (sht ? 'M' : 'METOP')+strmid(sats[i],1,1)
 			endif else begin
@@ -2149,7 +2128,7 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 	if sats[0] eq 'MA' and ~sht then return, 'METOPA'
 	if sats[0] eq 'MB' and ~sht then return, 'METOPB'
 
-	return, 'NOAA-'+(keyword_set(no_zero) ? strcompress(fix(sats),/rem) : sats[0])
+	return, 'NOAA'+(keyword_set(no_minus)?'':'-')+(keyword_set(no_zero) ? strcompress(fix(sats),/rem) : sats[0])
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
@@ -4354,7 +4333,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 					'GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/MODIS/'+yyyy+'/'
-; 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/MODIS/'+yyyy+'/'
+;							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/MODIS/'+yyyy+'/'
 							which  = strupcase(noaa_ampm(sat))
 							if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
 								case which of 
@@ -4472,7 +4451,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				case alg of
 					'HECTOR': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime,/hirs)
 							endif
 							dumdat = dat
 							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
@@ -4486,6 +4465,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								'l3pm'	:	apx = 'pm'
 								else 	: 	apx = (dd ? 'in' : 'mm')
 							endcase
+							dumlevel = apx eq 'in' ? 'LEVEL2B' : 'LEVEL3'
 
 							if ( (dat eq 'JCH' or is_h1d(dumdat)) and apx eq 'mm' ) then apx = 'mh'
 ; 							if  dat eq 'JCH' and apx eq 'dm' then apx = 'dh'
@@ -4493,7 +4473,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 
 							case strmid(sat,0,4) of
 								'NOAA'	: satn = 'HIN'+string(strmid(sat,5,2),f='(i2.2)')
-								'METO'	: satn = 'HIME'+strmid(sat,5,1)
+								'METO'	: satn = 'HIM0'+(strmid(sat,5,1) eq 'A' ? '2':'1')
 								'AVHR'	: satn = 'HIPOS'
 								'ALLS'	: satn = 'HIPOS'
 								else	: satn = 'NN'
@@ -4505,7 +4485,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
 								endif
 							endif
-							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/HECTOR/BETA_withIASI/LEVEL3/'+dat+'/'+satn+'/'+yyyy+'/'
+							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/HECTOR/BETA_paper/'+dumlevel+'/'+satn+'/'+yyyy+'/'
 							filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
 						end
 					else:
