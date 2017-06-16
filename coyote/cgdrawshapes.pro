@@ -192,7 +192,6 @@ PRO cgDrawShapes_DrawEntity, entity, $
       entity.shape_type EQ 5 OR $    ; Polygon.
       entity.shape_type EQ 15 OR $   ; PolygonZ (ignoring Z)
       entity.shape_type EQ 25: BEGIN ; PolygonM (ignoring M)
-
          IF Ptr_Valid(entity.parts) THEN BEGIN
             cuts = [*entity.parts, entity.n_vertices]
             FOR j=0, entity.n_parts-1 DO BEGIN

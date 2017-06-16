@@ -615,6 +615,10 @@ function full_varname, varname, unit = unit, universal = universal
 	if stregex(dat,'_day',/fold,/bool)  and ~stregex(vollername,'_day',/fold,/bool)  then  vollername = vollername + ' - Day'
 	if stregex(dat,'_twl',/fold,/bool)  and ~stregex(vollername,'_twl',/fold,/bool)  then  vollername = vollername + ' - Twilight'
 	if stregex(dat,'_night',/fold,/bool)  and ~stregex(vollername,'_night',/fold,/bool)  then  vollername = vollername + ' - Night'
+	if stregex(dat,'toa_lwup',/bool,/fold) then vollername = 'TOA longwave upward radiation'
+	if stregex(dat,'toa_lwup_clr',/bool,/fold) then vollername = 'TOA longwave upward radiation - clear sky'
+	if stregex(dat,'toa_swup',/bool,/fold) then vollername = 'TOA shortwave upward radiation'
+	if stregex(dat,'toa_swup_clr',/bool,/fold) then vollername = 'TOA shortwave upward radiation - clear sky'
 
 	return,vollername
 
@@ -897,30 +901,67 @@ end
 function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=fill_index, $
 		normalize=normalize,median=median,mean=mean,stddev=stddev,total=total
 
+; 	array must be 2D
+	si=size(array,/dim)
+	if n_elements(si) ne 2 then begin
+		print,'neighbour_pixel: Input array must be 2D'
+		return,-1
+	endif
+
 	if n_params() eq 1 then neighbors = 3
 	nb  = fix(neighbors)/2 < 10
 	arr = array
-	ndv = keyword_set(no_data_value) ? no_data_value[0] : -999.
+	ndv = adv_keyword_set(no_data_value) ? no_data_value[0] : -999.
 	idx = where(arr eq ndv,idx_cnt)
 	if idx_cnt gt 0  then arr[idx] = !values.f_nan
 
-	for i = (-1)*nb,nb do begin
-		for j = (-1)*nb,nb do begin
-			dum = shift(arr,i,j)
-			result = is_defined(result) ? [[[result]],[[dum]]] : dum
-		endfor
-	endfor
-
-	if keyword_set(median) then result = median(result,dim=3)
-	if keyword_set(mean)   then result = mean(result,dim=3,/nan)
-	if keyword_set(total)  then result = total(result,3,/nan)
-	if keyword_set(stddev) then result = stddev(result,dim=3,/nan)
-
-	; given index where manipulation takes place
 	if keyword_set(fill_index) then begin
-		arr[fill_index] = result[fill_index]
-		result = arr
-	endif
+		;this is not necessarily faster but should at least save some memory for big arrays
+		if size(fill_index,/n_dim) eq 1 and n_elements(fill_index) eq 2 then begin
+			print,'!! Warning !! neighbour_pixel will treat given fill_index as two 1D-Indizes not as One 2D-Index!'
+			print,'              If meant otherwise fill_index must be of size [1,2]'
+		endif
+		idx2d  = size(fill_index,/n_dim) eq 1 ? transpose(array_indices(arr,fill_index)) : fill_index
+		si2d   = size(idx2d,/dim)
+		;idx2d must be of dimsize [*,2]
+		if n_elements(si2d) ne 2 then begin
+			print,'neighbour_pixel: Check given Index (must be of dimsize fill_index[*,2])'
+			return,-1
+		endif
+		if si2d[1] ne 2 then begin
+			if total(si2d eq 2) then begin
+				idx2d = transpose(idx2d)
+				if size(idx2d,/dim) ne 2 then idx2d = reform(idx2d,1,n_elements(idx2d))
+			endif else begin
+				print,'neighbour_pixel: Check given Index (must be of dimsize fill_index[*,2])'
+				return,-1
+			endelse
+		endif
+		si2d   = size(idx2d,/dim)
+		result = fltarr((1+2*nb)^2.,n_elements(idx2d[*,0])) +!values.f_nan
+		for i=0ul,n_elements(idx2d[*,0])-1 do begin
+; 			dummy = arr[(0>(idx2d[i,0]-nb)):((idx2d[i,0]+nb)<(si[0]-1)),(0>(idx2d[i,1]-nb)):((idx2d[i,1]+nb)<(si[1]-1))]
+			; we want all neighbor pixel for Longitude (includes crossing the dateline), but not for Latitude!!
+			xx = ( si[0] + ( (idx2d[i,0]) + vector((-1)*nb,nb,(2*nb+1)) ) ) mod si[0]
+			dummy = arr[ [xx], (0>(idx2d[i,1]-nb)):((idx2d[i,1]+nb)<(si[1]-1)) ]
+			result[0:n_elements(dummy)-1,i] = reform(dummy,n_elements(dummy))
+		endfor
+		dim=1
+	endif else begin
+		for i = (-1)*nb,nb do begin
+			for j = (-1)*nb,nb do begin
+				dum = shift(arr,i,j)
+				result = is_defined(result) ? [[[result]],[[dum]]] : dum
+			endfor
+		endfor
+		dim=3
+	endelse
+
+	if keyword_set(median) then result = median(result,dim=dim)
+	if keyword_set(mean)   then result = mean(result,dim=dim,/nan)
+	if keyword_set(total)  then result = total(result,dim,/nan)
+	if keyword_set(stddev) then result = stddev(result,dim=dim,/nan)
+
 	idx =where(~finite(result),idx_cnt)
 	if keyword_set(normalize) then result = result/max(result)
 	if idx_cnt gt 0  then result[idx] = ndv
@@ -942,7 +983,57 @@ function ihistogram,data,bin_borders
 	return,histo
 
 end
+; maps a filled shapefile onto a regular grid 
 ;------------------------------------------------------------------------------------------
+function shape2grid, shape_file,grid=grid, plot_it = plot_it,found=found, germany = germany
+
+	found = 1
+	if keyword_set(germany) then shape_file = '/cmsaf/cmsaf-cld1/sstapelb/shapefiles/Germany/DEU_adm1.shp'
+	grd = keyword_set(grid) ? float(grid) : 0.05
+	if grd le 0 or ~file_test(shape_file,/read) then begin
+		found = 0
+		return,-1
+	endif
+
+	myshape = OBJ_NEW('IDLffShape', shape_file)
+	myshape -> GetProperty, N_ENTITIES=num_ent
+
+	filled = BYTARR(360./grd, 180./grd)
+	!quiet=1 ; suppress "No points in polygon" warnings by polyfillv
+	FOR x=0,num_ent-1 DO BEGIN
+		entity  = myshape->GetEntity(x)
+      
+		if 	entity.shape_type EQ 5 OR $    		; Polygon.
+			entity.shape_type EQ 15 OR $   		; PolygonZ (ignoring Z)
+			entity.shape_type EQ 25 then begin 	; PolygonM (ignoring M)
+
+			IF Ptr_Valid(entity.parts) THEN BEGIN
+				cuts = [*entity.parts, entity.n_vertices]
+				FOR j=0, entity.n_parts-1 DO BEGIN
+					lon = (*entity.vertices)[0, cuts[j]:cuts[j+1]-1]
+					lat = (*entity.vertices)[1, cuts[j]:cuts[j+1]-1]
+					;convert lon/lat to x/y
+					xxx = fix((lon + 180.)*(1./grd))
+					yyy = fix((lat +  90.)*(1./grd))
+					subscripts = POLYFILLV( reform(xxx), reform(yyy), long(360./grd), long(180./grd) )
+					if subscripts[0] ne -1 then filled[subscripts] += 1
+				endfor
+			endif
+		endif
+	endfor
+	!quiet=0
+	OBJ_DESTROY, myshape
+
+	if keyword_set(plot_it) then begin
+		make_geo,lon_g,lat_g,grid = grd
+		map_image,filled,lat_g,lon_g,/rainbow,min=0,max=1,/countries,limit=limit
+	endif
+	
+	return, (filled < 1b)
+
+end
+;------------------------------------------------------------------------------------------
+
 pro get_era_info, file, version, threshold , algo = algo, set_as_sysvar = set_as_sysvar
 
 		filen = file_basename(file)
@@ -1252,8 +1343,8 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
-			complement = complement, antarctic = antarctic, arctic = arctic			, $ 
-			index = index, count= count, found = found
+			complement = complement, antarctic = antarctic, arctic = arctic, germany = germany, $ 
+			shape_file = shape_file, index = index, count= count, found = found
 
 	found = 1
 	count = 0
@@ -1282,17 +1373,17 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 			cov = strreplace(cov,'_sea','')
 		endif
 		case cov of
-			''			: lim = [-90.0,-180.0, 90.0,180.0]
-			'full'			: lim = [-90.0,-180.0, 90.0,180.0]
-			'antarctica'		: lim = [-90.0,-180.0,-60.0,180.0]
-			'midlat_south'		: lim = [-60.0,-180.0,-30.0,180.0]
-			'tropic'		: lim = [-30.0,-180.0, 30.0,180.0]
-			'midlat_north'		: lim = [ 30.0,-180.0, 60.0,180.0]
-			'arctic'		: lim = [ 60.0,-180.0, 90.0,180.0]
-			'midlat_trop'		: lim = [-60.0,-180.0, 60.0,180.0]
+			''						: lim = [-90.0,-180.0, 90.0,180.0]
+			'full'					: lim = [-90.0,-180.0, 90.0,180.0]
+			'antarctica'			: lim = [-90.0,-180.0,-60.0,180.0]
+			'midlat_south'			: lim = [-60.0,-180.0,-30.0,180.0]
+			'tropic'				: lim = [-30.0,-180.0, 30.0,180.0]
+			'midlat_north'			: lim = [ 30.0,-180.0, 60.0,180.0]
+			'arctic'				: lim = [ 60.0,-180.0, 90.0,180.0]
+			'midlat_trop'			: lim = [-60.0,-180.0, 60.0,180.0]
 			'northern_hemisphere'	: lim = [  0.0,-180.0, 90.0,180.0]
 			'southern_hemisphere'	: lim = [-90.0,-180.0,  0.0,180.0]
-			else			: begin & print,'coverage not defined!' & return,-1 & found = 0 & end
+			else					: begin & print,'coverage not defined!' & return,-1 & found = 0 & end
 		endcase
 	endif
 
@@ -1300,6 +1391,13 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		ok = dialog_message('get_coverage: Need Lon / Lat info:')
 		found = 0.
 		return,-1
+	endif else if keyword_set(germany) then begin
+		if get_grid_res(lon) gt 0 then begin
+			result = shape2grid(shape_file,grid=get_grid_res(lon),/germany)
+		endif else begin
+			lim=[46.2, 4.9, 56, 16]
+			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+		endelse
 	endif else result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
 
 	if keyword_set(land) then begin
@@ -2336,6 +2434,7 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 		lambert = lambert, $
 		ortho=ortho,iso=iso,horizon=horizon,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, $ ; output
 		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify	, $
+		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lats=lats,latnames=latnames,lons=lons,lonnames=lonname, $
 		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format       ; output
 
 	if (~keyword_set(globe) and ~keyword_set(antarctic) and ~keyword_set(arctic) and $
@@ -2353,9 +2452,18 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 		iso     = 1
 		horizon = 1
 ; 		grid    = 1
-; 		londel  = 30
-; 		latdel  = 30
-; 		label   = 3
+ 		londel  = 60
+ 		latdel  = 30
+		label   = 1
+		lonlab = -90
+		latlab = -180
+		latalign=1
+		lonalign=0.5
+		lats = vector(-90,90,7)
+		latnames=strtrim(lats, 2)
+; 		latnames(where(lats eq 0)) = 'Eq.'
+		latnames(where(lats eq -90)) = ' '
+		latnames(where(lats eq  90)) = ' '
 		noborder= 1
 		no_color_bar = 1
 		box_axes = 0
@@ -5896,15 +6004,15 @@ stop
 			ls = 0
 		endelse
 		if keyword_set(error) and dumdat eq 'lus' then begin
-			usgs_file   = !SAVS_DIR + 'usgs/USGS_0.5km_MODIS_based_Land_Cover_Type_2_0.05_degree_regular.sav'
-			dum 		= restore_var(usgs_file[0],found=found)
-			outdata 	= dum.sampled ; dum.averaged
-			minvalue 	= dum.minvalue
-			maxvalue 	= dum.maxvalue
+			usgs_file   	= !SAVS_DIR + 'usgs/USGS_0.5km_MODIS_based_Land_Cover_Type_2_0.05_degree_regular.sav'
+			dum 			= restore_var(usgs_file[0],found=found)
+			outdata 		= dum.sampled ; dum.averaged
+			minvalue 		= dum.minvalue
+			maxvalue 		= dum.maxvalue
 			no_data_value 	= dum.no_data_value
-			longname 	= dum.longname
+			longname 		= dum.longname
 			flag_meanings 	= dum.flag_meanings
-			unit 		= dum.unit
+			unit 			= dum.unit
 			if ls then outdata = outdata ne 0
 		endif else begin
 			usgs_file = '/cmsaf/cmsaf-cld7/cmsaf_cld5/esa_cci_cloud_data/usgs_type_dem/Aux_file_CM_SAF_AVHRR_GAC_ori_0.05deg.nc'
@@ -8589,6 +8697,46 @@ pro mach_zeitreihe,start_year,n_months,data=data
 	view2d,avg
 	x = findgen(n_elements(hist)) * bin +mini
 	plot,x,100.*hist/total(hist),/xs
+
+end
+;-----------------------------------------------------------------------------------------------------------------
+function joint_rgb_product, rgb, product, no_data_value = no_data_value, col_table = col_table, $
+			mini = mini, maxi= maxi, brewer = brewer, add_2nd = add_2nd
+	
+	result =-1
+
+	ndv = keyword_set(no_data_value) ? no_data_value[0] : -999.
+	idx = where(product ne ndv,idxcnt)
+	if idxcnt gt 0 then begin
+
+		prd = bw_to_color(product, mini = mini, maxi= maxi, col_table = col_table, brewer = brewer)
+
+		r=bytscl(hist_equal(rgb[*,*,0]))
+		g=bytscl(hist_equal(rgb[*,*,1]))
+		b=bytscl(hist_equal(rgb[*,*,2]))
+
+		r[idx] = (prd[*,*,0])[idx]
+		g[idx] = (prd[*,*,1])[idx]
+		b[idx] = (prd[*,*,2])[idx]
+		if keyword_set(add_2nd) then begin
+			;add_2nd must be a structure incl. mini,maxi,col_table,brewer
+			if is_struct(add_2nd) then begin
+				idx = where(add_2nd.image ne ndv,idxcnt)
+				if idxcnt gt 0 then begin
+					prd = bw_to_color(add_2nd.image, mini = add_2nd.mini, maxi= add_2nd.maxi, $
+										col_table = add_2nd.col_table, brewer = add_2nd.brewer)
+					r[idx] = (prd[*,*,0])[idx]
+					g[idx] = (prd[*,*,1])[idx]
+					b[idx] = (prd[*,*,2])[idx]
+				endif
+			endif
+		endif
+
+		result = [[[r]],[[g]],[[b]]]
+
+	endif
+
+	return,result
 
 end
 ;-----------------------------------------------------------------------------------------------------------------

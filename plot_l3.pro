@@ -1095,6 +1095,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	endif
 	prefix = keyword_set(prefix)? strcompress(prefix+' ') : ''
 	hct    = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
+	if keyword_set(addtext) then begin
+		germany = stregex(addtext,'germany',/fold,/bool)
+	endif
 	adt    = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
 
 	; next ones only valid if not keyword_set(file)
@@ -1664,6 +1667,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		  ortho=ortho,iso=iso,horizon=horizon,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic	, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg_proj,$
+		  lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lats=lats,latnames=latnames,lons=lons,lonnames=lonnames, $
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format
 
 	if keyword_set(discrete) then begin
@@ -1703,11 +1707,24 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
 			~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and total(!p.multi) le 2
 
+	if keyword_set(germany) then begin
+		if get_grid_res(bild) gt 0 then begin
+			de = get_coverage(shape_file=shape_file,lon,lat,/germany)
+			void_index = where(bild eq fillvalue or de eq 0)
+			void_color = !p.background
+			limit=[46.2, 4.9, 56, 16]
+			p0lon=10.5
+			p0lat=51.
+			no_continents = 1
+		endif
+	endif
+
 	if opl le 1 or ~obj_valid(obj_out) then begin
 		if opl eq 0 then start_save, save_dum, thick = thick,size=[48,30]
-			m = obj_new("map_image",bild, lat, lon, void_index=void_index,n_lev=n_lev	, $
+			m = obj_new("map_image",bild, lat, lon, void_index=void_index, void_color = void_color,n_lev=n_lev	, $
 				max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue, format=bar_format, $
 				magnify=magnify, figure_title = figure_title,box_axes=box_axes, $
+				no_grid = no_grid, no_continents = no_continents ,$
 ; 				charthick = (keyword_set(save_as) ? 2. : 1.5), charsize  = (keyword_set(save_as) ? 3. : 2)	, $
 				charthick = !m_charthick, charsize  = !m_charsize , $
 				title= keyword_set(title) ? title : pref1+((keyword_set(hist_cloud_type) ? strupcase(hct)+' ' : '')+$ 
@@ -1717,6 +1734,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				limit = limit, ctable=ctable,discrete =discrete, bar_tickname=bar_tickname ,lambert=lambert,$
 				ortho = ortho,horizon = horizon, grid=grid,londel=londel,latdel=latdel,noborder=noborder, panoply=panoply, $
 				no_draw_border=no_draw_border, no_color_bar=no_color_bar, p0lon= p0lon, p0lat = p0lat, iso = iso , $
+				lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,$
 				goodeshomolosine = goodeshomolosine, mollweide=mollweide,hammer=hammer,aitoff=aitoff,stereographic=stereographic, $
 				latnames=latnames,lonnames=lonnames,lats=lats,lons=lons,label=label, sinusoidal=sinusoidal,robinson=robinson,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
@@ -1724,6 +1742,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext,discrete=discrete,void_index=void_index
 			endif
 		if opl eq 0 then begin
+			if keyword_set(germany) then begin
+				if is_defined(shape_file) then cgDrawShapes, shape_file
+			endif
 			if ~rotate_globe then begin
 				obj_destroy, m
 				end_save, save_dum
@@ -1978,7 +1999,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	found = 0
 
 	if ~(keyword_set(hist_only) or keyword_set(diff_only) or keyword_set(zonal_only) or keyword_set(box_only) or (histo1d and hct eq '1d')) then begin
-		if keyword_set(maps_only)  then !p.multi = [0,2,1] else !p.multi=[0,1,2]
+; 		if keyword_set(maps_only)  then !p.multi = [0,2,1] else !p.multi=[0,1,2]
+		!p.multi=[0,1,2]
 	endif
 	save_dir = !SAVE_DIR + '/diffs/'
 
