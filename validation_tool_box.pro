@@ -20,6 +20,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	if total(alg eq ['cal','calipso']) then begin
 	       case dat of
 			'cfc'		: dat = 'cfc_allclouds'
+; 			'cfc'		: dat = 'cfc_allclouds_max'
 			'cfc_day'	: dat = 'cfc_allclouds_day'
 			'cfc_night'	: dat = 'cfc_allclouds_night'
 			'cfc_high'	: dat = 'cfc_allclouds_high'
@@ -718,51 +719,6 @@ pro symball,filled=filled,thick=thick
 	aa = findgen(17) * (!PI*2/16.) & usersym, cos(aa), sin(aa),fill=filled,thick=thick ; kullerchen
 end
 ;------------------------------------------------------------------------------------------
-; (c) by David N. Bresch, 960116
-PRO free, var, var1, var2, var3, var4, var5, var6, var7, var8, var9
-
-	if n_params() gt 0 then begin
-		var=fltarr(2)
-		dummy=0.*total(temporary(var))
-		if n_params() gt 1 then begin
-			var1=fltarr(2)
-			dummy=0.*total(temporary(var1))
-		endif
-		if n_params() gt 2 then begin
-			var2=fltarr(2)
-			dummy=0.*total(temporary(var2))
-		endif
-		if n_params() gt 3 then begin
-			var3=fltarr(2)
-			dummy=0.*total(temporary(var3))
-		endif
-		if n_params() gt 4 then begin
-			var4=fltarr(2)
-			dummy=0.*total(temporary(var4))
-		endif
-		if n_params() gt 5 then begin
-			var5=fltarr(2)
-			dummy=0.*total(temporary(var5))
-		endif
-		if n_params() gt 6 then begin
-			var6=fltarr(2)
-			dummy=0.*total(temporary(var6))
-		endif
-		if n_params() gt 7 then begin
-			var7=fltarr(2)
-			dummy=0.*total(temporary(var7))
-		endif
-		if n_params() gt 8 then begin
-			var8=fltarr(2)
-			dummy=0.*total(temporary(var8))
-		endif
-		if n_params() gt 9 then begin
-			var9=fltarr(2)
-			dummy=0.*total(temporary(var9))
-		endif
-	endif
-END
-;------------------------------------------------------------------------------------------
 ; Taken from fileinfo.pro Liam.Gumley
 ;- Get netCDF status
 ; print,is_ncdf('/cmsaf/cmsaf-cld1/sstapelb/gac/data/2008/06/metop02/metop02_20080601_0246_99999_satproj_00000_12423_physiography.h5')
@@ -899,7 +855,7 @@ function adv_keyword_set, keyword
 end
 ;------------------------------------------------------------------------------------------
 function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=fill_index, $
-		normalize=normalize,median=median,mean=mean,stddev=stddev,total=total
+		normalize=normalize,median=median,mean=mean,stddev=stddev,total=total,uniformity = uniformity
 
 ; 	array must be 2D
 	si=size(array,/dim)
@@ -957,6 +913,12 @@ function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=
 		dim=3
 	endelse
 
+	if keyword_set(uniformity) then begin
+		maxi = max(result,dim=dim,/nan)
+		mini = min(result,dim=dim,/nan)
+		mean = mean(result,dim=dim,/nan)
+		result = ( temporary(maxi) - temporary(mini) ) / temporary(mean)
+	endif
 	if keyword_set(median) then result = median(result,dim=dim)
 	if keyword_set(mean)   then result = mean(result,dim=dim,/nan)
 	if keyword_set(total)  then result = total(result,dim,/nan)
@@ -1002,7 +964,7 @@ function shape2grid, shape_file,grid=grid, plot_it = plot_it,found=found, german
 	!quiet=1 ; suppress "No points in polygon" warnings by polyfillv
 	FOR x=0,num_ent-1 DO BEGIN
 		entity  = myshape->GetEntity(x)
-      
+
 		if 	entity.shape_type EQ 5 OR $    		; Polygon.
 			entity.shape_type EQ 15 OR $   		; PolygonZ (ignoring Z)
 			entity.shape_type EQ 25 then begin 	; PolygonM (ignoring M)
@@ -1019,7 +981,7 @@ function shape2grid, shape_file,grid=grid, plot_it = plot_it,found=found, german
 					if subscripts[0] ne -1 then filled[subscripts] += 1
 				endfor
 			endif
-		endif
+		endif else print,'Entity Type: ',entity.shape_type
 	endfor
 	!quiet=0
 	OBJ_DESTROY, myshape
@@ -1149,7 +1111,7 @@ function PlanckInv, input_platform, T
          2670.000,  0.998000,  1.75000, 5.000  $ ;default
          ], 4, 22 )
 
-;     print,index
+;   print,index
 ; 	print,coefficients[ * , index ]
 
     PlanckInv = Planck_C1 * coefficients[ 0 , index ]^3 / $
@@ -1192,20 +1154,23 @@ end
 function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen, longname=longname,$
 			no_hist_equal=no_hist_equal,no_byte_scale=no_byte_scale
 
-	description =	[	'00) ir108 [DAY/NIGHT - warm->white, cold->black]', $
-				'01) ir108-ir039 [NIGHT ONLY - fog->white, cirrus -> black]', $
-				'02) ir120-ir108/ir108-ir039/ir108 [NIGHT ONLY - fog,contr.->green, ground->pink, ice->red, thin c.->dark]', $
-				'03) vi006 [DAY ONLY - high reflectance->white, low reflectance->black]', $
-				'04) rgb [DAY ONLY - true clolor image]', $
-				'05) vi006, vi006, BTnir37 , Ice clouds yellow', $
-				'06) vi006/vi008,ref37/vi008,bt11-bt12', $
-				'07) vi006,vi008,bt11, High-clouds -> yellow, low clouds -> pale yellow shade; vegetated land -> purple, water -> blue.',$
-				'08) vi008,vi006,vi006',$
-				'09) vi008,bt11,bt12', $
-				'10) ref37,vi008,vi006']
+	print_name = ( not arg_present(longname) )
+
+	description =[	'00) ir108 [DAY/NIGHT - warm->white, cold->black]', $
+					'01) ir108-ir039 [NIGHT ONLY - fog->white, cirrus -> black]', $
+					'02) ir120-ir108/ir108-ir039/ir108 [NIGHT ONLY - fog,contr.->green, ground->pink, ice->red, thin c.->dark]', $
+					'03) vi006 [DAY ONLY - high reflectance->white, low reflectance->black]', $
+					'04) rgb [DAY ONLY - true clolor image]', $
+					'05) vi006, vi006, BTnir37 , Ice clouds yellow', $
+					'06) vi006/vi008,ref37/vi008,bt11-bt12', $
+					'07) vi006,vi008,bt11, High-clouds -> yellow, low clouds -> pale yellow shade; vegetated land -> purple, water -> blue.',$
+					'08) vi008,vi006,vi006',$
+					'09) vi008,bt11,bt12', $
+					'10) ref37,vi008,vi006', $
+					'11) ir120-ir108/ir108/ir108 [NIGHT ONLY - water->cyan, ground->pink, ice clouds->red, thin c.->dark]']
 
 	longname = description[filter]
-	print,longname
+	if print_name then print,longname
 
 	mu0 = cos ( solzen * !dtor ) 
 
@@ -1286,6 +1251,12 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0), data_anz)
 			data     = transpose([[[c1]],[[c2]],[[c3]]], [2, 0, 1])
 		end
+		11:begin
+			c1 = bt12
+			c2 = bt11
+			data_idx = where((c1 gt 0) and (c2 gt 0), data_anz)
+			data = transpose([[[c1 - c2]],[[c2]],[[c2]]], [2, 0, 1])
+		end
 	endcase
 
 	;min und max werte fuer jeden kanal berechnen
@@ -1343,7 +1314,7 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
-			complement = complement, antarctic = antarctic, arctic = arctic, germany = germany, $ 
+			complement = complement, antarctic = antarctic, arctic = arctic, $ 
 			shape_file = shape_file, index = index, count= count, found = found
 
 	found = 1
@@ -1391,10 +1362,12 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		ok = dialog_message('get_coverage: Need Lon / Lat info:')
 		found = 0.
 		return,-1
-	endif else if keyword_set(germany) then begin
+	endif else if keyword_set(shape_file) then begin
 		if get_grid_res(lon) gt 0 then begin
-			result = shape2grid(shape_file,grid=get_grid_res(lon),/germany)
+			result = shape2grid(shape_file,grid=get_grid_res(lon))
 		endif else begin
+			print,'!!To do!! No regular grid found. try to read minmax(lon/lat) from shape_file instead!!)'
+			stop
 			lim=[46.2, 4.9, 56, 16]
 			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
 		endelse
@@ -1511,9 +1484,11 @@ function is_the_same,algo,reference,satellite=satellite
 
 end
 ;------------------------------------------------------------------------------------------
-function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = sat
+function ref2algo, reference ,lower_case = lower_case, upper_case = upper_case, sat = sat
 
-	case strlowcase(ref[0]) of 
+	ref = keyword_set(reference) ? strlowcase(reference[0]) : 'unknown' 
+
+	case ref of 
 		'cci_old'	: alg = 'esacci_old'
 		'esacci_old': alg = 'esacci_old'
 		'cci'		: alg = 'esacci'
@@ -1550,7 +1525,7 @@ function ref2algo, ref ,lower_case = lower_case, upper_case = upper_case, sat = 
 		'era-i'		: begin & alg = 'era-i' & sat = '' & end
 		'era2'		: begin & alg = 'era-i2' & sat = '' & end
 		'era-i2'	: begin & alg = 'era-i2' & sat = '' & end
-		else		: alg = ref[0]
+		else		: alg = 'unknown'
 	endcase
 
 	if keyword_set(sat) then begin
@@ -1563,7 +1538,8 @@ end
 ;-------------------------------------------------------------------------------------------------------
 function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_case
 
-	alg = strlowcase(algo[0])
+	alg = keyword_set(algo) ? strlowcase(algo[0]) : 'unknown' 
+
 	if strlowcase(alg) eq 'coll5' and keyword_set(sat) then begin 
 		if strlowcase(sat) eq 'aqua' then alg = 'myd'
 		if strlowcase(sat) eq 'terra' then alg = 'mod'
@@ -1584,18 +1560,18 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'clara'		: ref = 'gac'
 		'clara-a1'	: ref = 'gac'
 		'gac2'		: ref = 'gac2'
-		'clara2'		: ref = 'gac2'
+		'clara2'	: ref = 'gac2'
 		'clara-a2'	: ref = 'gac2'
 		'hector'	: ref = 'hec'
 		'hec'		: ref = 'hec'
 		'mod'		: ref = 'mod'
-		'coll5-terra'	: ref = 'mod'
+		'coll5-terra': ref = 'mod'
 		'myd'		: ref = 'myd'
-		'coll5-aqua'	: ref = 'myd'
+		'coll5-aqua': ref = 'myd'
 		'mod2'		: ref = 'mod2'
-		'coll6-terra'	: ref = 'mod2'
+		'coll6-terra': ref = 'mod2'
 		'myd2'		: ref = 'myd2'
-		'coll6-aqua'	: ref = 'myd2'
+		'coll6-aqua': ref = 'myd2'
 		'cal'		: ref = 'cal'
 		'calipso'	: ref = 'cal'
 		'gwx'		: ref = 'gwx'
@@ -1830,7 +1806,8 @@ pro color_table_names, color_tbl_name, colors1_tbl = colors1_tbl, brewer_tbl=bre
 	map_image_tbl = [ 		  $
 		'Default (Rainbow)'	, $
 		'Extended Rainbow'	, $
-		'Elevation'		, $
+		'Cloud Mask'		, $
+		'Elevation'			, $
 		'Blue to Red'		, $
 ; 		'GIST Earth'		, $ ; taken from panoply , only works buggy at the moment ; uncomment to use it
 ; 		'GMT Globe'		, $ ; taken from panoply , only works buggy at the moment ; uncomment to use it
@@ -2230,56 +2207,83 @@ function noaa_primes,year,month, ampm=ampm		, $ ; ampm := 0  am,1 pm, 2 ampm
 
 end
 ;--------------------------------------------------------------------------------------------------------------------------
-function noaa_ampm, satellite, ampm = ampm
+function vali_satname, satellite
+
+	sat  = strlowcase(strjoin(strsplit(satellite,'-',/ext)))
+
+	case sat of
+		'noaa05'	: result = 'noaa5'
+		'noaa06'	: result = 'noaa6'
+		'noaa07'	: result = 'noaa7'
+		'noaa08'	: result = 'noaa8'
+		'noaa09'	: result = 'noaa9'
+		'metop01'	: result = 'metopb'
+		'metop02'	: result = 'metopa'
+		'metop1'	: result = 'metopb'
+		'metop2'	: result = 'metopa'
+		'ers02'		: result = 'ers2'
+		else		: result = sat
+	endcase
+
+	return, result
+end
+;--------------------------------------------------------------------------------------------------------------------------
+function sat_ampm, satellite, ampm = ampm, avhrr_only = avhrr_only, main_sensor = main_sensor
 
 	sat  = strlowcase(strjoin(strsplit(satellite,'-',/ext)))
 	keyword_set_ampm = keyword_set(ampm)
 	ampm = 2
-
+	
 	case sat of
-		'noaaam'	: result = 'am'
-		'noaapm'	: result = 'pm'
-		'tirosn'	: result = 'pm'
-		'noaa5'		: result = 'pm'
-		'noaa05'	: result = 'pm'
-		'noaa6'		: result = 'am'
-		'noaa06'	: result = 'am'
-		'noaa7'		: result = 'pm'
-		'noaa07'	: result = 'pm'
-		'noaa8'		: result = 'am'
-		'noaa08'	: result = 'am'
-		'noaa9'		: result = 'pm'
-		'noaa09'	: result = 'pm'
-		'noaa10'	: result = 'am'
-		'noaa11'	: result = 'pm'
-		'noaa12'	: result = 'am'
-		'noaa14'	: result = 'pm'
-		'noaa15'	: result = 'am'
-		'noaa16'	: result = 'pm'
-		'noaa17'	: result = 'am'
-		'noaa18'	: result = 'pm'
-		'noaa19'	: result = 'pm'
-		'metopa'	: result = 'am'
-		'metopb'	: result = 'am'
-		'metop01'	: result = 'am'
-		'metop02'	: result = 'am'
-		'metop1'	: result = 'am'
-		'metop2'	: result = 'am'
-		'npp'		: result = 'pm'
-		'allsat'	: result = 'ampm'
-		'avhrrs'	: result = 'ampm'
-		'modises'	: result = 'ampm'
-		'aqua'		: result = 'pm'
-		'terra'		: result = 'am'
-		'envisat'	: result = 'am'
-		'ers2'		: result = 'am'
-		'aatsr'		: result = 'am'
-		'aatme'		: result = 'am'
-		else		: result = 'unknown'
+		'noaaam'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaapm'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'tirosn'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa5'		: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa05'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa6'		: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa06'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa7'		: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa07'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa8'		: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa08'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa9'		: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa09'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa10'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa11'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa12'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa14'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa15'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa16'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa17'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'noaa18'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaa19'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'metopa'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'metopb'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'metop01'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'metop02'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'metop1'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'metop2'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'npp'		: begin & result = 'pm'      & main_sensor = 'VIIRS' & end
+		'allsat'	: begin & result = 'ampm'    & main_sensor = 'AVHRR' & end
+		'avhrrs'	: begin & result = 'ampm'    & main_sensor = 'AVHRR' & end
+		'modises'	: begin & result = 'ampm'    & main_sensor = 'MODIS' & end
+		'aqua'		: begin & result = 'pm'      & main_sensor = 'MODIS' & end
+		'terra'		: begin & result = 'am'      & main_sensor = 'MODIS' & end
+		'envisat'	: begin & result = 'am'      & main_sensor = 'AATSR' & end
+		'ers2'		: begin & result = 'am'      & main_sensor = 'ATSR2' & end
+		'aatsr'		: begin & result = 'am'      & main_sensor = 'AATSR' & end
+		'aatme'		: begin & result = 'am'      & main_sensor = 'AATRS+MERIS' & end
+		else		: begin & result = 'unknown' & main_sensor = 'UNKNOWN' & ampm = -1 & end
 	endcase
 
 	if strmatch(result,'am') then ampm = 0
 	if strmatch(result,'pm') then ampm = 1
+
+	if keyword_set(avhrr_only) and main_sensor ne 'AVHRR' then begin
+		ampm = -1
+		result = 'unknown'
+		main_sensor = 'UNKNOWN'
+	endif
 
 	return, keyword_set_ampm ? ampm : result
 
@@ -2320,12 +2324,12 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 		'pmx'	: begin
 				algon = 'PATMOS-X'
 				if lev eq 'l3c' then $
-				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which) : satn
+				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=sat_ampm(satn,/ampm),which=which) : satn
 			  end
 		'pmx_old': begin
 				algon = 'PATMOS-X (old)'
 				if lev eq 'l3c' then $
-				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=noaa_ampm(satn,/ampm),which=which,/patmos) : ''
+				satn  = keyword_set(year) and keyword_set(month) ? noaa_primes(year,month,ampm=sat_ampm(satn,/ampm),which=which,/patmos) : ''
 			  end
 		else	: algon = strupcase(algo)
 	endcase
@@ -2341,7 +2345,7 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 	;new datset names AVHRR AM,PM
 	if total(dumsat eq ['NOAA-AM','NOAA-PM']) then begin
 		if keyword_set(year) and keyword_set(month) and algo ne 'pmx' then begin
-			dumsat = noaa_primes(year,month,ampm=noaa_ampm(dumsat,/ampm),which=which)
+			dumsat = noaa_primes(year,month,ampm=sat_ampm(dumsat,/ampm),which=which)
 		endif else begin
 			if dumsat eq 'NOAA-AM' then dumsat = 'AVHRR-AM'
 			if dumsat eq 'NOAA-PM' then dumsat = 'AVHRR-PM'
@@ -2428,42 +2432,99 @@ pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 	if not adv_keyword_set(wtext) then WIDGET_CONTROL, cont_base, /destroy
 end
 ;------------------------------------------------------------------------------------------
-; sets predefined projections to use with map_image__define
-pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar	, $ ; input 
-		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, $ ; input 
-		lambert = lambert, $
-		ortho=ortho,iso=iso,horizon=horizon,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, $ ; output
-		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify	, $
-		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lats=lats,latnames=latnames,lons=lons,lonnames=lonname, $
-		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format       ; output
+function set_limits, longitude, latitude, four_elements = four_elements, bounds = bounds, p0lon=p0lon, p0lat=p0lat,verbose=verbose
 
-	if (~keyword_set(globe) and ~keyword_set(antarctic) and ~keyword_set(arctic) and $
-	     ~keyword_set(goode) and ~keyword_set(hammer)    and ~keyword_set(aitoff) and $
-	     ~keyword_set(mollweide) and ~keyword_set(sinusoidal) and ~keyword_set(robinson) and ~keyword_set(lambert)) then box_axes = 1
-	if keyword_set(goode) then box_axes = 1
+	bds = keyword_set(bounds) ? float(bounds) : 0.
+
+	; USA:[15,-200,75,-60] Shape File
+
+	;seperate between neg. and positive longitudes
+	idx_total = where(finite(longitude),anz_total)
+	idx_neg   = where(longitude lt 0,anz_neg)
+	idx_pos   = where(longitude ge 0,anz_pos)
+	rat_neg   = float(anz_neg)/float(anz_total)
+	rat_pos   = float(anz_pos)/float(anz_total)
+
+	anz = 1
+	if (rat_neg gt rat_pos and rat_neg ne 1. and rat_pos lt 0.05) then begin & anz = 2 & neg = 1 & end
+	if (rat_pos gt rat_neg and rat_pos ne 1. and rat_neg lt 0.05) then begin & anz = 2 & neg = 0 & end
+; 	anz = (rat_neg gt rat_pos and rat_neg ne 1.) ? 2:1
+
+	dum_limit = fltarr(4,anz)
+
+	for i=0,anz-1 do begin
+		if anz eq 1 then idx = idx_total
+		if anz eq 2 and i eq 0 then idx = idx_neg
+		if anz eq 2 and i eq 1 then idx = idx_pos
+
+		d1=min(longitude[idx], i1,/nan)
+		d2=max(longitude[idx], i2,/nan)
+		d3=min(latitude [idx], i3,/nan)
+		d4=max(latitude [idx], i4,/nan)
+
+		dum_limit[*,i] = [    (d3 - bds) > (-90.), (d1 - bds), (d4 + bds) < ( 90.), (d2 + bds) ]
+	endfor
+
+	if anz eq 2 then begin
+		limit    = reform(dum_limit[*,1])
+		limit[0] = min(dum_limit[0,*])
+		limit[2] = max(dum_limit[2,*])
+		if neg eq 1 then begin
+			limit[1] = dum_limit[1,1] - 360.
+			limit[3] = dum_limit[3,0]
+		endif else begin
+			limit[1] = dum_limit[1,1]
+			limit[3] = dum_limit[3,0] + 360.
+		endelse
+	endif else begin
+		limit    = reform(dum_limit[*,0])
+	endelse
+
+	if total(abs(limit[[1,3]])) gt 360. then limit[[1,3]] = [-180.,180.]
+	if total(abs(limit[[0,2]])) gt 180. then limit[[0,2]] = [- 90., 90.]
+
+	p0lon = total(limit[[1,3]])/2.
+; 	p0lat = total(limit[[0,2]])/2.
+
+	if keyword_set(four_elements) then return, limit
+
+	limit = [	total(limit[[0,2]])/2., limit[1], $	; left 
+				limit[2], total(limit[[1,3]])/2., $	; top
+				total(limit[[0,2]])/2., limit[3], $	; right
+				limit[0], total(limit[[1,3]])/2.]	; bottom
+
+	return, limit
+
+end
+;------------------------------------------------------------------------------------------
+; sets predefined projections to use with map_image__define
+pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar, 	$ ; input 
+		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, 		$ ; input 
+		lambert = lambert, enhanced_robinson = enhanced_robinson, 																$ ; input 
+		ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
+		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify		, 						$
+		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
+		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format       									  ; output
+
+; 	if (~keyword_set(globe) and ~keyword_set(antarctic) and ~keyword_set(arctic) and ~keyword_set(enhanced_robinson) and $
+; 	     ~keyword_set(goode) and ~keyword_set(hammer)    and ~keyword_set(aitoff) and $
+; 	     ~keyword_set(mollweide) and ~keyword_set(sinusoidal) and ~keyword_set(robinson) and ~keyword_set(lambert)) then box_axes = 1
+; 	if keyword_set(goode) then box_axes = 1
+	
+	box_axes = 1
+	ksl = keyword_set(limit)
 
 	if ((keyword_set(globe) or keyword_set(antarctic) or keyword_set(arctic)   or $
-	     keyword_set(goode) or keyword_set(hammer)    or keyword_set(aitoff)   or $
-	     keyword_set(mollweide) or keyword_set(sinusoidal) or keyword_set(robinson) or $
-	     keyword_set(stereographic) or keyword_set(msg) or keyword_set(lambert)) $
-	     and ~keyword_set(limit)) then begin
+		keyword_set(goode) or keyword_set(hammer)    or keyword_set(aitoff)   or $
+		keyword_set(mollweide) or keyword_set(sinusoidal) or keyword_set(robinson) or $
+		keyword_set(stereographic) or keyword_set(msg) or keyword_set(lambert) or keyword_set(enhanced_robinson))) then begin;$ 
+; 		and ~keyword_set(limit)) then begin
 		; set map_image defaults
 		ortho   = 1
 		iso     = 1
-		horizon = 1
+		horizontal = 1
 ; 		grid    = 1
- 		londel  = 60
- 		latdel  = 30
 		label   = 1
-		lonlab = -90
-		latlab = -180
-		latalign=1
-		lonalign=0.5
-		lats = vector(-90,90,7)
-		latnames=strtrim(lats, 2)
-; 		latnames(where(lats eq 0)) = 'Eq.'
-		latnames(where(lats eq -90)) = ' '
-		latnames(where(lats eq  90)) = ' '
 		noborder= 1
 		no_color_bar = 1
 		box_axes = 0
@@ -2475,37 +2536,38 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 
 		p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 		p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
-		limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
-					[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
 
-		if keyword_set(antarctic) then begin
-			mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
-			limit = limit + [-50, 0,-50, 0,-50, 0,-50, 0]
-; 			limit = limit + [-65, 0,-65, 0,-65, 0,-65, 0]
-			no_color_bar = 0
-			if ~adv_keyword_set(magnify) then magnify = 1
-			horizon=0
-			label=1
-		endif
-		if keyword_set(arctic) then begin
-			mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
- 			limit = limit + [ 50, 0, 50, 0, 50, 0, 50, 0]
-; 			limit = limit + [ 65, 0, 65, 0, 65, 0, 65, 0]
-			no_color_bar = 0
-			if ~adv_keyword_set(magnify) then magnify = 1
-			horizon=0
-			label=1
+		if keyword_set(antarctic) or keyword_set(arctic) then begin
+			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
+									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+
+			if keyword_set(antarctic) then begin
+				mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
+				limit = limit + [-50, 0,-50, 0,-50, 0,-50, 0]
+				no_color_bar = 0
+				if ~adv_keyword_set(magnify) then magnify = 1
+				horizontal=0
+				label=1
+			endif
+			if keyword_set(arctic) then begin
+				mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
+				limit = limit + [ 50, 0, 50, 0, 50, 0, 50, 0]
+				no_color_bar = 0
+				if ~adv_keyword_set(magnify) then magnify = 1
+				horizontal=0
+				label=1
+			endif
 		endif
 
 		; other projections
-		other_limit = [-90,((p0lon mod 360) -180),90,((p0lon mod 360) +180)]
+		other_limit = ksl ? limit : [-90,((p0lon mod 360) -180),90,((p0lon mod 360) +180)]
 		if keyword_set(goode) then begin & goodeshomolosine = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & box_axes = 1 & end
 		if keyword_set(hammer) then begin & hammer = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(robinson) then begin & robinson = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & iso =1 & end
 		if keyword_set(sinusoidal) then begin & sinusoidal = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(aitoff) then begin & aitoff = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(mollweide) then begin & mollweide = 1 & no_color_bar = 0 & ortho = 0  & limit = other_limit & end
-		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & horizon = 0 & end
+		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & horizontal = 0 & end
 		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end 
 		if keyword_set(msg) then begin
 			; satellite projection
@@ -2515,35 +2577,57 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 			p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 			p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
 			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
-						[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
 ; 			Limit=[0.0, -90, 90, 0, 0.0, 90, -90, 0]
 ; 			p0lat=0.
 ; 			p0lon=0. ; floating underflow in convert_coord in map_point_valid in map_set in map_image
 			no_color_bar = 0
-			horizon = 0
+			horizontal = 0
 			no_draw_border=0
 		endif
-	endif else if keyword_set(limit) then begin
-		box_axes = 1
-		if n_elements(limit) eq 4 then begin
-			; dateline ? 
-			dl = max(deriv(vector(limit[1],limit[3],360.))) lt 0 
-			p0lon = round((limit[3]+limit[1])/2. )
-			if dl then begin
-				p0lon = p0lon -180
-				print,'Crossing dateline: set p0lon to ',p0lon
-			endif
-			; workaround strange effect bei map_image
-			; bei midlat North wurde p0lat auf 44.5 gesetzt (limit = [ 23.5,-180, 65.5,180])
-			; map_set meldet % MAP_SET_LIMITS: Warning, MAP limits are invalid
-; 			if ~(total(limit) eq 89.) then p0lat = (limit[2]+limit[0])/2.
-		endif else begin
-			free, p0lon
-			free, p0lat
-		endelse
-	endif else if keyword_set(p0lon) and ~keyword_set(lat) and ~keyword_set(limit) then begin
+		if keyword_set(enhanced_robinson) then begin
+			londel  = 60
+			latdel  = 30
+			lonlab =  -90
+			latlab = -180
+			latalign=1.2
+			lonalign=0.5
+			lats = vector(-90,90,7)
+			latnames=string(lats,format='(I3)')
+			latnames(where(lats eq 0)) = 'Eq.'
+			latnames(where(lats eq -90)) = ' '
+			latnames(where(lats eq  90)) = ' '
+			lons = vector(-180,180,7)
+			lonnames=strtrim(lons, 2)
+			lonnames=string(lons,format='(I4)')
+			lonnames(where(lons eq -180)) = ' '
+			lonnames(where(lons eq  180)) = ' '
+			robinson = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & iso =1
+		endif
+	endif else if ksl then begin
+; 		box_axes = 1
+; 		if n_elements(limit) eq 4 then begin
+; 		
+; print,'p0lon,p0lat sollte nich überschrieben werden wenn es gesetzt wurde'
+; stop
+; 			; dateline ? 
+; 			dl = max(deriv(vector(float(limit[1]),(limit[3]),360.))) lt 0 
+; 			p0lon = round((limit[3]+limit[1])/2. )
+; 			if dl then begin
+; 				p0lon = p0lon -180
+; 				print,'Crossing dateline: set p0lon to ',p0lon
+; 			endif
+; 			; workaround strange effect bei map_image
+; 			; bei midlat North wurde p0lat auf 44.5 gesetzt (limit = [ 23.5,-180, 65.5,180])
+; 			; map_set meldet % MAP_SET_LIMITS: Warning, MAP limits are invalid
+; ; 			if ~(total(limit) eq 89.) then p0lat = (limit[2]+limit[0])/2.
+; 		endif else begin
+; 			free, p0lon
+; 			free, p0lat
+; 		endelse
+	endif else if keyword_set(p0lon) and ~keyword_set(lat) and ~ksl then begin
 		limit = [-90,((p0lon mod 360) -180),90,((p0lon mod 360) +180)]
-	endif else if keyword_set(p0lat) and ~keyword_set(limit) then begin
+	endif else if keyword_set(p0lat) and ~ksl then begin
 		p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat : 0 ) <  90
 		p0lon = (-360) > ( keyword_set(p0lon) ? p0lon : 0 ) < 360
 		limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
@@ -2570,8 +2654,8 @@ pro set_proj, 	globe = globe, limit = limit, antarctic = antarctic, arctic = arc
 
 	if adv_keyword_set(nobar) then begin
 		if nobar eq 1 then no_color_bar = 1 ; no color bar
-		if nobar eq 2 then begin & no_color_bar = 0 & horizon = 1 & end ; force horizontal colorbar
-		if nobar eq 3 then begin & no_color_bar = 0 & horizon = 0 & end ; force vertical colorbar
+		if nobar eq 2 then begin & no_color_bar = 0 & horizontal = 1 & end ; force horizontal colorbar
+		if nobar eq 3 then begin & no_color_bar = 0 & horizontal = 0 & end ; force vertical colorbar
 ; 	no_color_bar = 1
 	endif
 
@@ -2653,11 +2737,13 @@ end
 ;------------------------------------------------------------------------------------------
 ; stapel with main part taken from lonlat2reg.pro [P. Albert]
 function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_res = grid_res, $
-					verbose = verbose, found = found, nan_fillv = nan_fillv,$
+					verbose = verbose, found = found, nan_fillv = nan_fillv, sample = sample, $
 					skill_ref_data = skill_ref_data ; add reference data for 2D skill analysis
 
 	found = 1
-	lon = dlon
+	do_view=0
+	kss   = keyword_set(sample)
+	lon   = dlon
 	grd_res       = keyword_set(grid_res)          ? float(grid_res)      : 0.25 ; GME 30 km 1/4 grad auflösung
 	no_data_val   = adv_keyword_set(no_data_value) ? float(no_data_value) : -999.
 	if ~finite(no_data_val) then begin
@@ -2701,29 +2787,32 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 		return,-1
 	endif
 
-	si = size(data,/dim)
-	do_it = size(data,/n_dim) eq 2
-	minv_idx = round(si[0]/2.-1)
+	if ~kss then begin
+		si = size(data,/dim)
+		do_view = size(data,/n_dim) eq 2
+		minv_idx = round(si[0]/2.-1)
 
-	lodata  = lon[idx]
-	ladata  = lat[idx]
-	lon_sum = fltarr(arr_dim)
-	lat_sum = fltarr(arr_dim)
+		lodata  = lon[idx]
+		ladata  = lat[idx]
+		lon_sum = fltarr(arr_dim)
+		lat_sum = fltarr(arr_dim)
 
-	xdata = data[idx]
-	if is_defined(data2) then xdata2= data2[idx]
-	view  = fltarr(arr_dim) + ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		view  = fltarr(arr_dim) + ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		sum   = fltarr(arr_dim)
+		sum2  = fltarr(arr_dim)
+		sam   = fltarr(arr_dim)
+		med   = fltarr(arr_dim)
+	endif
 	nnn   = lonarr(arr_dim)
-	sum   = fltarr(arr_dim)
-	sum2  = fltarr(arr_dim)
 	nul   = fltarr(arr_dim)
-	sam   = fltarr(arr_dim)
-	med   = fltarr(arr_dim)
+	xdata = data[idx]
+
 	if is_defined(data2) then begin
-		tss_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
-		pec_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
-		pod_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
-		bias_data = fltarr(arr_dim)+( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		xdata2    = data2[idx]
+		tss_data  = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		pec_data  = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		pod_data  = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
+		bias_data = fltarr(arr_dim)+ ( keyword_set(nan_fillv) ? !values.f_nan : no_data_val)
 	endif
 	min_x = min(x_model[idx], max = max_x)
 	xxx   = max_x - min_x + 1
@@ -2736,17 +2825,20 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 			ix = s[ri[ri[i]]] mod xxx + min_x
 			iy = s[ri[ri[i]]] / xxx
 			nnn[ix, iy]  = ri[i+1] - ri[i]
-			if do_it then view[ix, iy] = nnn[ix, iy] gt 1 ? $
-			(xdata[ri[ri[i]: ri[i+1]-1]])[(where(abs(minv_idx-(ri[ri[i]: ri[i+1]-1] mod si[0])) eq min(abs(minv_idx-(ri[ri[i]: ri[i+1]-1] mod si[0])))))[0]] : $
-			xdata[ri[ri[i]]]
-			rdm_idx         = round(randomu(seed,1) * (nnn[ix, iy] -1))
-			nul[ix, iy]     = nnn[ix, iy] gt 1 ? (xdata[ri[ri[i]: ri[i+1]-1]])[0]       : xdata[ri[ri[i]]]
-			sam[ix, iy]     = nnn[ix, iy] gt 1 ? (xdata[ri[ri[i]: ri[i+1]-1]])[rdm_idx] : xdata[ri[ri[i]]]
-			med[ix, iy]     = nnn[ix, iy] gt 1 ? median(xdata[ri[ri[i]: ri[i+1]-1]])    : xdata[ri[ri[i]]]
-			sum[ix, iy]     = nnn[ix, iy] gt 1 ? total( xdata[ri[ri[i]: ri[i+1]-1]])    : xdata[ri[ri[i]]]
-			sum2[ix, iy]    = nnn[ix, iy] gt 1 ? total((xdata[ri[ri[i]: ri[i+1]-1]])^2) : xdata[ri[ri[i]]]^2
-			lon_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( lodata[ri[ri[i]: ri[i+1]-1]])   : lodata[ri[ri[i]]]
-			lat_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( ladata[ri[ri[i]: ri[i+1]-1]])   : ladata[ri[ri[i]]]
+			if ~kss then begin
+				if do_view then view[ix, iy] = nnn[ix, iy] gt 1 ? $
+				(xdata[ri[ri[i]: ri[i+1]-1]])[(where(abs(minv_idx-(ri[ri[i]: ri[i+1]-1] mod si[0])) eq $
+				min(abs(minv_idx-(ri[ri[i]: ri[i+1]-1] mod si[0])))))[0]] : xdata[ri[ri[i]]]
+		
+				rdm_idx         = round(randomu(seed,1) * (nnn[ix, iy] -1))
+				sam[ix, iy]     = nnn[ix, iy] gt 1 ? (xdata[ri[ri[i]: ri[i+1]-1]])[rdm_idx] : xdata[ri[ri[i]]]
+				med[ix, iy]     = nnn[ix, iy] gt 1 ? median(xdata[ri[ri[i]: ri[i+1]-1]])    : xdata[ri[ri[i]]]
+				sum[ix, iy]     = nnn[ix, iy] gt 1 ? total( xdata[ri[ri[i]: ri[i+1]-1]])    : xdata[ri[ri[i]]]
+				sum2[ix, iy]    = nnn[ix, iy] gt 1 ? total((xdata[ri[ri[i]: ri[i+1]-1]])^2) : xdata[ri[ri[i]]]^2
+				lon_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( lodata[ri[ri[i]: ri[i+1]-1]])   : lodata[ri[ri[i]]]
+				lat_sum[ix, iy] = nnn[ix, iy] gt 1 ? total( ladata[ri[ri[i]: ri[i+1]-1]])   : ladata[ri[ri[i]]]
+			endif
+			nul[ix, iy]     = nnn[ix, iy] gt 1 ? (xdata[ri[ri[i]: ri[i+1]-1]])[0]       	: xdata[ri[ri[i]]]
 			if is_defined(data2) and nnn[ix, iy] gt 1 then begin
 				skills_n_scores,xdata2[ri[ri[i]: ri[i+1]-1]],xdata[ri[ri[i]: ri[i+1]-1]],tss=tss,pec=pec,pod=pod
 				tss_data[ix, iy] = tss
@@ -2757,36 +2849,42 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 		endif
 	endfor
 
-	avg  = sum / (nnn > 1l)
-	alon = lon_sum / (nnn > 1l)
-	alat = lat_sum / (nnn > 1l)
-	var  = ( (sum2 - nnn * avg^2) > 0.) / ((nnn-1l) > 1l)
-	sdv  = sqrt(var)
+	if ~kss then begin
+		avg  = sum / (nnn > 1l)
+		alon = lon_sum / (nnn > 1l)
+		alat = lat_sum / (nnn > 1l)
+		var  = ( (sum2 - nnn * avg^2) > 0.) / ((nnn-1l) > 1l)
+		sdv  = sqrt(var)
+	endif
 
 	no_data_idx = where(nnn eq 0l,ndc)
 	if ndc gt 0 then begin
-		avg[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		alon[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		alat[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		sdv[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		nul[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		sam[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		med[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		var[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		sum[no_data_idx]  = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		if is_defined(data2) then tss_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		if is_defined(data2) then pec_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		if is_defined(data2) then pod_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		if is_defined(data2) then bias_data[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
-		if do_it then view[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(avg)   then avg[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(alon)  then alon[no_data_idx] 	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(alat)  then alat[no_data_idx] 	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(sdv)   then sdv[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(nul)   then nul[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(sam)   then sam[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(med)   then med[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(var)   then var[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(sum)   then sum[no_data_idx]  	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then tss_data[no_data_idx]	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then pec_data[no_data_idx]	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then pod_data[no_data_idx]	= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if is_defined(data2) then bias_data[no_data_idx]= keyword_set(nan_fillv) ? !values.f_nan : no_data_val
+		if do_view then view[no_data_idx] = keyword_set(nan_fillv) ? !values.f_nan : no_data_val
 	endif
 
 	if is_defined(data2) then begin
 		skills = {tss:tss_data,pec:pec_data,pod:pod_data,bias:bias_data}
 	endif else skills =-1
 
-	return, { sum : sum, mean: avg,mean_lat: alat,mean_lon: alon, median:med, random_sample : sam, null_sample : nul, $
-	stddev: sdv, variance: var, count: nnn, lon: glon, lat: glat, nearest_nadir:view ,s:s,min_x:min_x,xxx:xxx,skills:skills}
+	if kss then begin
+		return, { null_sample : nul, lon: glon, lat: glat }
+	endif else begin
+		return, { sum : sum, mean: avg,mean_lat: alat,mean_lon: alon, median:med, random_sample : sam, null_sample : nul, $
+		stddev: sdv, variance: var, count: nnn, lon: glon, lat: glat, nearest_nadir:view ,s:s,min_x:min_x,xxx:xxx,skills:skills}
+	endelse
 end
 ;------------------------------------------------------------------------------------------
 function read_modis_obj_val, stringname, group, value = value,found=found
@@ -2812,7 +2910,7 @@ function read_modis_obj_val, stringname, group, value = value,found=found
 end
 ;------------------------------------------------------------------------------------------
 pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, msg = msg, $
-		nise = nise,nsidc=nsidc,pick_file=pick_file,osisaf=osisaf,algo=algo,offsets = offsets
+		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
 	if keyword_set(algo) then begin
@@ -2845,7 +2943,7 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		found = 1
 		return
 	endif 
-	
+
 	if keyword_set(grid_res) then begin
 		if keyword_set(offsets) then begin
 			lon_dum = findgen((offsets.ELON-offsets.SLON)/grid_res) * grid_res - (((-1) * offsets.SLON) - grid_res/2.)
@@ -2962,6 +3060,12 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		endif
 	endif
 
+; 	; reset lon to [-180,180]
+; 	idx = where(lon gt 180.,idxcnt)
+; 	if idxcnt gt 0 then begin
+; 		lon[idx] = lon[idx] - 360.
+; 	endif
+	
 end
 ;---------------------------------------------------------------------------------------------
 pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = algoname, set_fillvalue = set_fillvalue , $		;input 
@@ -4163,7 +4267,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				case alg of
 					'ESACCI': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 ; 								if found_prime then satellite = sat
 							endif
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strupcase(lev)+'/'+yyyy+'/'+mm+'/'
@@ -4174,7 +4278,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif else orbdum = ''
 							if strmid(dat,0,3) eq 'rgb' then begin
 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/v2.0/jpg/'+yyyy+'/'
-								ampm  = noaa_ampm(sat)
+								ampm  = sat_ampm(sat)
 								filen = dir + 'Cloudcci_v2.0_'+strupcase(ampm)+'_*_'+dat+'_'+yyyy+mm+dd+'*.jpg'
 							endif else begin
 								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
@@ -4196,7 +4300,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						  end
 					'CLARA' : begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 ; 								if found_prime then satellite = sat
 							endif
 							if lev eq 'l2' then begin
@@ -4226,7 +4330,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						  end
 					'CLARA2': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 ; 								if found_prime then satellite = sat
 							endif
 							dumdat = dat
@@ -4260,9 +4364,11 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
 								endif
 							endif
-							if dat eq 'RGB' then begin
-								dir   = din ? dirname+'/' : '/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/'
-								filen = dir + 'CLARA_A2_*_rgb_'+satn+'_'+yyyy+mm+dd+'*.jpg'
+							if strmid(dat,0,3) eq 'RGB' then begin
+; 								dir   = din ? dirname+'/' : '/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/'
+; 								filen = dir + 'CLARA_A2_*_rgb_'+satn+'_'+yyyy+mm+dd+'*.jpg'
+								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/AVHRR_GAC_2/'+dumlevel+'/CAC/'+satn+'/'+yyyy+'/'
+								filen = dir + 'CAC'+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
 							endif else begin
 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/AVHRR_GAC_2/'+dumlevel+'/'+dat+'/'+satn+'/'+yyyy+'/'
 								filen = dir + dat+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
@@ -4270,7 +4376,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						end
 					'PATMOS_OLD': begin
 							if lev eq 'l3c' or lev eq 'l3s' then begin
-								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/patmos,/no_zero,found=found)
+								satpat = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),which=which,/patmos,/no_zero,found=found)
 								if found then begin
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
@@ -4284,7 +4390,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								endif
 							endif else if lev eq 'l3u' then begin
 								if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-									sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,/patmos,found=found_prime)
+									sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,/patmos,found=found_prime)
 								endif
 								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
 								node  = node eq 'asc' or node eq 'des' ? node : '*'
@@ -4307,7 +4413,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'PATMOS': begin
 							if lev eq 'l3c' or lev eq 'l3s' then begin
-								satpat = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+								satpat = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),which=which,/no_zero,found=found)
 								if found then begin
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 ; 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
@@ -4322,7 +4428,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								endif
 							endif else if lev eq 'l3u' then begin
 								if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-									sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime)
+									sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 								endif
 								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
 								node  = node eq 'asc' or node eq 'des' ? node : '*'
@@ -4338,7 +4444,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'GEWEX': begin
 						if ~total(lev eq ['l3c','l3s']) then goto, ende
-							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+							satgwx = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/AVHRR/'+yyyy+'/'
@@ -4360,7 +4466,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						 end
 					'GAC2-GEWEX': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+							satgwx = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
 									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/bwuerzle/data/GEWEX_OUT/'+yyyy+'/'
@@ -4386,7 +4492,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							end
 					'ISCCP': begin
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
-							satgwx = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+							satgwx = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
 								dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/EXTERNAL_DATA/ISCCP/GEWEX/'+yyyy+'/'
 								dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
@@ -4442,7 +4548,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if ~total(lev eq ['l3c','l3s']) then goto, ende
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/new/MODIS/'+yyyy+'/'
 ;							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/gewex/old/MODIS/'+yyyy+'/'
-							which  = strupcase(noaa_ampm(sat))
+							which  = strupcase(sat_ampm(sat))
 							if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
 								case which of 
 									'AMPM'	: style = 'AMPM'
@@ -4559,7 +4665,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 				case alg of
 					'HECTOR': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
-								sat   = noaa_primes(yyyy,mm,ampm=noaa_ampm(sat,/ampm),/no_zero,found=found_prime,/hirs)
+								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime,/hirs)
 							endif
 							dumdat = dat
 							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
@@ -5000,8 +5106,14 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	endelse
 end
 ;------------------------------------------------------------------------------------------
+pro check_era,date
+
+	print, date+ (file_test('/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/AUXDATA/ERA_Interim/'+date,/dir) ? ': Yes' : ': No')
+
+end
+;------------------------------------------------------------------------------------------
 function map_ecmwf_to_orbit, orbit_date, orb_lon, orb_lat, parameter, found = found, index = index, grid_res=grid_res, verbose = verbose, $
-	 only_hr = only_hr, no_hr = no_hr
+	 only_hr = only_hr, no_hr = no_hr,cci_l3u_eu=cci_l3u_eu
 
 	found = 1.
 	error_status = 0
@@ -5450,14 +5562,18 @@ function int_stemp,cen_time,ecmwf_time,skt
 	return, ( ((idx1_cnt+idx2_cnt) eq 2) ? (w1 * skt[idx1] + w2 * skt[idx2]) : -1)
 end
 ;------------------------------------------------------------------------------------------
-function get_l3u_ecmwf_wind, date, time, grid_res = grid_res, found = found, verbose = verbose
+function get_l3u_ecmwf_wind, date, time, grid_res = grid_res, found = found, verbose = verbose,l3u_europe = l3u_europe
 
 	gres  = keyword_set(grid_res) ? float(grid_res) : 0.1
 	date1 = strmid(strjoin(unix2ymdhms(ymdhms2unix(date)+86400l,/arr)),0,8) ; next day
 
 	para = ['u10m','v10m']
-
-	make_geo,lon,lat, grid = gres
+	if keyword_set(l3u_europe) then begin
+		offsets = {grid:0.02,slon:(-15),elon:45,slat:35,elat:75}
+		gres    = offsets.grid
+	endif
+	
+	make_geo,lon,lat,grid = gres,offsets=offsets
 	; ECMWF Skin temperature
 	struc = map_ecmwf_to_orbit(date+'0000' , lon, lat, para, grid = gres, found = found, verbose = verbose)
 		if ~found then return,-1
@@ -5503,7 +5619,8 @@ function get_l3u_ecmwf_wind, date, time, grid_res = grid_res, found = found, ver
 
 end
 ;------------------------------------------------------------------------------------------
-function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose, only_hr = only_hr, no_hr = no_hr, wind = wind
+function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found, verbose = verbose, $
+							only_hr = only_hr, no_hr = no_hr, wind = wind, offsets = offsets
 
 	gres  = keyword_set(grid_res) ? float(grid_res) : 0.1
 	date1 = strmid(strjoin(unix2ymdhms(ymdhms2unix(date)+86400l,/arr)),0,8) ; next day
@@ -5514,7 +5631,9 @@ function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found,
 		only_hr = 1
 	endif
 
-	make_geo,lon,lat, grid = gres
+	if keyword_set(offsets) then gres = offsets.grid
+	make_geo,lon,lat,grid = gres, offsets = offsets
+
 	; ECMWF Skin temperature
 	struc = map_ecmwf_to_orbit(date+'0000' , lon, lat, para, grid = gres, found = found, only_hr = only_hr, no_hr = no_hr, verbose = verbose)
 		if ~found then return,-1
@@ -5736,7 +5855,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 	if ( total(dat eq ['blue_marble','marble']) ) and not keyword_set(filename) then filename='dum'
 
 	need_filename = ~total(dat eq ['blue_marble','marble','usgs_dem','usgs_lus','usgs_ls','usgs_lsm', $
-					'refl1','refl2','refl3a','refl3b','rad3b','rad4','rad5'])
+					'refl1','refl2','refl3a','refl3b','rad3b','rad4','rad5','rad4,rad5'])
 
 	if not keyword_set(filename) and need_filename then begin
 		if n_params() eq 0 then begin
@@ -5780,7 +5899,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			longname = 'Cloud Fraction' + dat eq 'cfc_std' ? ' standard deviation' : ''
 			free,tmp
 		endif else return,-1
-	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue'])) then begin
+	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and alg eq 'esacci') then begin
 		found = file_test(filename[0])
 		if arg_present(finfo) then finfo = file_info(filename[0])
 		if found then begin
@@ -5796,6 +5915,31 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
+	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and alg eq 'clara2') then begin
+		node = strmid(dat,3)
+		if node eq '' then node = sat_ampm(sat) eq 'pm' ? '_asc' : '_desc'
+		read_ncdf,filename[0],'REFL_VIS006'+node,rad1 ,found=found,set_fillvalue=-999.
+		read_ncdf,filename[0],'REFL_VIS008'+node,rad2 ,found=f2,set_fillvalue=-999.
+		read_ncdf,filename[0],'REFL_NIR016'+node,rad3a,found=f3,set_fillvalue=-999.
+		read_ncdf,filename[0],'BT_NIR037'  +node,rad3b,found=f4,set_fillvalue=-999.
+		read_ncdf,filename[0],'BT_TIR108'  +node,rad4 ,found=f5,set_fillvalue=-999.
+		ang_file = strreplace(filename[0],'CAC','CAA')
+		read_ncdf,ang_file[0],'SUNZEN'     +node,sunza,found=f6,set_fillvalue=-999.
+
+		if total([found,f2,f3,f4,f5,f6]) eq 6. then begin
+			refl_nir = (total(rad3a gt 0) gt 0)
+			if ~sil then print, ' Calculating RGB image for CLARA-A2 (0.05 degree). Be patient ...'
+			outdata = calc_rgb(rad1,rad2,(refl_nir ? rad3a:rad3b),rad4,sunza,0,/enhance,refl_nir037=refl_nir)
+		endif else begin
+			if ~sil then print, ' At least one of the measurements neeeded for RGB is missing!'
+			found=0
+			return,-1
+		endelse
+		no_data_value = -999.
+		longname = 'True color image'
+		minvalue = 0
+		maxvalue = 1
+		unit=''
 	endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
 		; die neuen patmos l2b haben kein cloud_phase mehr -> berechne alte cloud_phase definition aus cloud_type (auch für die alten l2b's)
 		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, flag_meanings, set_fillvalue = set_fillvalue,$
@@ -5963,15 +6107,15 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		endif
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		if ~sil then print,''
-	endif else if total(dat eq ['rad3b','rad4','rad5','refl1','refl2','refl3a','refl3b']) and alg eq 'clara2' and lev eq 'l3c' then begin
-		ref = algo2ref(alg)
+	endif else if total(dat eq ['rad3b','rad4','rad5','refl1','refl2','refl3a','refl3b','rad4,rad5']) and alg eq 'clara2' and lev eq 'l3c' then begin
+		ref    = algo2ref(alg)
+		if sat_ampm(sat,/avhrr) eq 'am' then sat = 'noaaam'
+		if sat_ampm(sat,/avhrr) eq 'pm' then sat = 'noaapm'
 		filename = !SAVS_DIR + ref+'_rad_mm/'+string(year,f='(i4.4)')+string(month,f='(i2.2)')+'_'+strlowcase(sat)+'_'+ref+'_radiances_L3c.sav'
 		d = restore_var(filename,found=found)
 		if found then begin
 			if arg_present(finfo) then finfo = file_info(filename[0])
 			if keyword_set(print_filename) then print,'get_data: Read File'+strcompress(print_filename,/rem)+': ', strcompress(filename[0],/rem)
-print,'please include refl3b'
-stop
 			strucname = stregex(dat,'refl',/bool,/fold) ? strupcase('rad'+strmid(dat,4)) : strupcase(dat)
 			strucidx  = where(tag_names(d) eq strucname,idxcnt)
 			if idxcnt gt 0 then begin
@@ -5982,6 +6126,25 @@ stop
 				minvalue = stregex(dat,'refl',/bool,/fold) ?   0 : 150
 				longname = stregex(dat,'refl',/bool,/fold) ? 'reflectance in AVHRR channel no '+strmid(dat,4) : $
 						'brightness temperature in AVHRR channel no '+strmid(dat,3)
+			endif else if dat eq 'rad4,rad5' then begin
+				outdata			= d.RAD4 - d.RAD5
+				no_data_value	= -999.
+				unit			= ' [K]'
+				maxvalue		= 10.
+				minvalue		= -10.
+				longname 		= 'brightness temperature difference in AVHRR channel no 4 minus 5'
+				ndidx = where(d.RAD4 eq no_data_value or d.RAD5 eq no_data_value,ndcnt)
+				if ndcnt gt 0 then outdata[ndidx] = no_data_value
+			endif else if dat eq 'refl3b' then begin
+				print,'please include refl3b'
+				stop
+				sunza			= '???'
+				outdata			= bt37_to_ref37( doy(yy,mm,dd), d.rad3b, d.rad4, sunza, sat, no_data_val=-999.)
+				no_data_value	= -999.
+				unit			= ' [%]'
+				maxvalue		= 120.
+				minvalue		=   0.
+				longname 		= 'reflectance in AVHRR channel no 3b'
 			endif else found = 0
 		endif
 	endif else if ( total(dat eq ['blue_marble','marble']) )   then begin
@@ -6601,7 +6764,7 @@ if found then begin
 		read_data, ang_file[0], 'sunzen'+nd, sunza, no_data_values, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
 		flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
 		count = count, offset = offset, stride = stride
-		noaasat = noaa_primes(year,month,ampm=noaa_ampm(sat,/ampm),which=which,/no_zero,found=found)
+		noaasat = noaa_primes(year,month,ampm=sat_ampm(sat,/ampm),which=which,/no_zero,found=found)
 ; 		idx = where(rad3b eq no_data_value3b[0] or rad4 eq no_data_value4[0] or sunza eq no_data_values[0],idxcnt)
 		idx = where(rad3b eq no_data_value3b[0] or rad4 eq no_data_value4[0] or ~between(sunza,0.,80.),idxcnt)
 		no_data_value = -999.
@@ -7066,7 +7229,7 @@ pro set_algolist, algo_list, sat = sat, data = data, default = default, exclude 
 	if keyword_set(default) and keyword_set(sat) and keyword_set(data) then begin
 		dat = strlowcase(data)
 		co5 = (sat eq 'terra' or sat eq 'aqua' or sat eq 'aatme' or sat eq 'aatsr')
-		ampm  = noaa_ampm(sat)
+		ampm  = sat_ampm(sat)
 		; define algo_list
 		if ampm eq 'am' then begin
 			algo_list = co5 ? ['mod2','cci'] : ['pmx','gac2','cci','mod2','hec','era','cla']
@@ -8604,11 +8767,11 @@ end
 pro set_colors,	rainbow, bwr, extended_rainbow, greyscale, elevation, flip_colours , $
 		other = other, ctable = ctable, brewer = brewer, col_tab = col_tab , panoply = panoply
 
-	rainbow 	= 0
-	bwr		= 0
+	rainbow 		= 0
+	bwr				= 0
 	extended_rainbow= 0
-	greyscale	= 0
-	elevation	= 0
+	greyscale		= 0
+	elevation		= 0
 	flip_colours	= 0
 	check_other     = 0
 
@@ -8616,35 +8779,38 @@ pro set_colors,	rainbow, bwr, extended_rainbow, greyscale, elevation, flip_colou
 	if keyword_set(other) then begin
 		check_other = 1
 		; default ist rainbow
+; 		print,other
 		case other of 
-			'bwr'			: begin & free,ctable & bwr = 1 & col_tab = 4 & end
-			'elevation'		: begin & free,ctable & elevation = 1 & end
-			'rainbow'		: begin & free,ctable & rainbow = 1 & col_tab = 1 & end
-			'extended_rainbow'	: begin & free,ctable & extended_rainbow = 1 & col_tab = 2 & end
-			'greyscale'		: begin & free,ctable & greyscale = 1 & col_tab = 5 & end
-			'gistearth'		: begin & free,ctable & panoply = 'GIST_earth' & col_tab = 0 & end
-			'gmtglobe'		: begin & free,ctable & panoply = 'GMT_globe' & col_tab = 0 & end
-			'gmtrelief'		: begin & free,ctable & panoply = 'GMT_relief' & col_tab = 0 & end
-			'gmtsplit'		: begin & free,ctable & panoply = 'GMT_split' & col_tab = 0 & end
-			'nytdrought'		: begin & free,ctable & panoply = 'NYT_drought' & col_tab = 0 & end
-			'ukmhadcrut'		: begin & free,ctable & panoply = 'UKM_hadcrut_10' & col_tab = 0 & end
-			'tempanomaly'		: begin & free,ctable & panoply = 'SVS_tempanomaly' & col_tab = 0 & end
-			'flip_bwr'		: begin & free,ctable & bwr = 1 & flip_colours = 1 & col_tab = -4 & end
-			'flip_elevation'	: begin & free,ctable & elevation = 1 & flip_colours = 1 & end
-			'flip_rainbow'		: begin & free,ctable & rainbow = 1 & flip_colours = 1 & col_tab = -1 & end
+			'bwr'					: begin & free,ctable & bwr = 1 & col_tab = 4 & end
+			'elevation'				: begin & free,ctable & elevation = 1 & end
+			'rainbow'				: begin & free,ctable & rainbow = 1 & col_tab = 1 & end
+			'extended_rainbow'		: begin & free,ctable & extended_rainbow = 1 & col_tab = 12 & end
+			'cloud_mask'			: begin & ctable = 13 & flip_colours = 1 & brewer =  1 & col_tab = 130 & end
+			'greyscale'				: begin & free,ctable & greyscale = 1 & col_tab = 5 & end
+			'gistearth'				: begin & free,ctable & panoply = 'GIST_earth' & col_tab = 0 & end
+			'gmtglobe'				: begin & free,ctable & panoply = 'GMT_globe' & col_tab = 0 & end
+			'gmtrelief'				: begin & free,ctable & panoply = 'GMT_relief' & col_tab = 0 & end
+			'gmtsplit'				: begin & free,ctable & panoply = 'GMT_split' & col_tab = 0 & end
+			'nytdrought'			: begin & free,ctable & panoply = 'NYT_drought' & col_tab = 0 & end
+			'ukmhadcrut'			: begin & free,ctable & panoply = 'UKM_hadcrut_10' & col_tab = 0 & end
+			'tempanomaly'			: begin & free,ctable & panoply = 'SVS_tempanomaly' & col_tab = 0 & end
+			'flip_bwr'				: begin & free,ctable & bwr = 1 & flip_colours = 1 & col_tab = -4 & end
+			'flip_elevation'		: begin & free,ctable & elevation = 1 & flip_colours = 1 & end
+			'flip_rainbow'			: begin & free,ctable & rainbow = 1 & flip_colours = 1 & col_tab = -1 & end
 			'flip_extended_rainbow'	: begin & free,ctable & extended_rainbow = 1 & flip_colours = 1 & col_tab = -2 & end
-			'flip_greyscale'	: begin & free,ctable & greyscale =1 & flip_colours = 1 & col_tab = -5 & end
-			'flipgistearth'		: begin & free,ctable & panoply = 'GIST_earth' & flip_colours = 1 & col_tab = 0 & end
-			'flipgmtglobe'		: begin & free,ctable & panoply = 'GMT_globe' & flip_colours = 1 & col_tab = 0 & end
-			'flipgmtrelief'		: begin & free,ctable & panoply = 'GMT_relief' & flip_colours = 1 & col_tab = 0 & end
-			'flipgmtsplit'		: begin & free,ctable & panoply = 'GMT_split' & flip_colours = 1 & col_tab = 0 & end
-			'flipnytdrought'	: begin & free,ctable & panoply = 'NYT_drought' & flip_colours = 1 & col_tab = 0 & end
-			'flipukmhadcrut'	: begin & free,ctable & panoply = 'UKM_hadcrut_10' & flip_colours = 1 & col_tab = 0 & end
-			'fliptempanomaly'	: begin & free,ctable & panoply = 'SVS_tempanomaly' & flip_colours = 1 & col_tab = 0 & end
-			'brewer'		: begin & brewer =  1 & col_tab = ctable & end
-			else			: check_other=0
+			'flip_cloud_mask'		: begin & ctable = 13 & brewer =  1 & col_tab = -130 & end
+			'flip_greyscale'		: begin & free,ctable & greyscale =1 & flip_colours = 1 & col_tab = -5 & end
+			'flip_gistearth'		: begin & free,ctable & panoply = 'GIST_earth' & flip_colours = 1 & col_tab = 0 & end
+			'flip_gmtglobe'			: begin & free,ctable & panoply = 'GMT_globe' & flip_colours = 1 & col_tab = 0 & end
+			'flip_gmtrelief'		: begin & free,ctable & panoply = 'GMT_relief' & flip_colours = 1 & col_tab = 0 & end
+			'flip_gmtsplit'			: begin & free,ctable & panoply = 'GMT_split' & flip_colours = 1 & col_tab = 0 & end
+			'flip_nytdrought'		: begin & free,ctable & panoply = 'NYT_drought' & flip_colours = 1 & col_tab = 0 & end
+			'flip_ukmhadcrut'		: begin & free,ctable & panoply = 'UKM_hadcrut_10' & flip_colours = 1 & col_tab = 0 & end
+			'flip_tempanomaly'		: begin & free,ctable & panoply = 'SVS_tempanomaly' & flip_colours = 1 & col_tab = 0 & end
+			'brewer'				: begin & brewer =  1 & col_tab = ctable & end
+			else					: check_other=0
 		endcase
-	endif 
+	endif
 
 	if ~check_other and ~is_number(ctable) then begin & rainbow=1 & free, ctable & col_tab = 1 & end
 end

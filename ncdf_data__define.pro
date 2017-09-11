@@ -2047,7 +2047,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 				'myd06'			: level = 'l2'
 				'modis_swath_type_l1b'	: begin & level = 'l1' & algoname = 'L1MODIS' & end
 				'modis_swath_type_geo'	: begin & level = 'l1' & algoname = 'L1MODIS' & end
-				else:		stop
+				else:
 			endcase
 		endif
 	endif
@@ -3290,10 +3290,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      syms_list      = [string([0.,0.5,1+((indgen(21))/10.) ],f='(f3.1)')]
 	      self.symsizeID = Widget_combobox(bla,VALUE=[syms_list],UVALUE=[syms_list],Scr_XSize=54,Scr_YSize=28,UNAME='PLOTS_SYMSIZELIST')
 	      self.zkompID   = Widget_combobox(bla,VALUE=strcompress(indgen(12),/rem),UVALUE=strcompress(indgen(12),/rem),Scr_XSize=46,Scr_YSize=28,UNAME='PLOTS_ZLIST')
-;               rotlist        = string(indgen(8),f='(i1)')
-;               rotlist        = string(indgen(20)/2.,f='(f3.1)')
-              rotlist        = string(indgen(8),f='(i1)')
-	      self.rotateID  = Widget_combobox(bla, Value=[rotlist],UVALUE=[rotlist],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_ROTATELIST') 
+	      rotlist        = string(indgen(9) -1,f='(i2)')
+	      self.rotateID  = Widget_combobox(bla,UValue=rotlist,VALUE=['Auto',strcompress(fix(rotlist[1:*]),/rem)],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_ROTATELIST') 
 	      maglist        = string(indgen(11)-1,f='(f3.0)')
 	      self.magniID   = Widget_combobox(bla,UVALUE=maglist,VALUE=['Auto',strcompress(fix(maglist[1:*]),/rem)],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_MAGNIFYLIST')
 	      self.p0lonID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
@@ -3409,7 +3407,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
 	  rightrow = Widget_Base(tlb2, ROW=3,/base_align_center)
-        topright = Widget_Base(rightrow,column=5,/base_align_center)
+        topright = Widget_Base(rightrow,column=6,/base_align_center)
 	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
 	        self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
 	        self.oplotID   = Widget_Button(bla, Value='Oplot'     , UVALUE='SET_PLOT_DEFAULTS')
@@ -3428,7 +3426,12 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		  bla = Widget_Base(topright,row=1,Frame=0)
 	        barlist = strupcase(['Color Bar','No Bar','Horiz. CB','Verti. CB','HCB Only','VCB Only'])
 	        self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=28,UNAME='PLOTS_BARLIST')
- 	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
+          bla = Widget_Base(topright,row=1,Frame=0)
+			shapelist = strupcase([	'Shape Files','Germany','USA','China','Russia','Canada','Africa','Europe','America','South America',$
+									'Australia','Choose File'])
+; 		'Atlantic Ocean','Asia','Baltic Sea','North Sea','France','Austria','Belgium','Czech','Denmark','Netherland','Poland','Sweden','Switzerland'])
+            self.shapeID = Widget_combobox(bla, Value=shapelist,UVALUE=shapelist,Scr_XSize=100,Scr_YSize=28,UNAME='PLOTS_SHAPELIST')
+	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 ; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
 ;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
@@ -3509,6 +3512,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.proj = 'Default'
 	; colorbar
 	self.handlebar = barlist[0]
+    ; shapefiles
+    self.handleshape = shapelist[0]
 	; day,month,year
 	yy_idx = where(self.year eq yy_list,yy_cnt)
 ; 	self.yy = ([yy_list,''])[yy_idx]; does not work with IDL versions below 8
@@ -3552,15 +3557,15 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.orbID     , Set_Value=self.orbit
 		Widget_Control, self.zkompID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.magniID   , SET_COMBOBOX_SELECT=0
-		Widget_Control, self.rotateID  , SET_COMBOBOX_SELECT=0
+		Widget_Control, self.rotateID  , SET_COMBOBOX_SELECT=1
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.winnrID   , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
  		Widget_Control, self.selftxt   , Set_Value=' Add Text'
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
-		Widget_Control, self.p0lonID   , Set_Value=''
-		Widget_Control, self.p0latID   , Set_Value=''
+		Widget_Control, self.p0lonID   , Set_Value='0'
+		Widget_Control, self.p0latID   , Set_Value='0'
 		WIDGET_CONTROL, self.showpvalID, Set_Value='             Pixel Values'
 		Widget_Control, self.enablelim , Set_Button=0
 		Widget_Control, self.enablemima, Set_Button=0
@@ -3586,6 +3591,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.errID     , Set_Button=0
 ; 		Widget_Control, self.noBarID   , Set_Button=0
 		Widget_Control, self.noBarID   , SET_COMBOBOX_SELECT=0
+		Widget_Control, self.ShapeID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.noTitleID , Set_Button=0
 ;  		Widget_Control, self.noaa5     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
@@ -3819,7 +3825,8 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
-		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle
+		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
+		shape_file=shape_file
 
 	found=1
 ; 	varName=self.varname_plotID
@@ -3862,17 +3869,18 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		case ctab of 
 			'Default(Rainbow)'	: oth = 'rainbow'
 			'ExtendedRainbow'	: oth = 'extended_rainbow'
-			'Elevation'		: oth = 'elevation'
-			'BluetoRed'		: oth = 'bwr'
-			'Greyscale'		: oth = 'greyscale'
-			'GISTEarth'		: oth = 'gistearth'
-			'GMTGlobe'		: oth = 'gmtglobe'
-			'GMTRelief'		: oth = 'gmtrelief'
-			'GMTSplit'		: oth = 'gmtsplit'
+			'CloudMask'			: oth = 'cloud_mask'
+			'Elevation'			: oth = 'elevation'
+			'BluetoRed'			: oth = 'bwr'
+			'Greyscale'			: oth = 'greyscale'
+			'GISTEarth'			: oth = 'gistearth'
+			'GMTGlobe'			: oth = 'gmtglobe'
+			'GMTRelief'			: oth = 'gmtrelief'
+			'GMTSplit'			: oth = 'gmtsplit'
 			'NYTDrought'		: oth = 'nytdrought'
 			'UKMHadcrut'		: oth = 'ukmhadcrut'
 			'TempAnomaly'		: oth = 'tempanomaly'
-			else			: oth = 'rainbow'
+			else				: oth = 'rainbow'
 		endcase
 		if inv then oth = 'flip_'+oth
 		ctab = ''
@@ -3997,7 +4005,7 @@ l1g = 0
 		if n_elements(dum) eq 4 then limit = dum
 	endif
 
-	; limit will be overwritten by defaults (if set!) 
+	; limit, if set, will be overwritten by defaults
 	if ant then begin
 		if pczm or pchist then limit = [-90.0,-180,-60.0,180] else begin
 			globe = 1
@@ -4017,26 +4025,60 @@ l1g = 0
 	if nhm then limit = [  0.0,-180, 90.0,180]
 	if shm then limit = [-90.0,-180,  0.0,180]
 
-	if keyword_set(p0lon) and keyword_set(limit) then limit = limit+[0,p0lon,0,p0lon]
-	
+	; if preset areas are set always disable shape_file 
+	if keyword_set(limit) and ~limit_enabled then begin
+		shape_file = ''
+	endif else begin
+		case strlowcase(strcompress(self.handleshape,/rem)) of
+			'africa'		: shape_file = !SHAPE_DIR + '/Africa/Africa.shp'
+			'eu'			: shape_file = !SHAPE_DIR + '/EU/MyEurope.shp'
+			'europe'		: shape_file = !SHAPE_DIR + '/Europe/Europe.shp'
+			'america'		: shape_file = !SHAPE_DIR + '/America/Americas.shp'
+			'asia'			: shape_file = !SHAPE_DIR + '/Asia/Asia.shp'
+			'atlanticocean'	: shape_file = !SHAPE_DIR + '/Atlantic_Ocean/AtlanticOcean.shp'
+			'southamerica'	: shape_file = !SHAPE_DIR + '/South_America/South_America.shp'
+			'germany'		: shape_file = !SHAPE_DIR + '/Germany/DEU_adm1.shp'
+			'usa'			: shape_file = !SHAPE_DIR + '/USA/USA_adm1.shp'
+			'china'			: shape_file = !SHAPE_DIR + '/China/CHN_adm1.shp'
+			'russia'		: shape_file = !SHAPE_DIR + '/Russia/RUS_adm1.shp'
+			'canada'		: shape_file = !SHAPE_DIR + '/Canada/CAN_adm1.shp'
+			'balticsea'		: shape_file = !SHAPE_DIR + '/Baltic_Sea/lme.shp'
+			'northsea'		: shape_file = !SHAPE_DIR + '/North_Sea/lme.shp'
+			'australia'		: shape_file = !SHAPE_DIR + '/Australia/AUS_adm1.shp'
+			'austria'		: shape_file = !SHAPE_DIR + '/Austria/AUT_adm1.shp'
+			'belgium'		: shape_file = !SHAPE_DIR + '/Belgium/BEL_adm1.shp'
+			'czech'			: shape_file = !SHAPE_DIR + '/Czech_Republic/CZE_adm1.shp'
+			'denmark'		: shape_file = !SHAPE_DIR + '/Denmark/DNK_adm1.shp'
+			'france'		: shape_file = !SHAPE_DIR + '/France/FRA_adm1.shp'
+			'netherland'	: shape_file = !SHAPE_DIR + '/Netherlands/NLD_adm1.shp'
+			'poland'		: shape_file = !SHAPE_DIR + '/Poland/POL_adm1.shp'
+			'sweden'		: shape_file = !SHAPE_DIR + '/Sweden/SWE_adm1.shp'
+			'switzerland'	: shape_file = !SHAPE_DIR + '/Switzerland/CHE_adm1.shp'
+			'choosefile'	: shape_file = dialog_pickfile(path = !SHAPE_DIR ,filter='*.shp')
+			else            : shape_file = ''
+		endcase
+	endelse
+
 	case strlowcase(self.proj) of 
- 		'stereo'	: stereographic = 1
-		'mollweide'	: mollweide = 1
-		'aitoff'	: aitoff    = 1
-		'hammer'	: hammer    = 1
-		'goode'		: goode     = 1
+ 		'stereo'		: stereographic = 1
+		'mollweide'		: mollweide = 1
+		'aitoff'		: aitoff    = 1
+		'hammer'		: hammer    = 1
+		'goode'			: goode     = 1
 		'sinusoidal'	: sinusoidal= 1
-		'robinson'	: robinson  = 1
+		'robinson'		: robinson  = 1
 		'globe (ortho)'	: globe     = 1
-		'satellite'	: msg       = 1
-; 		'msg'		: msg       = 1
+		'satellite'		: msg       = 1
+; 		'msg'			: msg       = 1
 		else		: 
 	endcase
 
 	; map_image crash
 	if (keyword_set(robinson) or keyword_set(mollweide) or keyword_set(goode) or keyword_set(sinusoidal)) and ~ant and ~arc then begin
-		if p0lat[0] ne '' then print,'Setting P0lat different to Zero, causes Map_image to crash! Use "Default","Globe","Aitoff","Hammer" or "Stereo" instead!'
-		p0lat=['']
+		if p0lat[0] ne '' and p0lat[0] ne '0' then begin
+			print,'Setting P0lat different to Zero, might cause Map_image to crash! Use "Default","Globe","Aitoff","Hammer" or "Stereo" instead!'
+; 			p0lat=['0']
+		endif
 	endif
 	setlist = Widget_Info([	self.noaa7,	$
 ; 				self.tirosn,	$
@@ -4114,7 +4156,7 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varnam
 
 	; das alles hier muss noch getestet werden!!
 	set_dummy = total(strlowcase(varname) eq ['blue_marble','usgs_lus','usgs_dem','usgs_ls','usgs_lsm',$
-						  'refl1','refl2','refl3a','rad3b','rad4','rad5'])
+						  'refl1','refl2','refl3a','rad3b','rad4','rad5','rad4,rad5'])
 	if keyword_set(set_dummy) then begin
 		found=1
 		return,self.directory+'/'+self.filename
@@ -4247,7 +4289,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file
 
 			if ~found then return
 
@@ -4513,7 +4555,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file
 
 			if ~found then return
 
@@ -4731,7 +4773,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file
 
 			if ~found then return
 
@@ -4905,7 +4947,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],obj_out=obj_out,addtext = addtext[0],$
-				magnify=magnify,countries=countries,notitle=notitle
+				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file
 
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
@@ -4946,6 +4988,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			self.PsymSize=list[event.index]
 		endif else if theName eq 'PLOTS_BARLIST' then begin
 			self.handlebar=list[event.index]
+        endif else if theName eq 'PLOTS_SHAPELIST' then begin
+            self.handleshape=list[event.index]
 		endif else if theName eq 'PLOTS_MAGNIFYLIST' then begin
 			self.magnify=list[event.index]
 		endif else if theName eq 'PLOTS_CTLIST' then begin
@@ -5947,6 +5991,7 @@ PRO NCDF_DATA__DEFINE, class
              axquotID:'',              $
              lalgID:'',                $
              handlebar:'',             $   
+             handleshape:'',           $   
              horizontal:'',            $    
              vertical:'',              $  
              year_idx:0L,              $
@@ -5974,6 +6019,7 @@ PRO NCDF_DATA__DEFINE, class
              verbID:0L,                $
              noTitleID:0L,             $
              noBarID:0L,               $
+             ShapeID:0L,               $
              invID:0L,                 $
              enablelim:0l,             $
              enablemima:0l,            $

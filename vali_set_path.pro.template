@@ -11,6 +11,7 @@ PRO vali_set_path
 	;CHANGE THIS ONLY IF YOU KNOW WHAT YOU ARE DOING
 	DEFSYSV,'!SAVS_DIR', '/cmsaf/cmsaf-cld1/sstapelb/savs/'			; directory to store and find IDL sav files
 	DEFSYSV,'!KML_DIR' , '/cmsaf/cmsaf-cld1/sstapelb/kmls/'			; directory to store and find kml files
+	DEFSYSV,'!SHAPE_DIR' , '/cmsaf/cmsaf-cld1/sstapelb/shapefiles/'	; directory to store and find shape files
 	DEFSYSV,'!BREWER_CT_FILE', '/cmsaf/nfshome/sstapelb/idl/vali_gui/coyote/fsc_brewer.tbl' ; brewer color table 
 
 END
