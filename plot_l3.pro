@@ -1723,7 +1723,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				lon[idx] = !values.f_nan
 				lat[idx] = !values.f_nan
 			endif
-stop
+
 			if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2)
 
 			print,limit
