@@ -5625,6 +5625,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if cli eq 'gac'  then gridc = 0.25
 	if cli eq 'gac2' then gridc = 0.25
 	if cli eq 'cci'  then gridc = 0.5
+	if cli eq 'cciv3' then gridc = 0.5
 	if cli eq 'era'  then gridc = 0.5
 	if cli eq 'era2' then gridc = 0.5
 	if cli eq 'cla'  then gridc = 0.25
@@ -5647,6 +5648,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if ref eq 'era'  then gridr = 0.5
 	if ref eq 'era2' then gridr = 0.5
 	if ref eq 'cci'  then gridr = 0.5
+	if ref eq 'cciv3' then gridr = 0.5
 	if ref eq 'cla'  then gridr = 0.25
 	if ref eq 'isp'  then gridr = 1.0
 	if ref eq 'isp_old'  then gridr = 2.5
@@ -5687,7 +5689,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
 
 	trend_sat = 1
-	if total(cli eq ['cci','gac','gac2','pmx']) and $
+	if total(cli eq ['cci','cciv3','gac','gac2','pmx']) and $
 	  ~total(satcci eq ['noaaam','noaapm','aatme','aatsr','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
 	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
 	if apxc ne '' or apxr ne '' then begin
@@ -5699,7 +5701,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 	dat1 = dat+dt1
 	dat2 = dat+dt2
-	if (cli eq 'gac2' or cli eq 'cci') and total(satcci eq ['noaaam','aatme']) and (ref eq 'mod2') then begin
+	if total(cli eq ['cci','cciv3','gac2']) and total(satcci eq ['noaaam','aatme']) and (ref eq 'mod2') then begin
 		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_16_allsky'
 		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_16_allsky'
 		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_16_allsky'
@@ -5713,7 +5715,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		if dat2 eq 'cot_ice' then dat2 = 'cot_16_ice'
 		if dat2 eq 'cer_ice' then dat2 = 'cer_16_ice'
 	endif
-	if (cli eq 'gac2' or cli eq 'cci') and (satcci eq 'noaapm') and (ref eq 'myd2') then begin
+	if total(cli eq ['cci','cciv3','gac2']) and (satcci eq 'noaapm') and (ref eq 'myd2') then begin
 		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_37_allsky'
 		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_37_allsky'
 		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_37_allsky'
@@ -5727,7 +5729,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		if dat2 eq 'cot_ice' then dat2 = 'cot_37_ice'
 		if dat2 eq 'cer_ice' then dat2 = 'cer_37_ice'
 	endif
-	if (cli eq 'cci') and total(satcci eq ['terra','aqua','aatsr','atsrs']) and (ref eq 'myd2' or ref eq 'mod2') then begin
+	if (cli eq 'cci' or cli eq 'cciv3') and total(satcci eq ['terra','aqua','aatsr','atsrs']) and (ref eq 'myd2' or ref eq 'mod2') then begin
 		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_37_allsky'
 		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_37_allsky'
 		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_37_allsky'
@@ -5801,7 +5803,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		mmmm=months[mm1]
 		cci_dum_file = get_filename(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,/silent,dirname=cci_dirname,/no_recursive)
 
-		if cli eq 'cci' and found_cci then begin
+		if (cli eq 'cci' or cli eq 'cciv3') and found_cci then begin
 			num = get_ncdf_data_by_name(cci_dum_file,'number_of_processed_orbits',/global)
 			if num lt 100 then begin
 				print,'File has only '+string(num)+' Orbits, and will be skipped! ',cci_dum_file
@@ -5809,7 +5811,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 			endif
 		endif
 		gac_dum_file = get_filename(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,/silent,dirname=gac_dirname,/no_recursive)
-		if ref eq 'cci' and found_gac then begin
+		if (ref eq 'cci' or ref eq 'cciv3') and found_gac then begin
 			num = get_ncdf_data_by_name(gac_dum_file,'number_of_processed_orbits',/global)
 			if num lt 100 then begin
 				print,'File has only '+string(num)+' Orbits, and will be skipped! ',gac_dum_file
@@ -5946,7 +5948,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		if idxcnt eq 0 then return
 		mima = minmax(idx)/12 * 12
 		mima[1] = mima[1]+11
-		if total(cli eq ['cci','gac','gac2','pmx']) then begin
+		if total(cli eq ['cci','cciv3','gac','gac2','pmx']) then begin
 			ect = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/plot_monthly_ECTs_cci_primes_'+satcci+'.sav',found=found)
 			if found then ect = ect[mima[0]:mima[1]] else free,ect
 		endif
@@ -5964,7 +5966,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 		free, dumm
 		free, cci_trend_2d
 		free,ect
-		if total(ref eq ['cci','gac','gac2','pmx']) then begin
+		if total(ref eq ['cci','cciv3','gac','gac2','pmx']) then begin
 			ect = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/plot_monthly_ECTs_cci_primes_'+satgac+'.sav',found=found)
 			if found then ect = ect[mima[0]:mima[1]] else free,ect
 		endif
@@ -6209,6 +6211,7 @@ pro create_time_series,data,algon,coverage,period=period
 	if cli eq 'gac'  then grid = 0.25
 	if cli eq 'gac2' then grid = 0.25
 	if cli eq 'cci'  then grid = 0.5
+	if cli eq 'cciv3' then grid = 0.5
 	if cli eq 'era'  then grid = 0.5
 	if cli eq 'era2' then grid = 0.5
 	if cli eq 'cal'  then grid = 2.0
@@ -6245,7 +6248,7 @@ pro create_time_series,data,algon,coverage,period=period
 
 	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
 	trend_sat = 1
-	if total(cli eq ['cci','gac','gac2','pmx']) and ~total(sat eq ['noaaam','noaapm','aatme','atsrs','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
+	if total(cli eq ['cci','cciv3','gac','gac2','pmx']) and ~total(sat eq ['noaaam','noaapm','aatme','atsrs','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
 	if total(strmid(dat,0,4) eq ['nobs','nret']) then begin
 		trend_sat = 0
 		sum_up    = 1
@@ -6302,7 +6305,7 @@ pro create_time_series,data,algon,coverage,period=period
 				found = 0
 			ENDIF
 		endif
-		if cli eq 'cci' and found then begin
+		if (cli eq 'cci' or cli eq 'cciv3') and found then begin
 			num = get_ncdf_data_by_name(dum_file,'number_of_processed_orbits',/global)
 			if num lt 100 then begin
 				print,'File has only '+string(num)+' Orbits, and will be skipped! ',dum_file
@@ -6380,7 +6383,7 @@ pro create_time_series,data,algon,coverage,period=period
 	if (first eq 0) then begin
 		mima = minmax(where(finite(stats[0,*,0])))/12 * 12
 		mima[1] = mima[1]+11
-		if total(cli eq ['cci','pmx','gac','gac2','hec']) then begin
+		if total(cli eq ['cci','cciv3','pmx','gac','gac2','hec']) then begin
 			ect = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/time_series/plot_monthly_ECTs_cci_primes_'+sat+'.sav',found=found)
 			if found then ect = ect[mima[0]:mima[1]] else free,ect
 		endif
@@ -6514,7 +6517,7 @@ pro do_create_all_compare_time_series
 
 	sat      = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa18','noaa19','noaa17', $
 		        'metopa','metopb','allsat','noaaam','noaapm','aqua','terra','aatme','aatsr','avhrrs','modises']
-	ref      = ['cci','pmx','gac2'];['myd2','mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
+	ref      = ['cci','pmx','gac2'];['cciv3','myd2','mod2','gac2','pmx','myd','gac','mod','cal','era','cla'];,'cci']
 	data     = ['cfc','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high'];,'ctp','cfc_day','cfc_night','cfc_low','cfc_mid','cfc_high','ctt','cot','cot_liq','cot_ice',$
 ; 				'cer','cer_liq','cer_ice','cth','lwp','iwp','cwp','cph','cph_day','iwp_allsky','lwp_allsky','cwp_allsky']
 
@@ -6580,6 +6583,8 @@ pro do_create_all_single_time_series
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-atsr2','cci-aatme','cci-atsrs','cci-avhrrs','cci-modises','cci-allsat']
+	; cciv3
+	cciv3_list = ['cciv3-'+avh_list,'cciv3-aatsr','cciv3-atsr2','cciv3-avhrrs','cciv3-allsat']
 	; gac
 	gac_list = ['gac-allsat','gac-'+avh_list]
 	; gac2
@@ -6623,11 +6628,13 @@ pro do_create_all_single_time_series
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
+pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci, compare_to_cciv3 = compare_to_cciv3
 
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
+	; cciv3
+	cciv3_list = ['cciv3-'+avh_list,'cciv3-aatsr','cciv3-atsr2','cciv3-avhrrs','cciv3-allsat']
 ; 	; gac
  	gac_list = ['gac-'+avh_list,'gac-allsat']
 	; gac2
@@ -6652,7 +6659,9 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
 	for k = 0,n_elements(algon_list) -1 do begin
 		dum = strsplit(algon_list[k],'-',/ext)
 		ref = dum[0]
-		vs  = keyword_set(compare_to_cci) and ref ne 'cci' ? '_vs_cci' : ''
+		vs  = ''
+		if keyword_set(compare_to_cci) and ref ne 'cci' then vs = '_vs_cci' else $
+		if keyword_set(compare_to_cciv3) and ref ne 'cciv3' then vs = '_vs_cciv3'
 		apx = ''
 ; 		if ref eq 'cci' then dirname='/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C' else free,dirname
 		sat = n_elements(dum) eq 2 ? dum[1] : ''
@@ -6663,12 +6672,13 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci
 			print,'Reading '+sat_name(ref,sat)+' '+yyyy
 			for j = 0,n_elements(months) -1 do begin
 				mm = months[j]
-				if keyword_set(compare_to_cci) then begin
+				if keyword_set(compare_to_cci) or keyword_set(compare_to_cciv3) then begin
 					dsat = sat
+					dalg = keyword_set(compare_to_cciv3) ? 'cciv3' : 'cci' 
 					if strmid(ref,0,3) eq 'era' then dsat = 'noaapm'
 					if strmid(ref,0,3) eq 'myd' then dsat = 'aqua'
 					if strmid(ref,0,3) eq 'mod' then dsat = 'terra'
-					ff =get_filename(yyyy,mm,sat=dsat,algo='cci',level='l3c',found=ccifound,/silent)
+					ff =get_filename(yyyy,mm,sat=dsat,algo=dalg,level='l3c',found=ccifound,/silent)
 				endif else ccifound=1
 				if ccifound eq 1 then begin
 					found_all = 0
@@ -6731,6 +6741,8 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
+	; cciv3
+	cciv3_list = ['cciv3-'+avh_list,'cciv3-aatsr','cciv3-atsr2','cciv3-avhrrs','cciv3-allsat']
 	; gac2
 	gac2_list = ['gac2-'+avh_list,'gac2-allsat']
 	; coll6
@@ -6753,7 +6765,9 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 	for k = 0,n_elements(algon_list) -1 do begin
 		dum = strsplit(algon_list[k],'-',/ext)
 		ref = dum[0]
-		vs  = keyword_set(compare_to_cci) and ref ne 'cci' ? '_vs_cci' : ''
+		vs  = ''
+		if keyword_set(compare_to_cci) and ref ne 'cci' then vs = '_vs_cci' else $
+		if keyword_set(compare_to_cciv3) and ref ne 'cciv3' then vs = '_vs_cciv3'
 		apx = ''
 ; 		if ref eq 'cci' then dirname='/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C' else free,dirname
 		sat = n_elements(dum) eq 2 ? dum[1] : ''
@@ -6766,12 +6780,13 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 				print,'Reading hist1d_'+dat+' '+sat_name(ref,sat)+' '+yyyy
 				for j = 0,n_elements(months) -1 do begin
 					mm = months[j]
-					if keyword_set(compare_to_cci) then begin
+					if keyword_set(compare_to_cci) or keyword_set(compare_to_cciv3) then begin
 						dsat = sat
+						dalg = keyword_set(compare_to_cciv3) ? 'cciv3' : 'cci' 
 						if strmid(ref,0,3) eq 'era' then dsat = 'noaapm'
 						if strmid(ref,0,3) eq 'myd' then dsat = 'aqua'
 						if strmid(ref,0,3) eq 'mod' then dsat = 'terra'
-						ff =get_filename(yyyy,mm,sat=dsat,algo='cci',level='l3c',found=ccifound,/silent)
+						ff =get_filename(yyyy,mm,sat=dsat,algo=dalg,level='l3c',found=ccifound,/silent)
 					endif else ccifound=1
 					if ccifound eq 1 then begin
 						tmp = get_data(	yyyy,mm,sat=sat,algo=ref,data='hist1d_'+dat,found = found,/silent,dirname=dirname, $
@@ -6828,6 +6843,8 @@ pro do_create_hovmoeller
 	avh_list   = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
 	cci_list   = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
+	; cciv3
+	cciv3_list = ['cciv3-'+avh_list,'cciv3-aatsr','cciv3-atsr2','cciv3-avhrrs','cciv3-allsat']
 	; gac
 	gac_list   = ['gac-'+avh_list,'gac-allsat']
 	; gac2
@@ -6860,6 +6877,7 @@ pro do_create_hovmoeller
 		apx = ''
 		case ref of
 			'cci'		: begin & grid = 0.50 & free,dirname & end;dirname='/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C' & end
+			'cciv3'		: begin & grid = 0.50 & free,dirname & end
 			'era'		: begin & grid = 0.50 & free,dirname & end
 			'era2'		: begin & grid = 0.50 & free,dirname & end
 			'gac'		: begin & grid = 0.25 & free,dirname & end
@@ -6885,7 +6903,7 @@ pro do_create_hovmoeller
 				for mm=0,nmonths-1 do begin
 					dum = 	get_data(years[yy],months[mm],file=dum_file,data=data[dd],sat=sat,algo=ref,found=found,no_data_value=no_data_value,$
 						dirname=dirname,/make_compare,/silent,/print_file,/no_recursive,var_dim_names=var_dim_names)
-					if ref eq 'cci' and found then begin
+					if (ref eq 'cci' or ref eq 'cciv3') and found then begin
 						num = get_ncdf_data_by_name(dum_file,'number_of_processed_orbits',/global)
 						if num lt 100 then begin
 							print,'File has only '+string(num)+' Orbits, and will be skipped! ',dum_file
