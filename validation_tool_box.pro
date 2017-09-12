@@ -399,18 +399,78 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'h_crei'		: dat = 'hist1d_cer_ice'
 			'cwp_ice'		: dat = 'iwp'
 			'cwp_liq'		: dat = 'lwp'
-			'cot_ctp_hist2d'	: dat = 'hist2d_cot_ctp'
+			'cot_ctp_hist2d': dat = 'hist2d_cot_ctp'
 			'cot_ctp_hist2d_liq'	: dat = 'hist2d_cot_ctp_liq'
 			'cot_ctp_hist2d_ice'	: dat = 'hist2d_cot_ctp_ice'
 			'h_cod_cp'		: dat = 'hist2d_cot_ctp'
 			'jch'			: dat = 'hist2d_cot_ctp'
 			'jch_liq'		: dat = 'hist2d_cot_ctp_liq'
 			'jch_ice'		: dat = 'hist2d_cot_ctp_ice'
-			'cph_daynight'		: dat = 'cph'
-			'sunzen_asc'		: dat = 'solzen_asc'
-			'sunzen_desc'		: dat = 'solzen_desc'
+			'cph_daynight'	: dat = 'cph'
+			'sunzen_asc'	: dat = 'solzen_asc'
+			'sunzen_desc'	: dat = 'solzen_desc'
 			else			:
 		endcase
+	endif
+	if alg eq 'esacciv3' or alg eq 'cciv3' then begin
+		if keyword_set(path) then begin ; the new L3u files are splitted!!!
+			dat = 'cld_products'
+			;cloud mask
+			if stregex(dat,'cph_',/bool)    then dat = 'cld_masktype'
+			if stregex(dat,'cty_',/bool)    then dat = 'cld_masktype'
+			if stregex(dat,'cccot_',/bool)  then dat = 'cld_masktype'
+			if stregex(dat,'cmask_',/bool)  then dat = 'cld_masktype'
+			if stregex(dat,'cee_',/bool)    then dat = 'rad_product'
+			if stregex(dat,'cla_',/bool)    then dat = 'rad_product'
+			if stregex(dat,'boa_',/bool)    then dat = 'rad_product'
+			if stregex(dat,'toa_',/bool)    then dat = 'rad_product'
+			if stregex(dat,'illum_',/bool)  then dat = 'cld_angles'
+			if stregex(dat,'satzen_',/bool) then dat = 'cld_angles'
+			if stregex(dat,'solzen_',/bool) then dat = 'cld_angles'
+			if stregex(dat,'relazi_',/bool) then dat = 'cld_angles'
+			return, keyword_set(upper_case) ? strupcase(dat) : strlowcase(dat)
+		endif else begin
+			case dat of
+				; Martins Calipso Jahresmittel
+				'cfc_cloudsgt03'	: dat = 'cfc'
+				'cfc_cloudsgt02'	: dat = 'cfc'
+				'cfc_cloudsgt01'	: dat = 'cfc'
+				'cfc_allclouds'		: dat = 'cfc'
+				'cfc_allclouds_day'	: dat = 'cfc_day'
+				'cfc_allclouds_night'	: dat = 'cfc_night'
+				'ctp_mean_all'		: dat = 'ctp'
+				'ctp_mean_ice'		: dat = 'ctp'
+				'ctp_mean_liq'		: dat = 'ctp'
+				'ctp_mean_th_ice'	: dat = 'ctp'
+				'ctp_mean_sc_liq'	: dat = 'ctp'
+				;------------------------------------------
+				'a_cod'			: dat = 'cot_log'
+				'h_cp'			: dat = 'hist1d_ctp'
+				'h_ct'			: dat = 'hist1d_ctt'
+				'h_cod'			: dat = 'hist1d_cot'
+				'h_codw'		: dat = 'hist1d_cot_liq'
+				'h_codi'		: dat = 'hist1d_cot_ice'
+				'h_ctw'			: dat = 'hist1d_ctt_liq'
+				'h_cti'			: dat = 'hist1d_ctt_ice'
+				'h_clwp'		: dat = 'hist1d_cwp_liq'
+				'h_ciwp'		: dat = 'hist1d_cwp_ice'
+				'h_crew'		: dat = 'hist1d_cer_liq'
+				'h_crei'		: dat = 'hist1d_cer_ice'
+				'cwp_ice'		: dat = 'iwp'
+				'cwp_liq'		: dat = 'lwp'
+				'cot_ctp_hist2d': dat = 'hist2d_cot_ctp'
+				'cot_ctp_hist2d_liq'	: dat = 'hist2d_cot_ctp_liq'
+				'cot_ctp_hist2d_ice'	: dat = 'hist2d_cot_ctp_ice'
+				'h_cod_cp'		: dat = 'hist2d_cot_ctp'
+				'jch'			: dat = 'hist2d_cot_ctp'
+				'jch_liq'		: dat = 'hist2d_cot_ctp_liq'
+				'jch_ice'		: dat = 'hist2d_cot_ctp_ice'
+				'cph_daynight'	: dat = 'cph'
+				'sunzen_asc'	: dat = 'solzen_asc'
+				'sunzen_desc'	: dat = 'solzen_desc'
+				else			:
+			endcase
+		endelse
 	endif
 	; gilt auch für patmos l3c (=gewex)
 	if alg eq 'gewex' or alg eq 'gwx' then begin
@@ -1443,6 +1503,7 @@ function is_the_same,algo,reference,satellite=satellite
 
 	case ref of 
 		'cci'	: result = alg eq 'esacci'
+		'cciv3'	: result = alg eq 'esacciv3'
 		'cci_old'	: result = alg eq 'esacci_old'
 		'gac'	: result = alg eq 'clara' 
 		'myd'	: result = alg eq 'coll5' and sat eq 'aqua' 
@@ -1463,6 +1524,7 @@ function is_the_same,algo,reference,satellite=satellite
 		; check also other way around
 		'esacci_old': result = alg eq 'cci_old'
 		'esacci': result = alg eq 'cci'
+		'esacciv3': result = alg eq 'cciv3'
 		'clara'	: result = alg eq 'gac' 
 		'coll5'	: result = alg eq 'myd' or alg eq 'mod' 
 		'patmos': result = alg eq 'pmx' 
@@ -1493,6 +1555,8 @@ function ref2algo, reference ,lower_case = lower_case, upper_case = upper_case, 
 		'esacci_old': alg = 'esacci_old'
 		'cci'		: alg = 'esacci'
 		'esacci'	: alg = 'esacci'
+		'cciv3'		: alg = 'esacciv3'
+		'esacciv3'	: alg = 'esacciv3'
 		'gac'		: alg = 'clara'
 		'clara'		: alg = 'clara'
 		'gac2'		: alg = 'clara2'
@@ -1554,6 +1618,7 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'esacci-pt'	: ref = 'cci_old'
 		'cci'		: ref = 'cci'
 		'cciv3'		: ref = 'cciv3'
+		'esacciv3'	: ref = 'cciv3'
 		'esacci'	: ref = 'cci'
 		'cloud_cci'	: ref = 'cci'
 		'gac'		: ref = 'gac'
@@ -2295,7 +2360,6 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 	satn  = keyword_set(sat)       ? strlowcase(sat)   : ''
 	lev   = keyword_set(level)     ? strlowcase(level) : ''
 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
-	ver   = keyword_set(version)
 
 	if total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) then satn = 'MERIS+AATSR'
 	if total(satn eq ['atsr','atsr2','ers','ers2']) then satn = 'ATSR2'
@@ -2303,8 +2367,9 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 	if total(satn eq ['atsrs']) then satn = 'ATSR2-AATSR'
 
 	case algo of
-		'cci'	: algon = 'Cloud_cci'
+		'cci'	: begin & algon = 'Cloud_cci' & version = 'v2.0' & end
 		'cci_old': begin & algon = 'Cloud_cci' & version = 'v1.0' & end
+		'cciv3' : begin & algon = 'Cloud_cci' & version = 'v3.0' & end
 		'isp'	: return,'ISCCP'
 		'isp_old': return,'ISCCP_OLD'
 		'gac'	: algon = 'CLARA-A1'
@@ -2359,9 +2424,8 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 	endif
 
 	if keyword_set(only_sat) then return, dumsat
-	return,	algon+(keyword_set(dumsat) and keyword_set(algon) ? ' ':'') + dumsat + $
-			(keyword_set(version) and strmid(algon,0,9) eq 'Cloud_cci' ? ' '+version : '')
-
+	return,	algon+ (keyword_set(version) and strmid(algon,0,9) eq 'Cloud_cci' ? ' '+version : '')+ $
+			(keyword_set(dumsat) and keyword_set(algon) ? ' ':'') + dumsat
 end
 ;--------------------------------------------------------------------------------------------------------------------------
 function tag_name2num,struc,tag
@@ -4254,6 +4318,20 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 			  end
 		'AVHRR' : begin
 				case alg of
+					'ESACCIV3': begin
+							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
+								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
+							endif
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/'+strupcase(lev)+'/';+yyyy+'/'+mm+'/'
+							if lev eq 'l2' then begin
+								sat = strjoin(strsplit(sat,/ext,'-'))
+								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
+								orbdum = strlen(orb) eq 4 ? orb : '' 
+							endif else orbdum = ''
+							vers  = keyword_set(version) ? strlowcase(version[0]) : 'v3.0'
+							pathdat = lev eq 'l3u' ? get_product_name(dat,algo=alg,level=lev,/path) : ''
+							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*'+pathdat+'-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
+						end
 					'ESACCI': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
@@ -4270,7 +4348,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								ampm  = sat_ampm(sat)
 								filen = dir + 'Cloudcci_v2.0_'+strupcase(ampm)+'_*_'+dat+'_'+yyyy+mm+dd+'*.jpg'
 							endif else begin
-								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
+								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v2.0'
 								filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
 							endelse
 						  end
@@ -4458,7 +4536,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							satgwx = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),which=which,/no_zero,found=found)
 							if found then begin
 								if strmatch(sat,satgwx) or total(sat eq ['NOAA-AM','NOAA-PM','AVHRRS']) then begin
-									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/bwuerzle/data/GEWEX_OUT/'+yyyy+'/'
+									dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/AVHRR_GAC_2/LEVEL3_GEWEX/'+yyyy+'/'
 									dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
 									if keyword_set(gewex_style) then style = strupcase(gewex_style[0]) else begin
 										case which of 
@@ -4508,6 +4586,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 			  end
 		'MODIS' : begin
 				case alg of
+					'ESACCIv3': begin
+							print,'MODIS will not be processed! with v3. If this has changed! Edit code here!'
+							filen=''
+					end
 					'ESACCI': begin
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/'+strmid(strupcase(lev),0,3)+'/'+yyyy+'/'+mm+'/'
 							vers  = keyword_set(version) ? strlowcase(version[0]) : 'v*'
@@ -4784,7 +4866,9 @@ function get_histo_time_series, algo, data, satellite, period = period, this_per
 	if stregex(dat,'_ice',/fold,/bool) then phase ='ice water'
 	if stregex(dat,'_ratio',/fold,/bool) then begin & dat = strreplace(dat,'_ratio','_liq',/fold) & phase ='ratio' & end
 	if keyword_set(compare) then begin
-		vs = algo2ref(alg) eq 'cci' ? '' : '_vs_cci'
+		vs = ''
+		if algo2ref(alg) eq 'cci' then vs = '_vs_cci'
+		if algo2ref(alg) eq 'cciv3' then vs = '_vs_cciv3'
 	endif else vs = ''
 
 	if is_h1d(dat) then begin
@@ -4892,7 +4976,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	uncertainty = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool)
 	stddev      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
 	season      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'season',/fold,/bool)
-	sum			= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (algo2ref(algo,sat=sat) eq 'cci') and $
+	sum			= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (total(algo2ref(algo,sat=sat) eq ['cci','cciv3'])) and $
 				 (stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool))
 
 	if stddev    	then dat = strreplace(dat,'_std','',/fold)
@@ -5063,9 +5147,9 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				return,-1
 			endif
 			struc.coverage = cov
-			if cli eq 'cci' and dat eq 'cfc' then struc.stats[tsi.unc1,*] /= 100.
+			if (cli eq 'cci' or cli eq 'cciv3') and dat eq 'cfc' then struc.stats[tsi.unc1,*] /= 100.
 			if keyword_set(reference) then begin
-				if ref eq 'cci' and dat eq 'cfc' then struc.stats[tsi.unc2,*] /= 100.
+				if (ref eq 'cci' or cli eq 'cciv3') and dat eq 'cfc' then struc.stats[tsi.unc2,*] /= 100.
 			endif
 			anz_mm      = n_elements(struc.stats[0,*])
 			stats_sm    = struc.stats * 0. + !values.f_nan
@@ -5986,7 +6070,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if cnt_il gt 0 then outdata[no_idx_ice] = no_data_value[0]
 		longname = 'monthly mean cloud water path'
 		if ~sil then print,''
-	endif else if (total(alg eq ['esacci','coll6']) and total(dat eq ['cwp','cwp_16','cwp_37']) and (lev eq 'l3c' or lev eq 'l3s')) then begin
+	endif else if (total(alg eq ['esacci','esacciv3','coll6']) and total(dat eq ['cwp','cwp_16','cwp_37']) and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		ch = ''
 		if alg eq 'coll6' and stregex(dat,'_16',/fold,/bool) then ch = '_16'
 		if alg eq 'coll6' and stregex(dat,'_37',/fold,/bool) then ch = '_37'
@@ -6023,7 +6107,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp_allsky=cwp*cfc_day'
 		; 2) cloud fraction day
-		if alg eq 'esacci' then begin
+		if alg eq 'esacci' or alg eq 'esacciv3' then begin
 			; this is the actual microphysical daytime cloud fraction of cc4cl based on same datset as lwp,iwp,cph_day
 			read_data, filename[0], 'nobs_clear_day'  , nclear, no_data_valuei, minvalue, maxvalue, longnamei, set_fillvalue = set_fillvalue,$
 			uniti, verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
@@ -6401,7 +6485,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			outdata = -1
 			found=0
 		endelse
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','era-i','era-i2','calipso']) and (is_jch(dat,/combined) or is_jch(dat,/ratio))) then begin
 		read_data, filename[0], 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit, found = found, verbose = verbose, var_dim_names=var_dim_names , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
@@ -6423,13 +6507,13 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				if idx_cnt gt 0 then outdata[idx] = no_data_value[0]
 			endif
 		endelse
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_jch(dat,/liquid)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','era-i','era-i2','calipso']) and is_jch(dat,/liquid)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,*,*,0])
 		longname = longname+' liquid only'
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_jch(dat,/ice)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','era-i','era-i2','calipso']) and is_jch(dat,/ice)) then begin
 		read_data, filename[0] , 'hist2d_cot_ctp', outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
 		if not found then return,-1
@@ -6496,7 +6580,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			flag_meanings, verbose = verbose, raw=raw,found = found, algo =alg, silent=silent,var_dim_names=var_dim_names,$
 			count = count, offset = offset, stride = stride
 		endelse
-	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i','era-i2','calipso','hector']) and is_h1d(dat,/combined)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','coll5','coll6','era-i','era-i2','calipso','hector']) and is_h1d(dat,/combined)) then begin
 		if total(alg eq ['coll5','coll6']) and (stregex(dat,'cot',/fold,/bool) or stregex(dat,'ref',/fold,/bool) or $
 			stregex(dat,'cwp',/fold,/bool) or stregex(dat,'cer',/fold,/bool) ) then begin
 			read_data, filename[0] , dat+'_liq', ice, no_data_valuei, minvalue, maxvalue, longname1, set_fillvalue = set_fillvalue,$
@@ -6545,7 +6629,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 				endif
 			endelse
 		endelse
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_h1d(dat,/liquid) ) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','era-i','era-i2','calipso']) and is_h1d(dat,/liquid) ) then begin
 		read_data, filename[0] , strreplace(dat,'_liq',''), outdata, no_data_value, minvalue, maxvalue, set_fillvalue = set_fillvalue,$
 		longname, unit,var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent,$
 		count = count, offset = offset, stride = stride
@@ -6576,7 +6660,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,0,*])
 		longname = 'Cloud Top Temperature (Day) liquid only'
-	endif else if (total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) and is_h1d(dat,/ice)) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','era-i','era-i2','calipso']) and is_h1d(dat,/ice)) then begin
 		read_data, filename[0] , strreplace(dat,'_ice',''), outdata, no_data_value, minvalue, maxvalue, longname, set_fillvalue = set_fillvalue,$
 		unit,var_dim_names=var_dim_names, $
 		found = found, verbose = verbose , silent=silent, count = count, offset = offset, stride = stride
@@ -6614,8 +6698,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if not found then return,-1
 		outdata  = reform(outdata[*,*,1,*])
 		longname = 'Cloud Top Temperature (Day) ice only'
-	endif else if (total(alg eq ['clara2','claas','esacci','coll5','coll6','era-i','era-i2','calipso','patmos']) and is_h1d(dat,/ratio)) then begin
-		if total(alg eq ['clara2','claas','esacci','era-i','era-i2','calipso']) then begin
+	endif else if (total(alg eq ['clara2','claas','esacci','esacciv3','coll5','coll6','era-i','era-i2','calipso','patmos']) and is_h1d(dat,/ratio)) then begin
+		if total(alg eq ['clara2','claas','esacci','esacciv3','era-i','era-i2','calipso']) then begin
 			read_data, filename[0] , strreplace(dat,'_ratio',''), outdata, no_data_value, set_fillvalue = set_fillvalue,$
 			minvalue, maxvalue, longname, unit, var_dim_names=var_dim_names, found = found, verbose = verbose , silent=silent,$
 			count = count, offset = offset, stride = stride
@@ -6706,9 +6790,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			outdata = -1
 		endelse
 		if found then longname = longname+' liquid fraction'
-	endif else if ((alg eq 'esacci' or strmid(alg,0,6) eq 'patmos') and keyword_set(join_nodes) and lev eq 'l3u') then begin
+	endif else if ((alg eq 'esacci' or alg eq 'esacciv3' or strmid(alg,0,6) eq 'patmos') and keyword_set(join_nodes) and lev eq 'l3u') then begin
 		files  = filename
-		dumdat = alg eq 'esacci' and stregex(dat,'cc_total',/bool,/fold) ? 'cc_mask' : dat
+		dumdat = (alg eq 'esacci' or alg eq 'esacciv3') and stregex(dat,'cc_total',/bool,/fold) ? 'cc_mask' : dat
 		dumdat = strreplace(dumdat,'_asc','')
 		dumdat = strreplace(dumdat,'_desc','')
 		if strmid(alg,0,6) eq 'patmos' then begin
@@ -6931,7 +7015,7 @@ endif
 				unit = textoidl(' [ \mum]')
 			endif
 		endif else if total(datd eq ['scanline_time_asc','scanline_time_desc','time_asc','time_desc']) then begin
-			if total(alg eq ['esacci']) then begin
+			if total(alg eq ['esacci','esacciv3']) then begin
 				idx = where(outdata ne no_data_value,idxcnt)
 				minzeit = get_ncdf_data_by_name(filename[0],datd,attr='add_offset',found = found_offset)
 				if idxcnt gt 0 and not found_offset then minzeit = rnd(min(outdata[idx]),/down)
@@ -7221,11 +7305,11 @@ pro set_algolist, algo_list, sat = sat, data = data, default = default, exclude 
 		ampm  = sat_ampm(sat)
 		; define algo_list
 		if ampm eq 'am' then begin
-			algo_list = co5 ? ['mod2','cci'] : ['pmx','gac2','cci','mod2','hec','era','cla']
+			algo_list = co5 ? ['mod2','cci','cciv3'] : ['pmx','gac2','cci','cciv3','mod2','hec','era','cla']
 		endif else begin
-			algo_list = co5 ? ['myd2','cci'] : ['pmx','gac2','cci','myd2','hec','era','cla','cal']
+			algo_list = co5 ? ['myd2','cci','cciv3'] : ['pmx','gac2','cci','cciv3','myd2','hec','era','cla','cal']
 		endelse
-	endif else algo_list = ['cci','cci_old','pmx','myd','myd2','mod','mod2','gac','gac2','gwx','cla','isp','era','cal','hec']
+	endif else algo_list = ['cci','cciv3','cci_old','pmx','myd','myd2','mod','mod2','gac','gac2','gwx','cla','isp','era','cal','hec']
 
 	; now remove algo and reference from algo_list
 	if keyword_set(exclude) then begin
@@ -7506,7 +7590,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 				if keyword_set(flag_meanings2) then flag_meanings2 = flag_meanings2[[0,1,4]]
 			endif
 	endif else if get_product_name(dat,algo='patmos') eq 'cloud_type' and lev eq 'l3u' then begin
-			if total(alg1 eq ['clara2','esacci','patmos']) then begin
+			if total(alg1 eq ['clara2','esacci','esacciv3','patmos']) then begin
 				fillvalue1 = -999.
 				; leave out fillvalue(-999),clear(0) and N/A(1)
 				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
@@ -7524,7 +7608,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 				if keyword_set(flag_meanings1) then flag_meanings1 = alg1 eq 'clara2' ? [flag_meanings1[[1,2,3,5,6,7]],'overshooting'] : $
 													 flag_meanings1[[2,3,4,6,7,8,9]]
 			endif
-			if total(alg2 eq ['clara2','esacci','patmos']) then begin
+			if total(alg2 eq ['clara2','esacci','esacciv3','patmos']) then begin
 				fillvalue2 = -999.
 				; leave out fillvalue(-999),clear(0) and N/A(1)
 				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
@@ -7639,7 +7723,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			if verb then print,'Divide now '+dat+' of '+alg2+' by 1.e-08'
 		endif
 	endif else if total(dat eq ['scanline_time_asc','scanline_time_desc','time_asc','time_desc']) then begin
-		if total(alg1 eq ['esacci']) then begin
+		if total(alg1 eq ['esacci','esacciv3']) then begin
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then minzeit = rnd(min(bild1[idx]),0.5)
 			if idxcnt gt 0 then bild1[idx] = (bild1[idx] - minzeit)*24d
@@ -7648,7 +7732,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = ' [h]'
 			if verb then print,'Convert now '+dat+' of '+alg1+' to fractional hours'
 		endif
-		if total(alg2 eq ['esacci']) then begin
+		if total(alg2 eq ['esacci','esacciv3']) then begin
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then minzeit = rnd(min(bild2[idx]),0.5)
 			if idxcnt gt 0 then bild2[idx] = (bild2[idx] - minzeit)*24d
@@ -7778,6 +7862,28 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 				endcase
 			 end
 		'esacci': begin
+				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
+				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
+				case strlowcase(hist_cloud_type) of
+					; low
+					'cu'	: idxse = [0, 4,10,14]
+					'sc'	: idxse = [5, 8,10,14]
+					'st'	: idxse = [9,12,10,14]
+					'low'	: idxse = [0,12,10,14]
+					; mid level
+					'ac'	: idxse = [0, 4, 6, 9]
+					'as'	: idxse = [5, 8, 6, 9]
+					'ns'	: idxse = [9,12, 6, 9]
+					'mid'	: idxse = [0,12, 6, 9]
+					; high
+					'ci'	: idxse = [0, 4, 0, 5]
+					'cs'	: idxse = [5, 8, 0, 5]
+					'cb'	: idxse = [9,12, 0, 5]
+					'high'	: idxse = [0,12, 0, 5]
+					else	: idxse = [0, 4,10,14] ; 'cu'
+				endcase
+			  end
+		'esacciv3': begin
 				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
 				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
 				case strlowcase(hist_cloud_type) of
@@ -8270,7 +8376,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 			cci_hist_ctp=dum
 		endif
 		;	plev_claas_clara2 = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-		if total(alg eq ['esacci','clara2','claas','era-i','era-i2','calipso']) then begin
+		if total(alg eq ['esacci','esacciv3','clara2','claas','era-i','era-i2','calipso']) then begin
 			dum = fltarr(7)
 			for i = 0,5 do dum[i] = total(cci_hist_ctp[2*i:(2*i)+1])
 			dum[6] = total(cci_hist_ctp[12:*])
@@ -8294,7 +8400,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 			cci_hist_cot=cci_hist_cot[1:*]
 		endif
 		;	tau_clara_clara2_claas  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-		if total(alg eq ['esacci','clara','clara2','claas','era-i','era-i2','calipso']) then begin
+		if total(alg eq ['esacci','esacciv3','clara','clara2','claas','era-i','era-i2','calipso']) then begin
 			dum = fltarr(6)
 			dum[0] = total(cci_hist_cot[0:2])
 			for i = 1,5 do dum[i] = total(cci_hist_cot[((2*i)+1):(2*(i+1))])
@@ -8361,7 +8467,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 
 	si = size(bild,/dim)
 
-	if total(alg eq ['esacci','clara','clara2','claas','era-i','era-i2','calipso']) then begin
+	if total(alg eq ['esacci','esacciv3','clara','clara2','claas','era-i','era-i2','calipso']) then begin
 		; plev_claas_clara2 = reverse([1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100])
 		; plev_clara = reverse([10,90,180,145,310,375,440,500,560,620,680,740,800,950,1100])
 		; tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
@@ -8371,7 +8477,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		for i = 1,5 do qwe[i,*] = bild[(i*2)+1,*] + bild[(i+1)*2,*]
 		bild = qwe
 		qwe  = fltarr(6,7)
-		if total(alg eq ['esacci','claas','clara2','era-i','era-i2','calipso']) then begin
+		if total(alg eq ['esacci','esacciv3','claas','clara2','era-i','era-i2','calipso']) then begin
 			qwe[*,0] = total(bild[*,0:2],2)
 			for i = 1,6 do qwe[*,i] = bild[*,(2*i)+1] + bild[*,(2*i)+2]
 		endif else for i = 0,6 do qwe[*,i] = bild[*,2*i] + bild[*,(2*i)+1]

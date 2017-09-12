@@ -3296,8 +3296,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.magniID   = Widget_combobox(bla,UVALUE=maglist,VALUE=['Auto',strcompress(fix(maglist[1:*]),/rem)],Scr_XSize=40,Scr_YSize=28,UNAME='PLOTS_MAGNIFYLIST')
 	      self.p0lonID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
 	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=35,/Editable)
-	    label = Widget_Label(leftrow,Value='ISCCP-CT  Color Tables                    ', SCR_XSIZE=270)
 	    bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
+	      label = Widget_Label(bla,Value=' ISCCP-CT  Color Tables', SCR_XSIZE=200,/align_left,Scr_YSize=19)
+	      bla2  = Widget_Base(bla, Column=1,Frame=0,/nonexclusive,Scr_YSize=19, SCR_XSIZE=60)
+	        self.invID     = Widget_Button(bla2, Value='Flip', UVALUE='SET_PLOT_DEFAULTS',/align_right,Scr_YSize=19)
+        bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
 	      histlist = strupcase(['--','h_1d','-cot','-ctp','h_2d','low','cu','sc','st','mid','ac','as','ns','high','ci','cs','cb','max','ovw'])
 	      self.histct= Widget_combobox(bla, Value=histlist,UVALUE=histlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_HISTCTLIST')
 	      color_table_names,color_tbl_name
@@ -3380,7 +3383,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
 			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','ERA-INTERIM2','PATMOS-X',$
-			  'CALIPSO','ESACCI-PT','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','CCIV3','SELECT FILE'];'PATMOS_OLD'
+			  'CALIPSO','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','CCIV3','SELECT FILE'];'ESACCI-PT','PATMOS_OLD'
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
@@ -3394,12 +3397,13 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA'    , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcla    = Widget_Button(bla, Value='CLAAS'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refhec    = Widget_Button(bla, Value='HECTOR'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refhec    = Widget_Button(bla, Value='HECTOR '     , UVALUE='SET_PLOT_DEFAULTS')
 ; 	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refg2gwx  = Widget_Button(bla, Value='GAC2-GWX'    , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refera    = Widget_Button(bla, Value='ERA-I'       , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcci2   = Widget_Button(bla, Value='ESACCI'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci    = Widget_Button(bla, Value='CCI-v1'      , UVALUE='SET_PLOT_DEFAULTS')
+; 	      self.refcci    = Widget_Button(bla, Value='CCI-v1'      , UVALUE='SET_PLOT_DEFAULTS')
+	      self.refcci3   = Widget_Button(bla, Value='CCI-v3'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refgwx    = Widget_Button(bla, Value='CCI-GWX'     , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refera2   = Widget_Button(bla, Value='ERA-(T1)'    , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refcal    = Widget_Button(bla, Value='CALIPSO'     , UVALUE='SET_PLOT_DEFAULTS')
@@ -3415,7 +3419,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	        self.errID     = Widget_Button(bla, Value='Error'     , UVALUE='SET_PLOT_DEFAULTS')
 	        self.verbID    = Widget_Button(bla, Value='Verbose'   , UVALUE='SET_PLOT_DEFAULTS')
 	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
-	        self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
+; 	        self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
 	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
 	        self.logID     = Widget_Button(bla, Value='Log-Plot'  , UVALUE='SET_PLOT_DEFAULTS')
 	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
@@ -3636,7 +3640,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
    		Widget_Control, self.refgwx    , Set_Button=0
 		Widget_Control, self.refisp    , Set_Button=0
 		Widget_Control, self.refcci2   , Set_Button=0
-		Widget_Control, self.refcci    , Set_Button=0
+; 		Widget_Control, self.refcci    , Set_Button=0
+		Widget_Control, self.refcci3    , Set_Button=0
 ; 		Widget_Control, self.refpmx    , Set_Button=0
 		Widget_Control, self.refg2gwx  , Set_Button=0
 		Widget_Control, self.refpmx2   , Set_Button=0
@@ -3821,8 +3826,8 @@ END ;---------------------------------------------------------------------------
 ; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
-		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day, $
-		orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat		, $
+		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,$
+		win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
 		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
@@ -3955,8 +3960,10 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	syn         = Widget_Info(self.refcal, /BUTTON_SET)
  	ccigwx      = Widget_Info(self.refgwx, /BUTTON_SET)
 	isp         = Widget_Info(self.refisp, /BUTTON_SET)
+	cci3        = Widget_Info(self.refcci3, /BUTTON_SET)
 	cci2        = Widget_Info(self.refcci2, /BUTTON_SET)
-	cci         = Widget_Info(self.refcci, /BUTTON_SET) ; prototype
+; 	cci         = Widget_Info(self.refcci, /BUTTON_SET) ; prototype
+cci = 0
 	era         = Widget_Info(self.refera, /BUTTON_SET)
 	era2        = Widget_Info(self.refera2, /BUTTON_SET)
 	g2gwx		= Widget_Info(self.refg2gwx, /BUTTON_SET)
@@ -4285,7 +4292,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
+				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4331,6 +4338,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if cla    then ref = 'cla'
 			if cci    then ref = 'cci_old'
 			if cci2   then ref = 'cci'
+			if cci3   then ref = 'cciv3'
 			if ccigwx then ref = 'gwx'
 			if g2gwx  then ref = 'g2_gwx'
 			if syn    then ref = 'cal'
@@ -4551,7 +4559,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4628,6 +4636,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if isp    then begin & algo2 = 'isccp'      & satn = sat & end
 				if cci    then begin & algo2 = 'esacci_old' & satn = sat & end
 				if cci2   then begin & algo2 = 'esacci'     & satn = sat & end
+				if cci3   then begin & algo2 = 'esacciv3'   & satn = sat & end
 				if g2gwx  then begin & algo2 = 'gac2-gewex' & satn = sat & end
 ; 				if pmx    then begin & algo2 = 'patmos_old' & satn = sat & end
 				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
@@ -4769,7 +4778,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, /HOURGLASS
 
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,$
+				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,$
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
@@ -4801,6 +4810,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if isp    then begin & algo = 'isccp'       & ref = 'isp'     & end
 			if cci    then begin & algo = 'esacci_old'  & ref = 'cci_old' & end
 			if cci2   then begin & algo = 'esacci'      & ref = 'cci'     & end
+			if cci3   then begin & algo = 'esacciv3'    & ref = 'cciv3'   & end
 ; 			if pmx    then begin & algo = 'patmos_old'  & ref = 'pmx_old' & end
 			if pmx2   then begin & algo = 'patmos'      & ref = 'pmx'     & end
 			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
@@ -6088,6 +6098,7 @@ PRO NCDF_DATA__DEFINE, class
              refisp:0L,                $
              refcci:0L,                $
              refcci2:0L,               $
+             refcci3:0L,               $
              loaded:0l,                $
              refera:0l,                $
              refera2:0l,               $

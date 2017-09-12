@@ -768,7 +768,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						charsize  = !m_charsize , bar_tickname=bar_tickname1, panoply = panoply						, $
 						limit = limit, figure_title = figure_title1,rainbow = rainbow, logarithmic=logarithmic		, $
 						ortho = ortho,horizontal = horizontal, grid=grid,londel=londel,latdel=latdel,lambert=lambert		, $
-						lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
 						noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,g_eq=g_eq,l_eq=l_eq	, $
 						p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine,discrete=discrete1	, $
 						lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
@@ -3052,7 +3051,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	;specials
 	pinatubo  = 0
 	mst_paper = 0
-	pvir      = 1
+	pvir      = 0
 
 	sav     = keyword_set(save_as)
 	wbg     = keyword_set(white_bg)
@@ -5614,14 +5613,8 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	sat    = strlowcase(satellite)
 	apxc   = '' ; appendix to climatology name, e.g. version
 	apxr   = '' ; appendix to reference name, e.g. version
-	if reference eq 'cciv3' then begin
-		ref = 'cci'
-		apxr = 'v3'
-	endif else ref = algo2ref(reference)
-	if climatology eq 'cciv3' then begin
-		cli = 'cci'
-		apxc = 'v3'
-	endif else 	cli    = algo2ref(climatology)
+	ref    = algo2ref(reference)
+	cli    = algo2ref(climatology)
 	dat    = strlowcase(data)
 
 	if cli eq 'mod'  then gridc = 1.0
@@ -5699,8 +5692,6 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
 	if apxc ne '' or apxr ne '' then begin
 		trend_sat = 0
-		if cli eq 'cci' and apxc eq 'v3' then cci_dirname = '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/delete/'
-		if ref eq 'cci' and apxr eq 'v3' then gac_dirname = '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/delete/'
 	endif
 
 	algon1 = sat_name(cli,satcci)
@@ -6206,10 +6197,7 @@ pro create_time_series,data,algon,coverage,period=period
 
 	dat    = strlowcase(data)
 	dum    = strsplit(strlowcase(algon[0]),'-',/ext)
-	if dum[0] eq 'cciv3' then begin
-		cli = 'cci'
-		apx = 'v3'
-	endif else cli = algo2ref(dum[0])
+	cli    = algo2ref(dum[0])
 	sat    = n_elements(dum) eq 2 ? dum[1] : ''
 	algon1 = sat_name(cli,sat)
 
@@ -6267,7 +6255,6 @@ pro create_time_series,data,algon,coverage,period=period
 	if cli eq 'isp' and total(sat eq ['avhrrs','allsat']) then sat = ''
 	if apx ne '' then begin
 		trend_sat = 0
-		if cli eq 'cci' and apx eq 'v3' then dirname = '/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/delete/'
 	endif
 	nyears  = n_elements(years)
 	nmonths = n_elements(months)
