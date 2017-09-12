@@ -1427,7 +1427,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 			result = shape2grid(shape_file,grid=get_grid_res(lon))
 		endif else begin
 			print,'!!To do!! No regular grid found. try to read minmax(lon/lat) from shape_file instead!!)'
-			stop
+stop
 			lim=[46.2, 4.9, 56, 16]
 			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
 		endelse
@@ -3894,7 +3894,7 @@ pro read_hdf, 	hdf_file, data, verbose = verbose ,find_tagnames=find_tagnames, a
 			minvalue = make_array(1,val=0,type=raw_type)
 
 			maxvalue = max(bild_raw)
-stop
+
 			if ~is_struct(att) then begin
 				; is dataset member of a group?  
 				dum  = strsplit(data,'/',/ext)
