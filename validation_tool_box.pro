@@ -2448,7 +2448,6 @@ function set_limits, longitude, latitude, four_elements = four_elements, bounds 
 	anz = 1
 	if (rat_neg gt rat_pos and rat_neg ne 1. and rat_pos lt 0.05) then begin & anz = 2 & neg = 1 & end
 	if (rat_pos gt rat_neg and rat_pos ne 1. and rat_neg lt 0.05) then begin & anz = 2 & neg = 0 & end
-; 	anz = (rat_neg gt rat_pos and rat_neg ne 1.) ? 2:1
 
 	dum_limit = fltarr(4,anz)
 
@@ -2486,12 +2485,17 @@ function set_limits, longitude, latitude, four_elements = four_elements, bounds 
 	p0lon = total(limit[[1,3]])/2.
 ; 	p0lat = total(limit[[0,2]])/2.
 
-	if keyword_set(four_elements) then return, limit
+	if ~keyword_set(four_elements) then limit = [	$
+			total(limit[[0,2]])/2., limit[1], $	; left 
+			limit[2], total(limit[[1,3]])/2., $	; top
+			total(limit[[0,2]])/2., limit[3], $	; right
+			limit[0], total(limit[[1,3]])/2.]	; bottom
 
-	limit = [	total(limit[[0,2]])/2., limit[1], $	; left 
-				limit[2], total(limit[[1,3]])/2., $	; top
-				total(limit[[0,2]])/2., limit[3], $	; right
-				limit[0], total(limit[[1,3]])/2.]	; bottom
+	if keyword_set(verbose) then begin
+		print,'set_limits -> limit: ', limit
+		print,'set_limits -> p0lon: ', p0lon
+		if n_elements(p0lat) gt 0 then print,'set_limits -> p0lat: ', p0lat
+	endif
 
 	return, limit
 
@@ -2506,19 +2510,13 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
 		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format       									  ; output
 
-; 	if (~keyword_set(globe) and ~keyword_set(antarctic) and ~keyword_set(arctic) and ~keyword_set(enhanced_robinson) and $
-; 	     ~keyword_set(goode) and ~keyword_set(hammer)    and ~keyword_set(aitoff) and $
-; 	     ~keyword_set(mollweide) and ~keyword_set(sinusoidal) and ~keyword_set(robinson) and ~keyword_set(lambert)) then box_axes = 1
-; 	if keyword_set(goode) then box_axes = 1
-	
 	box_axes = 1
 	ksl = keyword_set(limit)
 
 	if ((keyword_set(globe) or keyword_set(antarctic) or keyword_set(arctic)   or $
 		keyword_set(goode) or keyword_set(hammer)    or keyword_set(aitoff)   or $
 		keyword_set(mollweide) or keyword_set(sinusoidal) or keyword_set(robinson) or $
-		keyword_set(stereographic) or keyword_set(msg) or keyword_set(lambert) or keyword_set(enhanced_robinson))) then begin;$ 
-; 		and ~keyword_set(limit)) then begin
+		keyword_set(stereographic) or keyword_set(msg) or keyword_set(lambert) or keyword_set(enhanced_robinson))) then begin
 		; set map_image defaults
 		ortho   = 1
 		iso     = 1
@@ -2530,13 +2528,12 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		box_axes = 0
 		no_draw_border = 1
 		if ~adv_keyword_set(magnify) then magnify = 2
+
 		; create limit vector
 		if keyword_set(antarctic) then p0lat = -90
 		if keyword_set(arctic)    then p0lat =  90
-
 		p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 		p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
-
 		if keyword_set(antarctic) or keyword_set(arctic) then begin
 			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
@@ -2567,20 +2564,13 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if keyword_set(sinusoidal) then begin & sinusoidal = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(aitoff) then begin & aitoff = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(mollweide) then begin & mollweide = 1 & no_color_bar = 0 & ortho = 0  & limit = other_limit & end
-		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & horizontal = 0 & end
+		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & horizontal = 0 & limit = [-90,((p0lon mod 360) -90),90,((p0lon mod 360) +90)] & end
 		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end 
 		if keyword_set(msg) then begin
-			; satellite projection
-; 			d = restore_var('/home/sstapelb/Downloads/msg_bild_lon_lat.sav')
-; 			map_image,d.ir108,d.lat,d.lon,/rainbow,void_index=where(d.ir108 eq -999),/satellite,$
-; 			sat_p=[6,0.0,0.0],Limit=[0.0, -75, 75, 0, 0.0, 75, -75, 0],p0lat=0,p0lon=0,min=200,max=300,/iso
 			p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 			p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
 			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
-; 			Limit=[0.0, -90, 90, 0, 0.0, 90, -90, 0]
-; 			p0lat=0.
-; 			p0lon=0. ; floating underflow in convert_coord in map_point_valid in map_set in map_image
 			no_color_bar = 0
 			horizontal = 0
 			no_draw_border=0
@@ -2656,7 +2646,6 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if nobar eq 1 then no_color_bar = 1 ; no color bar
 		if nobar eq 2 then begin & no_color_bar = 0 & horizontal = 1 & end ; force horizontal colorbar
 		if nobar eq 3 then begin & no_color_bar = 0 & horizontal = 0 & end ; force vertical colorbar
-; 	no_color_bar = 1
 	endif
 
 	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'

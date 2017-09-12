@@ -1385,9 +1385,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	make_geo, file = geo_file, lon,lat, verbose = verbose, dimension = size(bild,/dim), $
 	found = found_geo, msg=msg,/ pick_file,algo=algo,grid=(algo eq 'unknown' ? 0 : get_grid_res(bild[*,*,0,0,0]))
 
-	if keyword_set(rot>0) then begin
+	if keyword_set(rot) then begin
 		if size(reform(bild),/n_dim) eq 2 then begin
-			bild = rotate(bild,fix(rot))
+			bild = rotate(bild,fix(rot>0))
 		endif
 	endif
 
@@ -1704,7 +1704,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	endif
 	if longname eq 'long_name unknown' then longname = ''
 	if strlen(longname) gt 80 then longname = strmid(longname,0,80)+'...'
-	
+
 	figure_title = keyword_set(notitle) ? '' : prefix + datum+' '+algon+' '+longname
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
 			~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and total(!p.multi) le 2
@@ -1724,11 +1724,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				lat[idx] = !values.f_nan
 			endif
 
-			if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2)
-
-			print,limit
-			print,p0lon
-			print,p0lat
+			if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
 
 			no_continents = 1
 			no_grid = 1
@@ -2103,17 +2099,17 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		endif
 	endelse
 	dat = dat1
-	
+
 	;change byte into integer to avoid problems when making differences
 	if size(bild1,/type) eq 1 then bild1 = fix(bild1)
 	if size(bild2,/type) eq 1 then bild2 = fix(bild2)
 
-	if keyword_set(rot>0) then begin
+	if keyword_set(rot) then begin
 		if size(reform(bild1),/n_dim) eq 2 then begin
-			bild1 = rotate(bild1,fix(rot))
+			bild1 = rotate(bild1,fix(rot>0))
 		endif
 		if size(reform(bild2),/n_dim) eq 2 then begin
-			bild2 = rotate(bild2,fix(rot))
+			bild2 = rotate(bild2,fix(rot>0))
 		endif
 	endif
 
@@ -2231,7 +2227,6 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 					didx = where(bild2 ge 0,didx_cnt)
 ; 					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor('Red')
 					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor(!compare_col2)
-; phere
 ; 					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[-1,cgcolor('Red')],thick=[thick,thick],$
 					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],thick=[thick,thick],$
 					spos=keyword_set(show_value) ? 'bot':'top', charsize=(keyword_set(save_as) ? 2.:1.5)
@@ -5186,7 +5181,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 	lines = pgrid(yrange,log=logarithmic)
 
 	;Quotient für BCRMSE Achse
-	qu = keyword_set(rot>0) ? rot : 0 ; now 0 means dont show 
+	qu = keyword_set(rot) ? (rot>0) : 0 ; now 0 means dont show 
 
 	jumps=0
 	nochmal:
