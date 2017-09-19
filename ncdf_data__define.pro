@@ -548,6 +548,7 @@ PRO NCDF_DATA::EventHandler, event
 	'WIDGET_BASE': BEGIN
 		; das hier ist wahrscheinlich die schlimmste aller Lösungen, aber immerhin eine Lösung!!
 		; Irgendwie stimmt noch die Zuordnung der eventhandler nicht. stapel 09/2013
+; 		print,'WIDGET_BASE'
 		error_status = 0
 		catch, error_status
 		if (error_status ne 0) then begin
@@ -558,8 +559,8 @@ PRO NCDF_DATA::EventHandler, event
 			goto , wbase_ende
 		endif
 		Widget_Control, self.draw, $
-		SCR_XSIZE = (event.x -(self.georow.scr_xsize + 1)) > self.minXS , $
-		SCR_YSIZE = (event.y -(self.geoToprow.scr_ysize + self.geoButtrow.scr_ysize + 22)) > self.minYS
+		SCR_XSIZE = ( (event.x -(self.georow.scr_xsize + 1)) > self.minXS ), $
+		SCR_YSIZE = ( (event.y -(self.geoToprow.scr_ysize + self.geoButtrow.scr_ysize + 22)) > self.minYS )
 		wbase_ende:
 	END
 
@@ -3257,22 +3258,23 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 
 	ok = self -> get_file_infos()
 	screen_size = GET_SCREEN_SIZE(RESOLUTION=resolution)
-	xsize = screen_size[0]-480 < 1100
-	ysize = screen_size[1]-200 <  880
-
+	xsize = screen_size[0]-480 < 1200
+	ysize = screen_size[1]-180 <  900
+	
+	label_size=13
 	; Get some position information.
 	Widget_Control, event.top, TLB_GET_OFFSET=offsets
 	; We want a non-modal pop-up dialog widget.
 	tlb2 = Widget_Base(GROUP_LEADER=event.top, XOFFSET=offsets[0], YOFFSET=offsets[1],col=2, BASE_ALIGN_CENTER=1, /FLOATING, $
 			  UVALUE=self,title='File: '+self.filename,TLB_SIZE_EVENT=1)
- 	  if ysize lt 880 then leftrow = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
+ 	  if ysize lt 900 then leftrow = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
 	  leftrow = Widget_Base(tlb2, ROW=26,FRAME=1)
-	    label = Widget_Label(leftrow, Value='Variable to Plot: ', SCR_XSIZE=270,ALIGN_CENTER=1)
+	    label = Widget_Label(leftrow, Value='Variable to Plot: ', SCR_XSIZE=270,ALIGN_CENTER=1,SCR_YSIZE=label_size)
 	    theList = self -> make_VARList(/data_only)
-	    ; neu use combobox instead of droplist
+	    ; new use combobox instead of droplist
 	    self.variablelistID = Widget_combobox(leftrow, Value=[theList],UVALUE=[theList],Scr_XSize=270, UNAME='PLOTS_VARLIST',/EDITABLE,font='8x13',Scr_YSize=30)
 	    bla = Widget_Base(leftrow, row=1,Frame=0, Scr_XSize=270,/nonexclusive)
-	      self.enablemima = Widget_Button(bla, Value='Min Value:  Max Value:     P.Multi   Win', UVALUE='SET_PLOT_DEFAULTS',Scr_YSize=21)
+	      self.enablemima = Widget_Button(bla, Value='Min Value:  Max Value:     P.Multi   Win', UVALUE='SET_PLOT_DEFAULTS',Scr_YSize=19)
 	    bla = Widget_Base(leftrow, Column=4,Frame=0, Scr_XSize=270)
 	      self.minimumID = Widget_Text(bla, Value=strcompress((*self.theVariables)[0].minvalue), /Editable, SCR_XSIZE=85)
 	      self.maximumID = Widget_Text(bla, Value=strcompress((*self.theVariables)[0].maxvalue), /Editable, SCR_XSIZE=85)
@@ -3285,7 +3287,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.limitID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=180)
 	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','Satellite']; EASE-grid  = equal angle 'Lambert' ??
 	      self.projlist = Widget_combobox(bla, Value=[proj_list],UVALUE=[proj_list],Scr_XSize=85,Scr_YSize=28,UNAME='PLOTS_PROJLIST')
-	    label = Widget_Label(leftrow, Value='  TS-SymSiz Bin/Z  Rot/BC Magn.  P0lon  P0lat ', SCR_XSIZE=270)
+	    label = Widget_Label(leftrow, Value='  TS-SymSiz Bin/Z  Rot/BC Magn.  P0lon  P0lat ', SCR_XSIZE=270,SCR_YSIZE=label_size)
 	    bla = Widget_Base(leftrow, Column=6,Frame=0, Scr_XSize=270)
 	      syms_list      = [string([0.,0.5,1+((indgen(21))/10.) ],f='(f3.1)')]
 	      self.symsizeID = Widget_combobox(bla,VALUE=[syms_list],UVALUE=[syms_list],Scr_XSize=54,Scr_YSize=28,UNAME='PLOTS_SYMSIZELIST')
@@ -3297,15 +3299,15 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.p0lonID   = Widget_Text(bla,Value='0',SCR_XSIZE=40,/Editable)
 	      self.p0latID   = Widget_Text(bla,Value='0',SCR_XSIZE=35,/Editable)
 	    bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
-	      label = Widget_Label(bla,Value=' ISCCP-CT  Color Tables', SCR_XSIZE=200,/align_left,Scr_YSize=19)
-	      bla2  = Widget_Base(bla, Column=1,Frame=0,/nonexclusive,Scr_YSize=19, SCR_XSIZE=60)
-	        self.invID     = Widget_Button(bla2, Value='Flip', UVALUE='SET_PLOT_DEFAULTS',/align_right,Scr_YSize=19)
+	      label = Widget_Label(bla,Value=' ISCCP-CT  Color Tables', SCR_XSIZE=200,/align_left, SCR_YSIZE=19)
+	      bla2  = Widget_Base(bla, Column=1,Frame=0,/nonexclusive, SCR_XSIZE=60, SCR_YSIZE=19)
+	        self.invID     = Widget_Button(bla2, Value='Flip', UVALUE='SET_PLOT_DEFAULTS',/align_right, SCR_YSIZE=19)
         bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
 	      histlist = strupcase(['--','h_1d','-cot','-ctp','h_2d','low','cu','sc','st','mid','ac','as','ns','high','ci','cs','cb','max','ovw'])
 	      self.histct= Widget_combobox(bla, Value=histlist,UVALUE=histlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_HISTCTLIST')
 	      color_table_names,color_tbl_name
 	      self.ctlistID= Widget_combobox(bla, Value=[color_tbl_name],UVALUE=[color_tbl_name],Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_CTLIST')
-	    label = Widget_Label(leftrow, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270)
+	    label = Widget_Label(leftrow, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270,SCR_YSIZE=label_size)
 	    bla = Widget_Base(leftrow, Column=5,Frame=0, Scr_XSize=270)
 	      yy_list        = reverse(string(indgen(40)+1978,f='(i4.4)'))
 	      self.yearID    = Widget_combobox(bla,VALUE=['--',yy_list],UVALUE=['--',yy_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_YEARLIST')
@@ -3361,7 +3363,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.aatsr     = Widget_Button(self.sat_base, Value='ATs', UVALUE='SET_PLOT_DEFAULTS')
 	      self.allsat    = Widget_Button(self.sat_base, Value='ALL', UVALUE='SET_PLOT_DEFAULTS')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
-	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Style: ')
+	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Style: ',SCR_YSIZE=label_size)
 	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270, /Exclusive,Frame=1)
 	      self.pcsingle  = Widget_Button(bla, Value='Single Time Step', UVALUE='SET_PLOT_DEFAULTS')
 	      self.pcmulti   = Widget_Button(bla, Value='Multi Time Steps', UVALUE='SET_PLOT_DEFAULTS')
@@ -3386,7 +3388,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 			  'CALIPSO','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','CCIV3','SELECT FILE'];'ESACCI-PT','PATMOS_OLD'
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
-	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ')
+	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ',SCR_YSIZE=label_size)
 	    bla = Widget_Base(leftrow, row=5, Scr_XSize=270, /Exclusive,Frame=1)
 	      self.refgac    = Widget_Button(bla, Value='CLARA1'      , UVALUE='SET_PLOT_DEFAULTS')
 	      self.refmyd    = Widget_Button(bla, Value='C5-AQUA'     , UVALUE='SET_PLOT_DEFAULTS')
@@ -3444,7 +3446,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
 ; 	        sym_list       = ['PSymbols',string((indgen(9)),f='(f3.1)')]
 ;                 self.symbolID  = Widget_combobox(bla,VALUE=[sym_list],UVALUE=[sym_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_SYMBOLLIST')
-      
+
 	    self.draw = WIDGET_DRAW(rightrow, scr_XSIZE=xsize, scr_YSIZE=ysize,frame=1)
 
 	    bottomright = Widget_Base(rightrow, col=5,/base_align_center)
@@ -3459,6 +3461,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	; Get the geometries of the tree widget and the button base. These
 	; will set the minimun and maximum values for resizing.
 	self.georow     = Widget_Info(leftrow, /GEOMETRY)
+help,self.georow
 	self.geoButtrow = Widget_Info(bottomright, /GEOMETRY)
 	self.geoToprow  = Widget_Info(topright, /GEOMETRY)
 	self.geodraw    = Widget_Info(self.draw, /GEOMETRY)
