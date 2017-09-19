@@ -1931,7 +1931,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	reference = ''
 	version   = ''
 	satnode   = ''
-; stop
+
 	verb = keyword_set(verbose)
 	; hier mal ein versuch für die L1 avhrr dateien
 	if H5F_IS_HDF5(pathn+'/'+filen) and stregex(filen,'99999_satproj',/bool) then begin
@@ -1971,7 +1971,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		month    = stregex(strmid(filen,strpos(filen,year)+4),'[0-9]{2}',/ext)
 		datum    = year+month
 	endif
-; stop
+
 ; 	if stregex(filen,'patmosx',/fold,/bool) then begin
 ; 		algoname = 'PATMOS'
 ; 		level    = stregex(pathn,'gewex',/fold,/bool) ? 'l3c' : ''
@@ -2347,7 +2347,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	endif
 
 	out = {satname:satname[0],algoname:algoname,level:level,year:year,month:month,day:day,orbit:orbit,datum:datum,reference:reference,version:version}
-; stop
+
 	if verb then begin
 		print,'Set Satname to   : '+satname[0]
 		print,'Set Algoname to  : '+algoname
@@ -3258,7 +3258,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	ok = self -> get_file_infos()
 	screen_size = GET_SCREEN_SIZE(RESOLUTION=resolution)
 	xsize = screen_size[0]-480 < 1100
-	ysize = screen_size[1]-200 < 880
+	ysize = screen_size[1]-200 <  880
 
 	; Get some position information.
 	Widget_Control, event.top, TLB_GET_OFFSET=offsets
@@ -3412,29 +3412,32 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
 	  rightrow = Widget_Base(tlb2, ROW=3,/base_align_center)
         topright = Widget_Base(rightrow,column=6,/base_align_center)
-	      bla = Widget_Base(topright,row=1,/NonExclusive,Frame=0)
+	      bla = Widget_Base(topright,row=2,/NonExclusive,Frame=0)
 	        self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
 	        self.oplotID   = Widget_Button(bla, Value='Oplot'     , UVALUE='SET_PLOT_DEFAULTS')
 	        self.zoomID    = Widget_Button(bla, Value='Zoom'      , UVALUE='SET_PLOT_DEFAULTS')
 	        self.errID     = Widget_Button(bla, Value='Error'     , UVALUE='SET_PLOT_DEFAULTS')
 	        self.verbID    = Widget_Button(bla, Value='Verbose'   , UVALUE='SET_PLOT_DEFAULTS')
-	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
-; 	        self.invID     = Widget_Button(bla, Value='Flip Color', UVALUE='SET_PLOT_DEFAULTS')
-	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
 	        self.logID     = Widget_Button(bla, Value='Log-Plot'  , UVALUE='SET_PLOT_DEFAULTS')
+	      
+	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
+	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
+	        self.boxID     = Widget_Button(bla, Value='No Box'    , UVALUE='SET_PLOT_DEFAULTS')
+	        self.contID    = Widget_Button(bla, Value='No Continents', UVALUE='SET_PLOT_DEFAULTS')
+	        self.gridID    = Widget_Button(bla, Value='No Grid', UVALUE='SET_PLOT_DEFAULTS')
+	        self.labelID   = Widget_Button(bla, Value='No Grid Labels', UVALUE='SET_PLOT_DEFAULTS')
+
 	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
 	        self.showpvalID = Widget_Text(bla, Value='', SCR_XSIZE=245)
-	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
+	      bla = Widget_Base(topright, row=2,/NonExclusive,Frame=0)
 	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
-	        self.wbgrID    = Widget_Button(bla, Value='White-BG'  , UVALUE='SET_PLOT_DEFAULTS')
-		  bla = Widget_Base(topright,row=1,Frame=0)
-	        barlist = strupcase(['Color Bar','No Bar','Horiz. CB','Verti. CB','HCB Only','VCB Only'])
-	        self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=28,UNAME='PLOTS_BARLIST')
-          bla = Widget_Base(topright,row=1,Frame=0)
+	        self.wbgrID    = Widget_Button(bla, Value='White Background '  , UVALUE='SET_PLOT_DEFAULTS')
+		  bla = Widget_Base(topright,column=2,Frame=0)
+			barlist   = strupcase(['Color Bar','No Bar','Horiz. CB','Verti. CB','HCB Only','VCB Only'])
+			self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=28,UNAME='PLOTS_BARLIST')
 			shapelist = strupcase([	'Shape Files','Germany','USA','China','Russia','Canada','Africa','Europe','America','South America',$
 									'Australia','Choose File'])
-; 		'Atlantic Ocean','Asia','Baltic Sea','North Sea','France','Austria','Belgium','Czech','Denmark','Netherland','Poland','Sweden','Switzerland'])
-            self.shapeID = Widget_combobox(bla, Value=shapelist,UVALUE=shapelist,Scr_XSize=100,Scr_YSize=28,UNAME='PLOTS_SHAPELIST')
+			self.shapeID = Widget_combobox(bla, Value=shapelist,UVALUE=shapelist,Scr_XSize=100,Scr_YSize=28,UNAME='PLOTS_SHAPELIST')
 	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 ; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
@@ -3450,8 +3453,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      button = Widget_Button(bottomright, Value='File Difference', UVALUE='PLOT_DIFF')
 	      button = Widget_Button(bottomright, Value='Take a Snapshot', UVALUE='SNAPSHOT')
 	      button = Widget_Button(bottomright, Value='Quit', UVALUE='QUIT_PLOT_VARIABLE_GUI')
-
-; 	plot_l3
+; 	      bla = Widget_Base(bottomright, row=1, Scr_XSize=78,/align_right)         
+; 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 
 	; Get the geometries of the tree widget and the button base. These
 	; will set the minimun and maximum values for resizing.
@@ -3589,11 +3592,15 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.invID     , Set_Button=0
 		Widget_Control, self.verbID    , Set_Button=0
 		Widget_Control, self.bordID    , Set_Button=0
+		Widget_Control, self.boxID     , Set_Button=0
 		Widget_Control, self.saveID    , Set_Button=0
 		Widget_Control, self.zoomID    , Set_Button=0
 		Widget_Control, self.oplotID   , Set_Button=0
 		Widget_Control, self.errID     , Set_Button=0
-; 		Widget_Control, self.noBarID   , Set_Button=0
+		Widget_Control, self.logID     , Set_Button=0
+		Widget_Control, self.contID    , Set_Button=0
+		Widget_Control, self.gridID    , Set_Button=0
+		Widget_Control, self.labelID   , Set_Button=0
 		Widget_Control, self.noBarID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.ShapeID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.noTitleID , Set_Button=0
@@ -3831,7 +3838,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
 		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
-		shape_file=shape_file
+		shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	found=1
 ; 	varName=self.varname_plotID
@@ -3919,6 +3926,10 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	error       = Widget_Info(self.errID, /BUTTON_SET)
 	notitle     = Widget_Info(self.noTitleID, /BUTTON_SET)
 	log         = Widget_Info(self.logID, /BUTTON_SET)
+	no_continents= Widget_Info(self.contID, /BUTTON_SET) 
+	no_grid		= Widget_Info(self.gridID, /BUTTON_SET) 
+	no_label	= Widget_Info(self.labelID, /BUTTON_SET)
+	no_box		= Widget_Info(self.boxID, /BUTTON_SET)
 
 	case strlowcase(self.handlebar) of
 		'color bar'	: nobar = 0
@@ -4296,7 +4307,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 			if ~found then return
 
@@ -4395,7 +4406,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
 				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum,magnify=magnify, $
-				countries=countries,notitle=notitle
+				countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				if show_values and pcdts and ~total(strlowcase(hct[0]) eq ['hist2d','hist_2d','max']) then $
 				show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 				if ~(pcdts and ~total(strlowcase(hct[0]) eq ['max','1d'])) then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
@@ -4415,7 +4426,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,$
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				return
 			endif
@@ -4436,7 +4448,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,$
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcdts and pcsing then begin
@@ -4450,7 +4463,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
-				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle
+				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle,shape_file=shape_file,$
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label
 				if show_values then show_pixel_value, out.bild, out.lon, out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcmat then begin
@@ -4474,7 +4488,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab,/zonal_only, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,log=log,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,magnify=magnify,countries=countries,notitle=notitle
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,magnify=magnify,countries=countries,notitle=notitle,$
+				shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 			endif
 			if pczm and pcmult then begin
 				if verbose then print,'Zonal Average Multi Time Step'
@@ -4483,7 +4498,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
 				robinson=robinson,show_values = show_values,nobar=nobar, stereographic = stereographic, ztext = ztext,log=log, $
-				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),magnify=magnify,countries=countries,symsize=symsize,notitle=notitle
+				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label
 			endif
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
@@ -4492,7 +4508,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
 				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext,magnify=magnify, $
-				countries=countries,symsize=symsize,notitle=notitle
+				countries=countries,symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID
 			endif
 			if pcvar and pcmult then begin
@@ -4501,7 +4517,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
 				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log,$
-				show_values = show_values,countries=countries,symsize=symsize,notitle=notitle
+				show_values = show_values,countries=countries,symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcmatts then begin
@@ -4563,7 +4579,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 			if ~found then return
 
@@ -4678,7 +4694,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,log=log	, $
 				other=oth,ctable=ctab, level=level,nobar=nobar, stereographic = stereographic		, $
 				/all_parameter,dim3=dim3,coverage=cov,rot=rot,magnify=magnify,countries=countries	, $
-				notitle=notitle
+				notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if is_jch(varname) and total(strlowcase(hct[0]) eq ['1d','1d_cot','1d_ctp','max']) then begin
 				satn1  = sat_name(algo,sat)
@@ -4718,7 +4734,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat1=sat,prefix=[f1str,f2str], $
 					land=land,sea=sea,limit=limit,save_as=save_as,win_nr=win_nr,antarctic=ant,arctic=arc	 , $
 					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool)	 , $
-					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0],notitle=notitle,sat2=satn
+					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0],notitle=notitle,sat2=satn,$
+					no_continents=no_continents,no_grid=no_grid,no_label=no_label
 				endif else begin
 					; file1
 					plot_l2,year[0],month[0],day[0],file=file1,data=varname[0],mini=mini,maxi=maxi,sat=sat	, $
@@ -4727,7 +4744,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,log=log	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar	, $
-					cov=cov,magnify=magnify,countries=countries,notitle=notitle
+					cov=cov,magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,$
+					no_grid=no_grid,no_label=no_label,no_box=no_box
 					; file2
 					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname2,mini=mini,maxi=maxi,sat=satn, $
 					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
@@ -4735,7 +4753,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,msg_proj=msg	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0],log=log, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f2str,nobar=nobar	, $
-					stereographic = stereographic,cov=cov,magnify=magnify,countries=countries,notitle=notitle
+					stereographic = stereographic,cov=cov,magnify=magnify,countries=countries,notitle=notitle,$
+					no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 					if show_values and ~pchist and ~pczm and ~pcmts then show_pixel_value, bild, lon,lat	, $
 					data = varname2, unit = unit, wtext = self.showpvalID
 				endelse
@@ -4761,7 +4780,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				diff_only=pcdts,hist_only=pchist,maps_only=pcvar,other=oth,ctable=ctab,zonal_only=pczm	, $
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
 				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify	, $
-				wtext = self.showpvalID,countries=countries,notitle=notitle
+				wtext = self.showpvalID,countries=countries,notitle=notitle,no_continents=no_continents,$
+				no_grid=no_grid,no_label=no_label,no_box=no_box
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
@@ -4782,7 +4802,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 			if ~found then return
 
@@ -4893,7 +4913,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, ztext = ztext, stereographic = stereographic,msg_proj=msg,error=error,log=log,$
 				dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],addtext = addtext[0],$
-				magnify=magnify,countries=countries,notitle=notitle
+				magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 			endif else if pchov then begin
 				; hovmoeller
 				if hist2d then begin 
@@ -4957,7 +4977,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],obj_out=obj_out,addtext = addtext[0],$
-				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file
+				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
@@ -6026,6 +6046,7 @@ PRO NCDF_DATA__DEFINE, class
              selftxt:'',               $
              pixvalID:0L,              $
              bordID:0L,                $
+             boxID:0L,                 $
              verbID:0L,                $
              noTitleID:0L,             $
              noBarID:0L,               $
@@ -6059,6 +6080,9 @@ PRO NCDF_DATA__DEFINE, class
              whatever:'',              $
              compare_algo1:'',         $
              logid:0L,                 $
+             contID:0L,                $ 
+             gridID:0L,                $ 
+             labelID:0L,               $
              sat_base:0L,              $
              tirosn:0L,                $
              noaa5:0L,                 $

@@ -358,7 +358,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			stereographic = stereographic, out=out, hist_cloud_type=hist_cloud_type	, $
 			logarithmic = logarithmic,timeseries=timeseries,dim3=dim3		, $
 			white_bg=white_bg,dirname2=dirname2,magnify=magnify,oplots=oplots	, $
-			wtext = wtext,countries=countries,notitle=notitle
+			wtext = wtext,countries=countries,notitle=notitle,shape_file=shape_file,$
+			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	if n_params() lt 1 then begin
 		print,"Syntax: compare_cci_with_clara, year, month, day, /data, /sat, /mini, /maxi, /zoom, /limit, /win_nr, /save_as"
@@ -750,13 +751,36 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	if total(strcompress(unit2[0],/rem) eq ['[]','[[]]']) then unit2 = ''
 	;-------------------- plot with map_image ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
-	set_proj  ,globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar	, $
+	set_proj  ,globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar,no_label=no_label, $
 		   Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		   ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic		, $
 		   no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,msg=msg, $
 		   maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert,$
-		   lonnames=lonnames,latnames=latnames,lons=lons,lats=lats
-		   
+		   lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box
+
+	if file_test(shape_file) then begin
+		found = 1
+		if get_grid_res(bild_cci) eq 0 then begin
+			print,'Found a non regular grid file -> Not possible at the moment!'
+			found = 0
+		endif
+		if found then begin
+			print,'Using shape_file, ',shape_file
+			de  = get_coverage(lon,lat,shape_file=shape_file)
+			idx = where(de eq 0,idxcnt)
+			if idxcnt gt 0 then begin
+				bild_cci[idx] = fillvalue1 
+				bild_gac[idx] = fillvalue2
+				lon[idx] = !values.f_nan
+				lat[idx] = !values.f_nan
+			endif
+
+			if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
+
+		endif
+		rotate_globe = 0
+	endif
+
 	if ~keyword_set(difference) and ~keyword_set(zonal_only) then begin
 		figure_title1 = keyword_set(notitle) ? '' : datum + ' ' + vollername1
 		start_save, save_as1, thick = thick, size = [32, 20]
@@ -772,9 +796,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine,discrete=discrete1	, $
 						lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
 						mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson		, $
-						stereographic=stereographic,label=label	, $
+						stereographic=stereographic,label=label	,no_continents=no_continents,no_grid=no_grid, $
 						bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow,magnify=magnify		, $
 						brewer = brewer, greyscale = greyscale,flip_colours = flip_colours,ctable=ctable,debug=verbose)
+			if file_test(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
 			obj_destroy, m
 		end_save, save_as1
 	endif
@@ -817,8 +842,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	if ~keyword_set(zonal_only) then begin
 		start_save, save_as2, thick = thick, size = [32, 20]
 
-			rotate_globe = 	keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and $
-					keyword_set(wtext) and ~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and keyword_set(difference)
+			rotate_globe = is_defined(rotate_globe) ? rotate_globe :	keyword_set(globe) and ~keyword_set(save_as) and $
+							~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and ~keyword_set(antarctic) and $
+							~keyword_set(arctic) and opl eq 0 and keyword_set(difference)
 
 			m = obj_new("map_image",bild_gac,lat,lon,void_index=void_index2,box_axes=box_axes,n_lev=n_lev2	, $
 						min=(float(size(mini,/type)) ? mini : minvalue)				, $
@@ -833,7 +859,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, $
 						mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,discrete=discrete2	, $
 						robinson=robinson,stereographic=stereographic, logarithmic=logarithmic,g_eq=g_eq,l_eq=l_eq, $
-						label=label,lambert=lambert, $
+						label=label,lambert=lambert, no_continents=no_continents,no_grid=no_grid,$
 						bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow,magnify=magnify	, $
 						brewer = brewer, greyscale = greyscale ,flip_colours = flip_colours,ctable=ctable,debug=verbose)
 			if keyword_set(zoom) then begin
@@ -842,6 +868,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				if win_nr ne -1 then win, win_nr
 				if ~keyword_set(difference) then !p.multi = [2,2,2]
 			endif
+		if file_test(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
 		if ~rotate_globe then begin
 			obj_destroy, m
 			end_save, save_as2
@@ -1075,7 +1102,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			nobar=nobar,cov = cov,wtext = wtext,ztext = ztext,msg_proj=msg_proj	, $
 			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum, $
 			obj_out=obj_out,addtext=addtext,countries=countries,notitle=notitle, $
-			shape_file=shape_file
+			shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -1088,7 +1115,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	if limit_test then limit_bck = limit
 	pref1 =''
  	win_nr    = adv_keyword_set(win_nr) ? win_nr : 1
-; 	box_axes  = 1
 	found_dem = 0
 	if keyword_set(land) and keyword_set(sea) then begin
 		land = 0
@@ -1454,7 +1480,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			endelse
 			if found then begin
 				; CTP
-; 				stop
 				if plot_ctp then begin
 					start_save, strreplace(save_dum,'.eps','_CTP.eps'), thick = thick, size = [32,16]
 						if sav then thick = 5
@@ -1671,10 +1696,10 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		  enhanced_robinson = enhanced_robinson, ortho=ortho,iso=iso,stereographic=stereographic, horizontal=horizontal,grid=grid,$
-		  londel=londel,latdel=latdel,label=label,noborder=noborder, $
+		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg_proj,$
 		  lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
-		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format
+		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,no_box=no_box
 
 	if keyword_set(discrete) then begin
 		if n_elements(discrete) eq 1 then discrete=findgen(n_lev+1)
@@ -1725,9 +1750,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 			if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
 
-			no_continents = 1
-			no_grid = 1
-			label   = 0
 		endif
 		rotate_globe = 0
 	endif
@@ -1860,7 +1882,8 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 			ctable = ctable, other = other, discrete = discrete, prefix=prefix	, $
 			nobar=nobar,cov = cov,ztext = ztext,msg_proj=msg_proj	, $
 			oplots=oplots,error=error,dim3=dim3,rot=rot,datum=datum, $
-			addtext=addtext,countries=countries,notitle=notitle,save_as=save_as
+			addtext=addtext,countries=countries,notitle=notitle,save_as=save_as,$
+			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	pug  = 0
 	pvir = 1
@@ -1952,7 +1975,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		ctable = ctable, other = other,zonal_only = zonal_only, stereographic = stereographic			, $
 		box_only = box_only, coverage = coverage, nobar = nobar, ztext = ztext	, $
 		msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3	, $
-		addtext=addtext,rot=rot,magnify=magnify,wtext=wtext,countries=countries,notitle=notitle
+		addtext=addtext,rot=rot,magnify=magnify,wtext=wtext,countries=countries,notitle=notitle,$
+		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -2391,9 +2415,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat, nobar = nobar	, $
 		    Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		    ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,msg=msg	, $
-		    no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,  $
+		    no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,no_label=no_label,  $
 		    stereographic=stereographic,maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert,$
-		    lonnames=lonnames,latnames=latnames,lons=lons,lats=lats
+		    lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box
 
 	if keyword_set(zonal_only) then begin
 		; cci und cci2 limit schon drin nur nicht land, sea
@@ -2651,7 +2675,7 @@ bin= ( bin/100.) > 0.01
 				ortho = ortho,horizontal = horizontal, grid=grid,londel=londel,latdel=latdel, g_eq=g_eq, l_eq=l_eq, $
 				noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar, flip_colours = flip_colours,$
 				p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, $
-				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 				mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,$
 				stereographic=stereographic,label=label, $
 				bwr=bwr,rainbow=rainbow,extended_rainbow=extended_rainbow,elevation=elevation,greyscale=greyscale,$
@@ -2691,7 +2715,7 @@ bin= ( bin/100.) > 0.01
 			ortho = ortho,horizontal = horizontal, grid=grid,londel=londel,latdel=latdel,g_eq=g_eq, l_eq=l_eq	, $
 			noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
 			p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
-			lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+			lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 			mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal, logarithmic=logarithmic,$
 			robinson=robinson,stereographic=stereographic,label=label, $
 			bwr=bwr,rainbow=rainbow,extended_rainbow=extended_rainbow,elevation=elevation,greyscale=greyscale,$
@@ -2809,7 +2833,8 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 		datum2=datum2,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=antarctic,arctic=arctic,level=level	, $
 		mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,ctable=ctable	, $
 		other=other,robinson=robinson,nobar=nobar, stereographic = stereographic, dim3=dim3		, $
-		all_parameter = all_parameter, logarithmic=logarithmic,coverage=coverage,countries=countries,notitle=notitle
+		all_parameter = all_parameter, logarithmic=logarithmic,coverage=coverage,countries=countries,notitle=notitle,$
+		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	jetzt      = strjoin((unix2ymdhms(systime(1),/arr))[0:2],'_')
 	mtime1     = strjoin(unix2ymdhms((file_info(file1)).mtime,/arr))
@@ -3435,7 +3460,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				p0lat = p0lat, Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, ztext = ztext	, $
 				sinusoidal = sinusoidal,robinson=robinson,zonal_only=zonal_only,nobar=nobar, stereographic = stereographic,$
 				msg=msg, logarithmic=logarithmic,white_bg=white_bg,oplots=oplots,rot=rot,magnify=magnify,countries=countries,$
-				symsize=symsize,notitle=notitle
+				symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	sat = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
 	ref = keyword_set(reference) ? strlowcase(reference) : 'gac'
@@ -3580,12 +3605,12 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	make_geo,lon,lat,grid = get_grid_res(bild1)
 
 	if ~zoo then begin
-		set_proj, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat				, $
+		set_proj, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,no_label=no_label				, $
 			Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, $
 			limit = limit, ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,$
 			stereographic=stereographic, no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,$
 			nobar=nobar,msg=msg, maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert, $
-			lonnames=lonnames,latnames=latnames,lons=lons,lats=lats
+			lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box
 
 		if keyword_set(diff) then begin
 			start_save, save_as, thick = thick, size = [32,20]
@@ -3601,7 +3626,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 					ortho = ortho,horizontal = horizontal, grid=grid,londel=londel,latdel=latdel, logarithmic=logarithmic	, $
 					noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
 					p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
-					lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+					lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 					mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson, $
 					stereographic=stereographic,label=label, $
 					limit = limit,format=bar_format,debug=verbose)
@@ -3634,7 +3659,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				ortho = ortho,horizontal = horizontal, grid=grid,londel=londel,latdel=latdel, logarithmic=logarithmic	, $
 				noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
 				p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
-				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 				mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,stereographic=stereographic, $
 				label=label, limit = limit,debug=verbose,format=bar_format)
 			obj_destroy,m
@@ -3652,7 +3677,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				ortho = ortho,horizontal = horizontal, grid=grid,londel=londel,latdel=latdel, logarithmic=logarithmic	, $
 				noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,lambert=lambert, $
 				p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine, panoply = panoply, $
-				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 				mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,stereographic=stereographic, $
 				label=label, limit = limit,debug=verbose,format=bar_format)
 			obj_destroy,m
@@ -3791,7 +3816,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			difference = difference, show_values = show_values, out = out, p0lon = p0lon, p0lat = p0lat, $
 			antarctic = antarctic, arctic = arctic, mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg,$
 			robinson=robinson, hammer = hammer, goode = goode, globe = globe, verbose = verbose,nobar=nobar, $
-			stereographic = stereographic, logarithmic=logarithmic,datum=datum,magnify=magnify,countries=countries,notitle=notitle
+			stereographic = stereographic, logarithmic=logarithmic,datum=datum,magnify=magnify,countries=countries,notitle=notitle,$
+			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	datum = keyword_set(datum) ? datum : stregex(file_basename(ccifile),'[0-9]+',/ext)
 	year  = strmid(datum,0,4)
@@ -4093,12 +4119,12 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	; free limit for plotting only, no harm, all the void_indices are set properly,already
 	if keyword_Set(antarctic) or keyword_Set(arctic) then free, limit
 
-	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat		, $
+	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,no_label=no_label		, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson			, $
 		  ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic	, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg	, $
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert, $
-  		  lonnames=lonnames,latnames=latnames,lons=lons,lats=lats
+  		  lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box
 
 	if hct eq 'max' then begin
 		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_max_type.eps'
@@ -4110,7 +4136,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizontal=horizontal, $
-				format=bar_format,  $
+				format=bar_format,no_continents=no_continents,no_grid=no_grid,  $
 				p0lon = p0lon, p0lat = p0lat,lambert=lambert	, no_color_bar=no_color_bar,$
 				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
@@ -4126,7 +4152,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,horizontal=horizontal, $
-				format=bar_format,  $
+				format=bar_format,no_continents=no_continents,no_grid=no_grid,  $
 				p0lon = p0lon, p0lat = p0lat,lambert=lambert	,no_color_bar=no_color_bar, $
 				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
@@ -4146,7 +4172,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 ; 					charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 					charthick = !m_charthick, charsize  = !m_charsize,$
 					title= keyword_set(bar_title) ? bar_title : 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
-					limit = limit,countries=countries,usa=countries, $
+					limit = limit,countries=countries,usa=countries,no_continents=no_continents,no_grid=no_grid, $
 					format=bar_format,  logarithmic=logarithmic,no_color_bar=no_color_bar, $
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
 					p0lon = p0lon, p0lat = p0lat,lambert=lambert,label=label,horizontal=horizontal, panoply = panoply	, $
@@ -4168,7 +4194,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow	, flip_colours = flip_colours,$
 					brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow ,label=label,horizontal=horizontal, $
 					p0lon = p0lon, p0lat = p0lat,lambert=lambert, panoply = panoply, $
-					lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+					lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 					mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 					globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 				obj_destroy,m
@@ -4205,7 +4231,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				bwr = (keyword_set(difference) ? bwr:1 ), elevation = elevation, extended_rainbow = extended_rainbow, flip_colours = flip_colours,$
 				brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow ,label=label,horizontal=horizontal, $
 				p0lon = p0lon, p0lat = p0lat,lambert=lambert, panoply = panoply	, $
-				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats, $
+				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 				globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin

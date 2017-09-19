@@ -414,21 +414,21 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	if alg eq 'esacciv3' or alg eq 'cciv3' then begin
 		if keyword_set(path) then begin ; the new L3u files are splitted!!!
-			dat = 'cld_products'
+			dumdat = 'cld_products'
 			;cloud mask
-			if stregex(dat,'cph_',/bool)    then dat = 'cld_masktype'
-			if stregex(dat,'cty_',/bool)    then dat = 'cld_masktype'
-			if stregex(dat,'cccot_',/bool)  then dat = 'cld_masktype'
-			if stregex(dat,'cmask_',/bool)  then dat = 'cld_masktype'
-			if stregex(dat,'cee_',/bool)    then dat = 'rad_product'
-			if stregex(dat,'cla_',/bool)    then dat = 'rad_product'
-			if stregex(dat,'boa_',/bool)    then dat = 'rad_product'
-			if stregex(dat,'toa_',/bool)    then dat = 'rad_product'
-			if stregex(dat,'illum_',/bool)  then dat = 'cld_angles'
-			if stregex(dat,'satzen_',/bool) then dat = 'cld_angles'
-			if stregex(dat,'solzen_',/bool) then dat = 'cld_angles'
-			if stregex(dat,'relazi_',/bool) then dat = 'cld_angles'
-			return, keyword_set(upper_case) ? strupcase(dat) : strlowcase(dat)
+			if stregex(dat,'cph_',/bool)    then dumdat = 'cld_masktype'
+			if stregex(dat,'cty_',/bool)    then dumdat = 'cld_masktype'
+			if stregex(dat,'cccot_',/bool)  then dumdat = 'cld_masktype'
+			if stregex(dat,'cmask_',/bool)  then dumdat = 'cld_masktype'
+			if stregex(dat,'cee_',/bool)    then dumdat = 'rad_product'
+			if stregex(dat,'cla_',/bool)    then dumdat = 'rad_product'
+			if stregex(dat,'boa_',/bool)    then dumdat = 'rad_product'
+			if stregex(dat,'toa_',/bool)    then dumdat = 'rad_product'
+			if stregex(dat,'illum_',/bool)  then dumdat = 'cld_angles'
+			if stregex(dat,'satzen_',/bool) then dumdat = 'cld_angles'
+			if stregex(dat,'solzen_',/bool) then dumdat = 'cld_angles'
+			if stregex(dat,'relazi_',/bool) then dumdat = 'cld_angles'
+			return, keyword_set(upper_case) ? strupcase(dumdat) : strlowcase(dumdat)
 		endif else begin
 			case dat of
 				; Martins Calipso Jahresmittel
@@ -2568,7 +2568,7 @@ end
 ; sets predefined projections to use with map_image__define
 pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar, 	$ ; input 
 		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, 		$ ; input 
-		lambert = lambert, enhanced_robinson = enhanced_robinson, 																$ ; input 
+		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,								$ ; input 
 		ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
 		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify		, 						$
 		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
@@ -2598,7 +2598,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if keyword_set(arctic)    then p0lat =  90
 		p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 		p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
-		if keyword_set(antarctic) or keyword_set(arctic) then begin
+		if keyword_set(antarctic) or keyword_set(arctic) or keyword_set(globe) then begin
 			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
 
@@ -2710,6 +2710,13 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if nobar eq 1 then no_color_bar = 1 ; no color bar
 		if nobar eq 2 then begin & no_color_bar = 0 & horizontal = 1 & end ; force horizontal colorbar
 		if nobar eq 3 then begin & no_color_bar = 0 & horizontal = 0 & end ; force vertical colorbar
+	endif
+
+	if keyword_set(no_label) then label = 0
+	if keyword_set(no_box)   then begin
+		box_axes = 0
+		noborder=1
+ 		no_draw_border=1
 	endif
 
 	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'
@@ -4322,14 +4329,16 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 							endif
-							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/'+strupcase(lev)+'/';+yyyy+'/'+mm+'/'
+							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/'+strupcase(lev)+$
+							(lev eq 'l3u' ? 'x':'')+ $ ;temporär!!!!!!
+							'/'+yyyy+'/'+mm+'/'
 							if lev eq 'l2' then begin
 								sat = strjoin(strsplit(sat,/ext,'-'))
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 							endif else orbdum = ''
 							vers  = keyword_set(version) ? strlowcase(version[0]) : 'v3.0'
-							pathdat = lev eq 'l3u' ? get_product_name(dat,algo=alg,level=lev,/path) : ''
+							pathdat = lev eq 'l3u' ? get_product_name(dat,algo=alg,level=lev,/path,/upper) : ''
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*'+pathdat+'-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
 						end
 					'ESACCI': begin
