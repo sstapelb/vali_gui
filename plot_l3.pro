@@ -196,7 +196,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 	apx      = ''
 
 	if ts then begin
-		period       = '1978-2016'
+		period       = !DEFAULT_TS_PERIOD
 		corr_arr     = fltarr(ncov) -999.
 		bias_arr     = fltarr(ncov) -999.
 		pbias_arr    = fltarr(ncov) -999.
@@ -500,7 +500,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	if keyword_set(save_dir) then !p.multi = 0
 
 	if is_h1d(dat[0]) and ts then begin
-		datum  = '1978-2016'
+		datum  = !DEFAULT_TS_PERIOD
 		struc1 = get_histo_time_series(algo1, dat, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found, compare=algo1)
 		if not found then begin
 			ok = dialog_message('compare_cci: sav_file1 not found! '+sav_file)
@@ -1102,7 +1102,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			nobar=nobar,cov = cov,wtext = wtext,ztext = ztext,msg_proj=msg_proj	, $
 			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum, $
 			obj_out=obj_out,addtext=addtext,countries=countries,notitle=notitle, $
-			shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+			shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version=version
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -1148,7 +1148,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	; ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
 
-	algon = sat_name(algo,sat, year=(ts ? 0 :year), month=(ts ? 0:month),level=level)
+	algon = sat_name(algo,sat, year=(ts ? 0 :year), month=(ts ? 0:month),level=level,version=version)
 	if stregex(dat,'usgs_',/fold,/bool) then begin
 		algon = 'USGS'
 		datum = ''
@@ -1171,7 +1171,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	if ts then begin
 		if histo1d or histo2d then begin
-			datum = '1978-2016'
+			datum = !DEFAULT_TS_PERIOD
 			struc = get_histo_time_series(algo, dat, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found)
 			if not found then begin
 				ok = dialog_message('plot_l2: sav_file not found! '+sav_file)
@@ -1184,12 +1184,12 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			datum = struc.actual_date
 			free,struc
 		endif else begin
-			datum = '1978-2016'
+			datum = !DEFAULT_TS_PERIOD
 			d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = datum, $
 							sav_file = sfile, longname = longname, unit = unit, found = found, $
 							trend = trend, tr_corr = tr_corr, anomalies = anomalies, uncertainty = uncertainty, $
 							stddev = stddev, no_trend_found = no_trend_found, pvir=pvir, season=season)
-			algon = sat_name(algo,sat)
+			algon = sat_name(algo,sat,version=version)
 
 			if not found then begin
 				trace = SCOPE_TRACEBACK( )
@@ -1976,7 +1976,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		box_only = box_only, coverage = coverage, nobar = nobar, ztext = ztext	, $
 		msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3	, $
 		addtext=addtext,rot=rot,magnify=magnify,wtext=wtext,countries=countries,notitle=notitle,$
-		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
+		version1=version1,version2=version2
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -1984,8 +1985,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	ts        = keyword_set(timeseries)
 	dat1      = get_product_name(data1,algo=algo1)
 	dat2      = keyword_set(data2) ? get_product_name(data2,algo=algo2) : get_product_name(data1,algo=algo2)
-	satn1     = sat_name(algo1,sat1, year=(ts ? 0:year), month=(ts ? 0:month),level=level)
-	satn2     = sat_name(algo2,sat2, year=(ts ? 0:year), month=(ts ? 0:month),level=level)
+	satn1     = sat_name(algo1,sat1, year=(ts ? 0:year), month=(ts ? 0:month),level=level,version=version1)
+	satn2     = sat_name(algo2,sat2, year=(ts ? 0:year), month=(ts ? 0:month),level=level,version=version2)
 	if adv_keyword_set(mini) then mini = strsplit(mini,',',/ext)
 	if adv_keyword_set(maxi) then maxi = strsplit(maxi,',',/ext)
 	histo1d  = is_h1d(dat1) or is_h1d(dat2)
@@ -2048,7 +2049,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 	if ts then begin
 		if dat1 ne dat2 then begin
-			d  = get_available_time_series( algo1, dat1, sat1, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found, $
+			d  = get_available_time_series( algo1, dat1, sat1, coverage = coverage, period = !DEFAULT_TS_PERIOD, sav_file = sav_file, found = found, $
 							trend = trend, tr_corr = tr_corr, anomalies = anomalies, uncertainty = uncertainty, $
 							stddev = stddev, no_trend_found = no_trend_found)
 			if ~found then begin
@@ -2058,7 +2059,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			bild1  = d.mean
 			unit1  = d.unit
 			datum1 = d.actual_date
-			d2 = get_available_time_series( algo2, dat2, sat2, coverage = coverage, period = '1978-2016', sav_file = sav_file, found = found2, $
+			d2 = get_available_time_series( algo2, dat2, sat2, coverage = coverage, period = !DEFAULT_TS_PERIOD, sav_file = sav_file, found = found2, $
 							trend = trend, tr_corr = tr_corr, anomalies = anomalies, uncertainty = uncertainty, $
 							stddev = stddev, no_trend_found = no_trend_found)
 			if ~found2 then begin
@@ -2069,7 +2070,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			unit2  = d2.unit
 			datum2 = d2.actual_date
 		endif else begin
-			d = get_available_time_series( 	algo1, dat1, sat1, coverage = coverage, reference = algo2, period = '1978-2016', sav_file = sav_file, $
+			d = get_available_time_series( 	algo1, dat1, sat1, coverage = coverage, reference = algo2, period = !DEFAULT_TS_PERIOD, sav_file = sav_file, $
 							trend = trend, tr_corr = tr_corr, anomalies = anomalies, uncertainty = uncertainty, found = found, $
 							stddev = stddev, no_trend_found = no_trend_found)
 			if not found then begin
@@ -2834,13 +2835,13 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 		mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,ctable=ctable	, $
 		other=other,robinson=robinson,nobar=nobar, stereographic = stereographic, dim3=dim3		, $
 		all_parameter = all_parameter, logarithmic=logarithmic,coverage=coverage,countries=countries,notitle=notitle,$
-		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version=version
 
 	jetzt      = strjoin((unix2ymdhms(systime(1),/arr))[0:2],'_')
 	mtime1     = strjoin(unix2ymdhms((file_info(file1)).mtime,/arr))
 	mtime2     = strjoin(unix2ymdhms((file_info(file2)).mtime,/arr))
-	satn1      = sat_name(algo1,sat1)
-	satn2      = sat_name(algo2,sat2)
+	satn1      = sat_name(algo1,sat1,version=version)
+	satn2      = sat_name(algo2,sat2,version=version)
 	datum      = keyword_set(datum1) ? datum1 : (keyword_set(datum2) ? datum2 : 'YYYYMM')
 	lev        = keyword_set(level) ? datum+'_'+strupcase(level)+'_' : datum+'_'
 	dir        = '/cmsaf/cmsaf-cld1/sstapelb/bilder/feedbackloop/loop2/'
@@ -2877,7 +2878,7 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 		if is_jch(dat) then begin
 			sat3  = sat1 eq 'aatme' or sat1 eq 'aatsr' ? 'noaa17' : sat1
 			algo3 = stregex(sat3,'noaa',/fold,/bool) ? 'clara':'coll5'  
-			satn3 = sat_name(algo3,sat3)
+			satn3 = sat_name(algo3,sat3,version=version)
 			file3 = get_filename(strmid(datum,0,4),strmid(datum,4,2),strmid(datum,6,2),algo=algo3,data=dat,level=level,sat=sat3)
 			f1str  = 'File1: '
 			f2str  = 'File2: '
@@ -3460,7 +3461,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				p0lat = p0lat, Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, ztext = ztext	, $
 				sinusoidal = sinusoidal,robinson=robinson,zonal_only=zonal_only,nobar=nobar, stereographic = stereographic,$
 				msg=msg, logarithmic=logarithmic,white_bg=white_bg,oplots=oplots,rot=rot,magnify=magnify,countries=countries,$
-				symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version=version
 
 	sat = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
 	ref = keyword_set(reference) ? strlowcase(reference) : 'gac'
@@ -3469,7 +3470,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	if stregex(sat,'noaa',/bool,/fold) then sat = strlowcase(strjoin(strsplit(sat,/ext,'-')))
 	if keyword_set(land) then coverage = 'land'
 	if keyword_set(sea) then coverage = 'sea'
-	datum = '1978-2016' ; start dummy
+	datum = !DEFAULT_TS_PERIOD ; start dummy
 	no_trends_etc = 0
 	!p.multi=0
 
@@ -3479,8 +3480,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	zoo     = keyword_set(zonal_only)
 	wbg     = keyword_set(white_bg)
 
-	algon1 = sat_name(alg,sat)
-	algon2 = sat_name(ref,sat)
+	algon1 = sat_name(alg,sat,version=version)
+	algon2 = sat_name(ref,sat,version=version)
 
 	set_colors, rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, $
 			panoply = panoply
@@ -3838,8 +3839,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		return
 	endif
 
-	algon1 = sat_name(algo1,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
-	algon2 = sat_name(algo2,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
+	algon1 = sat_name(algo1,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c',version=version)
+	algon2 = sat_name(algo2,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c',version=version)
 
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
 
@@ -3848,7 +3849,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	sav = keyword_set(save_as)
 
 	if ts then begin
-		datum = '1978-2016'
+		datum = !DEFAULT_TS_PERIOD
 		struc = get_histo_time_series(algo1, data, sat, period = datum, longname = longname, unit = unit, sav_file = sav_file, found = found, compare=algo2)
 		if not found then begin
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: No time_series "sav" file found for '+algon1)
@@ -4359,9 +4360,9 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 	endcase
 
 	algo1   = algo2ref(algo,sat=sat1)
-	algon1  = sat_name(algo,sat1,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
+	algon1  = sat_name(algo,sat1,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c',version=version)
 	algo2   = ref
-	algon2  = sat_name(ref,sat2,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c')
+	algon2  = sat_name(ref,sat2,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c',version=version)
 	dummy   = fltarr(360,180) -999.
 
 	if ts then begin
@@ -4487,7 +4488,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 
 ; 	vali_set_path
 	opl   = keyword_set(oplots)
-	datum = '1978-2016'
+	datum = !DEFAULT_TS_PERIOD
 	dat   = strlowcase(data[0])
 	if keyword_set(antarctic) then limit = [-90.,-180.,-60.,180.] 
 	if keyword_set(arctic)    then limit = [ 60.,-180., 90.,180.] 
@@ -4499,9 +4500,9 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	endif
 	algo  = keyword_set(algo) ? strlowcase(algo) : 'esacci'
 	sat   = keyword_set(satellite) ? strlowcase(strjoin(strsplit(satellite,'-',/ext))) : 'noaa18'
-	algon = sat_name(algo,opl eq 0 ? sat:'')
+	algon = sat_name(algo,opl eq 0 ? sat:'',version=version)
 	ref   = keyword_set(reference) ? algo2ref(reference) : '' ; must be of type 'gac','myd','mod',etc
-	if keyword_set(ref) then ref_name = sat_name(ref,opl eq 0 ? sat:'')
+	if keyword_set(ref) then ref_name = sat_name(ref,opl eq 0 ? sat:'',version=version)
 	no_data_val = -999.
 
 	struc_idx = 0
@@ -4736,7 +4737,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 			ok = dialog_message('Limit not possible choose pre defined areas!')
 			return
 		endif
-		datum = '1978-2016' ; use this as first guess
+		datum = !DEFAULT_TS_PERIOD ; use this as first guess
 
 		if ~strmatch(varn[0],varn[1]) then begin
 			d = get_available_time_series( 	alg, varn[0], sat, coverage = coverage, period = datum, $
@@ -4924,7 +4925,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 ; 	datum = string(year[0],f='(i4.4)')+string(month[0],f='(i2.2)')
 
 	if ts then begin
-		date = '1978-2016' ; use this as first guess
+		date = !DEFAULT_TS_PERIOD ; use this as first guess
 		d = get_available_time_series( 	algo, varname, satellite, coverage = coverage, reference = reference, period = date, sav_file = sav_file,$
 						found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, $
 						no_trend_found = no_trend_found, pvir=pvir)
@@ -5047,7 +5048,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 			ok = dialog_message('Found more than 2 variable names. Stop')
 			return
 		endif
-		d = get_available_time_series( 	algo, dat[0], sat, coverage = cov, period = '1978-2016', $
+		d = get_available_time_series( 	algo, dat[0], sat, coverage = cov, period = !DEFAULT_TS_PERIOD, $
 						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
 						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found)
 		if not found then begin
@@ -5070,7 +5071,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 			print,'No Trend corrected Time series available! For CCI, Clara and Patmos only NOAA-AM,NOAA-PM satellites have trends!'
 		endif
 		dtn = appendix(dat[0],trend_corrected=tr_corr)
-		d1  = get_available_time_series( keyword_set(reference) ? reference :algo, dat[1], sat, coverage = cov, period = '1978-2016', $
+		d1  = get_available_time_series( keyword_set(reference) ? reference :algo, dat[1], sat, coverage = cov, period = !DEFAULT_TS_PERIOD, $
 						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
 						anomalies = anomalies, sum=sum1,no_trend_found = no_trend_found)
 		if not found then begin
@@ -5103,7 +5104,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 		dtn     = strjoin(dtn,' -')
 		free_reference = 1
 	endif else begin
-		d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = '1978-2016', $
+		d = get_available_time_series( 	algo, dat, sat, coverage = cov, reference = reference, period = !DEFAULT_TS_PERIOD, $
 						sav_file = sav_file, found = found, stddev = stddev, trend = trend, tr_corr = tr_corr, $
 						anomalies = anomalies, sum=sum,no_trend_found = no_trend_found, diff = diff)
 		if not found then begin
@@ -5329,7 +5330,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 	endif else if win_nr ne -1 then win, win_nr, size=700,ysize=1200
 
 	if ts then begin
-		datum = '1978-2016'
+		datum = !DEFAULT_TS_PERIOD
 		if ~strmatch(dat[0],dat[1]) then begin
 			d = get_available_time_series( 	algo, dat[0], sat, coverage = cov, period = datum, found = found, $
 							stddev = stddev, trend = trend, tr_corr = tr_corr, anomalies = anomalies, $
@@ -5628,11 +5629,11 @@ end
 pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,coverage,period=period
 
 	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
+	vali_set_defaults
 
-	if keyword_set(period) then begin
-		yspl   = fix(strsplit(period,'-',/ext))
-		years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
-	endif else years  = string(indgen(39)+1978,f='(i4.4)')
+	per    = keyword_set(period) ? period : !default_ts_period
+	yspl   = fix(strsplit(per,'-',/ext))
+	years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
 	months = string(indgen(12)+1,f='(i2.2)')
 
 	cov    = strlowcase(coverage)
@@ -6213,11 +6214,11 @@ pro create_time_series,data,algon,coverage,period=period
 	starttime = systime(1)
 
 	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
+	vali_set_defaults
 
-	if keyword_set(period) then begin
-		yspl   = fix(strsplit(period,'-',/ext))
-		years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
-	endif else years  = string(indgen(39)+1978,f='(i4.4)')
+	per    = keyword_set(period) ? period : !default_ts_period
+	yspl   = fix(strsplit(per,'-',/ext))
+	years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
 	months = string(indgen(12)+1,f='(i2.2)')
 
 	cov    = strlowcase(coverage)
@@ -6581,7 +6582,8 @@ pro do_create_all_single_time_series
 
 	starttime = systime(1)
 	mem_cur   = memory(/current)
-; 	period    = ['2003-2011']
+; 	period    = ['2003-2011'] ; pvir
+
 ; 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
 ; 		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
 ; 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
@@ -6656,6 +6658,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci, compare_to_cciv3 = compare_to_cciv3
 
+; 	period      = '2003-2011' ; pvir
+
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
@@ -6677,10 +6681,13 @@ pro do_hist_cloud_type_time_series, compare_to_cci = compare_to_cci, compare_to_
 	; combine all you need
 	algon_list = 'era2-'
 
-	years      = string(indgen(39)+1978,f='(i4.4)')
-	months     = string(indgen(12)+1,f='(i2.2)')
-; 	plot_l3
-	datestr = years[0]+'-'+(reverse(years))[0]
+	;read default variable
+	vali_set_defaults
+	per     = keyword_set(period) ? period : !default_ts_period
+	yspl    = fix(strsplit(per,'-',/ext))
+	years   = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
+	months  = string(indgen(12)+1,f='(i2.2)')
+	datestr = per
 
 	for k = 0,n_elements(algon_list) -1 do begin
 		dum = strsplit(algon_list[k],'-',/ext)
@@ -6764,6 +6771,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 
+; 	period      = '2003-2011' ; pvir
+
 	avh_list = ['noaa7','noaa9','noaa11','noaa12','noaa14','noaa15','noaa16','noaa17','noaa18','noaa19','metopa','metopb','noaaam','noaapm']
 	; cci
 	cci_list = ['cci-'+avh_list,'cci-aqua','cci-terra','cci-aatsr','cci-aatme','cci-avhrrs','cci-modises','cci-allsat']
@@ -6782,11 +6791,12 @@ pro do_1d_hist_time_series, compare_to_cci = compare_to_cci
 
 	algon_list = 'isp-noaapm'
 
-; 	years      = string(indgen(39)+1978,f='(i4.4)')
-	years      = string(indgen(9)+2003,f='(i4.4)')
-	months     = string(indgen(12)+1,f='(i2.2)')
-; 	plot_l3
-	datestr = years[0]+'-'+(reverse(years))[0]
+	vali_set_defaults
+	per    = keyword_set(period) ? period : !default_ts_period
+	yspl   = fix(strsplit(per,'-',/ext))
+	years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
+	months  = string(indgen(12)+1,f='(i2.2)')
+	datestr = per
 
 	for k = 0,n_elements(algon_list) -1 do begin
 		dum = strsplit(algon_list[k],'-',/ext)
@@ -6888,12 +6898,15 @@ pro do_create_hovmoeller
 	; combine all you need
 	algon_list = ['gac2-noaapm','gac2-noaaam']
 
-	years      = string(indgen(39)+1978,f='(i4.4)')
-	months     = string(indgen(12)+1   ,f='(i2.2)')
-	datestr    = years[0]+'-'+(reverse(years))[0]
-	nyears     = n_elements(years)
-	nmonths    = n_elements(months)
-	lat_res    = 1.
+	vali_set_defaults
+	per         = keyword_set(period) ? period : !default_ts_period
+	yspl        = fix(strsplit(per,'-',/ext))
+	years       = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
+	months      = string(indgen(12)+1   ,f='(i2.2)')
+	datestr     = per
+	nyears      = n_elements(years)
+	nmonths     = n_elements(months)
+	lat_res     = 1.
 	dum_bin_val = -1
 	dum_border  = -1
 	for k = 0,n_elements(algon_list) -1 do begin

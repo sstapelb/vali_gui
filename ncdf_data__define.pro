@@ -2076,11 +2076,11 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		if stregex(tcd,'GEWEX',/bool,/fold) then begin
 			if where(tag_names(theglobattr) eq 'CLIMATOLOGY') ge 0 then begin
 				tcd = (theglobattr).climatology
-				if stregex(tcd,'CLARA-A2',/fold,/bool) then algoname = 'GAC2-GEWEX'
-				if stregex(tcd,'CLARA_A2',/fold,/bool) then algoname = 'GAC2-GEWEX'
-				if stregex(tcd,'PATMOSX',/bool,/fold)  then algoname = 'PATMOS'
-				if stregex(tcd,'ESACCI',/bool,/fold)  then algoname = 'GEWEX'
-				if stregex(tcd,'CLOUD_CCI',/bool,/fold)  then algoname = 'GEWEX'
+				if stregex(tcd,'CLARA-A2',/fold,/bool)  then algoname = 'GAC2-GEWEX'
+				if stregex(tcd,'CLARA_A2',/fold,/bool)  then algoname = 'GAC2-GEWEX'
+				if stregex(tcd,'PATMOSX',/bool,/fold)   then algoname = 'PATMOS'
+				if stregex(tcd,'ESACCI',/bool,/fold)    then algoname = 'GEWEX'
+				if stregex(tcd,'CLOUD_CCI',/bool,/fold) then algoname = 'GEWEX'
 			endif else algoname = 'GEWEX'
 			year     = (reverse(strsplit((file_basename(filen,is_compressed(file) ? 'nc.gz':'.nc')),'_',/ext)))[0]
 			month    = '01'
@@ -2312,22 +2312,25 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	endif
 
 	; für den Übergang 
-	if strupcase(algoname) eq 'ESACCI' and version eq 'fv1.0' then algoname = 'ESACCI_OLD'
-	; 
+	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V1.?',/bool) then algoname = 'ESACCI_OLD'
+	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V2.?',/bool) then algoname = 'ESACCI'
+	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V3.?',/bool) then algoname = 'ESACCIV3'
+
 	case strlowcase(algoname) of 
-		'coll5'	: reference = (satname[0] eq 'terra' ? 'mod' : 'myd')
-		'coll6'	: reference = (satname[0] eq 'terra' ? 'mod2' : 'myd2')
-		'era-i'	: reference = 'era'
-		'clara'	: reference = 'gac'
-		'clara2': reference = 'gac2'
-		'gewex'	: reference = 'gwx'
-		'gac2-gewex': reference = 'g2_gwx'
-		'esacci': reference = 'cci'
-		'patmos': reference = 'pmx'
-		'claas'	: reference = 'cla'
-		'l1gac'	: reference = 'l1gac'
-		'hector': reference = 'hec'
-		'esacci_old' : reference = 'cci_old'
+		'coll5'			: reference = (satname[0] eq 'terra' ? 'mod' : 'myd')
+		'coll6'			: reference = (satname[0] eq 'terra' ? 'mod2' : 'myd2')
+		'era-i'			: reference = 'era'
+		'clara'			: reference = 'gac'
+		'clara2'		: reference = 'gac2'
+		'gewex'			: reference = 'gwx'
+		'gac2-gewex'	: reference = 'g2_gwx'
+		'patmos'		: reference = 'pmx'
+		'claas'			: reference = 'cla'
+		'l1gac'			: reference = 'l1gac'
+		'hector'		: reference = 'hec'
+		'esacci_old'	: reference = 'cci_old'
+		'esacci'		: reference = 'cci'
+		'esacciv3'		: reference = 'cciv3'
 		else :
 	endcase
 
@@ -4154,8 +4157,9 @@ l1g = 0
 	if not keyword_set(mini) then free,mini
 
 end
-
-function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, varname, level = level, dirname = dirname, gewex_style=gewex_style, found = found
+;----------------------------------------------------------------------------------------------------------------------
+function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, version = version, varname, level = level,$
+									  dirname = dirname, gewex_style=gewex_style, found = found
 
 	scol = total(Widget_Info([self.avhrrs,self.modises,self.allsat],/button_set))
 	if strlowcase(self.leveltype) eq 'l3s' and ~scol then begin
@@ -4601,6 +4605,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			algo     = self.algoname
 			level    = self.level
 			datum1   = self.datum
+			version1 = self.version
 			names    = strsplit(varname,',',/ext)
 			if n_elements(names) gt 1 then begin
 				varname  = names[0]
@@ -4640,6 +4645,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					algo2  = ok.algoname
 					satn   = ok.satname
 					datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
+					version2 = ok.version
 				endelse
 			endif else begin
 				if modi   then begin & algo2 = 'coll5'      & satn = 'terra' & end
@@ -4784,7 +4790,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
 				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify	, $
 				wtext = self.showpvalID,countries=countries,notitle=notitle,no_continents=no_continents,$
-				no_grid=no_grid,no_label=no_label,no_box=no_box
+				no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
@@ -4859,6 +4865,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				day    = ok.day
 				orbit  = ok.orbit
 				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
+				version= ok.version
 				file   = self.file2
 				if algo eq 'ERA-I' then get_era_info, self.file2, algo = algo, /set_as_sysvar
 				found  = 1
@@ -4980,7 +4987,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],obj_out=obj_out,addtext = addtext[0],$
-				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
+				no_label=no_label,no_box=no_box,version=version
 
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,

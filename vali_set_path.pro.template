@@ -90,5 +90,6 @@ pro vali_set_defaults
 	DEFSYSV, '!era_i2_threshold','1.00'
 	DEFSYSV, '!era_i1_version'  ,'v2.0' 
 	DEFSYSV, '!era_i2_version'  ,'v2.0'
+	DEFSYSV, '!default_ts_period','1978-2018'
 
 end

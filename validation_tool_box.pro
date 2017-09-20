@@ -2367,9 +2367,9 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 	if total(satn eq ['atsrs']) then satn = 'ATSR2-AATSR'
 
 	case algo of
-		'cci'	: begin & algon = 'Cloud_cci' & version = 'v2.0' & end
-		'cci_old': begin & algon = 'Cloud_cci' & version = 'v1.0' & end
-		'cciv3' : begin & algon = 'Cloud_cci' & version = 'v3.0' & end
+		'cci'	: begin & algon = 'Cloud_cci'  & version = keyword_set(version) ? strlowcase(version) : 'v2.0' & end
+		'cci_old': begin & algon = 'Cloud_cci' & version = keyword_set(version) ? strlowcase(version) : 'v1.0' & end
+		'cciv3' : begin & algon = 'Cloud_cci'  & version = keyword_set(version) ? strlowcase(version) : 'v3.0' & end
 		'isp'	: return,'ISCCP'
 		'isp_old': return,'ISCCP_OLD'
 		'gac'	: algon = 'CLARA-A1'
@@ -2889,7 +2889,7 @@ function sat2global, dlon, lat, in_data , no_data_value = no_data_value, grid_re
 				if do_view then view[ix, iy] = nnn[ix, iy] gt 1 ? $
 				(xdata[ri[ri[i]: ri[i+1]-1]])[(where(abs(minv_idx-(ri[ri[i]: ri[i+1]-1] mod si[0])) eq $
 				min(abs(minv_idx-(ri[ri[i]: ri[i+1]-1] mod si[0])))))[0]] : xdata[ri[ri[i]]]
-		
+
 				rdm_idx         = round(randomu(seed,1) * (nnn[ix, iy] -1))
 				sam[ix, iy]     = nnn[ix, iy] gt 1 ? (xdata[ri[ri[i]: ri[i+1]-1]])[rdm_idx] : xdata[ri[ri[i]]]
 				med[ix, iy]     = nnn[ix, iy] gt 1 ? median(xdata[ri[ri[i]: ri[i+1]-1]])    : xdata[ri[ri[i]]]
