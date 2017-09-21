@@ -2658,42 +2658,10 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 			lonnames(where(lons eq  180)) = ' '
 			robinson = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & iso =1
 		endif
-	endif else if ksl then begin
-; 		box_axes = 1
-; 		if n_elements(limit) eq 4 then begin
-; 		
-; print,'p0lon,p0lat sollte nich überschrieben werden wenn es gesetzt wurde'
-; stop
-; 			; dateline ? 
-; 			dl = max(deriv(vector(float(limit[1]),(limit[3]),360.))) lt 0 
-; 			p0lon = round((limit[3]+limit[1])/2. )
-; 			if dl then begin
-; 				p0lon = p0lon -180
-; 				print,'Crossing dateline: set p0lon to ',p0lon
-; 			endif
-; 			; workaround strange effect bei map_image
-; 			; bei midlat North wurde p0lat auf 44.5 gesetzt (limit = [ 23.5,-180, 65.5,180])
-; 			; map_set meldet % MAP_SET_LIMITS: Warning, MAP limits are invalid
-; ; 			if ~(total(limit) eq 89.) then p0lat = (limit[2]+limit[0])/2.
-; 		endif else begin
-; 			free, p0lon
-; 			free, p0lat
-; 		endelse
-	endif else if keyword_set(p0lon) and ~keyword_set(lat) and ~ksl then begin
+	endif else if keyword_set(p0lon) and ~keyword_set(p0lat) and ~ksl then begin
 		limit = [-90,((p0lon mod 360) -180),90,((p0lon mod 360) +180)]
-	endif else if keyword_set(p0lat) and ~ksl then begin
-		p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat : 0 ) <  90
-		p0lon = (-360) > ( keyword_set(p0lon) ? p0lon : 0 ) < 360
-		limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
-					[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
-		ortho   = 1
-		iso     = 1
-		if ~adv_keyword_set(magnify) then magnify = 1
-		box_axes = 0
-		grid    = 1
-		londel  = 15
-		latdel  = 15
- 		label   = 2
+	endif else if keyword_set(fix(p0lat)) and ksl then begin
+		if total(limit eq [-90,-180,90,180]) eq 4. then free ,limit ; let map_image do the calculation
 	endif
 
 	if adv_keyword_set(maxvalue) then begin

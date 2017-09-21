@@ -372,6 +372,10 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		print,"Tell me what data to compare, e.g. ['cfc','cot','cph','iwp','lwp','ctp','ctt','cth']"
 		return
 	endif
+
+	if keyword_set(shape_file) then begin
+		use_shape_file = file_test(shape_file)
+	endif else use_shape_file = 0
 	ts         = keyword_set(timeseries)
 	limit_test = keyword_set(limit)
 	if limit_test then limit_bck = limit
@@ -758,7 +762,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		   maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert,$
 		   lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box
 
-	if file_test(shape_file) then begin
+	if use_shape_file then begin
 		found = 1
 		if get_grid_res(bild_cci) eq 0 then begin
 			print,'Found a non regular grid file -> Not possible at the moment!'
@@ -799,7 +803,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						stereographic=stereographic,label=label	,no_continents=no_continents,no_grid=no_grid, $
 						bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow,magnify=magnify		, $
 						brewer = brewer, greyscale = greyscale,flip_colours = flip_colours,ctable=ctable,debug=verbose)
-			if file_test(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
+			if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
 			obj_destroy, m
 		end_save, save_as1
 	endif
@@ -868,7 +872,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 				if win_nr ne -1 then win, win_nr
 				if ~keyword_set(difference) then !p.multi = [2,2,2]
 			endif
-		if file_test(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
+		if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
 		if ~rotate_globe then begin
 			obj_destroy, m
 			end_save, save_as2
@@ -1102,7 +1106,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			nobar=nobar,cov = cov,wtext = wtext,ztext = ztext,msg_proj=msg_proj	, $
 			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum, $
 			obj_out=obj_out,addtext=addtext,countries=countries,notitle=notitle, $
-			shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version=version
+			shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
+			no_label=no_label,no_box=no_box,version=version
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -1110,6 +1115,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	if keyword_set(save_as) then !p.multi= 0
 	ts = keyword_set(timeseries)
 	opl  = keyword_set(oplots) ? fix(oplots) : 0
+	if keyword_set(shape_file) then begin
+		use_shape_file = file_test(shape_file)
+	endif else use_shape_file = 0
 	; ---defaults-------------------------------------------------------------------------
 	limit_test = keyword_set(limit)
 	if limit_test then limit_bck = limit
@@ -1733,7 +1741,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
 			~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and total(!p.multi) le 2
 
-	if file_test(shape_file) then begin
+	if use_shape_file then begin
 		found = 1
 		if get_grid_res(bild) eq 0 then begin
 			print,'Found a non regular grid file -> Not possible at the moment!'
@@ -1778,7 +1786,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext, figure_title = figure_title,discrete=discrete,void_index=void_index
 			endif
 		if opl eq 0 then begin
-			if file_test(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
+			if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
 			if ~rotate_globe then begin
 				obj_destroy, m
 				end_save, save_dum
@@ -1887,7 +1895,7 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 
 	pug  = 0
 	pvir = 1
-	
+
 	if pug then begin
 		if level eq 'l3c' then begin
 			varnames = ['cfc','cph','cot','cer','ctp','lwp','iwp','cla_vis006','hist2d_cot_ctp','hist2d_cot_ctp']
@@ -1945,17 +1953,18 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 		endelse
 
 		plot_l2, year, month, day ,sat = sat, data = varnames[dd], mini = minv[dd], maxi = maxv[dd]	, $
-			limit=limit, save_as=save_as, logarithmic=logarithmic, land = land, sea = sea		, $
-			iso = iso, file = file, magnify=magnify, verbose = verbose, win_nr =-1			, $
-			hist_cloud_type = hct[dd], hist_phase=hist_phase, algoname = algoname			, $ 
-			show_values = show_values, level = level, orbit = orbit, timeseries = timeseries	, $
-			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic			, $
-			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal				, $
-			hammer = hammer, goode = goode, robinson = robinson, stereographic = stereographic 	, $
-			ctable = ctable, other = other, prefix=prefix			, $
-			nobar=nobar,cov = cov,wtext = wtext,ztext = ztext,msg_proj=msg_proj			, $
-			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum		, $
-			obj_out=obj_out,addtext=addtext,countries=countries,notitle=notitle
+			limit=limit, save_as=save_as, logarithmic=logarithmic, land = land, sea = sea			, $
+			iso = iso, file = file, magnify=magnify, verbose = verbose, win_nr =-1					, $
+			hist_cloud_type = hct[dd], hist_phase=hist_phase, algoname = algoname					, $ 
+			show_values = show_values, level = level, orbit = orbit, timeseries = timeseries		, $
+			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic					, $
+			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal							, $
+			hammer = hammer, goode = goode, robinson = robinson, stereographic = stereographic 		, $
+			ctable = ctable, other = other, prefix=prefix											, $
+			nobar=nobar,cov = cov,wtext = wtext,ztext = ztext,msg_proj=msg_proj						, $
+			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum				, $
+			obj_out=obj_out,addtext=addtext,countries=countries,notitle=notitle						, $
+			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
 	endfor
 
@@ -3068,11 +3077,11 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anomalies=anomalies	, $
 		 log=log,save_as=save_as,error=error,show_values = show_values			, $
-		 no_compare=no_compare,nobar=nobar,opl=opl,coverage=coverage			, $
+		 no_compare=no_compare,opl=opl,coverage=coverage			, $
 		 longname=longname,hct=hct,white_bg=white_bg,standard=standard,datum=datum	, $
 		 trend=trend,symsize=symsize,notitle=notitle,tr_corr=tr_corr, stddev = stddev	, $
 		 uncertainty = uncertainty,satnames = satnames, sum=sum, dtn=dtn		, $
-		 satn_background = satn_background
+		 satn_background = satn_background,smoothTS = smoothTS
 
 	;specials
 	pinatubo  = 0
@@ -3110,7 +3119,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	dec3 = ''
 
 	sn_cov = short_cov_name(coverage)
-	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(nobar) then dtn += ' ('+ sn_cov+')'
+	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(smoothTS) then dtn += ' ('+ sn_cov+')'
 
 	if sav then begin
 		charthick = !p_charthick ;1.5
@@ -3219,7 +3228,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				if keyword_set(coverage) then begin
 					legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize, charthick=charthick, numsym=1
 				endif
-				if keyword_set(nobar) then begin
+				if keyword_set(smoothTS) then begin
 					oplot,ts_data[tsi.gm1,*],thick=2,col=cgColor(!compare_col1)
 					sm_data = smooth(reform(ts_data[tsi.gm1,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[tsi.gm1,*]),sm_cnt)
@@ -3243,7 +3252,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 			endif
 
 			if qu ne 0 then begin
-				if keyword_set(nobar) then begin
+				if keyword_set(smoothTS) then begin
 					if yrange[0] gt yrange[1] then begin
 						oplot,yrange[0] - ts_data[tsi.bcr,*],col=cgColor("Slate Gray"), thick=2 
 						sm_data = smooth(reform(yrange[0] - ts_data[tsi.bcr,*]),8,/nan,/edge_truncate)
@@ -3287,7 +3296,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries
 				polyfill_ts_error,ts_data[tsi.gm1,*],ts_data[tsi.unc1,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
 				polyfill_ts_error,ts_data[tsi.gm2,*],ts_data[tsi.unc2,*],error=error,color=cgcolor('blue'),fill=fill,bars=bars
-				if keyword_set(nobar) then begin
+				if keyword_set(smoothTS) then begin
 					oplot,ts_data[tsi.gm1,*],thick=2,col=cgcolor(cols)
 					sm_data = smooth(reform(ts_data[tsi.gm1,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[tsi.gm1,*]),sm_cnt)
@@ -3405,7 +3414,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					endif
 					ts_data[nc,dumidx] = !values.f_nan
 				endif
-				if keyword_set(nobar) then begin
+				if keyword_set(smoothTS) then begin
 					oplot,ts_data[nc,*],thick=2
 					sm_data = smooth(reform(ts_data[nc,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[nc,*]),sm_cnt)
@@ -3415,7 +3424,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick, numsym=1
 					endif
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,symsize=syms
-				if ~keyword_set(show_values) and ~keyword_set(nobar) then $
+				if ~keyword_set(show_values) and ~keyword_set(smoothTS) then $
 				legend,algon1+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos='top',charsize=lcharsize,charthick=charthick
 			endif else begin
 				pf_ycr = keyword_set(log) ? 10.^(!y.crange) : (!y.crange)
@@ -3430,7 +3439,7 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 				endif
 				define_oplots, opl, cols, spos, linestyle, psymm, ystretch,/timeseries, color = color
 				polyfill_ts_error,ts_data[nc,*],ts_data[nc_unc,*],error=error,color=cgColor("Gray"),fill=fill,bars=bars
-				if keyword_set(nobar) then begin
+				if keyword_set(smoothTS) then begin
 					oplot,ts_data[nc,*],col=cgcolor(cols),linestyle=linestyle,thick=2
 					sm_data = smooth(reform(ts_data[nc,*]),8,/nan,/edge_truncate)
 					sm_idx = where(~finite(ts_data[nc,*]),sm_cnt)
@@ -5034,7 +5043,7 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 			    sav_file = sav_file, verbose=verbose, oplots=oplots, found=found,$
 			    addtext = addtext,error=error,save_as=save_as, win_nr=win_nr,white_bg=white_bg, $
 			    logarithmic=logarithmic, show_values = show_values, rot = rot,$
-			    symsize=symsize,notitle=notitle,nobar=nobar
+			    symsize=symsize,notitle=notitle,nobar=nobar,smoothTS = smoothTS
 
 	hct        = keyword_set(addtext)    ? ' - '+strupcase(addtext[0]) : ''
 	win_nr     = adv_keyword_set(win_nr) ? win_nr : 1
@@ -5296,12 +5305,12 @@ pro plot_simple_timeseries, varname, satellite, algo, cov, reference = reference
 
 	gac_ts_plots,d,ts_data,strupcase(dat),algon,yrange,lines,anz,xtickname,qu,ref		, $
 		 log=logarithmic,save_as=save_as,error=error,show_values=show_values		, $
-		 no_compare=~keyword_set(reference),nobar=nobar,opl=opl				, $
+		 no_compare=~keyword_set(reference),opl=opl				, $
 		 longname=longname,coverage=coverage,hct=hct,white_bg=white_bg,datum=datum	, $
 		 standard=stregex(varname,'_std',/bool,/fold),anomalies=anomalies		, $
 		 trend = trend,symsize=symsize,tr_corr=tr_corr,notitle=notitle			, $
 		 stddev = stddev, uncertainty = uncertainty,satnames = satnames			, $
-		 sum=sum, dtn=dtn, satn_background = satn_background
+		 sum=sum, dtn=dtn, satn_background = satn_background,smoothTS = smoothTS
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
@@ -6584,11 +6593,11 @@ pro do_create_all_single_time_series
 	mem_cur   = memory(/current)
 ; 	period    = ['2003-2011'] ; pvir
 
-; 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ ;PVIR vars
+; 	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky','ctp2',$ 
 ; 		     'cfc_day','cfc_night','cfc_twl','cfc_low','cfc_mid','cfc_high','cph_day','ctt','ctt2',$
 ; 		     'cer','cot','cth','cth2','cwp','cwp_allsky','sal']
-	data      = ['cfc','ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky',$ ;PVIR vars
-				'cfc_high','cfc_low','cfc_mid'];,'cph_day','ctt','cer','cot','cth','cwp','cwp_allsky']
+	data      = [	'cfc'];,'ctp','cph','cot_liq','cot_ice','cer_liq','cer_ice','lwp','iwp','iwp_allsky','lwp_allsky',$ ;PVIR vars
+; 					'cfc_high','cfc_low','cfc_mid'];,'cph_day','ctt','cer','cot','cth','cwp','cwp_allsky']
 
 	; coll6 only
 ; 	data     = [	'iwp_16','lwp_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
@@ -6634,7 +6643,8 @@ pro do_create_all_single_time_series
 
 	; combine all you need
 	algon_list = ['cciv3-noaapm']
-	data=['cfc_day','cfc_night','cfc_twl','cfc','cfc_low','cfc_high','cfc_mid'];,'cth','ctt','ctp']
+; 	data='cfc'
+; 	data=['cfc_day','cfc_night','cfc_twl','cfc','cfc_low','cfc_high','cfc_mid'];,'cth','ctt','ctp']
 
 	if is_defined(period) then begin
 		print,''

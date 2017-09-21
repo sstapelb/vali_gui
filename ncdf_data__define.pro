@@ -548,7 +548,6 @@ PRO NCDF_DATA::EventHandler, event
 	'WIDGET_BASE': BEGIN
 		; das hier ist wahrscheinlich die schlimmste aller Lösungen, aber immerhin eine Lösung!!
 		; Irgendwie stimmt noch die Zuordnung der eventhandler nicht. stapel 09/2013
-; 		print,'WIDGET_BASE'
 		error_status = 0
 		catch, error_status
 		if (error_status ne 0) then begin
@@ -621,6 +620,8 @@ PRO NCDF_DATA::EventHandler, event
 			'PLOTS': self -> PlotVariableFromGUI_Events, event
 		ENDCASE
 	END
+
+	'WIDGET_LIST':self -> PlotVariableFromGUI_Events, event
 
 	'WIDGET_TEXT_CH':
 
@@ -3285,7 +3286,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.pmultID   = Widget_combobox(bla,VALUE=[pmult_list],UVALUE=[pmult_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_PMULTILIST')
 	      self.winnrID   = Widget_Text(bla, Value='1', /Editable, SCR_XSIZE=30)
 	    bla = Widget_Base(leftrow, row=1,Frame=0, Scr_XSize=270,/nonexclusive)
-	      self.enablelim = Widget_Button(bla, Value='Limit=[lat0,lon0,lat1,lon1] Projections ', UVALUE='SET_PLOT_DEFAULTS',Scr_YSize=21)
+	      self.enablelim = Widget_Button(bla, Value='Limit=[lat0,lon0,lat1,lon1] Projections ', UVALUE='SET_PLOT_DEFAULTS',Scr_YSize=21,$
+	      tooltip='Check to enable Limit Field below. If Limit Field is empty limit = [-90,-180,90,180]')
 	    bla = Widget_Base(leftrow, Column=3,Frame=0, Scr_XSize=270)
 	      self.limitID = Widget_Text(bla, Value='No', /Editable, SCR_XSIZE=180)
 	      proj_list = ['Default','Globe (Ortho)','Mollweide','Aitoff','Hammer','Goode','Sinusoidal','Robinson','Stereo','Satellite']; EASE-grid  = equal angle 'Lambert' ??
@@ -3304,13 +3306,13 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	    bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
 	      label = Widget_Label(bla,Value=' ISCCP-CT  Color Tables', SCR_XSIZE=200,/align_left, SCR_YSIZE=19)
 	      bla2  = Widget_Base(bla, Column=1,Frame=0,/nonexclusive, SCR_XSIZE=60, SCR_YSIZE=19)
-	        self.invID     = Widget_Button(bla2, Value='Flip', UVALUE='SET_PLOT_DEFAULTS',/align_right, SCR_YSIZE=19)
+	        self.invID     = Widget_Button(bla2, Value='Flip', UVALUE='SET_PLOT_DEFAULTS',/align_right, SCR_YSIZE=19,tooltip='Flip Color Table')
         bla = Widget_Base(leftrow, Column=2,Frame=0, Scr_XSize=270)
 	      histlist = strupcase(['--','h_1d','-cot','-ctp','h_2d','low','cu','sc','st','mid','ac','as','ns','high','ci','cs','cb','max','ovw'])
 	      self.histct= Widget_combobox(bla, Value=histlist,UVALUE=histlist,Scr_XSize=60,Scr_YSize=28,UNAME='PLOTS_HISTCTLIST')
 	      color_table_names,color_tbl_name
 	      self.ctlistID= Widget_combobox(bla, Value=[color_tbl_name],UVALUE=[color_tbl_name],Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_CTLIST')
-	    label = Widget_Label(leftrow, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270,SCR_YSIZE=label_size)
+	    label = Widget_Label(leftrow, Value='YYYY      MM      DD      HHMN    Level  ', SCR_XSIZE=270,SCR_YSIZE=label_size,sunken_frame=0)
 	    bla = Widget_Base(leftrow, Column=5,Frame=0, Scr_XSize=270)
 	      yy_list        = reverse(string(indgen(40)+1978,f='(i4.4)'))
 	      self.yearID    = Widget_combobox(bla,VALUE=['--',yy_list],UVALUE=['--',yy_list],Scr_XSize=58,Scr_YSize=28,UNAME='PLOTS_YEARLIST')
@@ -3336,40 +3338,40 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.midlatsID = Widget_Button(bla, Value='MidLS', UVALUE='SET_PLOT_DEFAULTS')
 	      self.pm70ID    = Widget_Button(bla, Value=''+string(177b)+'60'+string(176b)+' Lat     ', UVALUE='SET_PLOT_DEFAULTS')
 	    self.sat_base = Widget_Base(leftrow, Column=6, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
-; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05', UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N', UVALUE='SET_PLOT_DEFAULTS')
-;  	      self.noaa6     = Widget_Button(self.sat_base, Value='N06', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa7     = Widget_Button(self.sat_base, Value='N07', UVALUE='SET_PLOT_DEFAULTS')
-;  	      self.noaa8     = Widget_Button(self.sat_base, Value='N08', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa9     = Widget_Button(self.sat_base, Value='N09', UVALUE='SET_PLOT_DEFAULTS')
-  	      self.noaa10    = Widget_Button(self.sat_base, Value='N10', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa11    = Widget_Button(self.sat_base, Value='N11', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa12    = Widget_Button(self.sat_base, Value='N12', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa14    = Widget_Button(self.sat_base, Value='N14', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa15    = Widget_Button(self.sat_base, Value='N15', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa16    = Widget_Button(self.sat_base, Value='N16', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa17    = Widget_Button(self.sat_base, Value='N17', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa18    = Widget_Button(self.sat_base, Value='N18', UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaa19    = Widget_Button(self.sat_base, Value='N19', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aatme     = Widget_Button(self.sat_base, Value='A/M', UVALUE='SET_PLOT_DEFAULTS')
-	      self.metopa    = Widget_Button(self.sat_base, Value='MA' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.metopb    = Widget_Button(self.sat_base, Value='MB' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaaAM    = Widget_Button(self.sat_base, Value='AM' , UVALUE='SET_PLOT_DEFAULTS')
-	      self.noaaPM    = Widget_Button(self.sat_base, Value='PM' , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS')
-	      self.ers2      = Widget_Button(self.sat_base, Value='ERS', UVALUE='SET_PLOT_DEFAULTS')
-	      self.envisat   = Widget_Button(self.sat_base, Value='ENV', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS')
-	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS')
-	      self.avhrrs    = Widget_Button(self.sat_base, Value='AVs', UVALUE='SET_PLOT_DEFAULTS')
-	      self.modises   = Widget_Button(self.sat_base, Value='MOs', UVALUE='SET_PLOT_DEFAULTS')
-	      self.aatsr     = Widget_Button(self.sat_base, Value='ATs', UVALUE='SET_PLOT_DEFAULTS')
-	      self.allsat    = Widget_Button(self.sat_base, Value='ALL', UVALUE='SET_PLOT_DEFAULTS')
+; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-05')
+; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N', UVALUE='SET_PLOT_DEFAULTS',tooltip='TIROS-N')
+;  	      self.noaa6     = Widget_Button(self.sat_base, Value='N06', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-06')
+	      self.noaa7     = Widget_Button(self.sat_base, Value='N07', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-07')
+;  	      self.noaa8     = Widget_Button(self.sat_base, Value='N08', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-08')
+	      self.noaa9     = Widget_Button(self.sat_base, Value='N09', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-09')
+  	      self.noaa10    = Widget_Button(self.sat_base, Value='N10', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-10')
+	      self.noaa11    = Widget_Button(self.sat_base, Value='N11', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-11')
+	      self.noaa12    = Widget_Button(self.sat_base, Value='N12', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-12')
+	      self.noaa14    = Widget_Button(self.sat_base, Value='N14', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-14')
+	      self.noaa15    = Widget_Button(self.sat_base, Value='N15', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-15')
+	      self.noaa16    = Widget_Button(self.sat_base, Value='N16', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-16')
+	      self.noaa17    = Widget_Button(self.sat_base, Value='N17', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-17')
+	      self.noaa18    = Widget_Button(self.sat_base, Value='N18', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-18')
+	      self.noaa19    = Widget_Button(self.sat_base, Value='N19', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-19')
+	      self.aatme     = Widget_Button(self.sat_base, Value='A/M', UVALUE='SET_PLOT_DEFAULTS',tooltip='AATSR+MERIS (FAME-C)')
+	      self.metopa    = Widget_Button(self.sat_base, Value='MA' , UVALUE='SET_PLOT_DEFAULTS',tooltip='METOP-A (-02)')
+	      self.metopb    = Widget_Button(self.sat_base, Value='MB' , UVALUE='SET_PLOT_DEFAULTS',tooltip='METOP-B (-01)')
+	      self.noaaAM    = Widget_Button(self.sat_base, Value='AM' , UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA/METOP - Morning Satellites')
+	      self.noaaPM    = Widget_Button(self.sat_base, Value='PM' , UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA - Afternoon Satellites')
+; 	      self.msg       = Widget_Button(self.sat_base, Value='MSG', UVALUE='SET_PLOT_DEFAULTS',tooltip='Meteosat 2nd Generation')
+	      self.ers2      = Widget_Button(self.sat_base, Value='ERS', UVALUE='SET_PLOT_DEFAULTS',tooltip='ERS-2 (ATSR-2)')
+	      self.envisat   = Widget_Button(self.sat_base, Value='ENV', UVALUE='SET_PLOT_DEFAULTS',tooltip='ENVISAT')
+	      self.aqua      = Widget_Button(self.sat_base, Value='MYD', UVALUE='SET_PLOT_DEFAULTS',tooltip='AQUA')
+	      self.terra     = Widget_Button(self.sat_base, Value='MOD', UVALUE='SET_PLOT_DEFAULTS',tooltip='TERRA')
+	      self.avhrrs    = Widget_Button(self.sat_base, Value='AVs', UVALUE='SET_PLOT_DEFAULTS',tooltip='AVHRRs (AM+PM) L3S')
+	      self.modises   = Widget_Button(self.sat_base, Value='MOs', UVALUE='SET_PLOT_DEFAULTS',tooltip='MODISes (Aqua+Terra) L3S')
+	      self.aatsr     = Widget_Button(self.sat_base, Value='ATs', UVALUE='SET_PLOT_DEFAULTS',tooltip='A(a)tsr')
+	      self.allsat    = Widget_Button(self.sat_base, Value='ALL', UVALUE='SET_PLOT_DEFAULTS',tooltip='Allsat L3S')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Style: ',SCR_YSIZE=label_size)
 	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270, /Exclusive,Frame=1)
-	      self.pcsingle  = Widget_Button(bla, Value='Single Time Step', UVALUE='SET_PLOT_DEFAULTS')
-	      self.pcmulti   = Widget_Button(bla, Value='Multi Time Steps', UVALUE='SET_PLOT_DEFAULTS')
+	      self.pcsingle  = Widget_Button(bla, Value='Single Time Step', UVALUE='SET_PLOT_DEFAULTS',tooltip='Monthly/Daily/Orbit-based data!')
+	      self.pcmulti   = Widget_Button(bla, Value='Multi Time Steps', UVALUE='SET_PLOT_DEFAULTS',tooltip='Preprocessed Time Series data!')
 	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270, /Exclusive,Frame=1)
 	      self.pcvar     = Widget_Button(bla, Value='Map2D', UVALUE='SET_PLOT_DEFAULTS') 				; Map2D  = Variable (TS-MEAN)
 	      self.pcts      = Widget_Button(bla, Value='Serie', UVALUE='SET_PLOT_DEFAULTS') 				; Serie  = Timeseries
@@ -3384,7 +3386,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	    bla = Widget_Base(leftrow, Column=2, Scr_XSize=270,Frame=1)
 ; 	      self.archive  = Widget_Button(bla, Value='Archive', UVALUE='SET_PLOT_DEFAULTS')
 	      bla1 = Widget_Base(bla, Column=1, Scr_XSize=52,/NonExclusive)
-	         self.refself  = Widget_Button(bla1, Value='Load:', UVALUE='SET_PLOT_DEFAULTS')
+	         self.refself  = Widget_Button(bla1, Value='Load:', UVALUE='SET_PLOT_DEFAULTS',tooltip='Uncheck to choose Algorithms from List that will be compared to the reference (Below) use Button "Compare Variable". ')
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
 			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','ERA-INTERIM2','PATMOS-X',$
@@ -3393,50 +3395,52 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ',SCR_YSIZE=label_size)
 	    bla = Widget_Base(leftrow, row=5, Scr_XSize=270, /Exclusive,Frame=1)
-	      self.refgac    = Widget_Button(bla, Value='CLARA1'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmyd    = Widget_Button(bla, Value='C5-AQUA'     , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmod    = Widget_Button(bla, Value='C5-TERRA'    , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refisp    = Widget_Button(bla, Value='ISCCP'       , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refgac2   = Widget_Button(bla, Value='CLARA2'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmyd2   = Widget_Button(bla, Value='C6-AQUA'     , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA'    , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcla    = Widget_Button(bla, Value='CLAAS'       , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refhec    = Widget_Button(bla, Value='HECTOR '     , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refg2gwx  = Widget_Button(bla, Value='GAC2-GWX'    , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refera    = Widget_Button(bla, Value='ERA-I'       , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci2   = Widget_Button(bla, Value='ESACCI'      , UVALUE='SET_PLOT_DEFAULTS')
-; 	      self.refcci    = Widget_Button(bla, Value='CCI-v1'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcci3   = Widget_Button(bla, Value='CCI-v3'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refgwx    = Widget_Button(bla, Value='CCI-GWX'     , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refera2   = Widget_Button(bla, Value='ERA-(T1)'    , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refcal    = Widget_Button(bla, Value='CALIPSO'     , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refselect = Widget_Button(bla, Value='Select File' , UVALUE='SET_PLOT_DEFAULTS')
-;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS')
-	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS')
+	      tooltip = 'Choose the Algorithm to plot (Press "Plot Variable") or the Reference for Comparisons (Press "Compare Variable" or "File Difference")'
+	      self.refgac    = Widget_Button(bla, Value='CLARA1'      , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refmyd    = Widget_Button(bla, Value='C5-AQUA'     , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refmod    = Widget_Button(bla, Value='C5-TERRA'    , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refisp    = Widget_Button(bla, Value='ISCCP'       , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refgac2   = Widget_Button(bla, Value='CLARA2'      , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refmyd2   = Widget_Button(bla, Value='C6-AQUA'     , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refmod2   = Widget_Button(bla, Value='C6-TERRA'    , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refcla    = Widget_Button(bla, Value='CLAAS'       , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refpmx2   = Widget_Button(bla, Value='PATMOS'      , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refhec    = Widget_Button(bla, Value='HECTOR '     , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+; 	      self.refpmx    = Widget_Button(bla, Value='PATMOS_v1'   , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refg2gwx  = Widget_Button(bla, Value='GAC2-GWX'    , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refera    = Widget_Button(bla, Value='ERA-1'       , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+; 	      self.refcci    = Widget_Button(bla, Value='CCI-V1'      , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refcci2   = Widget_Button(bla, Value='CCI2.0'      , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refcci3   = Widget_Button(bla, Value='CCI3.0 '     , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refgwx    = Widget_Button(bla, Value='CCI2-GWX'    , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refera2   = Widget_Button(bla, Value='ERA-2'       , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refcal    = Widget_Button(bla, Value='CALIPSO'     , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refselect = Widget_Button(bla, Value='Select File' , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+;  	      self.refl1gac  = Widget_Button(bla, Value='L1_GAC'      , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
+	      self.refnone   = Widget_Button(bla, Value='Loaded File' , UVALUE='SET_PLOT_DEFAULTS',tooltip=tooltip)
 	  rightrow = Widget_Base(tlb2, ROW=3,/base_align_center)
         topright = Widget_Base(rightrow,column=6,/base_align_center)
 	      bla = Widget_Base(topright,row=2,/NonExclusive,Frame=0)
-	        self.saveID    = Widget_Button(bla, Value='Save Image', UVALUE='SET_PLOT_DEFAULTS')
-	        self.oplotID   = Widget_Button(bla, Value='Oplot'     , UVALUE='SET_PLOT_DEFAULTS')
-	        self.zoomID    = Widget_Button(bla, Value='Zoom'      , UVALUE='SET_PLOT_DEFAULTS')
-	        self.errID     = Widget_Button(bla, Value='Error'     , UVALUE='SET_PLOT_DEFAULTS')
-	        self.verbID    = Widget_Button(bla, Value='Verbose'   , UVALUE='SET_PLOT_DEFAULTS')
-	        self.logID     = Widget_Button(bla, Value='Log-Plot'  , UVALUE='SET_PLOT_DEFAULTS')
-	      
-	        self.noTitleID = Widget_Button(bla, Value='No Title'  , UVALUE='SET_PLOT_DEFAULTS')
-	        self.bordID    = Widget_Button(bla, Value='Borders'   , UVALUE='SET_PLOT_DEFAULTS')
-	        self.boxID     = Widget_Button(bla, Value='No Box'    , UVALUE='SET_PLOT_DEFAULTS')
-	        self.contID    = Widget_Button(bla, Value='No Continents', UVALUE='SET_PLOT_DEFAULTS')
-	        self.gridID    = Widget_Button(bla, Value='No Grid', UVALUE='SET_PLOT_DEFAULTS')
-	        self.labelID   = Widget_Button(bla, Value='No Grid Labels', UVALUE='SET_PLOT_DEFAULTS')
+	        self.saveID    = Widget_Button(bla, Value='Save '	  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Save the Image as EPS')
+	        self.oplotID   = Widget_Button(bla, Value='Oplot '    , UVALUE='SET_PLOT_DEFAULTS',tooltip='Plots into an existing 2D-Image or plots vector data over a previously-drawn plot.')
+	        self.zoomID    = Widget_Button(bla, Value='Zoom   '   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Zoom into Image (follow Instructions on Cammandline)')
+	        self.errID     = Widget_Button(bla, Value='Error  '   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Shows Error- (Uncertainty-) Bars on TS plots.')
+	        self.verbID    = Widget_Button(bla, Value='Verbose '  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Writes some Infos into command line.')
+	        self.logID     = Widget_Button(bla, Value='Log-Plot ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Creates logarithmic plots')
+	        self.wbgrID    = Widget_Button(bla, Value='White BG         ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Switch Background from Black to White')
 
-	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250)
-	        self.showpvalID = Widget_Text(bla, Value='', SCR_XSIZE=245)
-	      bla = Widget_Base(topright, row=2,/NonExclusive,Frame=0)
-	        self.pixvalID  = Widget_Button(bla, Value='Show Pixel Values', UVALUE='SET_PLOT_DEFAULTS')
-	        self.wbgrID    = Widget_Button(bla, Value='White Background '  , UVALUE='SET_PLOT_DEFAULTS')
+	        self.noTitleID = Widget_Button(bla, Value='Title'    , UVALUE='SET_PLOT_DEFAULTS',tooltip='Show Figure Titles')
+	        self.boxID     = Widget_Button(bla, Value='No Box'   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Do not show Box Axes.')
+	        self.gridID    = Widget_Button(bla, Value='No Grid'  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Do not show Lon/LAT Grid lines.')
+	        self.bordID    = Widget_Button(bla, Value='Borders'  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Draw Country/State Borders in Image')
+	        self.contID    = Widget_Button(bla, Value='No Coast' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Do not show Continental/Coast Lines.')
+	        self.labelID   = Widget_Button(bla, Value='No Labels', UVALUE='SET_PLOT_DEFAULTS',tooltip='Do not show Lon/LAT Grid Labels.')
+	        self.smoothTS  = Widget_Button(bla, Value='Smooth TS        ', UVALUE='SET_PLOT_DEFAULTS',tooltip='Smooths Time Series Plots.')
+	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250);, Scr_YSize=45)
+	        self.showpvalID = Widget_Text(bla, Value='', SCR_XSIZE=245);, Scr_YSize=30)
+	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
+	        self.pixvalID  = Widget_Button(bla, Value='Show PV  ', UVALUE='SET_PLOT_DEFAULTS',tooltip ='Check to Show Pixel Values with Mouse Over, Exit with right Mouse Click')
+; 	        self.wbgrID    = Widget_Button(bla, Value='White BG', UVALUE='SET_PLOT_DEFAULTS',tooltip='Check to plot on a White Background!')
 		  bla = Widget_Base(topright,column=2,Frame=0)
 			barlist   = strupcase(['Color Bar','No Bar','Horiz. CB','Verti. CB','HCB Only','VCB Only'])
 			self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=28,UNAME='PLOTS_BARLIST')
@@ -3449,6 +3453,9 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 ;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
 ; 	        sym_list       = ['PSymbols',string((indgen(9)),f='(f3.1)')]
 ;                 self.symbolID  = Widget_combobox(bla,VALUE=[sym_list],UVALUE=[sym_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_SYMBOLLIST')
+; 	      bla = Widget_Base(topright, column=1, Scr_XSize=130,Scr_YSize=40,/align_right)
+; 			val_list = ['','No Title', 'Borders','No Box','Log-Plot', 'No Continents', 'No Grid','No Grid Labels']
+; 	        self.noTitleID = Widget_list(bla,Value=val_list, UValue=val_list , UNAME='MAP_IMAGE_LIST',/multiple)
 
 	    self.draw = WIDGET_DRAW(rightrow, scr_XSIZE=xsize, scr_YSIZE=ysize,frame=1)
 
@@ -3464,7 +3471,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	; Get the geometries of the tree widget and the button base. These
 	; will set the minimun and maximum values for resizing.
 	self.georow     = Widget_Info(leftrow, /GEOMETRY)
-help,self.georow
 	self.geoButtrow = Widget_Info(bottomright, /GEOMETRY)
 	self.geoToprow  = Widget_Info(topright, /GEOMETRY)
 	self.geodraw    = Widget_Info(self.draw, /GEOMETRY)
@@ -3574,7 +3580,7 @@ help,self.georow
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.winnrID   , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
- 		Widget_Control, self.selftxt   , Set_Value=' Add Text'
+		Widget_Control, self.selftxt   , Set_Value=' Add Text'
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
 		Widget_Control, self.p0lonID   , Set_Value='0'
@@ -3607,9 +3613,10 @@ help,self.georow
 		Widget_Control, self.contID    , Set_Button=0
 		Widget_Control, self.gridID    , Set_Button=0
 		Widget_Control, self.labelID   , Set_Button=0
+		Widget_Control, self.smoothTS  , Set_Button=0
 		Widget_Control, self.noBarID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.ShapeID   , SET_COMBOBOX_SELECT=0
-		Widget_Control, self.noTitleID , Set_Button=0
+		Widget_Control, self.noTitleID , Set_Button=1
 ;  		Widget_Control, self.noaa5     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
 ;  		Widget_Control, self.noaa6     , Set_Button=(self.satname eq 'noaa6'  ? 1:0)
@@ -3844,7 +3851,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
 		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
-		shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+		shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,smoothTS = smoothTS
 
 	found=1
 ; 	varName=self.varname_plotID
@@ -3870,7 +3877,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 
 	widget_control,self.selftxt,get_value=addtext
  	addtext = addtext eq ' Add Text' ? '' : addtext
-; 	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
+;  	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
 
 	hct = self.hct eq '--' ? '' : strlowcase(self.hct)
 	if hct eq 'ovw' then hct = 'overview'
@@ -3930,12 +3937,13 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	save_as     = Widget_Info(self.saveID, /BUTTON_SET)
 	zoom        = Widget_Info(self.zoomID, /BUTTON_SET)
 	error       = Widget_Info(self.errID, /BUTTON_SET)
-	notitle     = Widget_Info(self.noTitleID, /BUTTON_SET)
+	notitle     = ~Widget_Info(self.noTitleID, /BUTTON_SET)
 	log         = Widget_Info(self.logID, /BUTTON_SET)
 	no_continents= Widget_Info(self.contID, /BUTTON_SET) 
 	no_grid		= Widget_Info(self.gridID, /BUTTON_SET) 
 	no_label	= Widget_Info(self.labelID, /BUTTON_SET)
 	no_box		= Widget_Info(self.boxID, /BUTTON_SET)
+	smoothTS	= Widget_Info(self.smoothTS, /BUTTON_SET)
 
 	case strlowcase(self.handlebar) of
 		'color bar'	: nobar = 0
@@ -4024,7 +4032,7 @@ l1g = 0
 	limit_enabled = ( Widget_Info(self.enablelim,/BUTTON_SET) )
 
 	if limit_enabled then begin
-		if dumlimit[0] eq '' then dumlimit = '[-90,-180,90,180]'
+		if dumlimit[0] eq '' then dumlimit = strjoin([-90,((p0lon mod 360) -180),90,((p0lon mod 360) +180)],',')
 		dum = float(strsplit(strcompress(dumlimit,/rem),'],[()',/ext))
 		if n_elements(dum) eq 4 then limit = dum
 	endif
@@ -4314,7 +4322,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
 				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
+				no_label=no_label,smoothTS = smoothTS,no_box=no_box
 
 			if ~found then return
 
@@ -4485,7 +4494,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_simple_timeseries, varname, sat, algo, cov, reference = ref,mini=mini, maxi=maxi,verbose=verbose,  $
 				oplots=opl,win_nr=win_nr,logarithmic=log,white_bg=Widget_Info(self.wbgrID, /BUTTON_SET),$
 				show_values = show_values, rot=rot,error=error,save_as=save_as,symsize=symsize,notitle=notitle,$
-				nobar=nobar, addtext = addtext
+				nobar=nobar, addtext = addtext,smoothTS = smoothTS
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pczm and pcsing then begin
@@ -4584,7 +4593,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
 				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
-				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found		, $
+				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	,smoothTS = smoothTS	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
 				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 
@@ -4811,7 +4820,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
+				no_label=no_label,smoothTS = smoothTS,no_box=no_box
 
 			if ~found then return
 
@@ -4948,7 +4958,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_simple_timeseries, varname, sat, algo, cov, mini=mini, maxi=maxi, win_nr=win_nr,symsize=symsize,$
 				verbose=verbose,oplots = opl,found=found, addtext = addtext[0],error=error,save_as = save_as,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),show_values=show_values,$
-				notitle=notitle,nobar=nobar,logarithmic=log
+				notitle=notitle,nobar=nobar,logarithmic=log,smoothTS = smoothTS
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pchist then begin
 				; histogram
@@ -5108,7 +5118,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			stop
 		endelse
     END
-
+    
+    'WIDGET_LIST': 	BEGIN
+						Widget_Control, event.id, Get_UVALUE=list
+						theName = Widget_Info(event.id, /UNAME)
+						if theName eq 'MAP_IMAGE_LIST' then begin
+							self.map_image_list = list[event.index]
+						endif
+					END
     'WIDGET_TEXT': ; Nothing to do here. We just want to read the value. Don't care what it is.
 
  ENDCASE
@@ -6039,6 +6056,7 @@ PRO NCDF_DATA__DEFINE, class
              month_idx:0L,             $
              day_idx:0L,               $
              level_idx:0L,             $
+             map_image_list:'',        $
              leveltype:'',             $
              daytype:'',               $
              orbID:'',                 $
@@ -6094,6 +6112,7 @@ PRO NCDF_DATA__DEFINE, class
              contID:0L,                $ 
              gridID:0L,                $ 
              labelID:0L,               $
+             smoothTS:0L,              $
              sat_base:0L,              $
              tirosn:0L,                $
              noaa5:0L,                 $
