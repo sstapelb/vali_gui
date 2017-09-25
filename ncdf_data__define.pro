@@ -559,7 +559,7 @@ PRO NCDF_DATA::EventHandler, event
 		endif
 		Widget_Control, self.draw, $
 		SCR_XSIZE = ( (event.x -(self.georow.scr_xsize + 1)) > self.minXS ), $
-		SCR_YSIZE = ( (event.y -(self.geoToprow.scr_ysize + self.geoButtrow.scr_ysize + 22)) > self.minYS )
+ 		SCR_YSIZE = ( (event.y -(self.geoToprow.scr_ysize + self.geoButtrow.scr_ysize + 20)) > self.minYS )
 		wbase_ende:
 	END
 
@@ -3261,17 +3261,18 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	ENDIF
 
 	ok = self -> get_file_infos()
-	screen_size = GET_SCREEN_SIZE(RESOLUTION=resolution)
-	xsize = screen_size[0]-480 < 1200
-	ysize = screen_size[1]-180 <  900
-	
+	self.screen_size = GET_SCREEN_SIZE(RESOLUTION=resolution)
+	xsize = self.screen_size[0]-480 < 1200
+	ysize = self.screen_size[1]-180 <  900
+
 	label_size=13
 	; Get some position information.
 	Widget_Control, event.top, TLB_GET_OFFSET=offsets
 	; We want a non-modal pop-up dialog widget.
 	tlb2 = Widget_Base(GROUP_LEADER=event.top, XOFFSET=offsets[0], YOFFSET=offsets[1],col=2, BASE_ALIGN_CENTER=1, /FLOATING, $
 			  UVALUE=self,title='File: '+self.filename,TLB_SIZE_EVENT=1)
- 	  if ysize lt 900 then leftrow = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
+
+	  if self.screen_size[1] lt 1040 then leftrow = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
 	  leftrow = Widget_Base(tlb2, ROW=26,FRAME=1)
 	    label = Widget_Label(leftrow, Value='Variable to Plot: ', SCR_XSIZE=270,ALIGN_CENTER=1,SCR_YSIZE=label_size)
 	    theList = self -> make_VARList(/data_only)
@@ -3423,11 +3424,11 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla = Widget_Base(topright,row=2,/NonExclusive,Frame=0)
 	        self.saveID    = Widget_Button(bla, Value='Save '	  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Save the Image as EPS')
 	        self.oplotID   = Widget_Button(bla, Value='Oplot '    , UVALUE='SET_PLOT_DEFAULTS',tooltip='Plots into an existing 2D-Image or plots vector data over a previously-drawn plot.')
-	        self.zoomID    = Widget_Button(bla, Value='Zoom   '   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Zoom into Image (follow Instructions on Cammandline)')
+	        self.zoomID    = Widget_Button(bla, Value='Zoom   '   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Zoom into Image (follow Instructions on IDL Command line)')
 	        self.errID     = Widget_Button(bla, Value='Error  '   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Shows Error- (Uncertainty-) Bars on TS plots.')
 	        self.verbID    = Widget_Button(bla, Value='Verbose '  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Writes some Infos into command line.')
 	        self.logID     = Widget_Button(bla, Value='Log-Plot ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Creates logarithmic plots')
-	        self.wbgrID    = Widget_Button(bla, Value='White BG         ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Switch Background from Black to White')
+	        self.fscrID    = Widget_Button(bla, Value='Full Screen      ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Plot 2D maps in Fullscreen, without Colorbar! Overwrites P.multi settings.')
 
 	        self.noTitleID = Widget_Button(bla, Value='Title'    , UVALUE='SET_PLOT_DEFAULTS',tooltip='Show Figure Titles')
 	        self.boxID     = Widget_Button(bla, Value='No Box'   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Do not show Box Axes.')
@@ -3438,24 +3439,19 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	        self.smoothTS  = Widget_Button(bla, Value='Smooth TS        ', UVALUE='SET_PLOT_DEFAULTS',tooltip='Smooths Time Series Plots.')
 	      bla = Widget_Base(topright, row=1,/GRID_LAYOUT, FRAME=1, Scr_XSize=250);, Scr_YSize=45)
 	        self.showpvalID = Widget_Text(bla, Value='', SCR_XSIZE=245);, Scr_YSize=30)
-	      bla = Widget_Base(topright, row=1,/NonExclusive,Frame=0)
+	      bla = Widget_Base(topright, row=2,/NonExclusive,Frame=0)
 	        self.pixvalID  = Widget_Button(bla, Value='Show PV  ', UVALUE='SET_PLOT_DEFAULTS',tooltip ='Check to Show Pixel Values with Mouse Over, Exit with right Mouse Click')
-; 	        self.wbgrID    = Widget_Button(bla, Value='White BG', UVALUE='SET_PLOT_DEFAULTS',tooltip='Check to plot on a White Background!')
-		  bla = Widget_Base(topright,column=2,Frame=0)
+	        self.wbgrID    = Widget_Button(bla, Value='White BG ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Switch Background from Black to White')
+		  bla = Widget_Base(topright,row=2,Frame=0)
 			barlist   = strupcase(['Color Bar','No Bar','Horiz. CB','Verti. CB','HCB Only','VCB Only'])
-			self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=28,UNAME='PLOTS_BARLIST')
+			self.noBarID   = Widget_combobox(bla, Value=barlist,UVALUE=barlist,Scr_XSize=90,Scr_YSize=24,UNAME='PLOTS_BARLIST')
+	        self.selftxt   = Widget_Text(bla,Value='  Add Text',SCR_XSIZE=90,/Editable,Scr_YSize=29)
+		  bla = Widget_Base(topright,row=2,Frame=0)
 			shapelist = strupcase([	'Shape Files','Germany','USA','China','Russia','Canada','Africa','Europe','America','South America',$
 									'Australia','Choose File'])
-			self.shapeID = Widget_combobox(bla, Value=shapelist,UVALUE=shapelist,Scr_XSize=100,Scr_YSize=28,UNAME='PLOTS_SHAPELIST')
-	      bla = Widget_Base(topright, column=1, Scr_XSize=78,/align_right);           
-	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
-; 	        quot_list      = ['Axis-Qu.',string((indgen(20))/2.,f='(f3.1)')]
-;                 self.axquotID  = Widget_combobox(bla,VALUE=[quot_list],UVALUE=[quot_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_AXISQUOTLIST')
-; 	        sym_list       = ['PSymbols',string((indgen(9)),f='(f3.1)')]
-;                 self.symbolID  = Widget_combobox(bla,VALUE=[sym_list],UVALUE=[sym_list],Scr_XSize=20,Scr_YSize=28,UNAME='PLOTS_SYMBOLLIST')
-; 	      bla = Widget_Base(topright, column=1, Scr_XSize=130,Scr_YSize=40,/align_right)
-; 			val_list = ['','No Title', 'Borders','No Box','Log-Plot', 'No Continents', 'No Grid','No Grid Labels']
-; 	        self.noTitleID = Widget_list(bla,Value=val_list, UValue=val_list , UNAME='MAP_IMAGE_LIST',/multiple)
+			self.shapeID = Widget_combobox(bla, Value=shapelist,UVALUE=shapelist,Scr_XSize=100,Scr_YSize=24,UNAME='PLOTS_SHAPELIST')
+			MTS_list     = ['MTS EXTRAs','PVIR','Anomalies','Trend','Season','Sum','Diff']
+	        self.MTS_ID  = Widget_combobox(bla,VALUE=MTS_list,UVALUE=MTS_list,Scr_XSize=100,Scr_YSize=29,UNAME='PLOTS_MTS_ADD_LIST')
 
 	    self.draw = WIDGET_DRAW(rightrow, scr_XSIZE=xsize, scr_YSIZE=ysize,frame=1)
 
@@ -3465,8 +3461,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      button = Widget_Button(bottomright, Value='File Difference', UVALUE='PLOT_DIFF')
 	      button = Widget_Button(bottomright, Value='Take a Snapshot', UVALUE='SNAPSHOT')
 	      button = Widget_Button(bottomright, Value='Quit', UVALUE='QUIT_PLOT_VARIABLE_GUI')
-; 	      bla = Widget_Base(bottomright, row=1, Scr_XSize=78,/align_right)         
-; 	        self.selftxt   = Widget_Text(bla,Value='0',SCR_XSIZE=54,/Editable)
 
 	; Get the geometries of the tree widget and the button base. These
 	; will set the minimun and maximum values for resizing.
@@ -3474,8 +3468,8 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.geoButtrow = Widget_Info(bottomright, /GEOMETRY)
 	self.geoToprow  = Widget_Info(topright, /GEOMETRY)
 	self.geodraw    = Widget_Info(self.draw, /GEOMETRY)
-	self.minxs      = self.geodraw.scr_xsize
-	self.minys      = self.geodraw.scr_ysize
+	self.minxs      = self.geoToprow.scr_xsize
+	self.minys      = self.georow.scr_ysize - self.geoToprow.scr_ysize - self.geoButtrow.scr_ysize - 20 ; 20 pix approx. Windowhead
 
 	; If there is a tree selection, see if this corresponds to a variable in the list.
 	; If so, set this variable in the combobox widget.
@@ -3531,7 +3525,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.proj = 'Default'
 	; colorbar
 	self.handlebar = barlist[0]
-    ; shapefiles
+	; shapefiles
     self.handleshape = shapelist[0]
 	; day,month,year
 	yy_idx = where(self.year eq yy_list,yy_cnt)
@@ -3580,7 +3574,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.pmultID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.winnrID   , Set_Value=''
 		Widget_Control, self.histct    , SET_COMBOBOX_SELECT=0
-		Widget_Control, self.selftxt   , Set_Value=' Add Text'
 		Widget_Control, self.limitID   , Set_Value=''
 ; 		Widget_Control, self.whatever  , Set_Value=''
 		Widget_Control, self.p0lonID   , Set_Value='0'
@@ -3610,12 +3603,14 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.oplotID   , Set_Button=0
 		Widget_Control, self.errID     , Set_Button=0
 		Widget_Control, self.logID     , Set_Button=0
+		Widget_Control, self.fscrID    , Set_Button=0
 		Widget_Control, self.contID    , Set_Button=0
 		Widget_Control, self.gridID    , Set_Button=0
 		Widget_Control, self.labelID   , Set_Button=0
 		Widget_Control, self.smoothTS  , Set_Button=0
 		Widget_Control, self.noBarID   , SET_COMBOBOX_SELECT=0
 		Widget_Control, self.ShapeID   , SET_COMBOBOX_SELECT=0
+		Widget_Control, self.MTS_ID    , SET_COMBOBOX_SELECT=0,sensitive=0
 		Widget_Control, self.noTitleID , Set_Button=1
 ;  		Widget_Control, self.noaa5     , Set_Button=(self.satname eq 'noaa5'  ? 1:0)
 ; 		Widget_Control, self.tirosn    , Set_Button=(self.satname eq 'tirosn' ? 1:0)
@@ -3688,7 +3683,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	; Get it going...
 	Widget_Control, tlb2, /REALIZE
 	;stapel Set the draw widget as the current drawable area.
-	WIDGET_CONTROL, self.draw, GET_VALUE=drawID
+	WIDGET_CONTROL, self.draw, GET_VALUE=drawID,SCR_XSIZE = self.minXS,SCR_YSIZE = self.minYS
 	self.drawID=drawID
 
 	!p.multi = 0
@@ -3876,7 +3871,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 ; 	oth = strlowcase(oth[0])
 
 	widget_control,self.selftxt,get_value=addtext
- 	addtext = addtext eq ' Add Text' ? '' : addtext
+ 	addtext = addtext eq '  Add Text' ? '' : addtext
 ;  	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
 
 	hct = self.hct eq '--' ? '' : strlowcase(self.hct)
@@ -3887,7 +3882,22 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	if hct eq '-ctp' then hct = '1d_ctp'
 	rot = self.rot
 
-	pmulti=strjoin(['0',strsplit(self.pmulti,'x',/ext)],',')
+	;Full Screen overwrites bar and pmulti settings
+	if Widget_Info(self.fscrID, /BUTTON_SET) then begin
+		nobar  = 99 ; sets position and no_color_bar in set_proj (validation_tool_box.pro)
+		pmulti = '0,1,1'
+	endif else begin
+		pmulti=strjoin(['0',strsplit(self.pmulti,'x',/ext)],',')
+		case strlowcase(self.handlebar) of
+			'color bar'	: nobar = 0
+			'no bar'	: nobar = 1
+			'horiz. cb'	: nobar = 2
+			'verti. cb'	: nobar = 3
+			'hcb only'	: nobar = 4
+			'vcb only'	: nobar = 5
+			else		: nobar = 0
+		endcase
+	endelse
 	ctab = strcompress((strsplit(self.ctab,/ext,':'))[0],/rem)
 	inv  = Widget_Info(self.invID, /BUTTON_SET)
 	if ~is_number(ctab) then begin
@@ -3944,16 +3954,6 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	no_label	= Widget_Info(self.labelID, /BUTTON_SET)
 	no_box		= Widget_Info(self.boxID, /BUTTON_SET)
 	smoothTS	= Widget_Info(self.smoothTS, /BUTTON_SET)
-
-	case strlowcase(self.handlebar) of
-		'color bar'	: nobar = 0
-		'no bar'	: nobar = 1
-		'horiz. cb'	: nobar = 2
-		'verti. cb'	: nobar = 3
-		'hcb only'	: nobar = 4
-		'vcb only'	: nobar = 5
-		else		: nobar = 0
-	endcase
 
 	if Widget_Info(self.oplotID, /BUTTON_SET) then begin
 		self.oplotnr++
@@ -4254,6 +4254,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			pcmult = Widget_Info(self.pcmulti,/BUTTON_SET)
 			hide   = ((sel+none) eq 2 and ~pcmult);or pcmult)
 			Widget_Control, self.SymSizeID,sensitive=pcmult 
+			Widget_Control, self.MTS_ID,sensitive=pcmult
 			if hide then begin
 				Widget_Control, self.yearID  ,SET_COMBOBOX_SELECT=self.year_idx,sensitive=( hide ? 0:1 )
 				Widget_Control, self.monthID ,SET_COMBOBOX_SELECT=self.month_idx,sensitive=( hide ? 0:1 )
@@ -4300,6 +4301,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				Widget_Control, self.levelID ,sensitive=( hide ? 0:1 )
 				self -> setlevel
 			endelse
+			
 		end
 		'SNAPSHOT'	: begin
 			save_as = !SAVE_DIR + 'snapshots/'
@@ -4379,6 +4381,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				file  = ''
 				found = 1
 				datum = ''
+				if self.addname_MTS ne '' then begin
+					varName  = varName + '_'+strlowcase(self.addname_MTS)
+					varName2 = varName2 + '_'+strlowcase(self.addname_MTS)
+				endif
 			endif else if algo eq 'SELECT FILE' then begin
 				self.file2 = dialog_pickfile(path=(self.file2 eq '' ? self.directory:file_dirname(self.file2)),$
 							; following needs to be done for filenames that include white spaces
@@ -4443,7 +4449,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,$
-				no_continents=no_continents,no_grid=no_grid,no_label=no_label
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				return
 			endif
@@ -4465,7 +4471,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,$
-				no_continents=no_continents,no_grid=no_grid,no_label=no_label
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 			if pcdts and pcsing then begin
@@ -4480,7 +4486,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
 				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle,shape_file=shape_file,$
-				no_continents=no_continents,no_grid=no_grid,no_label=no_label
+				no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				if show_values then show_pixel_value, out.bild, out.lon, out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcmat then begin
@@ -4554,7 +4560,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit,coverage=cov, $
 				notitle=notitle
 				if show_values then begin
-					if ~keyword_set(nobar) then begin
+					if nobar ne 1 then begin
 						print,'Set "No Bar" to get Pixel Values'
 					endif else show_pixel_value, out.bild, data = varname, unit=out.unit, wtext = self.showpvalID
 				endif
@@ -4681,6 +4687,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					self.file2 = ''
 					found = 1
 					datum2 = ''
+					if self.addname_MTS ne '' then begin
+						varName = varName + '_'+strlowcase(self.addname_MTS)
+					endif
 				endif else begin
 					if strlowcase(algo) eq 'gewex' then gewex_style = (reverse((strsplit(file_basename(file1),'_',/ext))))[1]
 					self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, $
@@ -4886,6 +4895,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					datum = ''
 					level = self.level
 					if select then algo = 'select'
+					if self.addname_MTS ne '' then begin
+						varName = varName + '_'+strlowcase(self.addname_MTS)
+					endif
 				endif else if sel and none then begin
 					file    = self.directory+'/'+self.filename
 					year    = self.year
@@ -4944,7 +4956,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,coverage=cov,$
-				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc
+				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc,$
+				notitle=notitle
 				if show_values and is_defined(out) then begin
 					if nobar ne 1 then begin
 						print,'Set "No Bar" to get Pixel Values'
@@ -5039,6 +5052,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			self.PsymSize=list[event.index]
 		endif else if theName eq 'PLOTS_BARLIST' then begin
 			self.handlebar=list[event.index]
+		endif else if theName eq 'PLOTS_MTS_ADD_LIST' then begin
+			self.addname_MTS = event.index eq 0 ? '' : list[event.index]
         endif else if theName eq 'PLOTS_SHAPELIST' then begin
             self.handleshape=list[event.index]
 		endif else if theName eq 'PLOTS_MAGNIFYLIST' then begin
@@ -6048,6 +6063,7 @@ PRO NCDF_DATA__DEFINE, class
              symbolID:'',              $
              axquotID:'',              $
              lalgID:'',                $
+             addname_MTS:'',           $
              handlebar:'',             $   
              handleshape:'',           $   
              horizontal:'',            $    
@@ -6079,6 +6095,7 @@ PRO NCDF_DATA__DEFINE, class
              verbID:0L,                $
              noTitleID:0L,             $
              noBarID:0L,               $
+             MTS_ID:0L,                $
              ShapeID:0L,               $
              invID:0L,                 $
              enablelim:0l,             $
@@ -6108,6 +6125,7 @@ PRO NCDF_DATA__DEFINE, class
              dd:'',                    $
              whatever:'',              $
              compare_algo1:'',         $
+             fscrID:0L,                $
              logid:0L,                 $
              contID:0L,                $ 
              gridID:0L,                $ 
@@ -6174,6 +6192,7 @@ PRO NCDF_DATA__DEFINE, class
              pcts:0L,                  $
              pchist:0L,                $
              out_hovmoeller:Ptr_New(), $
+             screen_size:[0,0],        $       
              pczm:0L,                  $
              pcdts:0L,                 $
              pcmts:0L,                 $

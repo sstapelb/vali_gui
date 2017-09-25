@@ -2572,7 +2572,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
 		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify		, 						$
 		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
-		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format       									  ; output
+		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format,position = position						  ; output
 
 	box_axes = 1
 	ksl = keyword_set(limit)
@@ -2675,9 +2675,10 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 	endif
 
 	if adv_keyword_set(nobar) then begin
-		if nobar eq 1 then no_color_bar = 1 ; no color bar
-		if nobar eq 2 then begin & no_color_bar = 0 & horizontal = 1 & end ; force horizontal colorbar
-		if nobar eq 3 then begin & no_color_bar = 0 & horizontal = 0 & end ; force vertical colorbar
+		if nobar eq 1  then no_color_bar = 1 ; no color bar
+		if nobar eq 2  then begin & no_color_bar = 0 & horizontal = 1 & end ; force horizontal colorbar
+		if nobar eq 3  then begin & no_color_bar = 0 & horizontal = 0 & end ; force vertical colorbar
+		if nobar eq 99 then begin & position = [0.,0.,1.,1.] & no_color_bar = 1 & no_box = 1 & end
 	endif
 
 	if keyword_set(no_label) then label = 0
@@ -4940,11 +4941,11 @@ function get_histo_time_series, algo, data, satellite, period = period, this_per
 	return,-1
 end
 ;------------------------------------------------------------------------------------------
-; reads the plot, compare and hovmoeller time series savfiles.
-function get_available_time_series, algo, data, satellite, coverage = coverage, reference = reference, period = period	, $
-				longname = longname, unit = unit, sav_file = sav_file, found = found				, $
-				hovmoeller = hovmoeller, trend = trend, tr_corr = tr_corr, anomalies = anomalies	, $
-				stddev = stddev, uncertainty = uncertainty, sum = sum, diff = diff					, $
+; reads the plot, compare and hovmoeller time series sav-files.
+function get_available_time_series, algo, data, satellite, coverage = coverage, reference = reference	, $
+				period = period,longname = longname, unit = unit, sav_file = sav_file, found = found	, $
+				hovmoeller = hovmoeller, trend = trend, tr_corr = tr_corr, anomalies = anomalies		, $
+				stddev = stddev, uncertainty = uncertainty, sum = sum, diff = diff						, $
 				no_trend_found = no_trend_found, silent = silent, pvir = pvir, season = season
 
 	cov = keyword_set(coverage) ? strlowcase(coverage) : ''
