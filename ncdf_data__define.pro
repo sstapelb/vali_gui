@@ -3867,6 +3867,8 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	widget_control,self.minimumID,get_value=mini
 	widget_control,self.p0lonID,get_value=p0lon
 	widget_control,self.p0latID,get_value=p0lat
+	if p0lon eq ['0'] then p0lon = ['']
+	if p0lat eq ['0'] then p0lat = ['']
 	widget_control,self.maximumID,get_value=maxi
 ; 	widget_control,self.pmultID,get_value=pmulti
 	widget_control,self.winnrID,get_value=win_nr

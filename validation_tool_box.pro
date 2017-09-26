@@ -2568,7 +2568,7 @@ end
 ; sets predefined projections to use with map_image__define
 pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar, 	$ ; input 
 		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, 		$ ; input 
-		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,								$ ; input 
+		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,no_grid=no_grid,				$ ; input 
 		ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
 		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify		, 						$
 		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
@@ -2660,8 +2660,10 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		endif
 	endif else if keyword_set(p0lon) and ~keyword_set(p0lat) and ~ksl then begin
 		limit = [-90,((p0lon mod 360) -180),90,((p0lon mod 360) +180)]
-	endif else if keyword_set(fix(p0lat)) and ksl then begin
+	endif else if keyword_set(p0lat) and ksl then begin
 		if total(limit eq [-90,-180,90,180]) eq 4. then free ,limit ; let map_image do the calculation
+	endif else if keyword_set(p0lon) and keyword_set(p0lat) and ~ksl then begin
+; stop
 	endif
 
 	if adv_keyword_set(maxvalue) then begin
@@ -2681,12 +2683,13 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if nobar eq 99 then begin & position = [0.,0.,1.,1.] & no_color_bar = 1 & no_box = 1 & end
 	endif
 
-	if keyword_set(no_label) then label = 0
 	if keyword_set(no_box)   then begin
+		label = 1
 		box_axes = 0
 		noborder=1
  		no_draw_border=1
 	endif
+	if keyword_set(no_label) or keyword_set(no_grid) then label = 0
 
 	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'
 

@@ -756,11 +756,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	;-------------------- plot with map_image ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
 	set_proj  ,globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar,no_label=no_label, $
-		   Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
+		   Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson,no_grid=no_grid	, $
 		   ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic		, $
 		   no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,msg=msg, $
 		   maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert,$
-		   lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position	
+		   lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position,no_grid=no_grid	
 
 	if use_shape_file then begin
 		found = 1
@@ -1711,7 +1711,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		  enhanced_robinson = enhanced_robinson, ortho=ortho,iso=iso,stereographic=stereographic, horizontal=horizontal,grid=grid,$
-		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label, $
+		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label,no_grid=no_grid, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg_proj,$
 		  lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,no_box=no_box,position = position	
@@ -2435,7 +2435,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		    ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,msg=msg	, $
 		    no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,no_label=no_label,  $
 		    stereographic=stereographic,maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert,$
-		    lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = map_position	
+		    lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = map_position,no_grid=no_grid	
 
 	if keyword_set(zonal_only) then begin
 		; cci und cci2 limit schon drin nur nicht land, sea
@@ -3635,7 +3635,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			limit = limit, ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,$
 			stereographic=stereographic, no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,$
 			nobar=nobar,msg=msg, maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert, $
-			lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position	
+			lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position,no_grid=no_grid	
 
 		if keyword_set(diff) then begin
 			start_save, save_as, thick = thick, size = [32,20]
@@ -4149,7 +4149,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		  ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic	, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg	, $
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert, $
-  		  lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position	
+  		  lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position	,no_grid=no_grid
 
 	if hct eq 'max' then begin
 		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_max_type.eps'
