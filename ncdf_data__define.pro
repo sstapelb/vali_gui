@@ -3240,9 +3240,15 @@ function NCDF_DATA::make_VARList, data_only = data_only
 		endfor
 		thelist = thenewList
 	endif
-
-	theList=[theList,'blue_marble','usgs_lus','usgs_dem']
-
+	
+	theList=[theList,'---Additional-Variables---','blue_marble','usgs_lus','usgs_dem']
+	
+	if self.level eq 'l3c' then begin
+		self.c6_list = ptr_new(['cwp_16','iwp_16','lwp_16','cot_16','cer_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
+								'cwp_37','iwp_37','lwp_37','cot_37','cer_37','cot_37_liq','cer_37_liq','cot_37_ice','cer_37_ice', $
+								'iwp_16_allsky','lwp_16_allsky','cwp_16_allsky','iwp_37_allsky','lwp_37_allsky','cwp_37_allsky'])
+		theList=[theList,'cwp','------Coll6-L3C-Only------',*self.c6_list]
+	endif
 	return, theList
 end
 
@@ -3271,7 +3277,6 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	; We want a non-modal pop-up dialog widget.
 	tlb2 = Widget_Base(GROUP_LEADER=event.top, XOFFSET=offsets[0], YOFFSET=offsets[1],col=2, BASE_ALIGN_CENTER=1, /FLOATING, $
 			  UVALUE=self,title='File: '+self.filename,TLB_SIZE_EVENT=1)
-
 	  if self.screen_size[1] lt 1040 then leftrow = Widget_Base(tlb2, ROW=26,FRAME=1,/scroll,x_scroll_size=280,y_scroll_size=800) else $
 	  leftrow = Widget_Base(tlb2, ROW=26,FRAME=1)
 	    label = Widget_Label(leftrow, Value='Variable to Plot: ', SCR_XSIZE=270,ALIGN_CENTER=1,SCR_YSIZE=label_size)
@@ -3329,15 +3334,15 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      self.landpixID = Widget_Button(bla, Value='Land Only ', UVALUE='SET_PLOT_DEFAULTS')
 	      self.seapixID  = Widget_Button(bla, Value='Sea Only    ', UVALUE='SET_PLOT_DEFAULTS')
 	    bla = Widget_Base(leftrow, row=2, /Exclusive,Frame=1, XSize=270)
-	      self.globalID  = Widget_Button(bla, Value='Global', UVALUE='SET_PLOT_DEFAULTS')
-	      self.arcticID  = Widget_Button(bla, Value='Arctic', UVALUE='SET_PLOT_DEFAULTS')
-	      self.midlatnID = Widget_Button(bla, Value='MidLN', UVALUE='SET_PLOT_DEFAULTS')
-	      self.northhmID = Widget_Button(bla, Value='NH', UVALUE='SET_PLOT_DEFAULTS')
-	      self.southhmID = Widget_Button(bla, Value='SH', UVALUE='SET_PLOT_DEFAULTS')
-	      self.tropicID  = Widget_Button(bla, Value='Tropic', UVALUE='SET_PLOT_DEFAULTS')
-	      self.antarcID  = Widget_Button(bla, Value='AntArc', UVALUE='SET_PLOT_DEFAULTS')
-	      self.midlatsID = Widget_Button(bla, Value='MidLS', UVALUE='SET_PLOT_DEFAULTS')
-	      self.pm70ID    = Widget_Button(bla, Value=''+string(177b)+'60'+string(176b)+' Lat     ', UVALUE='SET_PLOT_DEFAULTS')
+	      self.globalID  = Widget_Button(bla, Value='Global', UVALUE='SET_PLOT_DEFAULTS',tooltip='Global; Latitude = [-90.0, 90.0]')
+	      self.arcticID  = Widget_Button(bla, Value='Arctic', UVALUE='SET_PLOT_DEFAULTS',tooltip='Arctic; Latitude = [ 60.0, 90.0]')
+	      self.midlatnID = Widget_Button(bla, Value='MidLN', UVALUE='SET_PLOT_DEFAULTS',tooltip='Mid Latitude North; Latitude = [-60.0,-30.0]')
+	      self.northhmID = Widget_Button(bla, Value='NH', UVALUE='SET_PLOT_DEFAULTS',tooltip='Northern Hemisphere; Latitude = [  0.0, 90.0]')
+	      self.southhmID = Widget_Button(bla, Value='SH', UVALUE='SET_PLOT_DEFAULTS',tooltip='Southern Hemisphere; Latitude = [-90.0,  0.0]')
+	      self.tropicID  = Widget_Button(bla, Value='Tropic', UVALUE='SET_PLOT_DEFAULTS',tooltip='Tropics; Latitude = [-30.0, 30.0]')
+	      self.antarcID  = Widget_Button(bla, Value='AntArc', UVALUE='SET_PLOT_DEFAULTS',tooltip='Antarctica; Latitude = [-90.0,-60.0]')
+	      self.midlatsID = Widget_Button(bla, Value='MidLS', UVALUE='SET_PLOT_DEFAULTS',tooltip='Mid Latitude South; Latitude = [ 30.0, 60.0]')
+	      self.pm70ID    = Widget_Button(bla, Value=''+string(177b)+'60'+string(176b)+' Lat     ', UVALUE='SET_PLOT_DEFAULTS',tooltip='+/-60 degree Latitude; Latitude = [-60.0, 60.0]')
 	    self.sat_base = Widget_Base(leftrow, Column=6, Scr_XSize=270, /Exclusive,Frame=1,sensitive=1)
 ; 	      self.noaa5     = Widget_Button(self.sat_base, Value='N05', UVALUE='SET_PLOT_DEFAULTS',tooltip='NOAA-05')
 ; 	      self.tirosn    = Widget_Button(self.sat_base, Value='T-N', UVALUE='SET_PLOT_DEFAULTS',tooltip='TIROS-N')
@@ -4310,10 +4315,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				return
 			endif
 			if ~file_test(save_as) then file_mkdir, save_as
-			filename = Dialog_Pickfile(/write, File=filename,/overwrite_prompt,path=save_as, $
-				   filter='*.png,*.bmp,*.gif,*.jpg,*.pict,*.tiff')
-			image    = cgSnapshot(Filename=filename,/nodialog)
-                        print,'Image saved as: ',filename
+			filter=['*.png','*.bmp','*.gif','*.jpg','*.pict','*.tiff','*.eps','*.ps','*.pdf']
+			filename = 	Dialog_Pickfile(/write, File=filename,/overwrite_prompt,path=save_as, filter=filter,/default_extension)
+			if filename ne '' then begin
+				image = cgSnapshot_extended(Filename=filename,/nodialog)
+				print,'Image saved as: ',filename
+			endif
 		end
 		'JUST_COMPARE_CCI_WITH'	: begin
 
@@ -5091,12 +5098,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			self.compare_algo1 = event.index eq 0 ? self.algoname : algo2ref(event.str)
 			if self.compare_algo1 eq 'unknown' then self.compare_algo1 = event.str
 		endif else if theName eq 'PLOTS_VARLIST' then begin
-	; 		Widget_Control, self.varname_plotID, Set_Value=list[event.index]
-	; 		self.varname_plotID=event.str
-			self.varname_plotID=strreplace(event.str,['_liq','_ice','_ratio'],['','',''])
+			self.varname_plotID=strreplace(event.str,['_16','_37','_liq','_ice','_ratio'],['','','','',''])
 			keep_mima = ( Widget_Info(self.enablemima,/BUTTON_SET) )
 			if ~keep_mima then begin
-	; 			read_data,self.directory+'/'+self.filename, self.varname_plotID, theData, found = success, algo = self.algoname, fillvalue, minvalue, maxvalue
 				thedata = get_data(self.year,self.month,self.day,file=self.directory+'/'+self.filename,data=self.varname_plotID, $
 						algo=self.algoname,level=self.level,/keep_data_name,sat=self.satname,minvalue=minvalue,$
 						maxvalue=maxvalue,/make_compareable, var_dim_names=var_dim_names, found = success,/silent)
@@ -5104,7 +5108,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				; avoid converting byte into strings (ascii code!)
 				if size(minvalue,/type) eq 1 then minvalue = fix(minvalue)
 				if size(maxvalue,/type) eq 1 then maxvalue = fix(maxvalue)
-				if success then begin;and event.index ge 0 then begin
+				if success then begin
 					if stregex(event.str,'_ratio',/bool,/fold) then begin
 						minvalue = 0
 						maxvalue = 100
@@ -5123,9 +5127,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 							widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
 						endelse
 					endelse
-	; 			endif else if success then begin
-	; 				si = [size(thedata,/dim),1,1]
-	; 				widget_control, self.zkompID, set_uvalue = strcompress(indgen(si[2]),/rem),set_value=strcompress(indgen(si[2]),/rem)
 				endif
 			endif
 		endif else begin
@@ -6150,6 +6151,7 @@ PRO NCDF_DATA__DEFINE, class
              metopa:0L,                $
              metopb:0L,                $
              msg:0L,                   $
+             c6_list:ptr_new(),        $
              aqua:0L,                  $
              envisat:0L,               $
              ers2:0L,                  $

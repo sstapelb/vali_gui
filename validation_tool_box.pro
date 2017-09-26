@@ -5776,6 +5776,331 @@ function get_l3u_ecmwf_data, date, time, ls, grid_res = grid_res, found = found,
 
 end
 ;------------------------------------------------------------------------------------------
+;this is an extended version of david fannings cgsnapshot.pro 
+;           it is now including 'EPS' and 'PDF' support
+FUNCTION cgSnapshot_extended, xstart, ystart, ncols, nrows, $
+   BMP=bmp, $
+   Cancel=cancel, $
+   Colors=colors, $
+   Cube=cube, $
+   Dither=dither, $
+   Filename=filename, $
+   GIF=gif, $
+   JPEG=jpeg, $
+   NoDialog=nodialog, $
+   Order=order, $
+   Overwrite_Prompt=overwrite_prompt, $
+   PICT=pict, $
+   PNG=png, $
+   POSITION=position, $
+   TIFF=tiff, $
+   True=true, $
+   Type=type, $
+   Quality=quality, $
+   WID=wid, $
+   EPS=eps, $
+   PDF=pdf, $
+   _Ref_Extra=extra
+   
+
+   ; Error handling.
+   Catch, theError
+   IF theError NE 0 THEN BEGIN
+       Catch, /Cancel
+       ok = Error_Message()
+       IF N_Elements(thisWindow) EQ 0 THEN RETURN, -1
+       IF thisWindow GE 0 THEN WSet, thisWindow
+       
+       ; Need to set color decomposition back?
+       IF (N_Elements(theDecomposedState) NE 0) && (theDepth GT 0) THEN BEGIN
+           Device, Decomposed=theDecomposedState
+       ENDIF
+       RETURN, -1
+    ENDIF
+    
+    cancel = 0
+    
+    ; Check for availability of GIF files.
+    thisVersion = Float(!Version.Release)
+    IF (thisVersion LT 5.3) OR (thisVersion GE 6.1) THEN haveGif = 1 ELSE haveGIF = 0
+    
+    ; Go to correct window.
+    IF N_Elements(wid) EQ 0 THEN wid =!D.Window
+    thisWindow = !D.Window
+    IF (!D.Flags AND 256) NE 0 THEN WSet, wid
+    
+    ; Did the user specify a normalized position in the window?
+    IF N_Elements(position) NE 0 THEN BEGIN
+       xstart = position[0] * !D.X_VSize
+       ystart = position[1] * !D.Y_VSize
+       ncols = (position[2]*!D.X_VSize) - xstart
+       nrows = (position[3]*!D.Y_VSize) - ystart
+    ENDIF
+    
+    ; Check keywords and parameters. Define values if necessary.
+    IF N_Elements(xstart) EQ 0 THEN xstart = 0
+    IF N_Elements(ystart) EQ 0 THEN ystart = 0
+    IF N_Elements(ncols) EQ 0 THEN ncols = !D.X_VSize - xstart
+    IF N_Elements(nrows) EQ 0 THEN nrows = !D.Y_VSize - ystart
+    IF N_Elements(order) EQ 0 THEN order = !Order
+    IF N_Elements(true) EQ 0 THEN true = 1
+    dialog = 1 - Keyword_Set(nodialog)
+  
+    ; Is the FILENAME keyword being used? If so, get the type of the
+    ; file from the filename extension.
+    IF N_Elements(filename) NE 0 THEN BEGIN
+       root_name = cgRootName(filename, DIRECTORY=theDir, EXTENSION=ext)
+       IF ext NE "" THEN BEGIN
+           type = StrUpCase(ext)
+           typeFromExtension = 1
+       ENDIF ELSE typeFromExtension = 0
+    ENDIF ELSE typeFromExtension = 0
+  
+    ; Do you want to write an image file instead of capturing an image?
+    IF N_Elements(type) NE 0 THEN BEGIN
+       CASE StrUpCase(type) OF
+          'PS' : ps =1
+          'PDF': pdf = 1
+          'EPS': eps = 1
+          'BMP': bmp = 1
+          'GIF': gif = 1
+          'JPEG': jpeg = 1
+          'JPG': jpeg = 1
+          'PICT': pict = 1
+          'PNG': png = 1
+          'TIFF': tiff = 1
+          'TIF': tif = 1
+          ELSE: Message, 'Cannot write a file of type: ' + StrUpCase(type) + '.'
+       ENDCASE
+    ENDIF
+    writeImage = 0
+    fileType = ""
+    extention = ""
+    IF Keyword_Set(ps)THEN BEGIN
+       writeImage = 1
+       fileType = 'PS'
+       extension = 'ps'
+    ENDIF
+    IF Keyword_Set(pdf)THEN BEGIN
+       writeImage = 1
+       fileType = 'PDF'
+       extension = 'pdf'
+    ENDIF
+    IF Keyword_Set(eps)THEN BEGIN
+       writeImage = 1
+       fileType = 'EPS'
+       extension = 'eps'
+    ENDIF
+    IF Keyword_Set(bmp)THEN BEGIN
+       writeImage = 1
+       fileType = 'BMP'
+       extension = 'bmp'
+    ENDIF
+    IF Keyword_Set(gif) THEN BEGIN
+       IF havegif THEN BEGIN
+          writeImage = 1
+          fileType = 'GIF'
+          extension = 'gif'
+        ENDIF ELSE BEGIN
+           ok = Dialog_Message('GIF files not supported in this IDL version. Replacing with JPEG.')
+           writeImage = 1
+          fileType = 'JPEG'
+          extension = 'jpg'
+       ENDELSE
+    ENDIF
+    IF Keyword_Set(jpeg) THEN BEGIN
+       writeImage = 1
+       fileType = 'JPEG'
+       extension = 'jpg'
+    ENDIF
+    IF Keyword_Set(PICT) THEN BEGIN
+       writeImage = 1
+       fileType = 'PICT'
+       extension = 'pict'
+    ENDIF
+    IF Keyword_Set(png) THEN BEGIN
+       writeImage = 1
+       fileType = 'PNG'
+       extension = 'png'
+    ENDIF
+    IF Keyword_Set(tiff) THEN BEGIN
+       writeImage = 1
+       fileType = 'TIFF'
+       extension = 'tif'
+    ENDIF
+    
+    IF N_Elements(colors) EQ 0 THEN colors = 256
+    IF N_Elements(quality) EQ 0 THEN quality = 75
+    dither = Keyword_Set(dither)
+
+    ; On 24-bit displays, make sure color decomposition is ON.
+    IF (!D.Flags AND 256) NE 0 THEN BEGIN
+       Device, Get_Decomposed=theDecomposedState, Get_Visual_Depth=theDepth
+       IF theDepth GT 8 THEN BEGIN
+          Device, Decomposed=1
+          IF theDepth EQ 24 THEN truecolor = true ELSE truecolor = 0
+       ENDIF ELSE truecolor = 0
+       IF wid LT 0 THEN $
+          Message, 'No currently open windows. Returning.', /NoName
+    ENDIF ELSE BEGIN
+       truecolor = 0
+       theDepth = 8
+    ENDELSE
+
+    ; Fix for 24-bit Z-buffer.
+    IF (Float(!Version.Release) GE 6.4) AND (!D.NAME EQ 'Z') THEN BEGIN
+       Device, Get_Decomposed=theDecomposedState, Get_Pixel_Depth=theDepth
+       IF theDepth EQ 24 THEN truecolor = true ELSE truecolor = 0
+    ENDIF
+    
+   ; Get the screen dump. 2D image on 8-bit displays. 3D image on 24-bit displays.
+    image = TVRD(xstart, ystart, ncols, nrows, True=truecolor, Order=order)
+    
+    ; Need to set color decomposition back?
+    IF theDepth GT 8 THEN Device, Decomposed=theDecomposedState
+    
+    ; If we need to write an image, do it here.
+    IF writeImage THEN BEGIN
+    
+       ; Get the name of the output file.
+       IF N_Elements(filename) EQ 0 THEN BEGIN
+          filename = 'idl.' + StrLowCase(extension)
+       ENDIF ELSE BEGIN
+          IF typeFromExtension EQ 0 THEN filename = filename + "." + StrLowCase(extension)
+       ENDELSE
+       IF dialog THEN filename = Dialog_Pickfile(/Write, File=filename, OVERWRITE_PROMPT=Keyword_Set(overwrite_prompt))
+    
+       IF filename EQ "" THEN BEGIN
+          cancel = 1
+          RETURN, image
+       ENDIF
+    
+       ; Write the file.
+       CASE fileType OF
+			'PS': BEGIN
+				si = GET_SCREEN_SIZE(RESOLUTION=res) ; resolution in cm/pixel
+				eps_size = float([!d.x_vsize * res[0],!d.y_vsize * res[1]])
+				IF truecolor THEN BEGIN
+					start_eps, filename, xyscale = eps_size, /silent,/ps
+					tv, image, /true
+					end_eps
+				ENDIF ELSE BEGIN
+					;find out later
+					RETURN, -1
+				ENDELSE
+             END
+			'EPS': BEGIN
+				si = GET_SCREEN_SIZE(RESOLUTION=res) ; resolution in cm/pixel
+				eps_size = float([!d.x_vsize * res[0],!d.y_vsize * res[1]])
+				IF truecolor THEN BEGIN
+					start_eps, filename, xyscale = eps_size, /silent
+					tv, image, /true
+					end_eps
+				ENDIF ELSE BEGIN
+					;find out later
+					RETURN, -1
+				ENDELSE
+             END
+			'PDF': BEGIN
+				si = GET_SCREEN_SIZE(RESOLUTION=res) ; resolution in cm/pixel
+				eps_size = float([!d.x_vsize * res[0],!d.y_vsize * res[1]])
+				IF truecolor THEN BEGIN
+					eps_filename = file_dirname(filename)+'/'+file_basename(filename,'pdf')+'eps'
+					start_eps, eps_filename, xyscale = eps_size, /silent
+					tv, image, /true
+					end_eps
+					eps2pdf, eps_filename , filename,/remove, ok = ok
+				ENDIF ELSE BEGIN
+					;find out later
+					RETURN, -1
+				ENDELSE
+             END
+          'BMP': BEGIN
+             IF truecolor THEN BEGIN
+                ; BMP files assume blue, green, red planes.
+                temp = image[0,*,*]
+                image[0,*,*] = image[2,*,*]
+                image[2,*,*] = temp
+                Write_BMP, filename, image, _Extra=extra
+             ENDIF ELSE BEGIN
+                TVLCT, r, g, b, /Get
+                Write_BMP, filename, image, r, g, b, _Extra=extra
+             ENDELSE
+             END
+    
+          'GIF': BEGIN
+             IF truecolor THEN BEGIN
+                CASE Keyword_Set(cube) OF
+                   0: image2D = Color_Quan(image, 1, r, g, b, Colors=colors, Dither=dither)
+                   1: image2D = Color_Quan(image, 1, r, g, b, Cube=2 > cube < 6)
+                ENDCASE
+             ENDIF ELSE BEGIN
+                TVLCT, r, g, b, /Get
+                image2D = image
+             ENDELSE
+             Write_GIF, filename, image2D, r, g, b, _Extra=extra
+             END
+    
+          'JPEG': BEGIN
+             IF truecolor THEN BEGIN
+                image3D = image
+             ENDIF ELSE BEGIN
+                s = Size(image, /Dimensions)
+                image3D = BytArr(3, s[0], s[1])
+                TVLCT, r, g, b, /Get
+                image3D[0,*,*] = r[image]
+                image3D[1,*,*] = g[image]
+                image3D[2,*,*] = b[image]
+             ENDELSE
+             Write_JPEG, filename, image3D, True=1, Quality=quality, _Extra=extra
+             END
+    
+          'PICT': BEGIN
+             IF truecolor THEN BEGIN
+                CASE Keyword_Set(cube) OF
+                   0: image2D = Color_Quan(image, 1, r, g, b, Colors=colors, Dither=dither)
+                   1: image2D = Color_Quan(image, 1, r, g, b, Cube=2 > cube < 6)
+                ENDCASE
+             ENDIF ELSE BEGIN
+                TVLCT, r, g, b, /Get
+                image2D = image
+             ENDELSE
+             Write_PICT, filename, image2D, r, g, b
+             END
+    
+          'PNG': BEGIN
+             IF truecolor THEN BEGIN
+                Write_PNG, filename, image, _Extra=extra
+             ENDIF ELSE BEGIN
+                TVLCT, r, g, b, /Get
+                image2D = image
+                Write_PNG, filename, image2D, r, g, b, _Extra=extra
+             ENDELSE
+             END
+    
+          'TIFF': BEGIN
+             IF truecolor THEN BEGIN
+                image3D = Reverse(image,3)
+             ENDIF ELSE BEGIN
+                s = Size(image, /Dimensions)
+                image3D = BytArr(3, s[0], s[1])
+                TVLCT, r, g, b, /Get
+                image3D[0,*,*] = r[image]
+                image3D[1,*,*] = g[image]
+                image3D[2,*,*] = b[image]
+                image3D = Reverse(Temporary(image3D), 3)
+             ENDELSE
+             Write_TIFF, filename, image3D, 1, _Extra=extra
+             END
+       ENDCASE
+       RETURN, -1
+    ENDIF
+    
+    ; Return the screen dump image.
+    RETURN, image
+ 
+END 
+;------------------------------------------------------------------------------------------
 pro start_save, save_as, thick = thick, size = size, landscape = landscape, snapshot = snapshot
 	if keyword_set(save_as) then begin
 		save_as = strcompress(strreplace(save_as,[']','[',' ',':',';',',','(',')'],['','','_','','','','',''],/noregex),/rem)
