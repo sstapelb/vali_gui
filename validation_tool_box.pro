@@ -4948,36 +4948,44 @@ end
 function get_available_time_series, algo, data, satellite, coverage = coverage, reference = reference	, $
 				period = period,longname = longname, unit = unit, sav_file = sav_file, found = found	, $
 				hovmoeller = hovmoeller, trend = trend, tr_corr = tr_corr, anomalies = anomalies		, $
-				stddev = stddev, uncertainty = uncertainty, sum = sum, diff = diff						, $
-				no_trend_found = no_trend_found, silent = silent, pvir = pvir, season = season
+				stddev = stddev, uncertainty = uncertainty, sum = sum, bias = bias			, $
+				rmse = rmse, corr = corr, no_trend_found = no_trend_found, silent = silent, pvir = pvir	, $
+				bc_rmse = bc_rmse, season = season, ts_extras = ts_extras
 
 	cov = keyword_set(coverage) ? strlowcase(coverage) : ''
 	sat = strlowcase(satellite)
 	dat = (strlowcase(data))[0]
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
 	if cov eq 'full' then cov = ''
+	no_trend_found = 0
 
-	diff      	= stregex((reverse(strsplit(dat,'_',/ext)))[0],'diff',/fold,/bool)
-	if diff    	then dat = strreplace(dat,'_diff','',/fold)
+	TSE = keyword_set(ts_extras) ? (strsplit(strlowcase(ts_extras),/ext))[0] : ''
 
-	pvir		= stregex((reverse(strsplit(dat,'_',/ext)))[0],'pvir',/fold,/bool)
-	if pvir 	then dat = strreplace(dat,'_pvir','',/fold)
-	tr_corr		= stregex(dat,'_trend_corr',/fold,/bool) 	 							; TS: ECT,ENSO and seasonal Trend corrected
-	if tr_corr  then dat = strreplace(dat,'_trend_corr','',/fold)
-	trend       = stregex((reverse(strsplit(dat,'_',/ext)))[0],'trend',/fold,/bool)		; 2D: ECT,ENSO and seasonal Trend 
-	anomalies   = stregex((reverse(strsplit(dat,'_',/ext)))[0],'anomalies',/fold,/bool)	; TS: ECT,ENSO and seasonal Anomalies
+	trend 		= TSE eq 'trend'
+	anomalies 	= TSE eq 'anomalies'	
+	season 		= TSE eq 'season'
+	sum 		= TSE eq 'sum' and 	(total(algo2ref(algo,sat=sat) eq ['cci','cciv3'])) and $
+									(stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool))
+	tr_corr 	= TSE eq 'tc'
+	bias 		= TSE eq 'bias' and keyword_set(reference)
+	rmse 		= TSE eq 'rmse' and keyword_set(reference)
+	bc_rmse 	= TSE eq 'bc_rmse' and keyword_set(reference)
+	corr 		= TSE eq 'correlation' and keyword_set(reference)
+
+	if keyword_set(reference) and strmid(TSE,0,3) eq 'tc-' then begin
+		tr_corr	= 1
+		bias 	= strmid(TSE,3) eq 'bias'
+		rmse 	= strmid(TSE,3) eq 'rmse'
+		bc_rmse = strmid(TSE,3) eq 'bc_rmse'
+		corr 	= strmid(TSE,3) eq 'correlation'
+	endif
+
+	pvir        = stregex((reverse(strsplit(dat,'_',/ext)))[0],'pvir',/fold,/bool) ; Pvir is always last added to varname
+	if pvir    		then dat = strreplace(dat,'_pvir','',/fold)
 	uncertainty = stregex((reverse(strsplit(dat,'_',/ext)))[0],'unc',/fold,/bool)
-	stddev      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
-	season      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'season',/fold,/bool)
-	sum			= stregex((reverse(strsplit(dat,'_',/ext)))[0],'sum',/fold,/bool) and (total(algo2ref(algo,sat=sat) eq ['cci','cciv3'])) and $
-				 (stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool))
-
-	if stddev    	then dat = strreplace(dat,'_std','',/fold)
 	if uncertainty 	then dat = strreplace(dat,'_unc','',/fold)
-	if anomalies 	then dat = strreplace(dat,'_anomalies','',/fold)
-	if trend     	then dat = strreplace(dat,'_trend','',/fold)
-	if season     	then dat = strreplace(dat,'_season','',/fold)
-	if sum			then dat = strreplace(dat,'_sum','',/fold) 
+	stddev      = stregex((reverse(strsplit(dat,'_',/ext)))[0],'std',/fold,/bool)
+	if stddev    	then dat = strreplace(dat,'_std','',/fold)
 
 	if algo2ref(algo,sat=sat) eq 'gac2' and sat eq 'avhrrs' then sat = 'allsat'
 	if algo2ref(algo,sat=sat) eq 'cci' and sat eq 'envisat' then sat = 'aatsr' ; is this a good idea? I don't know.
@@ -5066,15 +5074,8 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		endelse
 	endelse
 
-	if found eq 0 then begin
-		no_trend_found = 0
-		tr_corr = 0
-		trend = 0
-		anomalies = 0
-		sum = 0
-		season = 0
-		return,-1
-	endif
+	if found eq 0 then return,-1
+
 	if found gt 1 then begin
 		; welches file nehmen wir, wenn wir mehr als ein file haben
 		zeitraum = intarr(found)
@@ -5121,21 +5122,19 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 			endif
 			struc = create_struct(struc,{period:datum,longname:longname,unit:unit})
 		endif else begin
-			no_trend_found = 0
-			if tr_corr   and ~is_tag(struc,'TREND') then no_trend_found = 1
-			if trend     and ~is_tag(struc,'TREND') then no_trend_found = 1
-			if anomalies and ~is_tag(struc,'TREND') then no_trend_found = 1
-			if season    and ~is_tag(struc,'TREND') then no_trend_found = 1
+			if tr_corr    and ~is_tag(struc,'TREND') then no_trend_found = 1
+			if trend      and ~is_tag(struc,'TREND') then no_trend_found = 1
+			if anomalies  and ~is_tag(struc,'TREND') then no_trend_found = 1
+			if season     and ~is_tag(struc,'TREND') then no_trend_found = 1
 			if is_tag(struc,'TREND') then begin
-				if ~is_struct(struc.trend) and (tr_corr or trend or anomalies) then no_trend_found = 1
+				if ~is_struct(struc.trend) and (tr_corr or trend or anomalies or season) then no_trend_found = 1
 			endif
 			if no_trend_found then begin
 				ok = dialog_message('get_available_time_series: "Trend" not found or is not a structure!')
-				tr_corr = 0
-				trend = 0
-				anomalies = 0
-				season = 0
-				sum = 0
+				trend 		= 0
+				anomalies 	= 0
+				season 		= 0
+				tr_corr 	= 0
 				found = 0
 				return,-1
 			endif
@@ -5163,11 +5162,6 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 		if ~keyword_set(silent) then print,'Sav File: ',sav_file
 		return,struc
 	endif else begin
-		tr_corr = 0
-		trend = 0
-		anomalies = 0
-		season = 0
-		no_trend_found = 0
 		return,-1
 	endelse
 end
@@ -9168,7 +9162,7 @@ pro read_panoply_ct,name,r,g,b,h
 	endif
 
 	dum = einlesen('/cmsaf/nfshome/sstapelb/panoply_ct/'+name+'.cpt',comment=['#','B','F','N'])
-	
+
 	h = reform(dum[4,*])
 	r = reform(dum[5,*])
 	g = reform(dum[6,*])
