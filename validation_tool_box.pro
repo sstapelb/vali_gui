@@ -1061,7 +1061,7 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 				endif
 			endif
 		endfor
-		print,min_lon,max_lon,min_lat,max_lat
+; 		print,min_lon,max_lon,min_lat,max_lat
 		idx = where(between(lon_in,min_lon,max_lon) and between(lat_in,min_lat,max_lat),idx_cnt) 
 		if idx_cnt lt 1 then begin
 			found = 0
@@ -1087,19 +1087,23 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 						lat = reform((*entity.vertices)[1, cuts[j]:cuts[j+1]-1])
 						if grd eq 0 then begin
 							index = GRIDDATA(lon_in[idx],lat_in[idx], LINDGEN(idx_cnt), XOUT=lon, YOUT=lat, /NEAREST_N,TRIANGLES = c)
-; 						stop
-; 							dist  = great_circle(lon_in[idx[index]],lat_in[idx[index]],lon,lat)
-; 							print,minmax(dist) 
-							dum   = array_indices(lon_in,idx[index])
-							xxx   = reform(dum[0,*])
-							yyy   = reform(dum[1,*])
+							dist  = great_circle(lon_in[idx[index]],lat_in[idx[index]],lon,lat)
+							ddd   = where(dist lt 10000.,ddd_cnt); not if distance is more than 10km
+							if ddd_cnt gt 0 then begin
+; 								print,minmax(dist[ddd]) 
+								dum   = array_indices(lon_in,idx[index[ddd]])
+								xxx   = reform(dum[0,*])
+								yyy   = reform(dum[1,*])
+								subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
+								if subscripts[0] ne -1 then filled[subscripts] += 1
+							endif
 						endif else begin
 							;convert lon/lat to x/y
 							xxx = fix((lon + 180.)*(1./grd))
 							yyy = fix((lat +  90.)*(1./grd))
+							subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
+							if subscripts[0] ne -1 then filled[subscripts] += 1
 						endelse 
-						subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
-						if subscripts[0] ne -1 then filled[subscripts] += 1
 						if grd eq 0 then o_myt_orb -> wie_lang_noch
 					endfor
 			endif

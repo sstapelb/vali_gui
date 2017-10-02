@@ -4,6 +4,7 @@
 @/cmsaf/nfshome/sstapelb/idl/bias.pro
 @/cmsaf/nfshome/sstapelb/idl/rene/rmse.pro
 @/cmsaf/nfshome/sstapelb/idl/doy.pro
+@/cmsaf/nfshome/sstapelb/idl/great_circle.pro
 @./coyote/error_message.pro
 @./coyote/cgcolor.pro
 @./coyote/themonths.pro
