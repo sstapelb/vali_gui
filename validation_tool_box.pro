@@ -1007,40 +1007,103 @@ function ihistogram,data,bin_borders
 end
 ; maps a filled shapefile onto a regular grid 
 ;------------------------------------------------------------------------------------------
-function shape2grid, shape_file,grid=grid, plot_it = plot_it,found=found, germany = germany
+function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid, plot_it = plot_it,found=found, germany = germany
 
 	found = 1
 	if keyword_set(germany) then shape_file = '/cmsaf/cmsaf-cld1/sstapelb/shapefiles/Germany/DEU_adm1.shp'
-	grd = keyword_set(grid) ? float(grid) : 0.05
+	grd = adv_keyword_set(grid) ? float(grid) : 0.05
 	if grd le 0 or ~file_test(shape_file,/read) then begin
-		found = 0
-		return,-1
-	endif
+		if grd eq 0. then begin
+			;check if lon/lat are available
+			if keyword_set(longitude) and keyword_set(latitude) then begin
+				lon_in = longitude
+				lat_in = latitude
+				si = size(lon_in,/dim)
+				if n_elements(si) eq 2 then begin
+					x_dim = si[0]
+					y_dim = si[1]
+				endif else begin
+					found = 0
+					return,-1
+				endelse
+			endif else begin
+				found = 0
+				return,-1
+			endelse
+		endif
+	endif else begin
+		x_dim = 360./grd
+		y_dim = 180./grd
+	endelse
 
-	myshape = OBJ_NEW('IDLffShape', shape_file)
+	;use adm0 file for this, if available
+	sfile = strreplace(shape_file,'_adm1.shp','_adm0.shp')
+
+	myshape = OBJ_NEW('IDLffShape', file_test(sfile) ? sfile : shape_file)
 	myshape -> GetProperty, N_ENTITIES=num_ent
 
-	filled = BYTARR(360./grd, 180./grd)
+	if grd eq 0 then begin
+		;check_bounds
+		min_lat =  90.
+		max_lat = -90.
+		min_lon = 180.
+		max_lon =-180.
+		FOR x=0,num_ent-1 DO BEGIN
+			entity  = myshape->GetEntity(x)
+			if 	entity.shape_type EQ 5 OR $    		; Polygon.
+				entity.shape_type EQ 15 OR $   		; PolygonZ (ignoring Z)
+				entity.shape_type EQ 25 then begin 	; PolygonM (ignoring M)
+				IF Ptr_Valid(entity.parts) then begin
+					min_lon = min([min_lon,entity.bounds[0]])
+					max_lon = max([max_lon,entity.bounds[4]])
+					min_lat = min([min_lat,entity.bounds[1]])
+					max_lat = max([max_lat,entity.bounds[5]])
+				endif
+			endif
+		endfor
+		print,min_lon,max_lon,min_lat,max_lat
+		idx = where(between(lon_in,min_lon,max_lon) and between(lat_in,min_lat,max_lat),idx_cnt) 
+		if idx_cnt lt 1 then begin
+			found = 0
+			return,-1
+		endif
+		triangulate, lon_in[idx], lat_in[idx], c
+	endif
+
+	filled = BYTARR(x_dim,y_dim)
 	!quiet=1 ; suppress "No points in polygon" warnings by polyfillv
+
 	FOR x=0,num_ent-1 DO BEGIN
 		entity  = myshape->GetEntity(x)
-
 		if 	entity.shape_type EQ 5 OR $    		; Polygon.
 			entity.shape_type EQ 15 OR $   		; PolygonZ (ignoring Z)
 			entity.shape_type EQ 25 then begin 	; PolygonM (ignoring M)
 
 			IF Ptr_Valid(entity.parts) THEN BEGIN
-				cuts = [*entity.parts, entity.n_vertices]
-				FOR j=0, entity.n_parts-1 DO BEGIN
-					lon = (*entity.vertices)[0, cuts[j]:cuts[j+1]-1]
-					lat = (*entity.vertices)[1, cuts[j]:cuts[j+1]-1]
-					;convert lon/lat to x/y
-					xxx = fix((lon + 180.)*(1./grd))
-					yyy = fix((lat +  90.)*(1./grd))
-					subscripts = POLYFILLV( reform(xxx), reform(yyy), long(360./grd), long(180./grd) )
-					if subscripts[0] ne -1 then filled[subscripts] += 1
-				endfor
+					cuts = [*entity.parts, entity.n_vertices]
+					if grd eq 0 then o_myt_orb = obj_new('my_timer',entity.n_parts)
+					FOR j=0, entity.n_parts-1 DO BEGIN
+						lon = reform((*entity.vertices)[0, cuts[j]:cuts[j+1]-1])
+						lat = reform((*entity.vertices)[1, cuts[j]:cuts[j+1]-1])
+						if grd eq 0 then begin
+							index = GRIDDATA(lon_in[idx],lat_in[idx], LINDGEN(idx_cnt), XOUT=lon, YOUT=lat, /NEAREST_N,TRIANGLES = c)
+; 						stop
+; 							dist  = great_circle(lon_in[idx[index]],lat_in[idx[index]],lon,lat)
+; 							print,minmax(dist) 
+							dum   = array_indices(lon_in,idx[index])
+							xxx   = reform(dum[0,*])
+							yyy   = reform(dum[1,*])
+						endif else begin
+							;convert lon/lat to x/y
+							xxx = fix((lon + 180.)*(1./grd))
+							yyy = fix((lat +  90.)*(1./grd))
+						endelse 
+						subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
+						if subscripts[0] ne -1 then filled[subscripts] += 1
+						if grd eq 0 then o_myt_orb -> wie_lang_noch
+					endfor
 			endif
+			if grd eq 0 then obj_destroy, o_myt_orb
 		endif else print,'Entity Type: ',entity.shape_type
 	endfor
 	!quiet=0
@@ -1375,7 +1438,7 @@ end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
 			complement = complement, antarctic = antarctic, arctic = arctic, $ 
-			shape_file = shape_file, index = index, count= count, found = found
+			shape_file = shape_file, index = index, count= count, found = found,l3u_index=l3u_index
 
 	found = 1
 	count = 0
@@ -1389,59 +1452,109 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		if cov eq 'sea' then begin
 			sea  = 1
 			land = 0
+			mnts = 0
 			cov  = 'full'
 		endif else if cov eq 'land' then begin
 			sea  = 0
 			land = 1
+			mnts = 0
+			cov  = 'full'
+		endif else if cov eq 'mountains' then begin
+			sea  = 0
+			land = 1
+			mnts = 1
 			cov  = 'full'
 		endif else if stregex(cov,'_land',/bool) then begin
 			sea  = 0
 			land = 1
+			mnts = 0
 			cov  = strreplace(cov,'_land','')
 		endif else if stregex(cov,'_sea',/bool) then begin
 			sea  = 1
 			land = 0
+			mnts = 0
 			cov = strreplace(cov,'_sea','')
+		endif else if stregex(cov,'_mountains',/bool) then begin
+			sea  = 0
+			land = 1
+			mnts = 1
+			cov  = strreplace(cov,'_mountains','')
 		endif
 		case cov of
-			''						: lim = [-90.0,-180.0, 90.0,180.0]
-			'full'					: lim = [-90.0,-180.0, 90.0,180.0]
-			'antarctica'			: lim = [-90.0,-180.0,-60.0,180.0]
-			'midlat_south'			: lim = [-60.0,-180.0,-30.0,180.0]
-			'tropic'				: lim = [-30.0,-180.0, 30.0,180.0]
-			'midlat_north'			: lim = [ 30.0,-180.0, 60.0,180.0]
-			'arctic'				: lim = [ 60.0,-180.0, 90.0,180.0]
-			'midlat_trop'			: lim = [-60.0,-180.0, 60.0,180.0]
-			'northern_hemisphere'	: lim = [  0.0,-180.0, 90.0,180.0]
-			'southern_hemisphere'	: lim = [-90.0,-180.0,  0.0,180.0]
+			''						: lim = [-90.0,-180.0, 90.0, 180.0]
+			'full'					: lim = [-90.0,-180.0, 90.0, 180.0]
+			'global'				: lim = [-90.0,-180.0, 90.0, 180.0]
+			'antarctica'			: lim = [-90.0,-180.0,-60.0, 180.0]
+			'antarctica_kgk'		: lim = [-90.0,-180.0,-75.0, 180.0]
+			'midlat_south'			: lim = [-60.0,-180.0,-30.0, 180.0]
+			'midlat_south_kgk'		: lim = [-75.0,-180.0,-45.0, 180.0]
+			'tropic'				: lim = [-30.0,-180.0, 30.0, 180.0]
+			'tropic_kgk'			: lim = [-10.0,-180.0, 10.0, 180.0]
+			'subtropic'				: lim = [-45.0,-180.0,-10.0, 180.0, 10.0,-180.0, 45.0, 180.0]
+			'midlat_north'			: lim = [ 30.0,-180.0, 60.0, 180.0]
+			'midlat_north_kgk'		: lim = [ 45.0,-180.0, 75.0, 180.0]
+			'midlats'				: lim = [-60.0,-180.0,-30.0, 180.0, 30.0,-180.0, 60.0, 180.0]
+			'midlats_kgk'			: lim = [-75.0,-180.0,-45.0, 180.0, 45.0,-180.0, 75.0, 180.0]
+			'polar'					: lim = [-90.0,-180.0,-60.0, 180.0, 60.0,-180.0, 90.0, 180.0]
+			'polar_kgk'				: lim = [-90.0,-180.0,-75.0, 180.0, 75.0,-180.0, 90.0, 180.0]
+			'europe'				: lim = [ 40.0,   0.0, 51.0,  20.0]
+			'australia'				: lim = [-10.0, 110.0,-40.0, 155.0]
+			'arctic'				: lim = [ 60.0,-180.0, 90.0, 180.0]
+			'arctic_kgk'			: lim = [ 75.0,-180.0, 90.0, 180.0]
+			'midlat_trop'			: lim = [-60.0,-180.0, 60.0, 180.0]
+			'pm60'					: lim = [-60.0,-180.0, 60.0, 180.0]
+			'northern_hemisphere'	: lim = [  0.0,-180.0, 90.0, 180.0]
+			'southern_hemisphere'	: lim = [-90.0,-180.0,  0.0, 180.0]
 			else					: begin & print,'coverage not defined!' & return,-1 & found = 0 & end
 		endcase
 	endif
 
 	if ~keyword_set(lon) or ~keyword_set(lat) then begin
-		ok = dialog_message('get_coverage: Need Lon / Lat info:')
-		found = 0.
-		return,-1
-	endif else if keyword_set(shape_file) then begin
-		if get_grid_res(lon) gt 0 then begin
+		if keyword_set(l3u_index) then begin
+			make_geo,lon,lat,grid=0.05
+		endif else begin
+			ok = dialog_message('get_coverage: Need Lon / Lat info:')
+			found = 0.
+			return,-1
+		endelse
+	endif 
+
+	if keyword_set(shape_file) then begin
+		if get_grid_res(lon) then begin
 			result = shape2grid(shape_file,grid=get_grid_res(lon))
 		endif else begin
-			print,'!!To do!! No regular grid found. try to read minmax(lon/lat) from shape_file instead!!)'
-stop
-			lim=[46.2, 4.9, 56, 16]
-			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+			ok = dialog_message('get_coverage:: Try to read a shape_file on a non regular grid! On non-regular grids nearest neighbor '+$
+								'will be applied. Depending on the size of shape_file, this might take a while.',/cancel)
+			if ok eq 'Cancel' then begin
+				found=0.
+				return,-1
+			endif
+			result = shape2grid(shape_file,grid=get_grid_res(lon),lon=lon,lat=lat)
 		endelse
-	endif else result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+	endif else begin
+		if n_elements(lim) eq 4 then begin
+			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
+		endif else if n_elements(lim) eq 8 then begin
+			result = ( between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3]) ) or $
+					 ( between(lat,lim[4],lim[6]) and between(lon,lim[5],lim[7]) )
+		endif else begin
+			ok = dialog_message('Limit vector has unknown length.')
+			found=0.
+			return,-1
+		endelse
+	endelse
 
 	if keyword_set(land) then begin
 		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
-		result = (result eq 1) and (ddem ne 0)
+		result = keyword_set(mnts) ? (result eq 1) and (ddem gt 1000.) : (result eq 1) and (ddem ne 0)
 	endif else if keyword_set(sea) then begin
 		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
 		result = (result eq 1) and (ddem eq 0)
 	endif
 
 	if keyword_set(complement) then result = (result eq 0)
+
+	if keyword_set(l3u_index) then result = result[l3u_index]
 
 	index = where(result eq 1,count)
 
@@ -9449,7 +9562,911 @@ pro map_image_colors, $
 	endif
 
 end
+;-----------------------------------------------------------------------------------------------------
+;-------------------Create-Time-Series----------------------------------------------------------------
+;-----------------------------------------------------------------------------------------------------
+pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,coverage,period=period
 
+	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
+	vali_set_defaults
+
+	per    = keyword_set(period) ? period : !default_ts_period
+	yspl   = fix(strsplit(per,'-',/ext))
+	years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
+	months = string(indgen(12)+1,f='(i2.2)')
+
+	cov    = strlowcase(coverage)
+	sat    = strlowcase(satellite)
+	apxc   = '' ; appendix to climatology name, e.g. version
+	apxr   = '' ; appendix to reference name, e.g. version
+	ref    = algo2ref(reference)
+	cli    = algo2ref(climatology)
+	dat    = strlowcase(data)
+
+	if cli eq 'mod'  then gridc = 1.0
+	if cli eq 'myd'  then gridc = 1.0
+	if cli eq 'mod2' then gridc = 1.0
+	if cli eq 'myd2' then gridc = 1.0
+	if cli eq 'pmx'  then gridc = 1.0
+	if cli eq 'gac'  then gridc = 0.25
+	if cli eq 'gac2' then gridc = 0.25
+	if cli eq 'cci'  then gridc = 0.5
+	if cli eq 'cciv3' then gridc = 0.5
+	if cli eq 'era'  then gridc = 0.5
+	if cli eq 'era2' then gridc = 0.5
+	if cli eq 'cla'  then gridc = 0.25
+	if cli eq 'isp'  then gridc = 1.0
+	if cli eq 'isp_old'  then gridc = 2.5
+	if cli eq 'cal'  then gridc = 2.0
+	if cli eq 'hec'  then gridc = 0.5
+	if ~keyword_set(gridc) then begin
+		print,'Gridc not defined! Unknown Climatology?'
+		return
+	endif
+
+	if ref eq 'mod'  then gridr = 1.0
+	if ref eq 'myd'  then gridr = 1.0
+	if ref eq 'mod2' then gridr = 1.0
+	if ref eq 'myd2' then gridr = 1.0
+	if ref eq 'pmx'  then gridr = 1.0
+	if ref eq 'gac'  then gridr = 0.25
+	if ref eq 'gac2' then gridr = 0.25
+	if ref eq 'era'  then gridr = 0.5
+	if ref eq 'era2' then gridr = 0.5
+	if ref eq 'cci'  then gridr = 0.5
+	if ref eq 'cciv3' then gridr = 0.5
+	if ref eq 'cla'  then gridr = 0.25
+	if ref eq 'isp'  then gridr = 1.0
+	if ref eq 'isp_old'  then gridr = 2.5
+	if ref eq 'cal'  then gridr = 2.0
+	if ref eq 'hec'  then gridr = 0.5
+	if ~keyword_set(gridc) then begin
+		print,'Gridr not defined! Unknown Reference?'
+		return
+	endif
+
+	grid = max([gridc,gridr])
+	help,grid	
+	dem = get_dem(grid=grid)
+	make_geo,lon,lat,grid=grid
+
+	vollername = full_varname(dat)
+
+	case strmid(dat,0,3) of
+		'cot'	: histv = [0.1,0.,100.]
+		'cth'	: histv = [0.1,0.,20.]  
+		'cwp'	: histv = [1.,0.,1000.]  
+		'iwp'	: histv = [1.,0.,1000.]  
+		'lwp'	: histv = [1.,0.,1000.]  
+		'ctp'	: histv = [1.,100.,1000.]
+		'ctt'	: histv = [1.,180.,330.] 
+		'cfc'	: histv = [0.01,0.,1.]   
+		'cph'	: histv = [0.01,0.,1.]   
+		'cer'	: histv = [0.1,0.,80.]   
+		'sal'	: histv = [0.1,0.,100.]  
+		else : begin & print, 'tbd' & stop & end
+	endcase
+
+	satcci = sat
+	satgac = ( ( total(satcci eq ['aatme','aatsr']) and total(ref eq ['pmx','gac','gac2']) ) ? 'noaaam' : sat )
+	; fame-c only daytime, set ref dat to _day (!!but only if dat is not already a microphysical variable!!), and compare if available
+	dt1 = (satgac eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) and total(dat eq ['cfc','ctp','ctt','cth','cph']) ? '_day':'')
+	dt2 = (satcci eq 'aatme' and ~stregex(dat,'_day',/bool,/fold) and total(dat eq ['cfc','ctp','ctt','cth','cph']) ? '_day':'')
+	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
+
+	trend_sat = 1
+	if total(cli eq ['cci','cciv3','gac','gac2','pmx']) and $
+	  ~total(satcci eq ['noaaam','noaapm','aatme','aatsr','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
+	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
+	if apxc ne '' or apxr ne '' then begin
+		trend_sat = 0
+	endif
+
+	algon1 = sat_name(cli,satcci)
+	algon2 = sat_name(ref,satgac)
+
+	dat1 = dat+dt1
+	dat2 = dat+dt2
+	if total(cli eq ['cci','cciv3','gac2']) and total(satcci eq ['noaaam','aatme']) and (ref eq 'mod2') then begin
+		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_16_allsky'
+		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_16_allsky'
+		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_16_allsky'
+		if dat2 eq 'cwp' then dat2 = 'cwp_16'
+		if dat2 eq 'iwp' then dat2 = 'iwp_16'
+		if dat2 eq 'lwp' then dat2 = 'lwp_16'
+		if dat2 eq 'cot' then dat2 = 'cot_16'
+		if dat2 eq 'cer' then dat2 = 'cer_16'
+		if dat2 eq 'cot_liq' then dat2 = 'cot_16_liq'
+		if dat2 eq 'cer_liq' then dat2 = 'cer_16_liq'
+		if dat2 eq 'cot_ice' then dat2 = 'cot_16_ice'
+		if dat2 eq 'cer_ice' then dat2 = 'cer_16_ice'
+	endif
+	if total(cli eq ['cci','cciv3','gac2']) and (satcci eq 'noaapm') and (ref eq 'myd2') then begin
+		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_37_allsky'
+		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_37_allsky'
+		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_37_allsky'
+		if dat2 eq 'cwp' then dat2 = 'cwp_37'
+		if dat2 eq 'iwp' then dat2 = 'iwp_37'
+		if dat2 eq 'lwp' then dat2 = 'lwp_37'
+		if dat2 eq 'cot' then dat2 = 'cot_37'
+		if dat2 eq 'cer' then dat2 = 'cer_37'
+		if dat2 eq 'cot_liq' then dat2 = 'cot_37_liq'
+		if dat2 eq 'cer_liq' then dat2 = 'cer_37_liq'
+		if dat2 eq 'cot_ice' then dat2 = 'cot_37_ice'
+		if dat2 eq 'cer_ice' then dat2 = 'cer_37_ice'
+	endif
+	if (cli eq 'cci' or cli eq 'cciv3') and total(satcci eq ['terra','aqua','aatsr','atsrs']) and (ref eq 'myd2' or ref eq 'mod2') then begin
+		if dat2 eq 'cwp_allsky' then dat2 = 'cwp_37_allsky'
+		if dat2 eq 'iwp_allsky' then dat2 = 'iwp_37_allsky'
+		if dat2 eq 'lwp_allsky' then dat2 = 'lwp_37_allsky'
+		if dat2 eq 'cwp' then dat2 = 'cwp_37'
+		if dat2 eq 'iwp' then dat2 = 'iwp_37'
+		if dat2 eq 'lwp' then dat2 = 'lwp_37'
+		if dat2 eq 'cot' then dat2 = 'cot_37'
+		if dat2 eq 'cer' then dat2 = 'cer_37'
+		if dat2 eq 'cot_liq' then dat2 = 'cot_37_liq'
+		if dat2 eq 'cer_liq' then dat2 = 'cer_37_liq'
+		if dat2 eq 'cot_ice' then dat2 = 'cot_37_ice'
+		if dat2 eq 'cer_ice' then dat2 = 'cer_37_ice'
+	endif
+
+	nyears  = n_elements(years)
+	nmonths = n_elements(months)
+	dim_cov = n_elements(cov)
+	dim2d   = size(lon,/dim)
+	dims    = [dim2d,dim_cov]
+	dim0    = 12 ;[cci-gmean,cci-stdd,cci-unc-gmean,cci-unc-stdd,gac-gmean,gac-stdd,gac-unc-gmean,gac-unc-stdd,gbias,grmse,bc_rmse,correlate]
+
+	stats           = fltarr(dim0,nyears*nmonths,dim_cov) + !values.f_nan
+	gstats          = fltarr(dim0,nyears*nmonths,dim_cov) + !values.f_nan
+	cci_mean_2d     = fltarr(dims)
+	cci_mean2_2d    = fltarr(dims)
+	cci_unce_2d     = fltarr(dims)
+	cci_trend_2d    = fltarr([dim2d,nyears*nmonths]) +!values.f_nan
+	gac_mean_2d     = fltarr(dims)
+	gac_mean2_2d    = fltarr(dims)
+	gac_unce_2d     = fltarr(dims)
+	gac_trend_2d    = fltarr([dim2d,nyears*nmonths]) +!values.f_nan
+	anz_2d          = fltarr(dims)
+	cci_anz_unce_2d = fltarr(dims)
+	gac_anz_unce_2d = fltarr(dims)
+	mini            = histv[1]
+	maxi            = histv[2]
+	bin             = histv[0]
+	nbins           = ( (maxi - mini) / bin ) +1
+	histo1          = lonarr(nbins,dim_cov)
+	histo2          = lonarr(nbins,dim_cov)
+	histo2D         = lonarr(nbins,nbins,dim_cov)
+	sum_diff        = dblarr(dim_cov)
+	sum_diff2       = dblarr(dim_cov)
+	sum_cci         = dblarr(dim_cov)
+	sum2_cci        = dblarr(dim_cov)
+	sum_gac         = dblarr(dim_cov)
+	sum2_gac        = dblarr(dim_cov)
+	nnn             = ulonarr(dim_cov)
+	sum_prod        = dblarr(dim_cov)
+	maxv1           = dblarr(dim_cov) -999.
+	maxv2           = dblarr(dim_cov) -999.
+	minv1           = dblarr(dim_cov) +99999.
+	minv2           = dblarr(dim_cov) +99999.
+	gsum_cci        = dblarr(dim_cov)
+	gsum_gac        = dblarr(dim_cov)
+	gsum2_cci       = dblarr(dim_cov)
+	gsum2_gac       = dblarr(dim_cov)
+	gsum_diff       = dblarr(dim_cov)
+	gsum_diff2      = dblarr(dim_cov)
+	gsum_prod       = dblarr(dim_cov)
+	weight          = fltarr(dim_cov)
+
+; 	if cli eq 'cci' then cci_dirname='/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C' else free,cci_dirname
+; 	if ref eq 'cci' then gac_dirname='/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v2.0/L3C' else free,gac_dirname
+	first = 1
+	counti=0ul
+	for yy1=0,nyears-1,1 do begin
+	    for mm1=0,nmonths-1,1 do begin
+
+		yyyy=years[yy1]
+		mmmm=months[mm1]
+		cci_dum_file = get_filename(yyyy,mmmm,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,/silent,dirname=cci_dirname,/no_recursive)
+
+		if (cli eq 'cci' or cli eq 'cciv3') and found_cci then begin
+			num = get_ncdf_data_by_name(cci_dum_file,'number_of_processed_orbits',/global)
+			if num lt 100 then begin
+				print,'File has only '+string(num)+' Orbits, and will be skipped! ',cci_dum_file
+				found_cci = 0
+			endif
+		endif
+		gac_dum_file = get_filename(yyyy,mmmm,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,/silent,dirname=gac_dirname,/no_recursive)
+		if (ref eq 'cci' or ref eq 'cciv3') and found_gac then begin
+			num = get_ncdf_data_by_name(gac_dum_file,'number_of_processed_orbits',/global)
+			if num lt 100 then begin
+				print,'File has only '+string(num)+' Orbits, and will be skipped! ',gac_dum_file
+				found_gac = 0
+			endif
+		endif
+		if found_cci and found_gac then begin
+			cci_tmp = get_data(yyyy,mmmm,file=cci_dum_file,data=dat1,algo=cli,sat=satcci,level=lev,found=found_cci,glob=grid,$
+					/mean,/make_compare,no_data_val=fv_cci,/silent,unit=unit,dirname=cci_dirname)
+			cci_unc = get_data(yyyy,mmmm,data=dat1+'_unc',algo=cli,sat=satcci,level=lev,found=found_cci_unc,glob=grid,/mean,$
+				   /make_compare,no_data_val=fv_cci_unc,/silent,dirname=cci_dirname)
+			gac_tmp = get_data(yyyy,mmmm,file=gac_dum_file,data=dat2,algo=ref,sat=satgac,level=lev,found=found_gac,glob=grid,$
+					/mean,/make_compare,no_data_val=fv_gac,/silent,dirname=gac_dirname)
+			gac_unc = get_data(yyyy,mmmm,data=dat2+'_unc',algo=ref,sat=satgac,level=lev,found=found_gac_unc,glob=grid,/mean,$
+				   /make_compare,no_data_val=fv_gac_unc,/silent,dirname=gac_dirname)
+			if found_cci and found_gac then begin
+				if (first) and (trend_sat) then begin 
+					; save some memory, e.g. cal has grid = 0.05 , arr with [3600,3600,468] = 22.595 GiB RAM
+					tr_start  = counti/12*12
+					cci_trend_2d  = fltarr([dim2d,nyears*nmonths-tr_start]) +!values.f_nan
+					gac_trend_2d  = fltarr([dim2d,nyears*nmonths-tr_start]) +!values.f_nan
+					first     = 0
+				endif
+				print, 	strupcase(dat)+': '+yyyy+'/'+mmmm+' '+sat+' - '+ $
+					cli+' ('+get_product_name(dat1,algo=cli)+') vs '+$
+					ref+' ('+get_product_name(dat2,algo=ref)+')'
+				print,'"'+cci_dum_file+'" , "'+gac_dum_file+'"'
+				for ii = 0, dim_cov -1 do begin
+					area         = get_coverage( lon, lat, dem = dem, coverage = cov[ii],found = found)
+					anz_tmp      = ( (gac_tmp ne fv_gac[0]) and (cci_tmp ne fv_cci[0]) and (area eq 1) )
+					dum_cci_tmp  = anz_tmp * cci_tmp
+					dum_gac_tmp  = anz_tmp * gac_tmp
+					good_idx     = where(anz_tmp,good_count)
+					if good_count gt 0 then begin
+						stats [0,counti,ii] = mean  (cci_tmp[good_idx])
+						stats [1,counti,ii] = stddev(cci_tmp[good_idx])
+						gstats[0,counti,ii] = gmean  (cci_tmp[good_idx],lat[good_idx])
+						gstats[1,counti,ii] = gstddev(cci_tmp[good_idx],lat[good_idx])
+						if found_cci_unc then begin
+							dum_anz_unc_cci = ( anz_tmp and (cci_unc ne fv_cci_unc[0]) )
+							dum_cci_unc     = dum_anz_unc_cci * cci_unc
+							idx2            = where(dum_anz_unc_cci,idx2_cnt)
+							if idx2_cnt gt 0 then stats[2,counti,ii]       = mean   (cci_unc[idx2])
+							if idx2_cnt gt 0 then stats[3,counti,ii]       = stddev (cci_unc[idx2])
+							if idx2_cnt gt 0 then gstats[2,counti,ii]      = gmean  (cci_unc[idx2],lat[idx2])
+							if idx2_cnt gt 0 then gstats[3,counti,ii]      = gstddev(cci_unc[idx2],lat[idx2])
+							if idx2_cnt gt 0 then cci_unce_2d[*,*,ii]     += dum_cci_unc
+							if idx2_cnt gt 0 then cci_anz_unce_2d[*,*,ii] += dum_anz_unc_cci
+						endif
+						stats[4,counti,ii]  = mean  (gac_tmp[good_idx])
+						stats[5,counti,ii]  = stddev(gac_tmp[good_idx])
+						gstats[4,counti,ii] = gmean  (gac_tmp[good_idx],lat[good_idx])
+						gstats[5,counti,ii] = gstddev(gac_tmp[good_idx],lat[good_idx])
+						if found_gac_unc then begin
+							dum_anz_unc_gac = ( anz_tmp and (gac_unc ne fv_gac_unc[0]) )
+							dum_gac_unc = dum_anz_unc_gac * gac_unc
+							idx2        = where(dum_anz_unc_gac,idx2_cnt)
+							if idx2_cnt gt 0 then stats[6,counti,ii]       = mean   (gac_unc[idx2])
+							if idx2_cnt gt 0 then stats[7,counti,ii]       = stddev (gac_unc[idx2])
+							if idx2_cnt gt 0 then gstats[6,counti,ii]      = gmean  (gac_unc[idx2],lat[idx2])
+							if idx2_cnt gt 0 then gstats[7,counti,ii]      = gstddev(gac_unc[idx2],lat[idx2])
+							if idx2_cnt gt 0 then gac_unce_2d[*,*,ii]     += dum_gac_unc
+							if idx2_cnt gt 0 then gac_anz_unce_2d[*,*,ii] += dum_anz_unc_gac
+						endif
+						stats[8,counti,ii]   = bias(cci_tmp[good_idx],gac_tmp[good_idx])
+						stats[9,counti,ii]   = rmse(cci_tmp[good_idx],gac_tmp[good_idx])
+						stats[10,counti,ii]  = bc_rmse(stats[8,counti,ii],stats[9,counti,ii])
+						stats[11,counti,ii]  = correlate(cci_tmp[good_idx],gac_tmp[good_idx])
+						gstats[8,counti,ii]  = gbias(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+						gstats[9,counti,ii]  = grmse(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+						gstats[10,counti,ii] = bc_rmse(gstats[8,counti,ii],gstats[9,counti,ii])
+						gstats[11,counti,ii] = gcorrelate(cci_tmp[good_idx],gac_tmp[good_idx],lat[good_idx])
+						histo1[*,ii]        += histogram(float(cci_tmp[good_idx]),min=mini,max=maxi,nbins=nbins)
+						histo2[*,ii]        += histogram(float(gac_tmp[good_idx]),min=mini,max=maxi,nbins=nbins)
+						histo2D[*,*,ii]     += hist_2d(float(cci_tmp[good_idx]),float(gac_tmp[good_idx]),min1=mini,max1=maxi,bin1=bin,min2=mini,max2=maxi,bin2=bin)
+						cci_mean_2d[*,*,ii] += dum_cci_tmp
+						gac_mean_2d[*,*,ii] += dum_gac_tmp
+						cci_mean2_2d[*,*,ii]+= (dum_cci_tmp)^2.
+						gac_mean2_2d[*,*,ii]+= (dum_gac_tmp)^2.
+						anz_2d[*,*,ii]      += anz_tmp
+						sum_diff[ii]        += total((cci_tmp[good_idx]-gac_tmp[good_idx]))
+						sum_diff2[ii]       += total((cci_tmp[good_idx]-gac_tmp[good_idx])^2.)
+						sum_cci[ii]         += total((cci_tmp[good_idx]))
+						sum2_cci[ii]        += total((cci_tmp[good_idx])^2.)
+						sum_gac[ii]         += total((gac_tmp[good_idx]))
+						sum2_gac[ii]        += total((gac_tmp[good_idx])^2.)
+						sum_prod[ii]        += total((cci_tmp[good_idx] * gac_tmp[good_idx]))
+						maxv1[ii]            = max([maxv1[ii],max(cci_tmp[good_idx])])
+						maxv2[ii]            = max([maxv2[ii],max(gac_tmp[good_idx])])
+						minv1[ii]            = min([minv1[ii],min(cci_tmp[good_idx])])
+						minv2[ii]            = min([minv2[ii],min(gac_tmp[good_idx])])
+						;latitude weighted
+						weight[ii]          += total(cosd(lat[good_idx]))
+						gsum_cci[ii]        += total((cci_tmp[good_idx])    * cosd(lat[good_idx]))
+						gsum2_cci[ii]       += total((cci_tmp[good_idx])^2. * cosd(lat[good_idx]) )
+						gsum_gac[ii]        += total((gac_tmp[good_idx])    * cosd(lat[good_idx]))
+						gsum2_gac[ii]       += total((gac_tmp[good_idx])^2. * cosd(lat[good_idx]) )
+						gsum_diff[ii]       += total((cci_tmp[good_idx] - gac_tmp[good_idx])    * cosd(lat[good_idx]) )
+						gsum_diff2[ii]      += total((cci_tmp[good_idx] - gac_tmp[good_idx])^2. * cosd(lat[good_idx]) )
+						gsum_prod[ii]       += total((cci_tmp[good_idx] * gac_tmp[good_idx])    * cosd(lat[good_idx]) )
+						nnn[ii]             += good_count
+						; das muss zuletzt kommen 
+						if (first eq 0) and (cov[ii] eq 'full') then begin
+							dum_idx = where(anz_tmp eq 0,dum_idx_cnt)
+							if dum_idx_cnt gt 0 then dum_cci_tmp[dum_idx] = !values.f_nan
+							if dum_idx_cnt gt 0 then dum_gac_tmp[dum_idx] = !values.f_nan
+							cci_trend_2d[*,*,counti-tr_start] = dum_cci_tmp
+							gac_trend_2d[*,*,counti-tr_start] = dum_gac_tmp
+						endif
+					endif
+					free, anz_tmp
+					free, dum_cci_tmp
+					free, dum_gac_tmp
+					free, dum_anz_unc_cci
+					free, dum_cci_unc
+					free, dum_anz_unc_gac
+					free, area
+				endfor
+				free,cci_tmp
+				free,cci_unc
+				free,gac_tmp
+				free,gac_unc
+			endif
+		endif
+		free,cci_dum_file
+		free,gac_dum_file
+		counti++
+	    endfor
+	endfor
+
+	;linear_trends
+	if (first eq 0) then begin
+		idx  = where(finite(stats[0,*,0]),idxcnt)
+		if idxcnt eq 0 then return
+		mima = minmax(idx)/12 * 12
+		mima[1] = mima[1]+11
+		if total(cli eq ['cci','cciv3','gac','gac2','pmx']) then begin
+			ect = restore_var(!SAVS_DIR + 'time_series/plot_monthly_ECTs_cci_primes_'+satcci+'.sav',found=found)
+			if found then ect = ect[mima[0]:mima[1]] else free,ect
+		endif
+		cci_tr_dum = give_trend(cci_trend_2d[*,*,0:mima[1]-tr_start],mini,maxi,years[mima[0]/12],years[mima[1]/12],ect)
+		cci_lfit   = cci_tr_dum.slope *10.
+		dummean    = mean(cci_trend_2d,dim=3,/nan)
+		idx = where(~finite(dummean),idxcnt)
+		if idxcnt gt 0 then cci_lfit[idx] = -999.
+		dumm    = cci_tr_dum.anom
+		idx = where(dumm eq -999.,idxcnt)
+		if idxcnt gt 0 then dumm[idx] = !values.f_nan
+		cci_anom_mean = mean(dumm,dim=3,/nan)
+		idx = where(~finite(cci_anom_mean),idxcnt)
+		if idxcnt gt 0 then cci_anom_mean[idx] = -999.
+		free, dumm
+		free, cci_trend_2d
+		free,ect
+		if total(ref eq ['cci','cciv3','gac','gac2','pmx']) then begin
+			ect = restore_var(!SAVS_DIR + 'time_series/plot_monthly_ECTs_cci_primes_'+satgac+'.sav',found=found)
+			if found then ect = ect[mima[0]:mima[1]] else free,ect
+		endif
+		gac_tr_dum = give_trend(gac_trend_2d[*,*,0:mima[1]-tr_start],mini,maxi,years[mima[0]/12],years[mima[1]/12],ect)
+		gac_lfit   = gac_tr_dum.slope * 10.
+		dummean    = mean(gac_trend_2d,dim=3,/nan)
+		idx = where(~finite(dummean),idxcnt)
+		if idxcnt gt 0 then gac_lfit[idx] = -999.
+		dumm       = gac_tr_dum.anom
+		idx        = where(dumm eq -999.,idxcnt)
+		if idxcnt gt 0 then dumm[idx] = !values.f_nan
+		gac_anom_mean = mean(dumm,dim=3,/nan)
+		idx = where(~finite(gac_anom_mean),idxcnt)
+		if idxcnt gt 0 then gac_anom_mean[idx] = -999.
+		free, dumm
+		free, gac_trend_2d
+		free,ect
+	endif
+
+	for ii = 0, dim_cov -1 do begin
+		if nnn[ii] le 100 then continue
+
+		hist1        = {data:reform(histo1[*,ii])   ,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+		hist2        = {data:reform(histo2[*,ii])   ,minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+		hist2d       = {data:reform(histo2D[*,*,ii]),minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+		percentiles  = get_perc_from_hist(reform(histo1[*,ii]),[.5,.75,.25,.975,.025],mini,maxi,bin,data=cci_all)
+		percentiles2 = get_perc_from_hist(reform(histo2[*,ii]),[.5,.75,.25,.975,.025],mini,maxi,bin,data=gac_all)
+
+		if n_elements(cci_all) ne n_elements(gac_all) then begin
+			print,'All: Dimensions do not agree! , set larger to lower Dims!'
+			help,cci_all,gac_all
+			mi = min([n_elements(cci_all),n_elements(gac_all)])
+			cci_all = cci_all[0:(mi-1)]
+			gac_all = gac_all[0:(mi-1)]
+		endif
+		regr         = linfit(cci_all,gac_all,chisqr=chisqr,prob=prob,sigma=sigma,covar=covar)
+		hist2d       = create_struct(hist2d,'linfit',{regr:regr,chisqr:chisqr,prob:prob,sigma:sigma,covar:covar})
+		free,cci_all
+		free,gac_all
+
+		; arithmetic statistics over all good pixel and monthly means
+		anz          = float(nnn[ii])
+		;cci
+		all_avg_cci  = sum_cci[ii] / (anz > 1.)							; average
+		dum_var_cci  = ( (sum2_cci[ii] - anz * all_avg_cci^2.) > 0.)
+		all_var_cci  = dum_var_cci / ((anz-1.) > 1.) 					; variance
+		all_sdv_cci  = sqrt(all_var_cci)								; stddev
+		; gac
+		all_avg_gac  = sum_gac[ii] / (anz > 1.)							; average
+		dum_var_gac  = ( (sum2_gac[ii] - anz * all_avg_gac^2) > 0.) 
+		all_var_gac  = dum_var_gac / ((anz-1.) > 1.) 					; variance
+		all_sdv_gac  = sqrt(all_var_gac)								; stddev
+		; both
+		all_bias     = sum_diff[ii] / anz								; BIAS
+		all_rmse     = sqrt(sum_diff2[ii] / anz)						; RMSE
+		all_bcrmse   = sqrt((all_rmse)^2. - (all_bias)^2. )				; Bias corrected RMSE
+		all_cov      = sum_prod[ii] - anz * all_avg_cci * all_avg_gac	; Verschiebungssatz Covarianz
+		all_corr     = all_cov / sqrt( dum_var_cci * dum_var_gac)		; Correlation
+
+		; latitude_weighted
+		; cci
+		anz = weight[ii]
+		gall_avg_cci = gsum_cci[ii] / (anz > 1.)						; average
+		gdum_var_cci = ( (gsum2_cci[ii] - anz * gall_avg_cci^2.) > 0.) 
+		gall_var_cci = gdum_var_cci / ((anz-1.) > 1.) 					; variance
+		gall_sdv_cci = sqrt(gall_var_cci)								; stddev
+		; gac
+		gall_avg_gac = gsum_gac[ii] / anz 								; average
+		gdum_var_gac = ( (gsum2_gac[ii] - anz * gall_avg_gac^2.) > 0.)
+		gall_var_gac = gdum_var_gac / ((anz-1.) > 1.) 					; variance
+		gall_sdv_gac = sqrt(gall_var_gac)								; stddev
+		; both
+		gall_bias    = gsum_diff[ii] / anz								; bias
+		gall_rmse    = sqrt(gsum_diff2[ii] / anz) 						; rmse
+		gall_bcrmse  = sqrt((gall_rmse)^2. - (gall_bias)^2. ) 			; bias corrected rmse or stddev of difference
+		gall_cov     = gsum_prod[ii] - anz * gall_avg_cci * gall_avg_gac; Verschiebungssatz Covarianz
+		gall_corr    = gall_cov / sqrt( gdum_var_cci * gdum_var_gac)	; Correlation
+
+		gall = {nnn:weight[ii],$
+			sum :gsum_cci[ii],sum_sq :gsum2_cci[ii],$
+			sum2:gsum_gac[ii],sum2_sq:gsum2_gac[ii],$
+			sum_diff:gsum_diff[ii],sum_diff_sq:gsum_diff2[ii],sum_prod:gsum_prod[ii],$
+			avgerage :gall_avg_cci,variance :gall_var_cci,stddev :gall_sdv_cci,$
+			avgerage2:gall_avg_gac,variance2:gall_var_gac,stddev2:gall_sdv_gac,$
+			bias:gall_bias,rmse:gall_rmse,bc_rmse:gall_bcrmse,covariance:gall_cov,correlation:gall_corr}
+
+		all  = {nnn:nnn[ii],$
+			sum :sum_cci[ii],sum_sq :sum2_cci[ii],$
+			sum2:sum_gac[ii],sum2_sq:sum2_gac[ii],$
+			sum_diff:sum_diff[ii],sum_diff_sq:sum_diff2[ii],sum_prod:sum_prod[ii], $
+			minvalue :minv1[ii],maxvalue :maxv1[ii],avgerage :all_avg_cci,variance :all_var_cci,stddev :all_sdv_cci,$
+			minvalue2:minv2[ii],maxvalue2:maxv2[ii],avgerage2:all_avg_gac,variance2:all_var_gac,stddev2:all_sdv_gac,$
+			bias:all_bias,rmse:all_rmse,bc_rmse:all_bcrmse,covariance:all_cov,correlation:all_corr,latitude_weighted:gall}
+
+		; 2D average
+		qq = where(reform(anz_2d[*,*,ii] eq 0),c_qq)
+		mean_cci = reform(cci_mean_2d[*,*,ii]/float(anz_2d[*,*,ii] > 1))
+		mean_gac = reform(gac_mean_2d[*,*,ii]/float(anz_2d[*,*,ii] > 1))
+		cci_std  = sqrt( ( (cci_mean2_2d[*,*,ii] - anz_2d[*,*,ii] * mean_cci^2) > 0.) / ((anz_2d[*,*,ii]-1.) > 1.) )
+		gac_std  = sqrt( ( (gac_mean2_2d[*,*,ii] - anz_2d[*,*,ii] * mean_gac^2) > 0.) / ((anz_2d[*,*,ii]-1.) > 1.) )
+		if c_qq gt 0 then begin
+			mean_cci[qq] = -999.
+			mean_gac[qq] = -999.
+			cci_std[qq]  = -999.
+			gac_std[qq]  = -999.
+		endif
+		qq = where(reform(cci_anz_unce_2d[*,*,ii]) eq 0,c_qq)
+		unce_cci  = reform(cci_unce_2d[*,*,ii]/float(cci_anz_unce_2d[*,*,ii] > 1))
+		if c_qq gt 0 then unce_cci[qq] = -999.
+		qq = where(reform(gac_anz_unce_2d[*,*,ii]) eq 0,c_qq)
+		unce_gac  = reform(gac_unce_2d[*,*,ii]/float(gac_anz_unce_2d[*,*,ii] > 1))
+		if c_qq gt 0 then unce_gac[qq] = -999.
+		
+ 		; trend
+		if (first eq 0) then begin 
+			area          = get_coverage( lon, lat, dem = dem, coverage = cov[ii],found = found)
+			trend_cci     = cci_lfit * (area eq 1)  + (area eq 0) * (-999.) 
+			trend_gac     = gac_lfit * (area eq 1)  + (area eq 0) * (-999.) 
+			cci_an_mean2d = cci_anom_mean * (area eq 1)  + (area eq 0) * (-999.) 
+			gac_an_mean2d = gac_anom_mean * (area eq 1)  + (area eq 0) * (-999.) 
+
+			tr_dum_stats  = reform( stats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+			tr_dum_gstats = reform(gstats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+			anom_stats    = reform( stats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+			anom_gstats   = reform(gstats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+
+			for tr = 0,n_elements(tr_dum_stats[0,*])-1 do begin
+				cci_dummy = (reform(cci_tr_dum.ANOM[*,*,tr]) + mean_cci) * (area eq 1)  + (area eq 0) * (-999.)
+				gac_dummy = (reform(gac_tr_dum.ANOM[*,*,tr]) + mean_gac) * (area eq 1)  + (area eq 0) * (-999.)
+				idx = 	where(area eq 1 and mean_cci ne -999. and mean_gac ne -999. and $
+					reform(cci_tr_dum.ANOM[*,*,tr]) ne -999. and reform(gac_tr_dum.ANOM[*,*,tr]) ne -999.,idxcnt)
+				if idxcnt gt 0 then begin
+					tr_dum_stats [ 0,tr] = mean      (cci_dummy[idx])
+					tr_dum_stats [ 1,tr] = stddev    (cci_dummy[idx])
+					tr_dum_stats [ 4,tr] = mean      (gac_dummy[idx])
+					tr_dum_stats [ 5,tr] = stddev    (gac_dummy[idx])
+					tr_dum_stats [ 8,tr] = bias      (cci_dummy[idx],gac_dummy[idx])
+					tr_dum_stats [ 9,tr] = rmse      (cci_dummy[idx],gac_dummy[idx])
+					tr_dum_stats [10,tr] = bc_rmse   (tr_dum_stats[ 8,tr],tr_dum_stats[ 9,tr])
+					tr_dum_stats [11,tr] = correlate (cci_dummy[idx],gac_dummy[idx])
+					tr_dum_gstats[ 0,tr] = gmean     (cci_dummy[idx],lat[idx])
+					tr_dum_gstats[ 1,tr] = gstddev   (cci_dummy[idx],lat[idx])
+					tr_dum_gstats[ 4,tr] = gmean     (gac_dummy[idx],lat[idx])
+					tr_dum_gstats[ 5,tr] = gstddev   (gac_dummy[idx],lat[idx])
+					tr_dum_gstats[ 8,tr] = gbias     (cci_dummy[idx],gac_dummy[idx],lat[idx])
+					tr_dum_gstats[ 9,tr] = grmse     (cci_dummy[idx],gac_dummy[idx],lat[idx])
+					tr_dum_gstats[10,tr] = bc_rmse   (tr_dum_gstats[ 8,tr],tr_dum_gstats[ 9,tr])
+					tr_dum_gstats[11,tr] = gcorrelate(cci_dummy[idx],gac_dummy[idx],lat[idx])
+				endif
+				cci_dummy = (reform(cci_tr_dum.ANOM[*,*,tr])) * (area eq 1)  + (area eq 0) * (-999.)
+				gac_dummy = (reform(gac_tr_dum.ANOM[*,*,tr])) * (area eq 1)  + (area eq 0) * (-999.)
+				idx = where(cci_dummy ne -999. and gac_dummy ne -999.,idxcnt)
+				if idxcnt gt 0 then begin 
+					anom_stats [ 0,tr] = mean      (cci_dummy[idx])
+					anom_stats [ 1,tr] = stddev    (cci_dummy[idx])
+					anom_stats [ 4,tr] = mean      (gac_dummy[idx])
+					anom_stats [ 5,tr] = stddev    (gac_dummy[idx])
+					anom_stats [ 8,tr] = bias      (cci_dummy[idx],gac_dummy[idx])
+					anom_stats [ 9,tr] = rmse      (cci_dummy[idx],gac_dummy[idx])
+					anom_stats [10,tr] = bc_rmse   (anom_stats[ 8,tr],anom_stats[ 9,tr])
+					anom_stats [11,tr] = correlate (cci_dummy[idx],gac_dummy[idx])
+					anom_gstats[ 0,tr] = gmean     (cci_dummy[idx],lat[idx])
+					anom_gstats[ 1,tr] = gstddev   (cci_dummy[idx],lat[idx])
+					anom_gstats[ 4,tr] = gmean     (gac_dummy[idx],lat[idx])
+					anom_gstats[ 5,tr] = gstddev   (gac_dummy[idx],lat[idx])
+					anom_gstats[ 8,tr] = gbias     (cci_dummy[idx],gac_dummy[idx],lat[idx])
+					anom_gstats[ 9,tr] = grmse     (cci_dummy[idx],gac_dummy[idx],lat[idx])
+					anom_gstats[10,tr] = bc_rmse   (anom_gstats[ 8,tr],anom_gstats[ 9,tr])
+					anom_gstats[11,tr] = gcorrelate(cci_dummy[idx],gac_dummy[idx],lat[idx])
+				endif
+			endfor
+			dum_stats                          = reform(stats[*,*,ii])
+			dum_stats[*,mima[0]:mima[1]]       = tr_dum_stats
+			dum_gstats                         = reform(gstats[*,*,ii])
+			dum_gstats[*,mima[0]:mima[1]]      = tr_dum_gstats
+			dum_anom_stats                     = reform(stats[*,*,ii])
+			dum_anom_stats[*,mima[0]:mima[1]]  = anom_stats
+			dum_anom_gstats                    = reform(gstats[*,*,ii])
+			dum_anom_gstats[*,mima[0]:mima[1]] = anom_gstats
+
+			trends = {mean:trend_cci,mean2:trend_gac,anom_mean:cci_an_mean2d,anom_mean2:gac_an_mean2d,stats_non_weighted:dum_stats,stats:dum_gstats,$
+				  stats_anom_non_weighted:dum_anom_stats,stats_anom:dum_anom_gstats}
+		endif else trends = -1
+
+		str_cov = cov[ii]+'_'
+		if cov[ii] eq 'full'      then str_cov = '' 
+		if cov[ii] eq 'full_land' then str_cov = 'land_'
+		if cov[ii] eq 'full_sea'  then str_cov = 'sea_'
+
+		out_struc = {algoname:algon1,algoname2:algon2,varname:dat,longname:vollername,unit:unit,coverage:coverage[ii],percentiles:percentiles,$
+			percentiles2:percentiles2,stats:reform(gstats[*,*,ii]),stats_non_weighted:reform(stats[*,*,ii]),mean:temporary(mean_cci),$
+			unc:temporary(unce_cci),std:temporary(cci_std),mean2:temporary(mean_gac),unc2:temporary(unce_gac),std2:temporary(gac_std),trend:trends}
+
+		out_struc = create_struct(out_struc,'histogram',hist1)
+		out_struc = create_struct(out_struc,'histogram2',hist2)
+		out_struc = create_struct(out_struc,'hist_2d',hist2D)
+		out_struc = create_struct(out_struc,'Overall_Stats',all)
+		sav_file  = !SAVS_DIR + 'time_series/compare/compare_'+dat+'_'+cli+apxc+'_vs_'+ref+apxr+'_time_series_'+sat+'_'+str_cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
+		print,'Create: '+sav_file
+		save_var,out_struc,sav_file,chmod = '664'
+	endfor
+
+	;cleanup
+	free,cci_mean_2d 
+	free,cci_unce_2d 
+	free,gac_mean_2d 
+	free,gac_unce_2d 
+	free,anz_2d
+	free,cci_anz_unce_2d 
+	free,gac_anz_unce_2d 
+
+end
+; ----------------------------------------------------------------------------------------------------------------------------------------------
+; ----------------------------------------------------------------------------------------------------------------------------------------------
+pro create_time_series,data,algon,coverage,period=period
+
+	mem_cur   = memory(/current)
+	starttime = systime(1)
+
+	vali_set_path ; nur zur sicherheit das auch alle pfade gesetzt sind
+	vali_set_defaults
+
+	per    = keyword_set(period) ? period : !default_ts_period
+	yspl   = fix(strsplit(per,'-',/ext))
+	years  = string(indgen(yspl[1]-yspl[0]+1)+yspl[0],f='(i4.4)')
+	months = string(indgen(12)+1,f='(i2.2)')
+
+	cov    = strlowcase(coverage)
+	apx = ''
+
+	dat    = strlowcase(data)
+	dum    = strsplit(strlowcase(algon[0]),'-',/ext)
+	cli    = algo2ref(dum[0])
+	sat    = n_elements(dum) eq 2 ? dum[1] : ''
+	algon1 = sat_name(cli,sat)
+
+	if cli eq 'mod'  then grid = 1.0
+	if cli eq 'myd'  then grid = 1.0
+	if cli eq 'mod2' then grid = 1.0
+	if cli eq 'myd2' then grid = 1.0
+	if cli eq 'pmx'  then grid = 1.0
+	if cli eq 'gac'  then grid = 0.25
+	if cli eq 'gac2' then grid = 0.25
+	if cli eq 'cci'  then grid = 0.5
+	if cli eq 'cciv3' then grid = 0.5
+	if cli eq 'era'  then grid = 0.5
+	if cli eq 'era2' then grid = 0.5
+	if cli eq 'cal'  then grid = 2.0
+	if cli eq 'cla'  then grid = 0.05
+	if cli eq 'isp'  then grid = 1.0
+	if cli eq 'isp_old'  then grid = 2.5
+	if cli eq 'hec'  then grid = 0.5
+	if ~keyword_set(grid) then begin
+		print,'Grid not defined! Unknown Climatology?'
+		return
+	endif
+	make_geo,lon,lat,grid=grid,algo=cli
+	dem = get_dem(lon,lat,grid=grid)
+
+	case strmid(dat,0,3) of
+		'cot'	: begin & histv = [0.1,0.,100.]    & vollername = 'Cloud Optical Thickness' & end
+		'cth'	: begin & histv = [0.1,0.,20.]     & vollername = 'Cloud Top Height' & end
+		'cwp'	: begin & histv = [1.,0.,1000.]    & vollername = 'Cloud Water Path' & end
+		'iwp'	: begin & histv = [1.,0.,1000.]    & vollername = 'Cloud Ice Water Path' & end
+		'lwp'	: begin & histv = [1.,0.,1000.]    & vollername = 'Cloud Liquid Water Path' & end
+		'ctp'	: begin & histv = [1.,100.,1000.]  & vollername = 'Cloud Top Pressure' & end
+		'ctt'	: begin & histv = [1.,180.,330.]   & vollername = 'Cloud Top Temperature' & end
+		'cfc'	: begin & histv = [0.01,0.,1.]     & vollername = 'Cloud Fraction' & end
+		'cph'	: begin & histv = [0.01,0.,1.]     & vollername = 'Liquid Cloud Fraction' & end
+		'cer'	: begin & histv = [0.1,0.,80.]     & vollername = 'Cloud Effective Radius' & end
+		'sal'	: begin & histv = [0.1,0.,100.]    & vollername = 'Surface Albedo' & end
+		'ref'	: begin & histv = [0.1,0.,100.]    & vollername = 'Reflectance' & end
+		'rad'	: begin & histv = [1.,180.,350.]   & vollername = 'Bright. Temp.' & end
+		'nob'	: begin & histv = [100.,0.,20000.] & vollername = 'Number of Observations' & end
+		'nre'	: begin & histv = [100.,0.,20000.] & vollername = 'Number of valid cloudy Retrievals' & end
+		'cla'	: begin & histv = [.1,0.,1.]       & vollername = 'Cloud Albedo' & end
+		else : begin & print, 'tbd' & stop & end
+	endcase
+
+	lev = total(sat eq ['avhrrs','modises','allsat']) ? 'l3s' : 'l3c'
+	trend_sat = 1
+	if total(cli eq ['cci','cciv3','gac','gac2','pmx']) and ~total(sat eq ['noaaam','noaapm','aatme','atsrs','terra','aqua','avhrrs','modises','allsat']) then trend_sat = 0
+	if total(strmid(dat,0,4) eq ['nobs','nret']) then begin
+		trend_sat = 0
+		sum_up    = 1
+	endif else sum_up = 0
+	if keyword_set(period) then trend_sat=0 ; do only on full time series; '1978-2016'
+
+	if cli eq 'isp' and total(sat eq ['avhrrs','allsat']) then sat = ''
+	if apx ne '' then begin
+		trend_sat = 0
+	endif
+	nyears  = n_elements(years)
+	nmonths = n_elements(months)
+	dim_cov = n_elements(cov)
+	dim2d   = size(lon,/dim)
+	dims    = [dim2d,dim_cov]
+	dim0    = 4 + sum_up
+
+	stats       = fltarr(dim0,nyears*nmonths,dim_cov) +!values.f_nan
+	gstats      = fltarr(dim0,nyears*nmonths,dim_cov) +!values.f_nan
+	mean_2d     = fltarr(dims)
+	mean2_2d    = fltarr(dims)
+	unce_2d     = fltarr(dims)
+	anz_2d      = fltarr(dims)
+	anz_unce_2d = fltarr(dims)
+	mini        = histv[1]
+	maxi        = histv[2]
+	bin         = histv[0]
+	nbins       = ( (maxi - mini) / bin ) +1
+	histo       = lonarr(nbins,dim_cov)
+	sum         = fltarr(dim_cov)
+	sum2        = fltarr(dim_cov)
+	gsum        = fltarr(dim_cov)
+	gsum2       = fltarr(dim_cov)
+	weight      = fltarr(dim_cov)
+	maxv        = fltarr(dim_cov) -999.
+	minv        = fltarr(dim_cov) +99999.
+	nnn         = ulonarr(dim_cov)
+
+	first  = 1
+	counti = 0ul
+	for yy1=0,nyears-1,1 do begin
+	    for mm1=0,nmonths-1,1 do begin
+
+		yyyy=years[yy1]
+		mmmm=months[mm1]
+
+		dsat = noaa_primes(yyyy,mmmm,ampm=sat_ampm(sat,/ampm))
+
+		tmp = get_data(	yyyy,mmmm,file=dum_file,data=dat,algo=cli,sat=sat,level=lev,found=found,no_data_val=fv,unit=unit,/silent,$
+				/make_compare,dirname=dirname,/no_recursive)
+		if found then begin
+			if ( mean((tmp eq 0) or (tmp eq fv)) eq 1. ) then begin
+				print,algon1+': '+get_product_name(dat,algo=cli)+' '+yyyy+'/'+mmmm+' ### All Zeros or Fillvalues! Skipped! ###'
+				found = 0
+			ENDIF
+		endif
+		if (cli eq 'cci' or cli eq 'cciv3') and found then begin
+			num = get_ncdf_data_by_name(dum_file,'number_of_processed_orbits',/global)
+			if num lt 100 then begin
+				print,'File has only '+string(num)+' Orbits, and will be skipped! ',dum_file
+				found = 0
+			endif
+		endif
+		if (found) then begin
+			if (first) and (trend_sat) then begin
+				; save some memory, e.g. cal has grid = 0.05 , arr with [3600,3600,468] = 22.595 GiB RAM
+				tr_start  = counti/12*12
+				trend_2d  = fltarr([dim2d,nyears*nmonths-tr_start]) +!values.f_nan
+				first     = 0
+			endif
+			print, algon1+': '+get_product_name(dat,algo=cli,lev='l3c')+' '+yyyy+'/'+mmmm+' (File: '+temporary(dum_file)+')'
+			unc = get_data(	yyyy,mmmm,data=dat+'_unc',algo=cli,sat=sat,level=lev,found=found_unc,no_data_val=fv_unc,/silent,$
+					/make_compare,dirname=dirname,/no_recursive)
+			for ii = 0, dim_cov -1 do begin
+				area     = get_coverage( lon, lat, dem = dem, coverage = cov[ii],found = found)
+				anz_tmp  = ( (tmp ne fv[0]) and (area eq 1) )
+				dum_tmp  = anz_tmp * tmp
+				good_idx = where(anz_tmp,good_count)
+				if good_count gt 0 then begin
+					stats[0,counti,ii]  = mean   (tmp[good_idx])
+					stats[1,counti,ii]  = stddev (tmp[good_idx])
+					gstats[0,counti,ii] = gmean  (tmp[good_idx],lat[good_idx])
+					gstats[1,counti,ii] = gstddev(tmp[good_idx],lat[good_idx])
+					if found_unc then begin
+						dum_anz_unc = ( anz_tmp and (unc ne fv_unc[0]) )
+						dum_unc     = dum_anz_unc * unc
+						idx2        = where(dum_anz_unc,idx2_cnt)
+						if idx2_cnt gt 0 then stats[2,counti,ii]   = mean   (unc[idx2])
+						if idx2_cnt gt 0 then stats[3,counti,ii]   = stddev (unc[idx2])
+						if idx2_cnt gt 0 then gstats[2,counti,ii]  = gmean  (unc[idx2],lat[idx2])
+						if idx2_cnt gt 0 then gstats[3,counti,ii]  = gstddev(unc[idx2],lat[idx2])
+						if idx2_cnt gt 0 then unce_2d[*,*,ii]     += dum_unc
+						if idx2_cnt gt 0 then anz_unce_2d[*,*,ii] += dum_anz_unc
+					endif
+					if sum_up then stats[4,counti,ii]  = total(tmp[good_idx])
+					if sum_up then gstats[4,counti,ii] = total(tmp[good_idx] * cosd(float(lat[good_idx])))
+					histo[*,ii]     += histogram(float(tmp[good_idx]),min=mini,max=maxi,nbins=nbins)
+					mean_2d[*,*,ii] += dum_tmp
+					mean2_2d[*,*,ii]+= dum_tmp^2
+					anz_2d[*,*,ii]  += anz_tmp
+					sum[ii]         += total((tmp[good_idx]))
+					sum2[ii]        += total((tmp[good_idx])^2.)
+					maxv[ii]         = max([maxv[ii],max(tmp[good_idx])])
+					minv[ii]         = min([minv[ii],min(tmp[good_idx])])
+					nnn[ii]         += good_count
+					;gmeans
+					weight[ii]      += total(cosd(lat[good_idx]))
+					gsum[ii]        += total((tmp[good_idx])    * cosd(lat[good_idx]))
+					gsum2[ii]       += total((tmp[good_idx])^2. * cosd(lat[good_idx]))
+					; das muss zuletzt kommen 
+					if (first eq 0) and (cov[ii] eq 'full') then begin
+						dum_idx = where(anz_tmp eq 0,dum_idx_cnt)
+						if dum_idx_cnt gt 0 then dum_tmp[dum_idx] = !values.f_nan
+						trend_2d[*,*,counti-tr_start] = dum_tmp
+					endif
+				endif
+				free, anz_tmp
+				free, dum_tmp
+				free, dum_anz_unc
+				free, dum_unc
+				free, area
+			endfor
+			free,tmp
+			free,unc
+		endif
+		free,dum_file
+		counti++
+	    endfor
+	endfor
+
+	;trends
+	if (first eq 0) then begin
+		mima = minmax(where(finite(stats[0,*,0])))/12 * 12
+		mima[1] = mima[1]+11
+		if total(cli eq ['cci','cciv3','pmx','gac','gac2','hec']) then begin
+			ect = restore_var(!SAVS_DIR + 'time_series/plot_monthly_ECTs_cci_primes_'+sat+'.sav',found=found)
+			if found then ect = ect[mima[0]:mima[1]] else free,ect
+		endif
+		tr_dum  = give_trend(trend_2d[*,*,0:mima[1]-tr_start],mini,maxi,years[mima[0]/12],years[mima[1]/12],ect)
+		lfit    = tr_dum.slope * 10. ; make it per decade
+		dummean = mean(trend_2d,dim=3,/nan)
+		idx = where(~finite(dummean),idxcnt)
+		if idxcnt gt 0 then lfit[idx] = -999.
+		dumm    = tr_dum.anom
+		idx = where(dumm eq -999.,idxcnt)
+		if idxcnt gt 0 then dumm[idx] = !values.f_nan
+		anom_mean = mean(dumm,dim=3,/nan)
+		idx = where(~finite(anom_mean),idxcnt)
+		if idxcnt gt 0 then anom_mean[idx] = -999.
+		season_mean = fltarr([dim2d,12]) + !values.f_nan
+		for i = 0,11 do season_mean[*,*,i] = mean(trend_2d[*,*,i:*:12],dim=3,/nan)
+		free, trend_2d
+		free, dumm
+	endif
+
+	for ii = 0, dim_cov -1 do begin
+
+		if nnn[ii] le 100 then continue
+
+		hist = {data:reform(histo[*,ii]),minvalue:mini[0],maxvalue:maxi[0],bin:bin[0]}
+		;artihm statistics over all good pixel and monthly means
+		anz        = float(nnn[ii])
+		all_avg    = sum[ii] / (anz > 1.)					; average
+		all_var    = ( (sum2[ii] - anz * all_avg^2) > 0.) / ((anz-1.) > 1.) 	; varianz
+		all_sdv    = sqrt(all_var)						; stddev
+		;latitude weighted
+		anz        = weight[ii]
+		gall_avg   = gsum[ii] / anz						; average
+		gall_var = ( (gsum2[ii] - anz * gall_avg^2.) > 0.) / ((anz-1.) > 1.) 	; varianz
+		gall_sdv = sqrt(gall_var)						; stddev
+
+		gall = {nnn:weight[ii],sum:gsum[ii],sum_sq:gsum2[ii],avgerage:gall_avg,variance:gall_var,stddev:gall_sdv}
+		all  = {nnn:nnn[ii],sum:sum[ii],sum_sq:sum2[ii],minvalue:minv[ii],maxvalue:maxv[ii],$
+			avgerage:all_avg,variance:all_var,stddev:all_sdv,latitude_weighted:gall}
+
+		;average
+		qq      = where(reform(anz_2d[*,*,ii]) eq 0,c_qq)
+		cci     = reform(mean_2d[*,*,ii]/float(anz_2d[*,*,ii] > 1))
+		cci_std = sqrt( ( (mean2_2d[*,*,ii] - anz_2d[*,*,ii] * cci^2) > 0.) / ((anz_2d[*,*,ii]-1.) > 1.) )
+		if c_qq gt 0 then cci[qq] = -999.
+		if c_qq gt 0 then cci_std[qq] = -999.
+		qq = where(reform(anz_unce_2d[*,*,ii]) eq 0,c_qq)
+		unce  = reform(unce_2d[*,*,ii]/float(anz_unce_2d[*,*,ii] > 1))
+		if c_qq gt 0 then unce[qq] = -999.
+		;stddev
+
+		;trend
+		if (first eq 0) then begin 
+			area  = get_coverage( lon, lat, dem = dem, coverage = cov[ii],found = found)
+			trend = lfit * (area eq 1)  + (area eq 0) * (-999.) 
+			an_mean2d = anom_mean * (area eq 1)  + (area eq 0) * (-999.) 
+			seasonal_mean2d = season_mean *0. -999.
+			for i = 0,11 do seasonal_mean2d[*,*,i] = reform(season_mean[*,*,i]) * (area eq 1)  + (area eq 0) * (-999.)
+
+			tr_dum_stats  = reform( stats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+			tr_dum_gstats = reform(gstats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+			anom_stats    = reform( stats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+			anom_gstats   = reform(gstats[*,mima[0]:mima[1],ii])*0 +!values.f_nan
+
+			for tr = 0,n_elements(tr_dum_stats[0,*])-1 do begin
+				dummy = (reform(tr_dum.ANOM[*,*,tr]) + cci) * area
+				idx   = where(area eq 1 and cci ne -999. and reform(tr_dum.ANOM[*,*,tr]) ne -999.,idxcnt)
+				if idxcnt gt 0 then begin
+					tr_dum_stats[0,tr]  = mean  (dummy[idx])
+					tr_dum_stats[1,tr]  = stddev(dummy[idx])
+					tr_dum_gstats[0,tr] = gmean  (dummy[idx],lat[idx])
+					tr_dum_gstats[1,tr] = gstddev(dummy[idx],lat[idx])
+				endif
+				dummy = reform(tr_dum.ANOM[*,*,tr]) * (area eq 1)  + (area eq 0) * (-999.)
+				idx = where(dummy ne -999.,idxcnt)
+				if idxcnt gt 0 then begin
+					anom_stats [0,tr]  = mean   (dummy[idx])
+					anom_stats [1,tr]  = stddev (dummy[idx])
+					anom_gstats[0,tr]  = gmean  (dummy[idx],lat[idx])
+					anom_gstats[1,tr]  = gstddev(dummy[idx],lat[idx])
+				endif
+			endfor
+			dum_stats                          = reform(stats[*,*,ii])
+			dum_stats[*,mima[0]:mima[1]]       = tr_dum_stats
+			dum_gstats                         = reform(gstats[*,*,ii])
+			dum_gstats[*,mima[0]:mima[1]]      = tr_dum_gstats
+			dum_anom_stats                     = reform(stats[*,*,ii])
+			dum_anom_stats[*,mima[0]:mima[1]]  = anom_stats
+			dum_anom_gstats                    = reform(gstats[*,*,ii])
+			dum_anom_gstats[*,mima[0]:mima[1]] = anom_gstats
+
+			trends = {	mean:trend,anom_mean:an_mean2d,stats_non_weighted:dum_stats,stats:dum_gstats,$
+						stats_anom_non_weighted:dum_anom_stats,stats_anom:dum_anom_gstats, $
+						seasonal_mean2d:seasonal_mean2d}
+		endif else trends = -1
+
+		str_cov = cov[ii]+'_'
+		if cov[ii] eq 'full'      then str_cov = ''
+		if cov[ii] eq 'full_land' then str_cov = 'land_'
+		if cov[ii] eq 'full_sea'  then str_cov = 'sea_'
+		out_struc = {algoname:algon1,varname:dat,longname:vollername,unit:unit,coverage:coverage[ii],stats:reform(gstats[*,*,ii]),$
+				stats_non_weighted:reform(stats[*,*,ii]),mean:temporary(cci),unc:temporary(unce),std:temporary(cci_std),trend:trends}
+		out_struc = create_struct(out_struc,'histogram',hist)
+		out_struc = create_struct(out_struc,'Overall_Stats',all)
+		sav_file  = !SAVS_DIR + 'time_series/plot/plot_'+dat+'_'+cli+apx+'_time_series_'+sat+'_'+$
+		str_cov+strjoin([years[0],(reverse(years))[0]],'-')+'.sav'
+		print,'Create: '+sav_file
+		save_var, out_struc, sav_file,chmod = '664'
+	endfor
+
+	;cleanup
+	free,mean_2d
+	free,unce_2d
+	free,anz_2d
+	free,anz_unce_2d
+
+end
 ;------------------------------------------------------------------------------------------
 ;------------------------------------------------------------------------------------------
 ;------------------------------------------------------------------------------------------
