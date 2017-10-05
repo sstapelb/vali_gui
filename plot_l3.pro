@@ -876,7 +876,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						brewer = brewer, greyscale = greyscale ,flip_colours = flip_colours,ctable=ctable,debug=verbose)
 			if keyword_set(zoom) then begin
 				get_new_corners = 1
-				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete2,magnify=magnify
+				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 				if win_nr ne -1 then win, win_nr
 				if ~keyword_set(difference) then !p.multi = [2,2,2]
 			endif
@@ -1785,7 +1785,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
 				; Zoom does not work with discrete colors so far!
 				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext, $
-				figure_title = figure_title,discrete=discrete,void_index=void_index,magnify=magnify
+				figure_title = figure_title,void_index=void_index,magnify=magnify
 			endif
 		if opl eq 0 then begin
 			if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
@@ -2741,7 +2741,7 @@ bin= ( bin/100.) > 0.01
 			brewer=brewer,ctable=ctable,debug=verbose)
 		if keyword_set(zoom) then begin
 			get_new_corners = 1
-			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete,magnify=magnify
+			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 			if win_nr ne -1 then win, win_nr
 		endif
 
@@ -3681,7 +3681,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 
 			if keyword_set(zoom) then begin
 				get_new_corners = 1
-				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete,magnify=magnify
+				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 				if win_nr ne -1 then win, win_nr
 				plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
 				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
@@ -3729,7 +3729,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 
 		if keyword_set(zoom) then begin
 			get_new_corners = 1
-			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,discrete=discrete,magnify=magnify
+			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 			if win_nr ne -1 then win, win_nr
 			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
 			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
@@ -4202,7 +4202,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 				globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
-				m -> zoom,get_new_corners = zoom,/print_new, ztext = ztext,discrete=discrete,magnify=magnify
+				m -> zoom,get_new_corners = zoom,/print_new, ztext = ztext,magnify=magnify
 			endif
 			obj_destroy, m
 		end_save, save_as
@@ -4279,7 +4279,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 				globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
-				m -> zoom,get_new_corners = zoom,/print_new, ztext = ztext,discrete=discrete,magnify=magnify
+				m -> zoom,get_new_corners = zoom,/print_new, ztext = ztext,magnify=magnify
 			endif
 			obj_destroy,m
 		end_save, save_as

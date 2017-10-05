@@ -1090,7 +1090,7 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 							dist  = great_circle(lon_in[idx[index]],lat_in[idx[index]],lon,lat)
 							ddd   = where(dist lt 10000.,ddd_cnt); not if distance is more than 10km
 							if ddd_cnt gt 0 then begin
-; 								print,minmax(dist[ddd]) 
+								print,minmax(dist[ddd]) 
 								dum   = array_indices(lon_in,idx[index[ddd]])
 								xxx   = reform(dum[0,*])
 								yyy   = reform(dum[1,*])
@@ -1294,7 +1294,8 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 					'08) vi008,vi006,vi006',$
 					'09) vi008,bt11,bt12', $
 					'10) ref37,vi008,vi006', $
-					'11) ir120-ir108/ir108/ir108 [NIGHT ONLY - water->cyan, ground->pink, ice clouds->red, thin c.->dark]']
+					'11) ir120-ir108/ir108/ir108 [NIGHT ONLY - water->cyan, ground->pink, ice clouds->red, thin c.->dark]',$
+					'12) vi008,bt11,bt11-bt12']
 
 	longname = description[filter]
 	if print_name then print,longname
@@ -1383,6 +1384,14 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 			c2 = bt11
 			data_idx = where((c1 gt 0) and (c2 gt 0), data_anz)
 			data = transpose([[[c1 - c2]],[[c2]],[[c2]]], [2, 0, 1])
+		end
+		12:begin
+			c1 = ref08
+			c2 = bt11
+			c3 = bt12
+			c4 = bt37
+			data_idx = where((c1 gt 0) and (c2 gt 0) and (c3 gt 0) and (c4 gt 0), data_anz)
+			data = transpose([[[c1]],[[c2-c4]],[[c2 - c3]]], [2, 0, 1])
 		end
 	endcase
 
@@ -4351,12 +4360,16 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 			   end
 		'SEVIRI': begin
 				if alg eq 'CLAAS-1' then begin
+					if dat eq '' then begin
+						if ~sil then print,'Claas1 needs a productname to find filename!'
+						found =0
+						return,''
+					endif
 					if lev eq 'l2' then begin
 						dum = strupcase(dat)
 						orbdum = strlen(orb) eq 4 ? orb : '' 
 						if strmid(dat,0,3) eq 'cma' then dum = 'CFC'
 						if total(dat eq ['clwp','cwp','cot','cph']) then dum = 'CPP'
-						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
 						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/cmsaf_cld5/SEVIRI/operational/inst/'+dum+'/'+yyyy+'/'+mm+'/'
 						filen = dir+dum+'in'+yyyy+mm+dd+orbdum+'*MD.hdf'
 					endif else if dat eq 'zenith_angle' then begin
@@ -4364,22 +4377,22 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						filen = dir+'meteosat'+(julday(mm,1,yyyy) ge julday(04,11,2007,13,00) ? '9':'8')+'zenanlge.nc'
 					endif else begin
 						dat   = strmid(get_product_name(dat,algo=alg,/lower),0,3)
-; 						if dat eq 'cc_total' then dat = 'cfc' 
-; 						dat   = dat eq 'cot_ctp_hist2d' ? 'jch' : (strsplit(dat,'_',/ext))[0]
-						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
 						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/cmsaf_cld5/SEVIRI/repr1/level3_ncdf/'+(total(dat eq ['ctp','ctt','cth']) ? 'cto' : dat)+'/'+yyyy+'/'
 						apx   = dat eq 'jch' ? 'mh' : (dd ? 'dm' : 'mm')
-						filen = dir+(total(dat eq ['ctp','ctt','cth']) ? 'CTO' : strupcase(dat))+apx+$
-							yyyy+mm+dd+'*MA.nc'
+						filen = dir+(total(dat eq ['ctp','ctt','cth']) ? 'CTO' : strupcase(dat))+apx+yyyy+mm+dd+'*MA.nc'
 					endelse
 				endif
 				if alg eq 'CLAAS' then begin
+					if dat eq '' then begin
+						if ~sil then print,'Claas needs a productname to find filename!'
+						found =0
+						return,''
+					endif
 					if lev eq 'l2' then begin
 						dum = strupcase(dat)
 						orbdum = strlen(orb) eq 4 ? orb : '' 
 						if strmid(dat,0,3) eq 'cma' then dum = 'CMA'
 						if total(dat eq ['clwp','cwp','cot','cph']) then dum = 'CPP'
-						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
 						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level2/'+strlowcase(dum)+'/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+dum+'in'+yyyy+mm+dd+orbdum+'*MD.nc'
 					endif else begin
@@ -4397,8 +4410,6 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						if dat eq 'ref_liq' then dat = 'lwp'  else $
 						if dat eq 'cot_ice' then dat = 'iwp'  else $
 						if dat eq 'cot_liq' then dat = 'lwp'  else dat = pathdat
-						if dat eq '' and ~sil then begin & print,'Claas needs a productname to find filename!'& found =0 & return,1 & end
-						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level3/'+pathdat+'/'+yyyy+'/'+mm+'/'
 						apx   = ( is_h1d(data) or is_jch(data) ) ? 'mh' : (dd ? 'dm' : 'mm')
 						filen = dir+strupcase(dat)+apx+yyyy+mm+dd+'*MA.nc'
 					endelse
@@ -4419,8 +4430,13 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 							endif
 							dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/esa_cloud_cci/data/v3.0/'+strupcase(lev)+$
-							(lev eq 'l3u' ? 'x':'')+ $ ;temporär!!!!!!
+; 							(lev eq 'l3u' ? 'x':'')+ $ ;temporär!!!!!!
 							'/'+yyyy+'/'+mm+'/'
+							if dat eq '' and lev eq 'l3u' then begin
+								if ~sil then print,'Since Version 3, ESA CCI L3U data need a productname to find filename!'
+								found =0
+								return,''
+							endif
 							if lev eq 'l2' then begin
 								sat = strjoin(strsplit(sat,/ext,'-'))
 								dir = din ? dirname+'/' :dir+strlowcase(sat)+'/*/'
@@ -4476,9 +4492,13 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								filen = dir+'RR_AVHRR_L2_cp_'+strupcase(sat)+'_'+yyyy+mm+dd+'_'+orbdum+'*_v0_*_CMS2.nc'
 ; 								goto, ende
 							endif else begin
+								if dat eq '' then begin
+									if ~sil then print,'CLARA needs a productname to find filename!'
+									found =0
+									return,''
+								endif
 								pathdat = get_product_name(dat,algo=alg,level=lev,/path)
 								dat   = strmid(get_product_name(dat,algo=alg,/lower),0,3)
-								if dat eq '' and ~sil then begin & print,'Clara needs a productname to find filename!'& found =0 & return,1 & end
 								apx   = dat eq 'jch' ? 'mh' : (dd ? 'dm' : 'mm')
 								if din then begin
 									last_subdir = (reverse(strsplit(dirname,'/',/ext)))[0]
@@ -4494,13 +4514,17 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endelse
 						  end
 					'CLARA2': begin
+							if dat eq '' then begin
+								if ~sil then print,'CLARA2 needs a productname to find filename!'
+								found =0
+								return,''
+							endif
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 								sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 ; 								if found_prime then satellite = sat
 							endif
 							dumdat = dat
 							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
-							if dat eq '' and ~sil then begin & print,'Clara2 needs a productname to find filename!'& found =0 & return,1 & end
 							case lev of 
 								'l3c'	:	apx = 'mm'
 								'l3s'	:	apx = 'mm'
@@ -4546,7 +4570,11 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									if strmatch(sat,satpat) or total(sat eq ['NOAA-AM','NOAA-PM']) then begin
 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld1/esa_cci_cloud_data/data/Patmos-X/gewex/'+yyyy+'/'
 										dat   = strmid(get_product_name(dat,algo='gewex',/upper),2)
-										if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
+										if dat eq '' then begin
+											if ~sil then print,'PATMOS L3C data need a productname to find filename!'
+											found =0
+											return,''
+										endif
 										if dat eq 'COD_CP' then dat = 'HIST2D_COD_CP'
 										filen = dir+dat+'_PATMOSX_NOAA_'+which+'_'+yyyy+'.nc' ; nur 0130PM
 									endif else begin
@@ -4584,7 +4612,11 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 ; 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld7/thanschm/DATASET/PATMOS/'+yyyy+'/'
 										dir   = din ? dirname+'/' :'/cmsaf/cmsaf-cld8/EXTERNAL_DATA/PATMOS_X/LEVEL3/'+yyyy+'/'
 										dat   = strmid(get_product_name(dat,algo='gewex',/upper,/path),2)
-										if dat eq '' and ~sil then begin & print,'Patmos L3c needs a productname to find filename!'& found =0 & return,1 & end
+										if dat eq '' then begin
+											if ~sil then print,'PATMOS L3C data need a productname to find filename!'
+											found =0
+											return,''
+										endif
 										if dat eq 'COD_CP' then dat = 'CODW_CP'
 										filen = dir+dat+'_PATMOS4CLARA2_NOAA_'+which+'_'+yyyy+'.nc'
 									endif else begin
@@ -4846,7 +4878,11 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 							endif
 							dumdat = dat
 							dat    = get_product_name(dat,algo=alg,/upper,level=lev,/path)
-							if dat eq '' and ~sil then begin & print,alg+' needs a productname to find filename!'& found =0 & return,1 & end
+							if dat eq '' then begin
+								if ~sil then print,'HECTOR needs a productname to find filename!'
+								found =0
+								return,''
+							endif
 							case lev of 
 								'l3c'	:	apx = 'mm'
 								'l3s'	:	apx = 'mm'
