@@ -345,20 +345,20 @@ end
 ;------------------------------------------------------------------------------------------
 
 ;------------------------------------------------------------------------------------------
-pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = mini, maxi = maxi 	, $
-			zoom=zoom, limit=limit,  win_nr = win_nr, save_dir = save_dir		, $
+pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = mini	, $
+			maxi = maxi, zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_dir, $
 			overwrite_sav = overwrite_sav,verbose = verbose, land = land, sea = sea	, $
 			only_clara=only_clara, ccifile=ccifile, reference=reference,orbit=orbit	, $
 			coverage=coverage, show_values=show_values,other = other, ctable=ctable	, $
 			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
 			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg	, $
-			robinson=robinson, hammer = hammer, goode = goode,globe = globe		, $
+			robinson=robinson, hammer = hammer, goode = goode,globe = globe			, $
 			histogramm = histogramm,difference = difference, level=level,error=error, $
-			ztext = ztext, algo1=algo1,zonal_only=zonal_only, nobar=nobar		, $
+			ztext = ztext, algo1=algo1,zonal_only=zonal_only, nobar=nobar			, $
 			stereographic = stereographic, out=out, hist_cloud_type=hist_cloud_type	, $
-			logarithmic = logarithmic,timeseries=timeseries,dim3=dim3		, $
-			white_bg=white_bg,dirname2=dirname2,magnify=magnify,oplots=oplots	, $
-			wtext = wtext,countries=countries,notitle=notitle,shape_file=shape_file,$
+			logarithmic = logarithmic,timeseries=timeseries,dim3=dim3				, $
+			white_bg=white_bg,dirname2=dirname2,magnify=magnify,oplots=oplots		, $
+			wtext = wtext,countries=countries,notitle=notitle,shape_file=shape_file	, $
 			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
 			version1=version1,version2=version2
 
@@ -384,7 +384,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	ref      = keyword_set(reference) ? strlowcase(reference) : ''
 	dat      = strsplit(strlowcase(data[0]),',',/ext)
 	if n_elements(dat) eq 1 then dat = [dat,dat]
-	dtn      = [appendix(dat[0]),appendix(dat[1])]
 	hct      = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
 	sat      = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
@@ -421,6 +420,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	vollername1 = full_varname(dat[0],/universal)
 	vollername2 = full_varname(dat[1],/universal)
+; 	dtn      	= [appendix(dat[0]),appendix(dat[1])]; should be obsolete now, full_varname should do it.
+	dtn 		= ['','']
 
 	case strmid(dat[0],0,3) of
 		'cot'	: begin & histv = [0.1,0.,50.]   & end
@@ -1763,7 +1764,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		rotate_globe = 0
 	endif
 
-	if opl le 1 or ~obj_valid(obj_out) then begin
+; 	if opl le 1 or ~obj_valid(obj_out) then begin
+	if ~obj_valid(obj_out) then begin
 		if opl eq 0 then start_save, save_dum, thick = thick,size=[48,30]
 			m = obj_new("map_image",bild, lat, lon, void_index=void_index, void_color = void_color,n_lev=n_lev	, $
 				max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue, format=bar_format, $
@@ -1783,22 +1785,38 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				goodeshomolosine = goodeshomolosine, mollweide=mollweide,hammer=hammer,aitoff=aitoff,stereographic=stereographic, $
 				label=label, sinusoidal=sinusoidal,robinson=robinson,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
-				; Zoom does not work with discrete colors so far!
 				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext, $
 				figure_title = figure_title,void_index=void_index,magnify=magnify
 			endif
-		if opl eq 0 then begin
-			if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
-			if ~rotate_globe then begin
-				obj_destroy, m
-				end_save, save_dum
-			endif
-		endif else obj_out = m
+; 		if opl eq 0 then begin
+; 			if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
+; 			if ~rotate_globe then begin
+; 				obj_destroy, m
+; 				end_save, save_dum
+; 			endif
+; 		endif else obj_out = m
+		if opl eq 0 then end_save, save_dum
+		obj_out = m
 	endif else begin
+		if void_index[0] ne -1 then begin
+			lon[void_index] = !values.f_nan
+			lat[void_index] = !values.f_nan
+			if get_product_name(dat,algo='pmx') eq 'cloud_mask' then begin
+				idx = where(bild eq 0,idxcnt)
+				if idxcnt gt 0 then begin
+					lon[idx] = !values.f_nan
+					lat[idx] = !values.f_nan
+				endif
+			endif
+			void_index = -1
+		endif
 		obj_out -> project, image = bild, lon = lon, lat = lat,/no_erase, no_color_bar=1, void_index=void_index,n_lev=n_lev, $
-			max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue, discrete=discrete
+			max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue,$
+			limit=limit, figure_title = figure_title
 		device,decompose=1
 	endelse
+
+	if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
 
 	if rotate_globe then begin
 
@@ -1833,10 +1851,10 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 				limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 							[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
-				if do_it then m -> project,limit=limit,p0lon=p0lon,p0lat=p0lat, void_index=void_index
+				if do_it then m -> project,limit=limit,p0lon=p0lon,p0lat=p0lat,void_index=void_index
 			endif
 		endwhile
-		obj_destroy, m
+; 		obj_destroy, m
 		widget_control,wtext,set_value='             Pixel Values'
 	endif
 

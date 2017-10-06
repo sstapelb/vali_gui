@@ -3242,8 +3242,10 @@ function NCDF_DATA::make_VARList, data_only = data_only
 	endif
 	
 	theList=[theList,'---Additional-Variables---','blue_marble','usgs_lus','usgs_dem']
-	
-	if self.level eq 'l3c' then begin
+
+	if self.level eq 'l3u' then begin
+		theList=[theList,'rgb_asc','rgb_desc','rgb']
+	endif else if self.level eq 'l3c' then begin
 		self.c6_list = ptr_new(['cwp_16','iwp_16','lwp_16','cot_16','cer_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
 								'cwp_37','iwp_37','lwp_37','cot_37','cer_37','cot_37_liq','cer_37_liq','cot_37_ice','cer_37_ice', $
 								'iwp_16_allsky','lwp_16_allsky','cwp_16_allsky','iwp_37_allsky','lwp_37_allsky','cwp_37_allsky'])
@@ -4463,7 +4465,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			histo1d = is_h1d(varname[0])
 
 			if histo1d and pcmult and ~pchov then begin
-				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean'
+				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean Multi Time Step'
 				if ~(histo1d and strlowcase(hct[0]) eq '1d') then !p.multi=[0,2,2]
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, orbit = orbit, $
 				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as,land=land, ztext = ztext,$
@@ -5027,7 +5029,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if obj_valid(obj_out) then obj_destroy,obj_out
 					if obj_valid(self.map_objout) then obj_destroy,self.map_objout
 				endif
-				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi=[0,2,1] 
+				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi=[0,2,1]
 				plot_l2,year[0],month[0],day[0],file=file,data=varname[0],mini=mini,maxi=maxi,sat=sat[0],algo=algo[0],hist_cloud_type=hct[0], $
 				win_nr=win_nr,sea = sea,land=land,save_as=save_as,limit=limit,zoom=zoom,lon=lon,lat=lat,bild=bild,unit=unit,timeseries=pcmult, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
@@ -6229,9 +6231,9 @@ PRO NCDF_DATA__DEFINE, class
              minys:0L,                 $
              decompose:1L,             $
              pmulti:'',                $
-	     pmulti_default:'',        $
+             pmulti_default:'',        $
              oplotID:0l,               $
-	     oplotnr:0l,               $
+             oplotnr:0l,               $
 ;              map_objout:obj_new(''),   $
              map_objout:obj_new('IDL_Container'),   $
 	     draw:0L,                  $

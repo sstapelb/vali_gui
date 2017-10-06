@@ -2636,8 +2636,8 @@ function set_limits, longitude, latitude, four_elements = four_elements, bounds 
 	rat_pos   = float(anz_pos)/float(anz_total)
 
 	anz = 1
-	if (rat_neg gt rat_pos and rat_neg ne 1. and rat_pos lt 0.05) then begin & anz = 2 & neg = 1 & end
-	if (rat_pos gt rat_neg and rat_pos ne 1. and rat_neg lt 0.05) then begin & anz = 2 & neg = 0 & end
+	if (rat_neg gt rat_pos and rat_neg ne 1. and rat_pos lt 0.01) then begin & anz = 2 & neg = 1 & end
+	if (rat_pos gt rat_neg and rat_pos ne 1. and rat_neg lt 0.01) then begin & anz = 2 & neg = 0 & end
 
 	dum_limit = fltarr(4,anz)
 
