@@ -2695,10 +2695,10 @@ end
 pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar, 	$ ; input 
 		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, 		$ ; input 
 		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,no_grid=no_grid,				$ ; input 
-		ortho=ortho,iso=iso,horizontal=horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
+		ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
 		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify		, 						$
 		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
-		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format,position = position						  ; output
+		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format,position = position,horizon=horizon		  ; output
 
 	box_axes = 1
 	ksl = keyword_set(limit)
@@ -2710,7 +2710,8 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		; set map_image defaults
 		ortho   = 1
 		iso     = 1
-		horizontal = 1
+		bar_horizontal = 1
+		horizon = 1
 ; 		grid    = 1
 		label   = 1
 		noborder= 1
@@ -2733,7 +2734,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 				limit = limit + [-50, 0,-50, 0,-50, 0,-50, 0]
 				no_color_bar = 0
 				if ~adv_keyword_set(magnify) then magnify = 1
-				horizontal=0
+				bar_horizontal=0
 				label=1
 			endif
 			if keyword_set(arctic) then begin
@@ -2741,7 +2742,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 				limit = limit + [ 50, 0, 50, 0, 50, 0, 50, 0]
 				no_color_bar = 0
 				if ~adv_keyword_set(magnify) then magnify = 1
-				horizontal=0
+				bar_horizontal=0
 				label=1
 			endif
 		endif
@@ -2754,7 +2755,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if keyword_set(sinusoidal) then begin & sinusoidal = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(aitoff) then begin & aitoff = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(mollweide) then begin & mollweide = 1 & no_color_bar = 0 & ortho = 0  & limit = other_limit & end
-		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & horizontal = 0 & limit = [-90,((p0lon mod 360) -90),90,((p0lon mod 360) +90)] & end
+		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & bar_horizontal = 0 & limit = [-90,((p0lon mod 360) -90),90,((p0lon mod 360) +90)] & end
 		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end 
 		if keyword_set(msg) then begin
 			p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
@@ -2762,7 +2763,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
 			no_color_bar = 0
-			horizontal = 0
+			bar_horizontal = 0
 			no_draw_border=0
 		endif
 		if keyword_set(enhanced_robinson) then begin
@@ -2804,8 +2805,8 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 
 	if adv_keyword_set(nobar) then begin
 		if nobar eq 1  then no_color_bar = 1 ; no color bar
-		if nobar eq 2  then begin & no_color_bar = 0 & horizontal = 1 & end ; force horizontal colorbar
-		if nobar eq 3  then begin & no_color_bar = 0 & horizontal = 0 & end ; force vertical colorbar
+		if nobar eq 2  then begin & no_color_bar = 0 & bar_horizontal = 1 & end ; force horizontal colorbar
+		if nobar eq 3  then begin & no_color_bar = 0 & bar_horizontal = 0 & end ; force vertical colorbar
 		if nobar eq 99 then begin & position = [0.,0.,1.,1.] & no_color_bar = 1 & no_box = 1 & end
 	endif
 
@@ -2816,7 +2817,8 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
  		no_draw_border=1
 	endif
 	if keyword_set(no_label) or keyword_set(no_grid) then label = 0
-
+	if keyword_set(no_grid) then horizon = 0
+	
 	print,'magnify: ',keyword_set(magnify) ? magnify :' not set'
 
 end
@@ -6340,11 +6342,11 @@ end
 ;------------------------------------------------------------------------------------------
 pro save_as_kml, image, save_file, minvalue, maxvalue, fillvalue, brewer = brewer, ctable=ctable, limit = limit, transparent=transparent
 
-    lonlatbox = keyword_set(limit)  ? limit[[2,0,3,1]] : [90,-90,180,-180]
+    latlonbox = keyword_set(limit)  ? limit[[2,0,3,1]] : [90,-90,180,-180]
     ctindex   = keyword_set(ctable) ? fix(ctable) : 33
 
     cgImage2KML, image, Min_Value=minvalue, max_value = maxvalue, missing_value = fillvalue, $
-          CTIndex=abs(ctindex),reverse=(ctindex lt 0), brewer=brewer,latlonbox=lonlatbox,$
+          CTIndex=abs(ctindex),reverse=(ctindex lt 0), brewer=brewer,latlonbox=latlonbox,$
           Filename=save_file, transparent=transparent
 
 end

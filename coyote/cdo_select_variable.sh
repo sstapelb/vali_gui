@@ -1,0 +1,1 @@
+cdo select,name=cmask_asc,cmask_desc,cccot_asc,cccot_desc,time_asc,time_desc 20130502-ESACCI-L3U_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-19-fv2.0.nc 20130502-ESACCI-L3U_CLOUD-CLD_PRODUCTS-AVHRR_NOAA-19-fv2.0_cmask.nc
