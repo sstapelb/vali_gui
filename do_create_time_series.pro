@@ -2,10 +2,6 @@ pro do_create_time_series
 
 end
 
-pro set_coverage, cov
-	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
-	cov      = [coverage,coverage+'_land',coverage+'_sea']
-end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 ; do jobs
 ; ----------------------------------------------------------------------------------------------------------------------------------------------

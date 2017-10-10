@@ -4555,7 +4555,7 @@ end
 pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi = maxi, win_nr = win_nr,notitle=notitle,$
 		     ctable = ctable, other = other, reference = reference, out = out, land = land, sea = sea,$
 		     oplots = oplots, found = found, nobar = nobar, limit = limit, antarctic=antarctic, arctic=arctic, $
-		     coverage=coverage,version=version,version2=version2
+		     coverage=coverage,version=version,version2=version2,ts_extras = ts_extras
 
 ; 	vali_set_path
 	opl   = keyword_set(oplots)
@@ -4563,14 +4563,9 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	dat   = strlowcase(data[0])
 	if keyword_set(antarctic) then limit = [-90.,-180.,-60.,180.] 
 	if keyword_set(arctic)    then limit = [ 60.,-180., 90.,180.] 
-	anomalies = stregex(dat,'_anomalies',/bool)
-	if anomalies then dat = strreplace(dat,'_anomalies','')
-	if anomalies and keyword_set(reference) then begin
-		print,'anomalie and compare does not work until now'
-		anomalies = 0
-	endif
-	algo  = keyword_set(algo) ? strlowcase(algo) : 'esacci'
-	sat   = keyword_set(satellite) ? strlowcase(strjoin(strsplit(satellite,'-',/ext))) : 'noaa18'
+
+	algo  = keyword_set(algo) ? strlowcase(algo) : ''
+	sat   = keyword_set(satellite) ? strlowcase(strjoin(strsplit(satellite,'-',/ext))) : ''
 	algon = sat_name(algo,opl eq 0 ? sat:'',version=version)
 	ref   = keyword_set(reference) ? algo2ref(reference) : '' ; must be of type 'gac','myd','mod',etc
 	if keyword_set(ref) then ref_name = sat_name(ref,opl eq 0 ? sat:'',version=version2)
@@ -4586,15 +4581,29 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	endif
 	set_colors,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
 
-	d = get_available_time_series( algo, dat, sat, period = datum, /hovmoeller, found = found)
+	varn  = strsplit(dat,',',/ext)
+	
+	same_var = n_elements(varn) eq 1
+	if same_var then varn = [varn,varn]
+	
+	vollername = full_varname(varn[0],/universal)
+
+	d = get_available_time_series( algo, varn[0], sat, period = datum, /hovmoeller, found = found, anomalies = anomalies,ts_extras = ts_extras)
+
 	if ~float(found) then begin
-		ok = dialog_message('plot_hovmoeller: File not found for '+algon+' '+dat)
+		ok = dialog_message('plot_hovmoeller: File not found for '+algon+' '+varn[0])
 		if is_defined(out) then out = {bild:out.bild,sm:out.sm}
 		return
 	endif
 
+	if anomalies eq 1 and keyword_set(reference) then begin
+		print,'Plot_hovmoeller: Plotting of Anomalies while comparing at the moment not possible.'
+		anomalies = 0
+	endif
+
 	matrix = transpose(d.(struc_idx))
-	
+	longname = d.longname
+
 	mima = minmax(matrix,no_data_value=-999)
 	if keyword_set(mini) then mima[0] = mini[0]
 	if keyword_set(maxi) then mima[1] = maxi[0]
@@ -4604,11 +4613,10 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	nlev = 16 > fix(((mima[1]-mima[0])/dist)+1) < 30
 	nbar = 8 > nlev < 11
 
-	if is_h1d(dat) then begin
-		dum_cov     = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
-		dum_cov     = [dum_cov,dum_cov+'_land',dum_cov+'_sea']
+	if is_h1d(varn[0]) then begin
+		set_coverage, dum_cov
 		bin_borders = (d.bin_borders) 
-		form = stregex(dat,'cla_vis',/fold,/bool) ?  '(f20.2)' : '(f20.1)'
+		form = stregex(varn[0],'cla_vis',/fold,/bool) ?  '(f20.2)' : '(f20.1)'
 		idx = where(bin_borders ge 10000.,idxcnt)
 		bin_borders = strcompress(string(bin_borders,f=form),/rem)
 		if idxcnt gt 0 then bin_borders[idx] = strcompress(string(bin_borders[idx],f='(G20.1)'),/rem)
@@ -4622,19 +4630,20 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	ori_period = fix(strsplit(d.period,'-',/ext))
 
 	if keyword_set(ref) then begin
-
-	d = get_available_time_series( ref, dat, sat, period = datum, /hovmoeller, found = found)
+		d = get_available_time_series( ref, varn[1], sat, period = datum, /hovmoeller, anomalies = anomalies, found = found)
 		if ~float(found) then begin
-			ok = dialog_message('plot_hovmoeller: Reference File not found for '+ref+' '+sat+' '+dat)
+			ok = dialog_message('plot_hovmoeller: Reference File not found for '+ref+' '+sat+' '+varn[1])
 			return
 		endif
 		mat_ref = transpose(d.(struc_idx))
-		if is_h1d(dat) then mat_ref = reform(mat_ref[dum_cov_idx,*,*])
+		if is_h1d(varn[1]) then mat_ref = reform(mat_ref[dum_cov_idx,*,*])
 		idx     = where(matrix eq no_data_val[0] or mat_ref eq no_data_val[0],icnt)
 		matrix  = matrix - mat_ref
 		; contour blacks out all values lower or greater than min / max values
 		; set values lower/greater to min/max to avoid this
-		matrix = mima[0] > matrix < mima[1]
+		matrix    = mima[0] > matrix < mima[1]
+		same_algo = strmatch(algon,ref_name)
+		if same_var eq 0 then longname = longname+ ' - '+d.longname
 	endif else idx = where(matrix eq no_data_val[0],icnt)
 	if icnt gt 0 then matrix[idx]=no_data_val
 
@@ -4735,8 +4744,8 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	print,'Nlevel: ', string(nlev)
 	print,'Minmax: ', string(minmax(matrix,no=no_data_val,/nan))
 
-	ytickname = is_h1d(dat) ? bin_borders : ['-90','-60','-30','0','30','60','90']
-	title     = keyword_set(ref) ? 'Difference '+algon+' - '+ref_name+' '+d.longname : algon+' '+d.longname
+	ytickname = is_h1d(varn[0]) ? bin_borders : ['-90','-60','-30','0','30','60','90']
+	title     = keyword_set(ref) ? 'Difference '+(same_algo ? algon : algon+' - '+ref_name)+' '+longname : algon+' '+longname
 
 	if keyword_set(land) then title=title+' Land'
 	if keyword_set(sea)  then title=title+' Sea'
@@ -4752,7 +4761,7 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	plus = form_len eq 1 ? 1 : 0
 	bar_format = '(f'+strcompress(form_len+3+plus,/rem)+'.'+string(1+plus,f='(i1)')+')'
 
-	if keyword_set(limit) and ~is_h1d(dat) then begin
+	if keyword_set(limit) and ~is_h1d(varn[0]) then begin
 		dum_lat   = vector(-89.5,89.5,180.)
 		rnd_limit = rnd(limit,30,/out)
 		if rnd_limit[0] eq rnd_limit[2] then begin
@@ -4774,10 +4783,9 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	start_save, save_as
 
 	make_cool_contour,matrix,findgen(si[0]),findgen(si[1]),nlev,lines = keyword_set(nobar), charsize=2,xmargin=[10,4],ymargin=[5,2], $
-		title=title,bar_title=is_h1d(dat) ? 'rel. occur. of '+strreplace(strupcase(dat),'hist1d_','',/fold)+' '+unit:strupcase(dat)+' '+unit,$
-		no_data_val=no_data_val[0],/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
-		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle=is_h1d(dat) ? 'Bin Borders':'Latitude',c_charsize = 2., format = bar_format, $
-		xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
+		title=title,bar_title=longname + unit,no_data_val=no_data_val[0],/cc4cl_hovmoeller,nbar=nbar,/contin_bar, $
+		ytickname=ytickname,yticks=n_elements(ytickname)-1,ytitle=is_h1d(varn[0]) ? 'Bin Borders':'Latitude',c_charsize = 2., $
+		format = bar_format,xtickname=xtickname,xticks=n_elements(xtickname)-1,min=mima[0],max=mima[1],color=(keyword_set(nobar) ? 0.:2),$
 		col_table=col_tab,brewer =brewer,xticklen=0.00001;,xminor=2,col_tab=105,color=(i/7 eq i/7. ? 1:0 )
 		if si[0] le 13 then axis,xaxis=0,xtickname=replicate(' ',si[0]),xticks=si[0]-1,xminor=2
 	end_save, save_as

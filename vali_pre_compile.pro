@@ -5,6 +5,7 @@
 @/cmsaf/nfshome/sstapelb/idl/rene/rmse.pro
 @/cmsaf/nfshome/sstapelb/idl/doy.pro
 @/cmsaf/nfshome/sstapelb/idl/great_circle.pro
+@/cmsaf/nfshome/sstapelb/idl/is_image.pro
 @./coyote/error_message.pro
 @./coyote/cgcolor.pro
 @./coyote/themonths.pro

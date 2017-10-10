@@ -2083,7 +2083,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 				if stregex(tcd,'ESACCI',/bool,/fold)    then algoname = 'GEWEX'
 				if stregex(tcd,'CLOUD_CCI',/bool,/fold) then algoname = 'GEWEX'
 			endif else algoname = 'GEWEX'
-			year     = (reverse(strsplit((file_basename(filen,is_compressed(file) ? 'nc.gz':'.nc')),'_',/ext)))[0]
+			year     = (reverse(strsplit((file_basename(filen,is_compressed(file,/gzip) ? 'nc.gz':'.nc')),'_',/ext)))[0]
 			month    = '01'
 			level    = 'l3c'
 		endif
@@ -4341,7 +4341,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if filename ne '' then begin
 				if file_name_info(filename,/ext) eq 'kml' then begin
 					image = cgSnapshot_extended(/nodialog)
-					cgImage2KML, image,Filename=filename, latlonbox = [90,-90,180,-180]
+					cgImage2KML, image,Filename=filename, latlonbox = [90.,-90.,179.999,-180.] ; 179.999 because of marble bug
 					print,'KML file saved as: ',filename
 				endif else begin
 					image = cgSnapshot_extended(Filename=filename,/nodialog)
@@ -4593,7 +4593,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Hovmoeller Time Series'
 				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
 				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit,coverage=cov, $
-				notitle=notitle
+				notitle=notitle,ts_extras = ts_extra
 				if show_values then begin
 					if nobar ne 1 then begin
 						print,'Set "No Bar" to get Pixel Values'
@@ -4930,7 +4930,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					datum = ''
 					level = self.level
 					if select then algo = 'select'
-					if self.addname_MTS ne '' then ts_extras = self.addname_MTS
+					if self.addname_MTS ne '' then ts_extra = self.addname_MTS
 					if pvir then varName += '_pvir'
 				endif else if sel and none then begin
 					file    = self.directory+'/'+self.filename
@@ -4991,7 +4991,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,coverage=cov,$
 				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc,$
-				notitle=notitle
+				notitle=notitle,ts_extras = ts_extra
 				if show_values and is_defined(out) then begin
 					if nobar ne 1 then begin
 						print,'Set "No Bar" to get Pixel Values'

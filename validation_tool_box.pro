@@ -613,6 +613,11 @@ function full_varname, varname, unit = unit, universal = universal
 
 	dat  = strlowcase(varname)
 	unit = '' ; set standard unit
+	if is_h1d(dat) then begin
+		pref = '# of occurrence of ' 
+		dat  = strreplace(dat[0],'hist1d_','',/fold)
+	endif else pref = ''
+
 	case strmid(dat,0,3) of
 		'cot'	: vollername = 'Cloud Optical Thickness' 
 		'cth'	: begin & vollername = 'Cloud Top Height' & unit = ' [km]' & end
@@ -681,7 +686,7 @@ function full_varname, varname, unit = unit, universal = universal
 	if stregex(dat,'toa_swup',/bool,/fold) then vollername = 'TOA shortwave upward radiation'
 	if stregex(dat,'toa_swup_clr',/bool,/fold) then vollername = 'TOA shortwave upward radiation - clear sky'
 
-	return,vollername
+	return,pref+vollername
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
@@ -1447,6 +1452,11 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 	endif
 
 	return,transpose(data,[1,2,0])
+end
+;------------------------------------------------------------------------------------------
+pro set_coverage, cov
+	coverage = ['midlat_trop','full','southern_hemisphere','northern_hemisphere','antarctica','midlat_south','tropic','midlat_north','arctic']
+	cov      = [coverage,coverage+'_land',coverage+'_sea']
 end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
@@ -4214,7 +4224,7 @@ pro read_data, 	filename, data, verbose = verbose, found = found, $;input
 
 	file = filename[0]
 
-	if is_compressed(file) then begin
+	if is_compressed(file,/gzip) then begin
 		ff = adv_tempname('dummy')
 		spawn,'zcat '+ file +' >'+ ff
 		if file_test(ff,/zero) then begin
@@ -5113,7 +5123,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	per = keyword_set(period)   ? strlowcase(period)   : '????-????'
 	if cov eq 'full' then cov = ''
 	no_trend_found = 0
-
+	
 	TSE = keyword_set(ts_extras) ? (strsplit(strlowcase(ts_extras),/ext))[0] : ''
 
 	trend 		= TSE eq 'trend'
@@ -5244,7 +5254,7 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 	sav_file = sfile[idx]
 
 	datum    = stregex(file_basename(sav_file),'[0-9]+-[0-9]+',/ext)
-	longname = full_varname(dat, unit=unit)
+	longname = full_varname(strreplace(dat,'hist1d_','',/fold),unit=unit)
 
 	struc = restore_var(sav_file,found=found)
 
@@ -5274,6 +5284,10 @@ function get_available_time_series, algo, data, satellite, coverage = coverage, 
 				idx = where(~finite(sea_sm),idx_cnt)
 				if idx_cnt gt 0 then sea_sm[idx] = -999.
 				struc = create_struct(struc,'seasonal_mean',{all:all_sm,land:land_sm,sea:sea_sm})
+			endif
+			if is_h1d(dat) then begin
+				longname = 'rel. occur. of '+longname
+				unit = ' [%]'
 			endif
 			struc = create_struct(struc,{period:datum,longname:longname,unit:unit})
 		endif else begin
@@ -6161,7 +6175,7 @@ FUNCTION cgSnapshot_extended, xstart, ystart, ncols, nrows, $
 					start_eps, eps_filename, xyscale = eps_size, /silent
 					tv, image, /true
 					end_eps
-					eps2pdf, eps_filename , filename,/remove, ok = ok
+					eps2pdf, eps_filename , filename, ok = ok
 				ENDIF ELSE BEGIN
 					;find out later
 					RETURN, -1
@@ -6342,7 +6356,7 @@ end
 ;------------------------------------------------------------------------------------------
 pro save_as_kml, image, save_file, minvalue, maxvalue, fillvalue, brewer = brewer, ctable=ctable, limit = limit, transparent=transparent
 
-    latlonbox = keyword_set(limit)  ? limit[[2,0,3,1]] : [90,-90,180,-180]
+    latlonbox = keyword_set(limit)  ? limit[[2,0,3,1]] : [90.,-90.,179.9999,-180.] ; 179.999 because of marble, seems to be buggy
     ctindex   = keyword_set(ctable) ? fix(ctable) : 33
 
     cgImage2KML, image, Min_Value=minvalue, max_value = maxvalue, missing_value = fillvalue, $
@@ -6440,7 +6454,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			free,tmp
 		endif else return,-1
 	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and alg eq 'esacci') then begin
-		found = file_test(filename[0])
+		found = is_image(filename[0])
 		if arg_present(finfo) then finfo = file_info(filename[0])
 		if found then begin
 			outdata = read_image(filename[0])
