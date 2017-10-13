@@ -420,10 +420,10 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if stregex(dat,'cty_',/bool)    then dumdat = 'cld_masktype'
 			if stregex(dat,'cccot_',/bool)  then dumdat = 'cld_masktype'
 			if stregex(dat,'cmask_',/bool)  then dumdat = 'cld_masktype'
-			if stregex(dat,'cee_',/bool)    then dumdat = 'rad_product'
-			if stregex(dat,'cla_',/bool)    then dumdat = 'rad_product'
-			if stregex(dat,'boa_',/bool)    then dumdat = 'rad_product'
-			if stregex(dat,'toa_',/bool)    then dumdat = 'rad_product'
+			if stregex(dat,'cee_',/bool)    then dumdat = 'rad_products'
+			if stregex(dat,'cla_',/bool)    then dumdat = 'rad_products'
+			if stregex(dat,'boa_',/bool)    then dumdat = 'rad_products'
+			if stregex(dat,'toa_',/bool)    then dumdat = 'rad_products'
 			if stregex(dat,'illum_',/bool)  then dumdat = 'cld_angles'
 			if stregex(dat,'satzen_',/bool) then dumdat = 'cld_angles'
 			if stregex(dat,'solzen_',/bool) then dumdat = 'cld_angles'
@@ -607,7 +607,59 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	if keyword_set(h_types) then dat = h_types+' '+dat
 	return, keyword_set(upper_case) ? strupcase(dat) : strlowcase(dat)
 end
+;-------------------------------------------------------------------------------------------------------------------------
+function is_jch, name, liquid = liquid, ice = ice, combined = combined, ratio=ratio, mixed = mixed
 
+	if (keyword_set(liquid) + keyword_set(ice)) eq 2 then begin
+		liquid = 0
+		ice = 0
+		combined = 1
+	endif
+	; liquid + ice
+	if keyword_set(combined) then return, (get_product_name(name[0],alg='clara') eq 'jch')
+	; only liquid
+	if keyword_set(liquid)   then return, (get_product_name(name[0],alg='clara') eq 'jch_liq')
+	; only ice
+	if keyword_set(ice)      then return, (get_product_name(name[0],alg='clara') eq 'jch_ice')
+	; ratio liq/(liq+ice)
+	if keyword_set(ratio)    then return, (get_product_name(name[0],alg='clara') eq 'jch_ratio')
+	; mixed / unknown so far Calipso only
+	if keyword_set(mixed)    then return, (get_product_name(name[0],alg='clara') eq 'jch_mixed')
+	; all jchs
+	return, (strmid(get_product_name(name[0],alg='clara'),0,3) eq 'jch')
+end
+;-------------------------------------------------------------------------------------------------------------------------
+function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = combined, mixed = mixed
+
+	dat = get_product_name(name[0],alg='cci')
+	if (keyword_set(liquid) + keyword_set(ice)) eq 2 then begin
+		liquid = 0
+		ice = 0
+		combined = 1
+		mixed = 0
+	endif
+
+	if stregex(dat,'_bin_',/fold,/bool) then return,0
+	hist1d     = strmid(dat,0,6) eq 'hist1d'
+	hist1d_liq = hist1d and stregex(dat,'_liq',/bool)
+	hist1d_ice = hist1d and stregex(dat,'_ice',/bool)
+	hist1d_rat = hist1d and stregex(dat,'_ratio',/bool)
+	hist1d_mix = hist1d and stregex(dat,'_mixed',/bool)
+	hist1d_com = hist1d and ~hist1d_liq and ~hist1d_ice and ~hist1d_rat and ~hist1d_mix
+	; only liquid
+	if keyword_set(liquid)   then return, hist1d_liq
+	; only ice
+	if keyword_set(ice)      then return, hist1d_ice
+	; only ratio
+	if keyword_set(ratio)    then return, hist1d_rat
+	; only mixed
+	if keyword_set(mixed)    then return, hist1d_mix
+	; liquid + ice
+	if keyword_set(combined) then return, hist1d_com
+
+	return,hist1d
+
+end
 ;-------------------------------------------------------------------------------------------------------------------------
 function full_varname, varname, unit = unit, universal = universal
 
@@ -687,59 +739,6 @@ function full_varname, varname, unit = unit, universal = universal
 	if stregex(dat,'toa_swup_clr',/bool,/fold) then vollername = 'TOA shortwave upward radiation - clear sky'
 
 	return,pref+vollername
-
-end
-;-------------------------------------------------------------------------------------------------------------------------
-function is_jch, name, liquid = liquid, ice = ice, combined = combined, ratio=ratio, mixed = mixed
-
-	if (keyword_set(liquid) + keyword_set(ice)) eq 2 then begin
-		liquid = 0
-		ice = 0
-		combined = 1
-	endif
-	; liquid + ice
-	if keyword_set(combined) then return, (get_product_name(name[0],alg='clara') eq 'jch')
-	; only liquid
-	if keyword_set(liquid)   then return, (get_product_name(name[0],alg='clara') eq 'jch_liq')
-	; only ice
-	if keyword_set(ice)      then return, (get_product_name(name[0],alg='clara') eq 'jch_ice')
-	; ratio liq/(liq+ice)
-	if keyword_set(ratio)    then return, (get_product_name(name[0],alg='clara') eq 'jch_ratio')
-	; mixed / unknown so far Calipso only
-	if keyword_set(mixed)    then return, (get_product_name(name[0],alg='clara') eq 'jch_mixed')
-	; all jchs
-	return, (strmid(get_product_name(name[0],alg='clara'),0,3) eq 'jch')
-end
-;-------------------------------------------------------------------------------------------------------------------------
-function is_h1d, name, liquid = liquid, ice = ice, ratio = ratio, combined = combined, mixed = mixed
-
-	dat = get_product_name(name[0],alg='cci')
-	if (keyword_set(liquid) + keyword_set(ice)) eq 2 then begin
-		liquid = 0
-		ice = 0
-		combined = 1
-		mixed = 0
-	endif
-
-	if stregex(dat,'_bin_',/fold,/bool) then return,0
-	hist1d     = strmid(dat,0,6) eq 'hist1d'
-	hist1d_liq = hist1d and stregex(dat,'_liq',/bool)
-	hist1d_ice = hist1d and stregex(dat,'_ice',/bool)
-	hist1d_rat = hist1d and stregex(dat,'_ratio',/bool)
-	hist1d_mix = hist1d and stregex(dat,'_mixed',/bool)
-	hist1d_com = hist1d and ~hist1d_liq and ~hist1d_ice and ~hist1d_rat and ~hist1d_mix
-	; only liquid
-	if keyword_set(liquid)   then return, hist1d_liq
-	; only ice
-	if keyword_set(ice)      then return, hist1d_ice
-	; only ratio
-	if keyword_set(ratio)    then return, hist1d_rat
-	; only mixed
-	if keyword_set(mixed)    then return, hist1d_mix
-	; liquid + ice
-	if keyword_set(combined) then return, hist1d_com
-
-	return,hist1d
 
 end
 ;------------------------------------------------------------------------------------------
@@ -2755,6 +2754,10 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 				bar_horizontal=0
 				label=1
 			endif
+			lons = vector(-180,180,13)
+			lonnames=strtrim(lons, 2)
+			lonnames=string(lons,format='(I4)')
+			lonnames(where(lons eq -180)) = ' ' ;avoid -180 and +180 printed on same spot
 		endif
 
 		; other projections
@@ -6002,7 +6005,7 @@ FUNCTION cgSnapshot_extended, xstart, ystart, ncols, nrows, $
        ncols = (position[2]*!D.X_VSize) - xstart
        nrows = (position[3]*!D.Y_VSize) - ystart
     ENDIF
-    
+
     ; Check keywords and parameters. Define values if necessary.
     IF N_Elements(xstart) EQ 0 THEN xstart = 0
     IF N_Elements(ystart) EQ 0 THEN ystart = 0

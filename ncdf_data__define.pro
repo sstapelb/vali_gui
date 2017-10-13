@@ -4031,8 +4031,7 @@ l1g = 0
 		!P.Color = cgcolor('White')
 		!P.Background = cgcolor('Black')
 	endelse
-print,'!p.color',!p.color
-print,'!P.Background',!P.Background
+
 	; Set the draw widget as the current drawable area.
 	if strlowcase(win_nr[0]) eq '' then begin
 		WSET, self.drawID

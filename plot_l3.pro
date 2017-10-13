@@ -2075,7 +2075,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 	if ~(keyword_set(hist_only) or keyword_set(diff_only) or keyword_set(zonal_only) or keyword_set(box_only) or (histo1d and hct eq '1d')) then begin
 ; 		if keyword_set(maps_only)  then !p.multi = [0,2,1] else !p.multi=[0,1,2]
-		!p.multi=[0,1,2]
+		!p.multi=keyword_set(globe) ? [0,2,1] : [0,1,2]
 	endif
 	save_dir = !SAVE_DIR + '/diffs/'
 
