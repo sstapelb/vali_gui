@@ -918,6 +918,22 @@ function adv_keyword_set, keyword
 	return, (size(keyword,/type) < 1)
 end
 ;------------------------------------------------------------------------------------------
+; check if 2 arrays match rebin criteria
+; shrinking array1 with dimensions1 being integral multiples 
+; or factors of the original dimension (rebin criteria)
+; bring array res1 to res2
+function rebinable,res1,res2
+
+	reg   = res1 ne 0 and res2 ne 0		; reguläres gitter
+	loe   = res1 le res2 				; auflösung kleiner(höher)-gleich als zielgitter
+	ganz  = fix(float(res2)/float(res1)) eq float(float(res2)/float(res1)) ; ganzzahliges vielfaches
+
+	result = reg and loe and ganz
+
+	return,result
+
+end
+;------------------------------------------------------------------------------------------
 function neighbour_pixel,array,neighbors,no_data_value=no_data_value,fill_index=fill_index, $
 		normalize=normalize,median=median,mean=mean,stddev=stddev,total=total,uniformity = uniformity
 
@@ -1301,12 +1317,12 @@ function false_color_max, filter, ref06, ref08, ref37, bt37, bt11, bt12, solzen,
 					'11) ir120-ir108/ir108/ir108 [NIGHT ONLY - water->cyan, ground->pink, ice clouds->red, thin c.->dark]',$
 					'12) vi008,bt11,bt11-bt12']
 
-	longname = description[filter]
+	longname = description[fix(filter)]
 	if print_name then print,longname
 
 	mu0 = cos ( solzen * !dtor ) 
 
-	case filter of
+	case fix(filter) of
 		0:begin
 			c1       = bt11
 			data_idx = where((c1 gt 0), data_anz)
@@ -1460,7 +1476,8 @@ end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
 			complement = complement, antarctic = antarctic, arctic = arctic, $ 
-			shape_file = shape_file, index = index, count= count, found = found,l3u_index=l3u_index
+			shape_file = shape_file, index = index, count= count, found = found,$
+			l3u_index=l3u_index, fillv_index = fillv_index
 
 	found = 1
 	count = 0
@@ -1468,6 +1485,15 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	lim = keyword_set(limit) ? limit   : [-90.0,-180., 90.0,180.]
 	if keyword_set(antarctic) then lim = [-90.0,-180.,-60.0,180.]
 	if keyword_set(arctic)    then lim = [ 60.0,-180., 90.0,180.]
+
+	if keyword_set(shape_file) then begin
+		if ~file_test(shape_file) then free, shape_file
+	endif
+
+	fvi_cnt = n_elements(fillv_index)
+	if fvi_cnt eq 1 then begin
+		if fillv_index[0] eq -1 then fvi_cnt = 0
+	endif
 
 	if keyword_set(coverage) then begin
 		cov = strlowcase(coverage)
@@ -1574,6 +1600,8 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		result = (result eq 1) and (ddem eq 0)
 	endif
 
+	if fvi_cnt gt 0 then result[fillv_index] = 0
+	
 	if keyword_set(complement) then result = (result eq 0)
 
 	if keyword_set(l3u_index) then result = result[l3u_index]
@@ -1861,6 +1889,20 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 function gmean,data,latitude,no_data_value=no_data_value,nan=nan,verbose=verbose
 
+; 	returns global mean weighted with latitude
+	if n_params() ne 2 then begin
+		print,'% GMEAN: At least one input Variable is undefined: data , latitude'
+		return,-1
+	endif
+	
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		help, /last_message
+		found = 0
+		return, -1
+	endif
+
 	ndv = keyword_set(no_data_value) ? no_data_value : -999.
 	dat = data
 	lat = latitude
@@ -1873,11 +1915,6 @@ function gmean,data,latitude,no_data_value=no_data_value,nan=nan,verbose=verbose
 
 	lat=lat[idx]
 	dat=dat[idx]
-; 	returns global mean weighted with latitude
-	if n_params() ne 2 then begin
-		print,'% GMEAN: At least one input Variable is undefined: data , latitude'
-		return,-1
-	endif
 	weight = cosd(float(lat))
 	return, total(float(dat) * weight) / total(weight)
 end
@@ -1888,6 +1925,14 @@ function gstddev,data,latitude
 		print,'% GSTDDEV: At least one input Variable is undefined: data, latitude'
 		return,-1
 	endif
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		help, /last_message
+		found = 0
+		return, -1
+	endif
+
 	weight = cosd(float(latitude))
 	nnn    = total(weight)
 	xx     = (float(data))
@@ -1901,6 +1946,14 @@ function gcorrelate,data1,data2,latitude
 		print,'% GCORRELATE: At least one input Variable is undefined: data1, data2, latitude'
 		return,-1
 	endif
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		help, /last_message
+		found = 0
+		return, -1
+	endif
+
 	weight   = cosd(double(latitude))
 	nnn      = total(weight)
 	sum_prod = total((double(data1) * double(data2)) * weight) 
@@ -1922,6 +1975,14 @@ function gbias,data1,data2,latitude
 		print,'% GBIAS: At least one input Variable is undefined: data1, data2, latitude'
 		return,-1
 	endif
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		help, /last_message
+		found = 0
+		return, -1
+	endif
+
 	weight = cosd(latitude)
 	return, total( (float(data1)-float(data2) ) * weight ) / total(weight)
 end
@@ -1932,6 +1993,13 @@ function grmse,data1,data2,latitude
 		print,'% GRMSE: At least one input Variable is undefined: data1, data2, latitude'
 		return,-1
 	endif
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		help, /last_message
+		found = 0
+		return, -1
+	endif
 	weight = cosd(float(latitude))
 	return, sqrt(total( (float(data1) - float(data2) )^2. * weight )  / total(weight) )
 end
@@ -1941,6 +2009,13 @@ function bc_rmse,bias,rmse
 	if n_params() ne 2 then begin
 		print,'% BC_RMSE: At least one input Variable is undefined: bias, rmse'
 		return,-1
+	endif
+	catch, error_status
+	if (error_status ne 0) then begin
+		catch, /cancel
+		help, /last_message
+		found = 0
+		return, -1
 	endif
 	return, sqrt(float(rmse)^2. - float(bias)^2. )
 end
@@ -3083,12 +3158,12 @@ function read_modis_obj_val, stringname, group, value = value,found=found
 end
 ;------------------------------------------------------------------------------------------
 pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, msg = msg, $
-		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets
+		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets,claas=claas
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
-	if keyword_set(algo) then begin
-		claas = algo2ref(algo) eq 'cla'
-	endif else claas = 0
+; 	if keyword_set(algo) then begin
+; 		claas = algo2ref(algo) eq 'cla' and ~keyword_set(grid_res) ; algo is claas and grid_res is 0; get_grid_res(arr(3600,3600))=0
+; 	endif else claas = 0
 
 	if keyword_set(file) then begin
 		filen = file[0]
@@ -3097,7 +3172,7 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 	fillv = -999.
 
 	if keyword_set(msg) then begin
-		xrange = [0,(claas ? 3599 : 3711)] & yrange=[0,(claas ? 3599 : 3711)]
+		xrange = [0,(keyword_set(claas) ? 3599 : 3711)] & yrange=[0,(keyword_set(claas) ? 3599 : 3711)]
 		msg_x = (indgen((xrange[1]-xrange[0])+1)+xrange[0]) #  (intarr((yrange[1]-yrange[0])+1)+1)
 		msg_y = (indgen((yrange[1]-yrange[0])+1)+yrange[0]) ## (intarr((xrange[1]-xrange[0])+1)+1)
 		dum = msg_to_geo(temporary(msg_x),temporary(msg_y),scale_params=scale_params,sub_sat_lon=sub_sat_lon)
@@ -3106,7 +3181,7 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		found = 1
 		free, dum
 		return
-	endif else if claas then begin
+	endif else if keyword_set(claas) then begin
 		lon_dum = vector(-89.9750,89.9750,3600.)
 		lat_dum = lon_dum
 		lon = lon_dum #  ( fltarr(n_elements(lat_dum))+1)
@@ -4411,8 +4486,10 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level2/'+strlowcase(dum)+'/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+dum+'in'+yyyy+mm+dd+orbdum+'*MD.nc'
 					endif else begin
+						apx   = (dd ? 'dm' : 'mm')
+						if is_h1d(dat) or is_jch(dat) then apx = (dd ? 'dh' : 'mh')
 						pathdat = get_product_name(dat,algo=alg,level=lev,/path)
-						dat   = get_product_name(dat,algo=alg,/lower)
+						dat     = get_product_name(dat,algo=alg,/lower)
 						if dat eq 'cwp' then dat = 'iwp' else $
 						if dat eq 'iwp' then dat = 'iwp' else $
 						if dat eq 'lwp' then dat = 'lwp' else $
@@ -4425,7 +4502,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						if dat eq 'ref_liq' then dat = 'lwp'  else $
 						if dat eq 'cot_ice' then dat = 'iwp'  else $
 						if dat eq 'cot_liq' then dat = 'lwp'  else dat = pathdat
-						apx   = ( is_h1d(data) or is_jch(data) ) ? 'mh' : (dd ? 'dm' : 'mm')
+						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level3/'+pathdat+'/'+yyyy+'/'+mm+'/'+dd+'/'
 						filen = dir+strupcase(dat)+apx+yyyy+mm+dd+'*MA.nc'
 					endelse
 				endif
@@ -4568,9 +4645,7 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									dirname = strmid(dirname,0,strpos(dirname,last_subdir))+yyyy
 								endif
 							endif
-							if strmid(dat,0,3) eq 'RGB' then begin
-; 								dir   = din ? dirname+'/' : '/cmsaf/nfshome/mstengel/progs/GAC/rgb_pics/'
-; 								filen = dir + 'CLARA_A2_*_rgb_'+satn+'_'+yyyy+mm+dd+'*.jpg'
+							if strmid(dat,0,3) eq 'RGB' or strmid(dat,0,3) eq 'FCI' then begin
 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld7/AVHRR_GAC_2/'+dumlevel+'/CAC/'+satn+'/'+yyyy+'/'
 								filen = dir + 'CAC'+apx+yyyy+mm+dd+'*'+ satn+'*'+c2_ende+'.nc'
 							endif else begin
@@ -6497,6 +6572,89 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		maxvalue = 1
 		unit=''
+	endif else if ( strmid(dat,0,3) eq 'fci' and total(lev eq ['l3u','l3ue']) and alg eq 'clara2') then begin
+		dum  = strsplit(dat,'_',/ext)
+		node = n_elements(dum) gt 1 ? '_'+dum[n_elements(dum)-1] : ''
+		if node eq '' then node = sat_ampm(sat) eq 'pm' ? '_asc' : '_desc'
+		read_ncdf,filename[0],'REFL_VIS006'+node,rad1 ,found=found,set_fillvalue=-999.
+		read_ncdf,filename[0],'REFL_VIS008'+node,rad2 ,found=f2,set_fillvalue=-999.
+		read_ncdf,filename[0],'REFL_NIR016'+node,rad3a,found=f3,set_fillvalue=-999.
+		read_ncdf,filename[0],'BT_NIR037'  +node,rad3b,found=f4,set_fillvalue=-999.
+		read_ncdf,filename[0],'BT_TIR108'  +node,rad4 ,found=f5,set_fillvalue=-999.
+		read_ncdf,filename[0],'BT_TIR120'  +node,rad5 ,found=f6,set_fillvalue=-999.
+		ang_file = strreplace(filename[0],'CAC','CAA')
+		read_ncdf,ang_file[0],'SUNZEN'     +node,sunza,found=f7,set_fillvalue=-999.
+
+		if total([found,f2,f3,f4,f5,f6,f7]) eq 7. then begin
+			filter = is_number(strmid(dum[0],3)) ? fix(strmid(dum[0],3)) : 0; default is 0
+			;calculate reflectances for the 3.7 channel and multiply with 100
+			satdum  = noaa_primes(year,month,ampm=sat_ampm(sat,/ampm),/no_zero,/no_minus)
+			ref3b	= bt37_to_ref37( doy(year,month,day), rad3b, rad4, sunza, satdum, no_data_val=-999.)
+			ref3b	= ( ref3b *100. )
+			idx     = where(rad3b eq -999. or rad4 eq -999. or sunza eq -999.,idxcnt)
+			if idxcnt gt 0 then ref3b[idx]=-999.
+			;--------------------------------
+			if ~sil then print, ' Calculating False Color Image for CLARA-A2 (0.05 degree). Be patient ...'
+			outdata = false_color_max(filter, rad1, rad2, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
+		endif else begin
+			if ~sil then print, ' At least one of the measurements neeeded for FCI is missing!'
+			found=0
+			return,-1
+		endelse
+		no_data_value = -999.
+		minvalue = 0
+		maxvalue = 1
+		unit=''
+	endif else if ( strmid(dat,0,3) eq 'fci' and total(lev eq ['l3u','l3ue']) and alg eq 'patmos') then begin
+		dum  = strsplit(dat,'_',/ext)
+		read_data,filename[0],'refl_0_65um_nom',rad1 ,found=found,set_fillvalue=-999.
+		read_data,filename[0],'refl_0_86um_nom',rad2 ,found=f2,set_fillvalue=-999.
+		read_data,filename[0],'refl_1_60um_nom',rad3a,found=f3,set_fillvalue=-999.
+		read_data,filename[0],'temp_3_75um_nom',rad3b,found=f4,set_fillvalue=-999.
+		read_data,filename[0],'temp_11_0um_nom',rad4 ,found=f5,set_fillvalue=-999.
+		read_data,filename[0],'temp_12_0um_nom',rad5 ,found=f6,set_fillvalue=-999.
+		read_data,filename[0],'solar_zenith_angle',sunza,found=f7,set_fillvalue=-999.
+		if total([found,f2,f3,f4,f5,f6,f7]) eq 7. then begin
+			filter = is_number(strmid(dum[0],3)) ? fix(strmid(dum[0],3)) : 0; default is 0
+			;calculate reflectances for the 3.7 channel and multiply with 100
+			satdum  = noaa_primes(year,month,ampm=sat_ampm(sat,/ampm),/no_zero,/no_minus)
+			ref3b	= bt37_to_ref37( doy(year,month,day), rad3b, rad4, sunza, satdum, no_data_val=-999.)
+			ref3b	= ( ref3b *100. )
+			idx     = where(rad3b eq -999. or rad4 eq -999. or sunza eq -999.,idxcnt)
+			if idxcnt gt 0 then ref3b[idx]=-999.
+			;--------------------------------
+			if ~sil then print, ' Calculating False Color Image for PATMOS-X (0.10 degree). Be patient ...'
+			outdata = false_color_max(filter, rad1, rad2, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
+		endif else begin
+			if ~sil then print, ' At least one of the measurements neeeded for FCI is missing!'
+			found=0
+			return,-1
+		endelse
+		no_data_value = -999.
+		minvalue = 0
+		maxvalue = 1
+		unit=''
+	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and alg eq 'patmos') then begin
+		read_data,filename[0],'refl_0_65um_nom',rad1 ,found=found,set_fillvalue=-999.
+		read_data,filename[0],'refl_0_86um_nom',rad2 ,found=f2,set_fillvalue=-999.
+		read_data,filename[0],'refl_1_60um_nom',rad3a,found=f3,set_fillvalue=-999.
+		read_data,filename[0],'temp_3_75um_nom',rad3b,found=f4,set_fillvalue=-999.
+		read_data,filename[0],'temp_11_0um_nom',rad4 ,found=f5,set_fillvalue=-999.
+		read_data,filename[0],'solar_zenith_angle',sunza,found=f6,set_fillvalue=-999.
+		if total([found,f2,f3,f4,f5,f6]) eq 6. then begin
+			refl_nir = (total(rad3a gt 0) gt 0)
+			if ~sil then print, ' Calculating RGB image for PATMOS-X (0.10 degree). Be patient ...'
+			outdata = calc_rgb(rad1,rad2,(refl_nir ? rad3a:rad3b),rad4,sunza,0,/enhance,refl_nir037=refl_nir,/true)
+		endif else begin
+			if ~sil then print, ' At least one of the measurements neeeded for RGB is missing!'
+			found=0
+			return,-1
+		endelse
+		no_data_value = -999.
+		longname = 'True color image'
+		minvalue = 0
+		maxvalue = 1
+		unit=''
 	endif else if (dat eq 'cloud_phase' and alg eq 'patmos' and lev eq 'l3u') then begin
 		; die neuen patmos l2b haben kein cloud_phase mehr -> berechne alte cloud_phase definition aus cloud_type (auch für die alten l2b's)
 		read_data, filename[0], 'cloud_type', cty, no_data_value, minvalue, maxvalue, longname, unit, flag_meanings, set_fillvalue = set_fillvalue,$
@@ -7379,13 +7537,13 @@ endif
 		;bring claas to regular grid
 		si  = size(outdata,/dim)
 		if n_elements(si) eq 3 then begin
-			dum_cla = make_array(si[0]*2,si[1],si[2],type=size(outdata,/type)) 
+			dum_cla = make_array(si[0]*2,si[1],si[2],type=size(outdata,/type),value=no_data_value) 
 			for i = 0,si[2]-1 do begin & $
 				pic_dum = reform(outdata[*,*,i]) & $
 				dum_cla[(si[0]/2-1):(si[0]/2-1)+si[0]-1,*,i] = pic_dum & $
 			endfor
 		endif else if n_elements(si) eq 4 then begin
-			dum_cla = make_array(si[0]*2,si[1],si[2],si[3],type=size(outdata,/type)) 
+			dum_cla = make_array(si[0]*2,si[1],si[2],si[3],type=size(outdata,/type),value=no_data_value) 
 			for i = 0,si[2]-1 do begin & $
 				for j=0,si[3]-1 do begin & $
 					pic_dum = reform(outdata[*,*,i,j]) & $
@@ -7393,7 +7551,7 @@ endif
 				endfor & $
 			endfor
 		endif else if n_elements(si) eq 5 then begin
-			dum_cla = make_array(si[0]*2,si[1],si[2],si[3],si[4],type=size(outdata,/type)) 
+			dum_cla = make_array(si[0]*2,si[1],si[2],si[3],si[4],type=size(outdata,/type),value=no_data_value)
 			for i = 0,si[2]-1 do begin & $
 				for j=0,si[3]-1 do begin & $
 					for k=0,si[4]-1 do begin & $
@@ -7531,23 +7689,24 @@ endif
 
 	if keyword_set(global_grid) then begin
 		si    = size(outdata,/dim)
-		gg    = ([360.,180.])/float(si)
-		reg   = gg[0] eq gg[1] ; reguläres gitter
-		loe   = gg[0] le float(global_grid) ; auflösung kleiner(höher)-gleich als zielgitter
-		ganz  = fix(float(global_grid)/float(gg[0])) eq float(float(global_grid)/float(gg[0])) ; ganzzahliges vielfaches
-		if reg and loe and ganz and (keyword_set(mean) or keyword_set(random_sample) or keyword_set(median)) then begin
-			outdata = grid_down_globe(outdata, global_grid, no_data_value = no_data_value, $
-			found = found, nan_fillv = nan_fillv, sample = (keyword_set(random_sample) or keyword_set(median)))
-		endif else begin
-			make_geo,file = filename,lon_dum,lat_dum
-			outdata = sat2global(lon_dum,lat_dum,outdata,no_data_value=no_data_value,grid_res=global_grid, nan_fillv = nan_fillv )
-			if is_struct(outdata) then begin
-				if keyword_set(mean) then if is_tag(outdata,'mean') then outdata = outdata.mean else found = 0
-				if keyword_set(median) then if is_tag(outdata,'median') then outdata = outdata.median else found = 0
-				if keyword_set(sum) then if is_tag(outdata,'sum') then outdata = outdata.sum else found = 0
-				if keyword_set(random_sample) then if is_tag(outdata,'random_sample') then outdata = outdata.random_sample else found = 0
-			endif else found = 0
-		endelse
+		if n_elements(si) eq 2 then begin
+			gg    = ([360.,180.])/float(si)
+			reg   = gg[0] eq gg[1] ; reguläres gitter
+			if reg and rebinable(gg[0],global_grid) then begin
+				outdata = grid_down_globe(outdata, global_grid, no_data_value = no_data_value, $
+				found = found, nan_fillv = nan_fillv,total = keyword_set(sum) , $
+				sample = (keyword_set(random_sample) or keyword_set(median)))
+			endif else begin
+				make_geo,file = filename,lon_dum,lat_dum
+				outdata = sat2global(lon_dum,lat_dum,outdata,no_data_value=no_data_value,grid_res=global_grid, nan_fillv = nan_fillv )
+				if is_struct(outdata) then begin
+					if keyword_set(mean) then if is_tag(outdata,'mean') then outdata = outdata.mean else found = 0
+					if keyword_set(median) then if is_tag(outdata,'median') then outdata = outdata.median else found = 0
+					if keyword_set(sum) then if is_tag(outdata,'sum') then outdata = outdata.sum else found = 0
+					if keyword_set(random_sample) then if is_tag(outdata,'random_sample') then outdata = outdata.random_sample else found = 0
+				endif else found = 0
+			endelse
+		endif else print,'Array has needs exactly 2 dimensions! Skip regridding!'
 	endif else if adv_keyword_set(no_data_value) and keyword_set(nan_fillv) then begin
 		idx = where(outdata eq no_data_value,idxcnt)
 		if idxcnt gt 0 then begin
@@ -7940,31 +8099,30 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 		if reg1 and reg2 then begin
 			if dum1[0] gt dum2[0] then begin
 				if verb then print,'Grid down '+alg2+' array to regular grid size of '+strcompress(dum1[0],/rem)+' degree.'
-				; ganzzahliges vielfaches??
-				if float(dum1[0])/float(dum2[0]) eq fix(float(dum1[0])/float(dum2[0]))then begin
+				if rebinable(dum2[0],dum1[0]) then begin
 					bild2 = grid_down_globe(bild2,dum1[0],no_data_value=fillvalue2, sample=(strmid(lev,0,3) eq 'l3u'))
 					make_geo,lon,lat,grid=dum1[0], verbose = verbose
 				endif else begin
 					make_geo,lon,lat,grid=dum2[0], verbose = verbose
 					dum   = sat2global(lon,lat,bild2,grid_res=dum1[0],no_data_value=fillvalue2,found=found)
 					if found then begin
-						bild2 = dum.mean
+						bild2 = strmid(lev,0,3) eq 'l3u' ? dum.null_sample : dum.mean
 						lon   = dum.lon
 						lat   = dum.lat
 					endif
 					free,dum
 				endelse
-				grid_res_out =dum1[0]
+				grid_res_out = dum1[0]
 			endif else begin
 				if verb then print,'Grid down '+alg1+' array to regular grid size of '+strcompress(dum2[0],/rem)+' degree.'
-				if float(dum2[0])/float(dum1[0]) eq fix(float(dum2[0])/float(dum1[0])) then begin
+				if rebinable(dum1[0],dum2[0]) then begin
 					bild1 = grid_down_globe(bild1,dum2[0],no_data_value=fillvalue1, sample=(strmid(lev,0,3) eq 'l3u'))
 					make_geo,lon,lat,grid=dum2[0], verbose = verbose
 				endif else begin
 					make_geo,lon,lat,grid=dum1[0], verbose = verbose
 					dum   = sat2global(lon,lat,bild1,grid_res=dum2[0],no_data_value=fillvalue1,found=found)
 					if found then begin
-						bild1 = dum.mean
+						bild1 = strmid(lev,0,3) eq 'l3u' ? dum.null_sample : dum.mean
 						lon   = dum.lon
 						lat   = dum.lat
 					endif
@@ -7977,7 +8135,7 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 			make_geo,file=file2,lon,lat, verbose = verbose
 			dum = sat2global(lon,lat,bild2,grid_res = dum1[0],no_data_value=fillvalue2,found=found)
 			if found then begin
-				bild2 = strmid(lev,0,3) eq 'l3u' ? dum.median : dum.mean
+				bild2 = strmid(lev,0,3) eq 'l3u' ? dum.null_sample : dum.mean
 				lon   = dum.lon
 				lat   = dum.lat
 			endif
@@ -7988,7 +8146,7 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 			make_geo,file=file1,lon,lat, verbose = verbose
 			dum = sat2global(lon,lat,bild1,grid_res = dum2[0],no_data_value=fillvalue1,found=found)
 			if found then begin
-				bild1 = strmid(lev,0,3) eq 'l3u' ? dum.median : dum.mean
+				bild1 = strmid(lev,0,3) eq 'l3u' ? dum.null_sample : dum.mean
 				lon   = dum.lon
 				lat   = dum.lat
 			endif
@@ -7999,11 +8157,11 @@ pro bring_to_same_grid, bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file
 			if verb then print,'Grid down unregular grid arrays of '+alg1+' and '+alg2+' to regular grid size 0.5 degree.'
 			make_geo,file=file2,lon,lat, verbose = verbose
 			dum = sat2global(lon,lat,bild2,grid_res = 0.5,no_data_value=fillvalue2,found=found)
-			if found then bild2 = dum.mean
+			if found then bild2 = strmid(lev,0,3) eq 'l3u' ? dum.null_sample : dum.mean
 			make_geo,file=file1,lon,lat, verbose = verbose
 			dum = sat2global(lon,lat,bild1,grid_res = 0.5,no_data_value=fillvalue1,found=found)
 			if found then begin
-				bild1 = strmid(lev,0,3) eq 'l3u' ? dum.median : dum.mean
+				bild1 = strmid(lev,0,3) eq 'l3u' ? dum.null_sample : dum.mean
 				lon   = dum.lon
 				lat   = dum.lat
 			endif
@@ -8075,7 +8233,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			endif
 	endif else if get_product_name(dat,algo='patmos') eq 'cloud_type' and lev eq 'l3u' then begin
 			if total(alg1 eq ['clara2','esacci','esacciv3','patmos']) then begin
-				fillvalue1 = -999.
+; 				fillvalue1 = -999.
 				; leave out fillvalue(-999),clear(0) and N/A(1)
 				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
 				bild1 -= (alg1 eq 'clara2' ? 1:2)
@@ -8093,7 +8251,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 													 flag_meanings1[[2,3,4,6,7,8,9]]
 			endif
 			if total(alg2 eq ['clara2','esacci','esacciv3','patmos']) then begin
-				fillvalue2 = -999.
+; 				fillvalue2 = -999.
 				; leave out fillvalue(-999),clear(0) and N/A(1)
 				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
 				bild2 -= (alg2 eq 'clara2' ? 1:2)
@@ -8102,7 +8260,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 				if ice_cnt gt 0 then bild2[ice_idx] -= 1
 				idx = where(~between(bild2,0,10),vi_count)
 				if vi_count gt 0 then bild2[idx] = fillvalue2
-				if mix_cnt gt 0 then bild1[mixed] = fillvalue1
+				if mix_cnt gt 0 then bild2[mixed] = fillvalue2
 				minv2 = 0
 				maxv2 = 6
 				unit2 = ' '
@@ -8318,8 +8476,11 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 	endif
 
 	algo = ref2algo(algoname)
+	; combine algos that use same definitions of histograms
 	is_gewex = total(algo eq ['gewex','gac2-gewex','patmos','patmos_old','isccp'])
 	if is_gewex then algo = 'gewex'
+	is_cmsaf = total(algo eq ['clara2','esacci','esacciv3','era-i','era-i2','claas','calipso'])
+	if is_cmsaf then algo = 'cmsaf'
 
 	; cci
 	case algo of
@@ -8345,94 +8506,6 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 					else	: idxse = [0,1,0,1]; 'cu'
 				endcase
 			 end
-		'esacci': begin
-				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-				case strlowcase(hist_cloud_type) of
-					; low
-					'cu'	: idxse = [0, 4,10,14]
-					'sc'	: idxse = [5, 8,10,14]
-					'st'	: idxse = [9,12,10,14]
-					'low'	: idxse = [0,12,10,14]
-					; mid level
-					'ac'	: idxse = [0, 4, 6, 9]
-					'as'	: idxse = [5, 8, 6, 9]
-					'ns'	: idxse = [9,12, 6, 9]
-					'mid'	: idxse = [0,12, 6, 9]
-					; high
-					'ci'	: idxse = [0, 4, 0, 5]
-					'cs'	: idxse = [5, 8, 0, 5]
-					'cb'	: idxse = [9,12, 0, 5]
-					'high'	: idxse = [0,12, 0, 5]
-					else	: idxse = [0, 4,10,14] ; 'cu'
-				endcase
-			  end
-		'esacciv3': begin
-				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-				case strlowcase(hist_cloud_type) of
-					; low
-					'cu'	: idxse = [0, 4,10,14]
-					'sc'	: idxse = [5, 8,10,14]
-					'st'	: idxse = [9,12,10,14]
-					'low'	: idxse = [0,12,10,14]
-					; mid level
-					'ac'	: idxse = [0, 4, 6, 9]
-					'as'	: idxse = [5, 8, 6, 9]
-					'ns'	: idxse = [9,12, 6, 9]
-					'mid'	: idxse = [0,12, 6, 9]
-					; high
-					'ci'	: idxse = [0, 4, 0, 5]
-					'cs'	: idxse = [5, 8, 0, 5]
-					'cb'	: idxse = [9,12, 0, 5]
-					'high'	: idxse = [0,12, 0, 5]
-					else	: idxse = [0, 4,10,14] ; 'cu'
-				endcase
-			  end
-		'era-i': begin
-				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-				case strlowcase(hist_cloud_type) of
-					; low
-					'cu'	: idxse = [0, 4,10,14]
-					'sc'	: idxse = [5, 8,10,14]
-					'st'	: idxse = [9,12,10,14]
-					'low'	: idxse = [0,12,10,14]
-					; mid level
-					'ac'	: idxse = [0, 4, 6, 9]
-					'as'	: idxse = [5, 8, 6, 9]
-					'ns'	: idxse = [9,12, 6, 9]
-					'mid'	: idxse = [0,12, 6, 9]
-					; high
-					'ci'	: idxse = [0, 4, 0, 5]
-					'cs'	: idxse = [5, 8, 0, 5]
-					'cb'	: idxse = [9,12, 0, 5]
-					'high'	: idxse = [0,12, 0, 5]
-					else	: idxse = [0, 4,10,14] ; 'cu'
-				endcase
-			  end
-		'era-i2': begin
-				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-				case strlowcase(hist_cloud_type) of
-					; low
-					'cu'	: idxse = [0, 4,10,14]
-					'sc'	: idxse = [5, 8,10,14]
-					'st'	: idxse = [9,12,10,14]
-					'low'	: idxse = [0,12,10,14]
-					; mid level
-					'ac'	: idxse = [0, 4, 6, 9]
-					'as'	: idxse = [5, 8, 6, 9]
-					'ns'	: idxse = [9,12, 6, 9]
-					'mid'	: idxse = [0,12, 6, 9]
-					; high
-					'ci'	: idxse = [0, 4, 0, 5]
-					'cs'	: idxse = [5, 8, 0, 5]
-					'cb'	: idxse = [9,12, 0, 5]
-					'high'	: idxse = [0,12, 0, 5]
-					else	: idxse = [0, 4,10,14] ; 'cu'
-				endcase
-			  end
 		'clara'	: begin
 				;plev = [10,90,180,145,310,375,440,500,560,620,680,740,800,950,1100]
 				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
@@ -8455,29 +8528,7 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 					else	: idxse = [0, 4,10,13] ; 'cu'
 				endcase
 			  end
-		'clara2': begin
-				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-				case strlowcase(hist_cloud_type) of
-					; low
-					'cu'	: idxse = [0, 4,10,14]
-					'sc'	: idxse = [5, 8,10,14]
-					'st'	: idxse = [9,12,10,14]
-					'low'	: idxse = [0,12,10,14]
-					; mid level
-					'ac'	: idxse = [0, 4, 6, 9]
-					'as'	: idxse = [5, 8, 6, 9]
-					'ns'	: idxse = [9,12, 6, 9]
-					'mid'	: idxse = [0,12, 6, 9]
-					; high
-					'ci'	: idxse = [0, 4, 0, 5]
-					'cs'	: idxse = [5, 8, 0, 5]
-					'cb'	: idxse = [9,12, 0, 5]
-					'high'	: idxse = [0,12, 0, 5]
-					else	: idxse = [0, 4,10,14] ; 'cu'
-				endcase
-			  end
-		'calipso': begin
+		'cmsaf': begin
 				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
 				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
 				case strlowcase(hist_cloud_type) of
@@ -8565,94 +8616,6 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 					else	: idxse = [0,2,5,6] ; 'cu'
 				endcase
 			  end
-; 		'gac2-gewex'	: begin
-; 				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
-; 				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
-; 				case strlowcase(hist_cloud_type) of
-; 					; low
-; 					'cu'	: idxse = [0,2,5,6]
-; 					'sc'	: idxse = [3,4,5,6]
-; 					'st'	: idxse = [5,6,5,6]
-; 					'low'	: idxse = [0,6,5,6]
-; 					; mid level
-; 					'ac'	: idxse = [0,2,3,4]
-; 					'as'	: idxse = [3,4,3,4]
-; 					'ns'	: idxse = [5,6,3,4]
-; 					'mid'	: idxse = [0,6,3,4]
-; 					; high
-; 					'ci'	: idxse = [0,2,0,2]
-; 					'cs'	: idxse = [3,4,0,2]
-; 					'cb'	: idxse = [5,6,0,2]
-; 					'high'	: idxse = [0,6,0,2]
-; 					else	: idxse = [0,2,5,6] ; 'cu'
-; 				endcase
-; 			  end
-; 		'patmos_old'	: begin
-; 				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
-; 				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
-; 				case strlowcase(hist_cloud_type) of
-; 					; low
-; 					'cu'	: idxse = [0,2,5,6]
-; 					'sc'	: idxse = [3,4,5,6]
-; 					'st'	: idxse = [5,6,5,6]
-; 					'low'	: idxse = [0,6,5,6]
-; 					; mid level
-; 					'ac'	: idxse = [0,2,3,4]
-; 					'as'	: idxse = [3,4,3,4]
-; 					'ns'	: idxse = [5,6,3,4]
-; 					'mid'	: idxse = [0,6,3,4]
-; 					; high
-; 					'ci'	: idxse = [0,2,0,2]
-; 					'cs'	: idxse = [3,4,0,2]
-; 					'cb'	: idxse = [5,6,0,2]
-; 					'high'	: idxse = [0,6,0,2]
-; 					else	: idxse = [0,2,5,6] ; 'cu'
-; 				endcase
-; 			  end
-; 		'patmos'	: begin
-; 				;plev = [0.,180.,310.,440.,560.,680.,800.,1100.]
-; 				;tau  = [0.,0.3,1.3,3.6,9.4,23.,60.,100.]
-; 				case strlowcase(hist_cloud_type) of
-; 					; low
-; 					'cu'	: idxse = [0,2,5,6]
-; 					'sc'	: idxse = [3,4,5,6]
-; 					'st'	: idxse = [5,6,5,6]
-; 					'low'	: idxse = [0,6,5,6]
-; 					; mid level
-; 					'ac'	: idxse = [0,2,3,4]
-; 					'as'	: idxse = [3,4,3,4]
-; 					'ns'	: idxse = [5,6,3,4]
-; 					'mid'	: idxse = [0,6,3,4]
-; 					; high
-; 					'ci'	: idxse = [0,2,0,2]
-; 					'cs'	: idxse = [3,4,0,2]
-; 					'cb'	: idxse = [5,6,0,2]
-; 					'high'	: idxse = [0,6,0,2]
-; 					else	: idxse = [0,2,5,6] ; 'cu'
-; 				endcase
-; 			  end
-		'claas'	: begin
-				;plev = [1,90,180,245,310,375,440,500,560,620,680,740,800,875,950,1100]
-				;tau  = [0.,0.3,0.6,1.3,2.2,3.6,5.8,9.4,15.0,23.0,41.0,60.0,80.0,100.]
-				case strlowcase(hist_cloud_type) of
-					; low
-					'cu'	: idxse = [0, 4,10,14]
-					'sc'	: idxse = [5, 8,10,14]
-					'st'	: idxse = [9,12,10,14]
-					'low'	: idxse = [0,12,10,14]
-					; mid level
-					'ac'	: idxse = [0, 4, 6, 9]
-					'as'	: idxse = [5, 8, 6, 9]
-					'ns'	: idxse = [9,12, 6, 9]
-					'mid'	: idxse = [0,12, 6, 9]
-					; high
-					'ci'	: idxse = [0, 4, 0, 5]
-					'cs'	: idxse = [5, 8, 0, 5]
-					'cb'	: idxse = [9,12, 0, 5]
-					'high'	: idxse = [0,12, 0, 5]
-					else	: idxse = [0, 4,10,14] ; 'cu'
-				endcase
-			  end
 		else	: begin
 				print,'Algorithm name unknown. '+algo
 				found = 0.
@@ -8663,18 +8626,26 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 ; 		arr = total(total(arr[*,*,idxse[0]:idxse[1],idxse[2]:idxse[3]],3),3)
 		si = size(arr,/dim)
 		dum = fltarr(si[0:1])
-                for i = idxse[0], idxse[1] do begin
-                        for j= idxse[2],idxse[3] do dum += arr[*,*,i,j]
-                endfor
+		for i = idxse[0], idxse[1] do begin
+			for j= idxse[2],idxse[3] do dum += arr[*,*,i,j]
+		endfor
 		arr = temporary(dum)
 
 		if keyword_set(grid) then begin
-			make_geo,lond,latd,grid = get_grid_res(arr)
-			dum = sat2global(lond,latd,arr,grid=grid,found=found)
-			if found then arr = (dum).sum
+			if rebinable(get_grid_res(arr),grid) then begin
+				arr = grid_down_globe(arr,grid,/total,found=found)
+			endif else begin
+				make_geo,lond,latd,grid = get_grid_res(arr)
+				dum = sat2global(lond,latd,arr,grid=grid,found=found)
+				if found then arr = (dum).sum
+			endelse
 			if keyword_set(found2) then begin
-				dum = sat2global(lond,latd,sdum,grid=grid,found=found2)
-				if found2 then sdum = (dum).sum
+				if rebinable(get_grid_res(sdum),grid) then begin
+					sdum = grid_down_globe(sdum,grid,/total,found=found2)
+				endif else begin
+					dum = sat2global(lond,latd,sdum,grid=grid,found=found2)
+					if found2 then sdum = (dum).sum
+				endelse
 			endif
 		endif
 
@@ -8686,30 +8657,16 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 end
 ;-------------------------------------------------------------------------------------------------------------------------
 function get_hct_ratio, array, sdum, limit=limit, antarctic = antarctic, arctic=arctic,lon=lon,lat=lat,dem=dem, land=land,sea=sea, $
-			void_index = void_index, relative = relative, texstyle = texstyle
+			void_index = void_index, shape_file = shape_file, fillv_index = fillv_index, relative = relative, texstyle = texstyle
 
 	bild = array
-; 	if keyword_set(limit) then dumlimit = limit
-; 	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
-; 	if keyword_set(arctic) then dumlimit = [ 60.,-180, 90.0,180]
-; 	if keyword_set(dumlimit) then begin
-; 		if ~keyword_set(lon) or ~keyword_set(lat) then make_geo,lon,lat,grid=get_grid_res(bild)
-; 		dumidx=where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),complement=dd_idx,ncomp=dd_cnt)
-; 		if dd_cnt gt 0 then sdum[dd_idx] = 0.
-; 	endif
-; 
-; 	if keyword_set(land) or keyword_set(sea) then begin
-; 		if ~keyword_set(dem) then dem = get_dem(grid=get_grid_res(bild))
-; 		if keyword_set(land) then void_index = where(sdum eq 0 or dem eq 0,complement=nvoid,ncomp=nvoid_cnt)
-; 		if keyword_set(sea)  then void_index = where(sdum eq 0 or dem ne 0,complement=nvoid,ncomp=nvoid_cnt)
-; 	endif else void_index = where(sdum eq 0,complement=nvoid,ncomp=nvoid_cnt)
-
-; 	if keyword_set(relative) then bild = bild/100. * sdum
 
 	if keyword_set(relative) then bild = bild/100. * sdum
 
-	area = get_coverage( lon, lat, dem = dem, limit = limit, land = land, sea = sea, antarctic = antarctic, arctic = arctic, coverage = coverage)
-	void_index = where(sdum eq 0,complement=nvoid,ncomp=nvoid_cnt)
+	area = get_coverage( lon, lat, dem = dem, limit = limit, land = land, sea = sea, shape_file = shape_file, $
+						antarctic = antarctic, arctic = arctic, coverage = coverage, fillv_index = fillv_index)
+
+	void_index = where((sdum*area) eq 0,complement=nvoid,ncomp=nvoid_cnt)
 
 	; global mean ratio
 	if keyword_set(lat) then begin
@@ -8743,12 +8700,16 @@ function get_hct_maxtype, array, algo, grid_res = grid_res,lon=lon,lat=lat,fillv
 		if o_grid eq gres[0] then begin
 			gres=0
 		endif else begin
-			if ~keyword_set(lon) and ~keyword_set(lat) then begin
-				if o_grid ne 0 then make_geo,lon,lat,grid=o_grid else begin
-					found=0
-					return,-1
-				endelse
-			endif
+			if rebinable(o_grid,gres) then begin
+				;do nothing
+			endif else begin
+				if ~keyword_set(lon) and ~keyword_set(lat) then begin
+					if o_grid ne 0 then make_geo,lon,lat,grid=o_grid else begin
+						found=0
+						return,-1
+					endelse
+				endif
+			endelse
 		endelse
 	endif else si = (size(arr,/dim))[0:1]
 	max_type     = intarr(si[0],si[1])-1
@@ -8758,8 +8719,13 @@ function get_hct_maxtype, array, algo, grid_res = grid_res,lon=lon,lat=lat,fillv
 		dum = get_hct_data(htypes[i],arr,algo,found=found)
 		if found then begin
 			if keyword_set(gres) then begin
-				dumsat = sat2global(lon,lat,dum,grid=gres,found=found,no_data_value=fillvalue)
-				if found then dum = dumsat.sum else stop
+				if rebinable(o_grid,gres) then begin
+					dumsat = grid_down_globe(dum,gres,found=found,no_data_value=fillvalue,/total)
+					if found then dum = dumsat else stop ; dont know what to do else, check out
+				endif else begin
+					dumsat = sat2global(lon,lat,dum,grid=gres,found=found,no_data_value=fillvalue)
+					if found then dum = dumsat.sum else stop ; dont know what to do else, check out
+				endelse
 			endif
 			dum_maxtype[*,*,i] = dum
 		endif else begin
@@ -8779,7 +8745,7 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found = found	, $
 				limit = limit, antarctic=antarctic, arctic=arctic	, $
-				lon=lon, lat=lat, dem=dem, land=land, sea=sea
+				lon=lon, lat=lat, dem=dem, land=land, sea=sea, fillv_index=fillv_index,shape_file=shape_file
 
 	found = 1.
 	if n_params() ne 2 then begin
@@ -8800,49 +8766,26 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 	alg = ref2algo(algo)
 	is_gewex = total(alg eq ['gewex','gac2-gewex','patmos','patmos_old','isccp'])
 
-	;-------prepare------------------------
-	if keyword_set(limit)     then dumlimit = limit
-	if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
-	if keyword_set(arctic)    then dumlimit = [ 60.0,-180, 90.0,180]
-	if keyword_set(dumlimit)  then begin
-		if ~keyword_set(lon) or ~keyword_set(lat) then begin
-			make_geo,lon,lat,grid=get_grid_res(bild[*,*,0,0,0]),found=found
-			if not found then return,-1
+	if ~keyword_set(lon) or ~keyword_set(lat) then begin
+		make_geo,lon,lat,grid=get_grid_res(bild[*,*,0,0,0]),found=found
+		if not found then begin
+			print,'Could not find Lon/lat info!'
+			return,-1
 		endif
-		qw  = where(between(lon,dumlimit[1],dumlimit[3]) and between(lat,dumlimit[0],dumlimit[2]),qw_cnt)
-		if qw_cnt eq 0 then return,-1
-		ind2d = array_indices(lat,qw)
-		mimax = minmax(ind2d[0,*])
-		mimay = minmax(ind2d[1,*])
+	endif
 
-		bild = bild[mimax[0]:mimax[1],mimay[0]:mimay[1],*,*,0]
-		if ls then begin
-			if ~keyword_set(dem) then begin
-				dem = get_dem(grid=get_grid_res(bild[*,*,0,0,0]),found=found)
-				if not found then return,-1
-			endif
-			dem = dem[mimax[0]:mimax[1],mimay[0]:mimay[1]]
-		endif
+	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage,shape_file=shape_file, $
+			antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt, fillv_index=fillv_index)
+
+	if lidx_cnt gt 0 then begin & $
+		for i = 0,si[2] -1 do begin & $
+			for j = 0,si[3] -1 do begin & $
+				ddb = reform(bild[*,*,i,j]) & $
+				ddb[lidx] = -999 & $
+				bild[*,*,i,j] = ddb & $
+			endfor & $
+		endfor & $
 	endif
-	if ls then begin
-		if ~keyword_set(dem) then begin
-			dem = get_dem(grid=get_grid_res(bild[*,*,0,0,0]),found=found)
-			if not found then return,-1
-		endif
-		si     = size(bild,/dim)
-		dum    = bild * 0
-		ddem   = keyword_set(land) ? (dem ne 0) : (dem eq 0)
-		dd_idx = where(ddem eq 1,dd_cnt)
-		if dd_cnt gt 0  then begin
-			for i=0,si[2]-1 do begin & $
-				for j=0,si[3]-1 do begin & $
-					dum[*,*,i,j] = bild[*,*,i,j] * ddem & $
-				endfor & $
-			endfor
-		endif
-		bild = dum
-	endif
-	;-----------------------------
 
 	if strupcase(data) eq 'CTP' or strupcase(data) eq 'BOTH' then begin
 		; CTP
@@ -8909,7 +8852,7 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea = sea, limit = limit	, $
 				   longitude = longitude, latitude = latitude, fillvalue = fillvalue, found = found		, $
-				   antarctic = antarctic, arctic = arctic
+				   antarctic = antarctic, arctic = arctic, fillv_index = fillv_index,shape_file=shape_file
 
 	found = 1.
 	if n_params() ne 2 then begin
@@ -8917,8 +8860,12 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		found = 0.
 		return,-1.
 	endif
+	
+	fillv = keyword_set(fillvalue) ? fillvalue : -999
 
-	alg = ref2algo(algoname)
+	alg  = ref2algo(algoname)
+	is_gewex = total(alg eq ['gewex','gac2-gewex','patmos','patmos_old','isccp'])
+
 	dum  = array
 	si   = size(dum,/dim)
 	if n_elements(si) ne 4 then begin
@@ -8934,8 +8881,8 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		lat = latitude
 	endelse
 	
-	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, $
-				antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt)
+	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, fillv_index = fillv_index, $
+				antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt,shape_file=shape_file)
 
 	bild = fltarr(si[2:3])
 	for i = 0,si[2] -1 do begin & $
@@ -8943,8 +8890,8 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 			; Ab sofort werden auch 4dim colls in read_hdf4 rotiert
 ; 			bla_bild = strmid(alg,0,4) eq 'coll' ? rotate(reform(dum[*,*,i,j]),7) : reform(dum[*,*,i,j])
 			bla_bild = reform(dum[*,*,i,j]) & $
-			if lidx_cnt gt 0 then bla_bild[lidx] = fillvalue & $
-			didx = where(bla_bild ne fillvalue,didx_cnt) & $
+			if lidx_cnt gt 0 then bla_bild[lidx] = fillv & $
+			didx = where(bla_bild ne fillv,didx_cnt) & $
 			if didx_cnt gt 0 then bild[i,j] = total(bla_bild[didx]) & $
 		endfor & $
 	endfor
@@ -8991,7 +8938,7 @@ end
 ;---------------------------------------------------------------------------------------------------------------------------------------------
 function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit=limit, land=land,sea=sea,arctic=arctic,antarctic=antarctic, $
 					xtickname=xtickname, bin_val=bin_val, ytitle = ytitle, hist_name=hist_name, found=found, $
-					var_dim_names=var_dim_names, file=file
+					var_dim_names=var_dim_names, file=file, fillv_index = fillv_index,shape_file=shape_file
 
 	found = 1.
 	si    = size(array,/dim)
@@ -9008,7 +8955,7 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 	make_geo,lon,lat,grid=get_grid_res(array[*,*,0,0]),file = file
 
 	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, $
-				antarctic = antarctic, arctic = arctic, index = lidx, count = lidx_cnt)
+				antarctic = antarctic, arctic = arctic, fillv_index = fillv_index,shape_file = shape_file, index = lidx, count = lidx_cnt)
 
 	dum    = array * 0
 	si     = [si,1]

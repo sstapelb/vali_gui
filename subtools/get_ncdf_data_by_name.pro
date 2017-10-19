@@ -22,7 +22,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 	found = 1.
 
 	if keyword_set(dimensions) then begin
-		for j=0,res.ndims -1 do begin
+		for j=0l,res.ndims -1 do begin
 			ncdf_diminq, id, j, dimension_name, dimension_size
 			if strupcase(dimension_name) eq strupcase(name) then begin
 				value = dimension_size
@@ -39,7 +39,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 	endif
 
 	if keyword_set(global_attribute) then begin
-		for j=0,res.ngatts-1 do begin
+		for j=0l,res.ngatts-1 do begin
 			globname = ncdf_attname(id, j, /GLOBAL)
 			if strupcase(globname) eq strupcase(name) then begin
 				ncdf_attget, id, globname, value, /global
@@ -58,7 +58,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 		return, value
 	endif
 
-	for i=0ul,res.nvars-1 do begin
+	for i=0l,res.nvars-1 do begin
 		dum = ncdf_varinq(id,i)
 		if strupcase(dum.name) eq strupcase(name) then begin
 			tag  = dum.name
@@ -71,7 +71,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 		if keyword_set(all_attributes) then begin
 			ncdf_varget,id,tag,dum,count = count, offset=offset, stride = stride
 			erg = ncdf_varinq(id,tag)
-			for j = 0ul, erg.natts -1 do begin
+			for j = 0l, erg.natts -1 do begin
 				attname = ncdf_attname(id,tag,j)
 				ncdf_attget,id,tag,attname,attval
 				if j ge 1 then begin
@@ -85,7 +85,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 		endif else if keyword_set(attribute) then begin
 			erg = ncdf_varinq(id,tag)
 			if erg.natts gt 0 then begin
-				for j = 0ul, erg.natts -1 do begin
+				for j = 0l, erg.natts -1 do begin
 					attname = ncdf_attname(id,tag,j)
 					if strupcase(attname) eq strupcase(attribute) then begin
 						ncdf_attget,id,tag,attname,attval
@@ -101,7 +101,7 @@ function get_ncdf_data_by_name, filename, name, attribute = attribute, $
 		endif else begin
 			ncdf_varget,id,tag,dum,count = count, offset=offset, stride = stride
 			var_dim_names = strarr(n_elements(dimi))
-			for j=0,n_elements(dimi) -1 do begin
+			for j=0l,n_elements(dimi) -1 do begin
 				ncdf_diminq, id, dimi[j], dimension_name, dimension_size
 				var_dim_names[j] = dimension_name
 			endfor

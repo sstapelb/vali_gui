@@ -84,7 +84,7 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 end
 ;------------------------------------------------------------------------------------------
 pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, brewer=brewer, mini = mini, maxi = maxi, save_as=save_as, $
-			difference = difference,notitle=notitle, appendix = appendix
+			difference = difference,notitle=notitle, appendix = appendix,nobar=nobar
 
 	apx = keyword_set(appendix) ? appendix : ''
 	xtickname = ['0.3','1.3','3.6','9.4','23','60','100'] ; tau
@@ -117,8 +117,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 		if keyword_set(save_as) then start_save, save_d, thick = thick, size=[40,40] else thick = 2
 			view2d,bild1-bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
-			title='Diff. '+name1+' - '+name2, mini = mini, maxi = maxi, $
-; 			charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
+			title='Diff. '+name1+' - '+name2, mini = mini, maxi = maxi, color=~keyword_set(nobar), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
@@ -134,10 +133,9 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 		if keyword_set(save_as) then end_save, save_d
 	endif else begin
 		if keyword_set(save_as) then start_save, save_1, thick = thick, size=[40,40] else thick = 2
-			view2d,bild1,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
+		view2d,bild1,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name1+apx, $
-			mini = mini, maxi = maxi,$
-; 			charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
+			mini = mini, maxi = maxi, color=~keyword_set(nobar),$
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
@@ -155,7 +153,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 			if keyword_set(save_as) then start_save, save_2, thick = thick, size=[40,40] else thick = 2
 				view2d,bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 				xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name2+apx, $
-				mini = mini, maxi = maxi,$
+				mini = mini, maxi = maxi, color=~keyword_set(nobar),$
 ; 				charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 				xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
@@ -569,12 +567,28 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	ndims = size(bild_cci,/n_dim)
 	if is_h1d(dat[0]) then begin
 		if hct eq '1d' then begin
-			bild_cci = get_1d_rel_hist_from_1d_hist( bild_cci, dat[0], algo = algo1, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
-				   xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found,file=ccifile[0],var_dim_names=var_dim_names_cci,bin_val=bin_val)
+
+			;this is a poor mans solution
+			;make sure both algos see the same and mark areas where one of both is not seeing anything
+			;e.g compare to claas
+			si_cci = size(bild_cci,/dim)
+			ndv_cci_array = total(total((bild_cci eq fillvalue1),3),3) eq product(si_cci[2:3]) ; no observations on cci grid
+			si_gac = size(bild_gac,/dim)
+			ndv_gac_array = total(total((bild_gac eq fillvalue2),3),3) eq product(si_gac[2:3])
+			;make it available for each other
+			ndv_cci_array_gac = congrid(ndv_cci_array,si_gac[0],si_gac[1]) ; no observations on cci grid brought to gac grid
+			ndv_gac_array_cci = congrid(ndv_gac_array,si_cci[0],si_cci[1]) ; no observations on gac grid brought to cci grid
+			fillv_index_cci = where(ndv_cci_array eq 1 or ndv_gac_array_cci eq 1,idxcnt)
+			fillv_index_gac = where(ndv_gac_array eq 1 or ndv_cci_array_gac eq 1,idxcnt)
+			;-------
+			bild_cci = get_1d_rel_hist_from_1d_hist( bild_cci, dat[0], algo = algo1, limit=limit, land=land, sea=sea, arctic=arctic, $
+						antarctic=antarctic,xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found,file=ccifile[0],$
+						var_dim_names=var_dim_names_cci,bin_val=bin_val,fillv_index=fillv_index_cci,shape_file=shape_file)
 			if ~found then return
 
-			bild_gac = get_1d_rel_hist_from_1d_hist( bild_gac, dat[1], algo = algo2, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
-				   xtickname=xtickname, ytitle=ytitle, hist_name = data_name, found=found, file=gac_nc_file, var_dim_names=var_dim_names_gac)
+			bild_gac = get_1d_rel_hist_from_1d_hist( bild_gac, dat[1], algo = algo2, limit=limit, land=land, sea=sea, arctic=arctic, $
+						antarctic=antarctic,xtickname=xtickname, ytitle=ytitle, hist_name = data_name, found=found, file=gac_nc_file, $
+						var_dim_names=var_dim_names_gac,fillv_index=fillv_index_gac,shape_file=shape_file)
 			if ~found then return
 			apx  = 'Liq + Ice'
 			if is_h1d(dat[0],/ice)    then apx = 'Ice ' 
@@ -644,33 +658,55 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		endif
 		longname = longname+' (bin # '+string(mo,f='(i2)')+')'
 		if ndims eq 2 then begin
-			if get_grid_res(bild_cci) ne get_grid_res(bild_gac) then begin
+		if get_grid_res(bild_cci) ne get_grid_res(bild_gac) then begin
 				grid = max([get_grid_res(bild_cci),get_grid_res(bild_gac)])
 				if get_grid_res(bild_cci) lt get_grid_res(bild_gac) then begin
-					make_geo,lon,lat,grid = get_grid_res(bild_cci)
-					dum  = sat2global(lon,lat,bild_cci,grid=grid,no_data_value = fillvalue1,found=found)
-					sdum = sat2global(lon,lat,sdum_cci,grid=grid,no_data_value = fillvalue1,found=found)
-					if found then begin
-						bild_cci = dum.sum/(sdum.sum>1) * 100.
-						idx = where(sdum.sum eq 0,idxcnt)
-						if idxcnt gt 0 then bild_cci[idx] = fillvalue1
-						lon      = dum.lon
-						lat      = dum.lat
-					endif
+					if rebinable(get_grid_res(bild_cci),grid) then begin
+						dum  = grid_down_globe(bild_cci,grid,no_data_value = fillvalue1,found=found,/total)
+						sdum = grid_down_globe(sdum_cci,grid,no_data_value = fillvalue1,found=found1,/total)
+						if found and found1 then begin
+							bild_cci = dum/(sdum>1) * 100.
+							idx = where(sdum eq 0,idxcnt)
+							if idxcnt gt 0 then bild_cci[idx] = fillvalue1
+							make_geo,lon,lat,grid = grid
+						endif
+					endif else begin
+						make_geo,lond,latd,grid = get_grid_res(bild_cci)
+						dum  = sat2global(lond,latd,bild_cci,grid=grid,no_data_value = fillvalue1,found=found)
+						sdum = sat2global(lond,latd,sdum_cci,grid=grid,no_data_value = fillvalue1,found=found1)
+						if found and found1 then begin
+							bild_cci = dum.sum/(sdum.sum>1) * 100.
+							idx = where(sdum.sum eq 0,idxcnt)
+							if idxcnt gt 0 then bild_cci[idx] = fillvalue1
+							lon      = dum.lon
+							lat      = dum.lat
+						endif
+					endelse
 					bild_gac = bild_gac/(sdum_gac>1) * 100.
 					idx = where(sdum_gac eq 0,idxcnt)
 					if idxcnt gt 0 then bild_gac[idx] = fillvalue2
 				endif else begin
-					make_geo,lon,lat,grid = get_grid_res(bild_gac)
-					dum  = sat2global(lon,lat,bild_gac,grid=grid,no_data_value = fillvalue2,found=found)
-					sdum = sat2global(lon,lat,sdum_gac,grid=grid,no_data_value = fillvalue2,found=found)
-					if found then begin
-						bild_gac = dum.sum/(sdum.sum>1) * 100.
-						idx = where(sdum.sum eq 0,idxcnt)
-						if idxcnt gt 0 then bild_gac[idx] = fillvalue2
-						lon      = dum.lon
-						lat      = dum.lat
-					endif
+					if rebinable(get_grid_res(bild_gac),grid) then begin
+						dum  = grid_down_globe(bild_gac,grid,no_data_value = fillvalue2,found=found,/total)
+						sdum = grid_down_globe(sdum_gac,grid,no_data_value = fillvalue2,found=found1,/total)
+						if found and found1 then begin
+							bild_gac = dum/(sdum>1) * 100.
+							idx = where(sdum eq 0,idxcnt)
+							if idxcnt gt 0 then bild_gac[idx] = fillvalue1
+							make_geo,lon,lat,grid = grid
+						endif
+					endif else begin
+						make_geo,lon,lat,grid = get_grid_res(bild_gac)
+						dum  = sat2global(lon,lat,bild_gac,grid=grid,no_data_value = fillvalue2,found=found)
+						sdum = sat2global(lon,lat,sdum_gac,grid=grid,no_data_value = fillvalue2,found=found1)
+						if found and found1 then begin
+							bild_gac = dum.sum/(sdum.sum>1) * 100.
+							idx = where(sdum.sum eq 0,idxcnt)
+							if idxcnt gt 0 then bild_gac[idx] = fillvalue2
+							lon      = dum.lon
+							lat      = dum.lat
+						endif
+					endelse
 					bild_cci = bild_cci/(sdum_cci>1) * 100.
 					idx = where(sdum_cci eq 0,idxcnt)
 					if idxcnt gt 0 then bild_cci[idx] = fillvalue1
@@ -765,25 +801,16 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		   lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position,horizon=horizon
 
 	if use_shape_file then begin
-		found = 1
-		if get_grid_res(bild_cci) eq 0 then begin
-			print,'Found a non regular grid file -> Not possible at the moment!'
-			found = 0
+		print,'Using shape_file, ',shape_file
+		de  = get_coverage(lon,lat,shape_file=shape_file)
+		idx = where(de eq 0,idxcnt)
+		if idxcnt gt 0 then begin
+			bild_cci[idx] = fillvalue1 
+			bild_gac[idx] = fillvalue2
+			lon[idx] = !values.f_nan
+			lat[idx] = !values.f_nan
 		endif
-		if found then begin
-			print,'Using shape_file, ',shape_file
-			de  = get_coverage(lon,lat,shape_file=shape_file)
-			idx = where(de eq 0,idxcnt)
-			if idxcnt gt 0 then begin
-				bild_cci[idx] = fillvalue1 
-				bild_gac[idx] = fillvalue2
-				lon[idx] = !values.f_nan
-				lat[idx] = !values.f_nan
-			endif
-
-			if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
-
-		endif
+		if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
 		rotate_globe = 0
 	endif
 
@@ -991,6 +1018,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		start_save, save_as3, thick = thick, size = [32, 20]
 			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1
 			if bar_discontinous then bar_tickname = string(aa[sort(aa)],f=bar_format)
+; stop
 			view2d,aa,no_data_val=0,$
 			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum )),$
 			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2)),$
@@ -998,7 +1026,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_format=bar_format,$
 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 4, $
-			log=~bar_discontinous,$
+			log=~bar_discontinous,col_table=col_tab,$
 			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
 			bar_tickname = bar_tickname,xmargin=[7,3],ymargin=[3,2]+(keyword_set(save_dir) ? [0,2]:0)
@@ -1307,7 +1335,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if strmid(hct,0,2) eq '1d' then begin
 			bild = get_1d_rel_hist_from_1d_hist( bild, dat, algo = algo, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
 							     xtickname=xtickname, ytitle=ytitle, hist_name = data_name, file=file[fidx], $
-							     var_dim_names=var_dim_names, bin_val=bin_val, found=found)
+							     var_dim_names=var_dim_names, bin_val=bin_val, found=found,shape_file=shape_file)
 			if ~found then return
 			apx = 'Liq + Ice'
 			if is_h1d(dat,/ice)    then apx = datum+' Ice ' 
@@ -1449,7 +1477,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		start_save, save_dum, thick = thick
 			view2d,bild,no_data_idx=no_data_idx,n_lev=n_lev,maxi=adv_keyword_set(maxi) ? maxi:max(bild),mini=adv_keyword_set(mini)?mini:min(bild[where(bild ne fillvalue[0])]), $
 			title = keyword_set(notitle) ? '' : keyword_set(save_as) ? '' : algon+' '+longname, $
-			g_eq =g_eq, l_eq =l_eq, $
+			g_eq =g_eq, l_eq =l_eq, color=~keyword_set(nobar),$
 			bar_title = ((keyword_set(hist_cloud_type) ? strupcase(hct)+' ' : '')+(dat[0] eq 'PHASE' ? 'CPH':dat[0])+(total(dat[0] eq ['COT','PHASE']) ? '' : unit))+adt, $
 			bar_format='(f7.1)', brewer=brewer,col_tab=col_tab, meridian_vec = meridian_vec, $
 			coast_vec = coast_vec,boxed=boxed,$
@@ -1471,8 +1499,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if keyword_set(save_as) then !p.multi=0
 			if strlowcase(hct) eq '1d_cot' then plot_cot = 1
 			if strlowcase(hct) eq '1d_ctp' then plot_ctp = 1
-			if strlowcase(hct) eq '1d'     then begin 
-				plot_cot = 1 
+			if strlowcase(hct) eq '1d'     then begin
+				plot_cot = 1
 				plot_ctp = 1
 				if keyword_set(opl) then begin
 					ok=dialog_message('Oplot not possible. Try "1d_cot" or "1d_ctp" instead of 1d.')
@@ -1482,9 +1510,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,50]
 			if is_jch(dat,/ratio) then begin
 				liq = get_1d_hist_from_jch(bild[*,*,*,*,0],algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found1)
+						land=land, sea=sea,found=found1,shape_file=shape_file)
 				ice = get_1d_hist_from_jch(bild[*,*,*,*,1],algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found)
+						land=land, sea=sea,found=found,shape_file=shape_file)
 				if found and found1 then begin
 					histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
 							ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
@@ -1492,7 +1520,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				endif else found=0
 			endif else begin
 				histos = get_1d_hist_from_jch(bild,algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-							lon=lon, lat=lat, dem=dem, land=land, sea=sea,found=found)
+							lon=lon, lat=lat, dem=dem, land=land, sea=sea,found=found,shape_file=shape_file)
 				ytitle='Relative Occurrence [%]'
 			endelse
 			if found then begin
@@ -1600,13 +1628,16 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				return
 			endif
 			if keyword_set(prefix) then begin
-				dum_h  = get_hct_data('high',reform(bild[*,*,*,*,0]),algo,found=found) 		; coll5 wird in get_hct_data gedreht 
-				dum_m  = get_hct_data('mid',reform(bild[*,*,*,*,0]),algo,found=found) 		; coll5 wird in get_hct_data gedreht 
-				dum_l  = get_hct_data('low',reform(bild[*,*,*,*,0]),algo,sdum=sdum,found=found) ; coll5 wird in get_hct_data gedreht 
-				rat_h = get_hct_ratio(dum_h,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,land=land,sea=sea,/tex)
-				rat_m = get_hct_ratio(dum_m,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,land=land,sea=sea,/tex)
-				rat_l = get_hct_ratio(dum_l,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,land=land,sea=sea,/tex)
-				print,prefix+year+month+' '+algon+' high/mid/low Ratio  : '+string(rat_h,f='(f4.1)')+'\%/' $
+				dum_h = get_hct_data('high',reform(bild[*,*,*,*,0]),algo,found=found) 		; coll5 wird in get_hct_data gedreht 
+				dum_m = get_hct_data('mid' ,reform(bild[*,*,*,*,0]),algo,found=found) 		; coll5 wird in get_hct_data gedreht 
+				dum_l = get_hct_data('low' ,reform(bild[*,*,*,*,0]),algo,sdum=sdum,found=found) ; coll5 wird in get_hct_data gedreht 
+				rat_h = get_hct_ratio(dum_h,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,$
+						land=land,sea=sea,shape_file=shape_file,/tex)
+				rat_m = get_hct_ratio(dum_m,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,$
+						land=land,sea=sea,shape_file=shape_file,/tex)
+				rat_l = get_hct_ratio(dum_l,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,$
+						land=land,sea=sea,shape_file=shape_file,/tex)
+				print, prefix+year+month+' '+algon+' high/mid/low Ratio  : '+string(rat_h,f='(f4.1)')+'\%/' $
 											   +string(rat_m,f='(f4.1)')+'\%/'+string(rat_l,f='(f4.1)')+'\%'
 				free, dum_h
 				free, dum_m
@@ -1615,9 +1646,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				if prefix eq 'File3 (ref): ' then prefix = ''
 			endif
 			bild = get_2d_rel_hist_from_jch(bild, algo, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-							lon = lon, lat = lat, fillvalue = fillvalue, found = found)
+							lon = lon, lat = lat, fillvalue = fillvalue, found = found, shape_file = shape_file)
 			if not found then return
-			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum, appendix = apx
+			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum, appendix = apx,nobar=nobar
 			return
 		endif else begin
 			if is_jch(dat,/ratio) then begin
@@ -1634,7 +1665,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				minvalue = 0
 				maxvalue = relative ? 100. : max(bild)
 				rat = get_hct_ratio(bild,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,$
-						    lat=lat,dem=dem,land=land,sea=sea,void_index=void_index,relative=relative)
+						    lat=lat,dem=dem,land=land,sea=sea,void_index=void_index,relative=relative, shape_file = shape_file)
 				print,strupcase(hct)+'/all Ratio '+algon+'  : '+rat
 				if relative then title = keyword_set(notitle) ? '' : strupcase(hct)+' Clouds Fraction [%]'
 			endelse
@@ -2207,7 +2238,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			bild2 = get_2d_rel_hist_from_jch(bild2, algo2, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
 							lon = lon, lat = lat, fillvalue = fillvalue2, found = found2)
 			plot_2d_rel_hist, bild1, f1str+satn1, bild2=bild2, name2=f2str+satn2, col_tab=col_tab, brewer=brewer, $
-			mini=mini, maxi=maxi, save_as=save_as, difference = diff_only, appendix = apx
+					mini=mini, maxi=maxi, save_as=save_as, difference = diff_only, appendix = apx,nobar=nobar
 			bild=(bild1-bild2)
 			idx = where(bild1 eq fillvalue1 or bild eq fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild[idx]=fillvalue2
@@ -2271,9 +2302,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if histo1d then begin
 		if strmid(hct,0,2) eq '1d' then begin
 			bild1 = get_1d_rel_hist_from_1d_hist( bild1, dat1, algo=algo1, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
-				xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found1,file=file1,var_dim_names=var_dim_names1,bin_val=bin_val)
+					xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found1,file=file1,var_dim_names=var_dim_names1, $
+					bin_val=bin_val,shape_file=shape_file)
 			bild2 = get_1d_rel_hist_from_1d_hist( bild2, dat2, algo=algo2, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
-				found=found2)
+					found=found2,shape_file=shape_file)
 			if found1 and found2 and (n_elements(bild1) eq n_elements(bild2)) then begin
 				start_save, save_as, thick = thick
 					yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,50]
@@ -2313,13 +2345,21 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		make_geo,lon,lat,grid=grid_res_out
 		if ggres1 ne ggres2 then begin
 			if ggres1 lt ggres2 then begin
-				make_geo,lond,latd,grid=ggres1
-				dum = sat2global(lond,latd,bild1,no_data_value=fillvalue1,grid_res=grid_res_out,found=found)
-				if found then bild1 =dum.sum
+				if rebinable(ggres1,grid_res_out) then begin
+					bild1 = grid_down_globe(bild1,grid_res_out,no_data_value=fillvalue1,found=found,/total)
+				endif else begin
+					make_geo,lond,latd,grid=ggres1
+					dum = sat2global(lond,latd,bild1,no_data_value=fillvalue1,grid_res=grid_res_out,found=found)
+					if found then bild1 =dum.sum
+				endelse
 			endif else begin
-				make_geo,lond,latd,grid=ggres2
-				dum = sat2global(lond,latd,bild2,no_data_value=fillvalue2,grid_res=grid_res_out,found=found)
-				if found then bild2 =dum.sum
+				if rebinable(ggres2,grid_res_out) then begin
+					bild2 = grid_down_globe(bild2,grid_res_out,no_data_value=fillvalue2,found=found,/total)
+				endif else begin
+					make_geo,lond,latd,grid=ggres2
+					dum = sat2global(lond,latd,bild2,no_data_value=fillvalue2,grid_res=grid_res_out,found=found)
+					if found then bild2 =dum.sum
+				endelse
 			endelse
 		endif
 		no_gridding = 1
@@ -3888,7 +3928,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			antarctic = antarctic, arctic = arctic, mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg,$
 			robinson=robinson, hammer = hammer, goode = goode, globe = globe, verbose = verbose,nobar=nobar, $
 			stereographic = stereographic, logarithmic=logarithmic,datum=datum,magnify=magnify,countries=countries,notitle=notitle,$
-			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2
+			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2,shape_file=shape_file
 
 	datum = keyword_set(datum) ? datum : stregex(file_basename(ccifile),'[0-9]+',/ext)
 	year  = strmid(datum,0,4)
@@ -3898,6 +3938,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	; the limits needs later to be freed otherwise map_image will have an error
 	if keyword_set(antarctic) then limit = [-90.0,-180,-60.,180]
 	if keyword_set(arctic) then limit = [ 60.,-180, 90.0,180]
+	limit_test = keyword_set(limit)
 
 	ls    = ( keyword_set(land) or keyword_set(sea) ) ? 1:0
 	hct   = keyword_set(hist_cloud_type) ? hist_cloud_type : 'cu'
@@ -3907,6 +3948,10 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	if (hct eq 'hist2d' or hct eq 'hist_2d' or hct eq 'max') and is_jch(varname,/rat) then begin
 		ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: '+hct+' not possible with hist2d_ratio!')
 		return
+	endif
+
+	if keyword_set(shape_file) then begin
+		if ~file_test(shape_file) then free, shape_file
 	endif
 
 	algon1 = sat_name(algo1,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c',version=version1)
@@ -3935,18 +3980,19 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		gac = struc.bild
 		adg = struc.actual_date
 		datum = strmatch(adg,adc) ? adc : 'Alg1-'+adc+' Alg2-'+adg
-		fillvalue = -999.
+		fillvalue1 = -999.
+		fillvalue2 = -999.
 		free,struc
 	endif else begin
 		adc=''
-		cci = get_data(file=ccifile,year,month,sat=sat,algo=algo1,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,/print_filename)
+		cci = get_data(file=ccifile,year,month,sat=sat,algo=algo1,data=data,found = found,no_data_val=fillvalue1,dim3=dim3, verbose = verbose,/print_filename)
 		if not found then begin
 			if ~file_test(ccifile) then return
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Data '+data+' not found in '+algo1+' file!')
 			return
 		endif
 		adg=''
-		gac = get_data(file=gacfile,year,month,sat=sat,algo=algo2,data=data,found = found,no_data_val=fillvalue,dim3=dim3, verbose = verbose,print_filename=2)
+		gac = get_data(file=gacfile,year,month,sat=sat,algo=algo2,data=data,found = found,no_data_val=fillvalue2,dim3=dim3, verbose = verbose,print_filename=2)
 		if not found then begin
 			if ~file_test(gacfile) then return
 			ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: Data '+data+' not found in Reference ('+algo2+') file!')
@@ -3974,6 +4020,35 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		endelse
 	endif
 
+	; get grid res of both and create final gridsize
+	cci_grid = get_grid_res(cci[*,*,0,0,0,0],found=found)
+	if not found then begin print,'Stop! this should not happen, except an unknown regular grid resolution is used ' & stop & end
+	gac_grid = get_grid_res(gac[*,*,0,0,0,0],found=found)
+	if not found then begin print,'Stop! this should not happen, except an unknown regular grid resolution is used ' & stop & end
+	out_grid = max([cci_grid,gac_grid],grid_index)
+
+	;this is a poor mans solution
+	;make sure both algos see the same and mark areas where one of both is not seeing anything
+	;e.g compare to claas
+	si_cci = size(cci,/dim)
+	ndv_cci_array = total(total((cci eq fillvalue1),3),3) eq product(si_cci[2:3]) ; no observations on cci grid
+	si_gac = size(gac,/dim)
+	ndv_gac_array = total(total((gac eq fillvalue2),3),3) eq product(si_gac[2:3])
+	;make it available for each other
+	ndv_cci_array_gac = congrid(ndv_cci_array,si_gac[0],si_gac[1]) ; no observations on cci grid brought to gac grid
+	ndv_gac_array_cci = congrid(ndv_gac_array,si_cci[0],si_cci[1]) ; no observations on gac grid brought to cci grid
+	fillv_index_cci = where(ndv_cci_array eq 1 or ndv_gac_array_cci eq 1,idxcnt)
+	fillv_index_gac = where(ndv_gac_array eq 1 or ndv_cci_array_gac eq 1,idxcnt)
+	fillv_index_out = grid_index eq 0 ? fillv_index_cci : fillv_index_gac
+	;-------
+
+	make_geo,file=ccifile,lon_cci,lat_cci,grid=cci_grid ; cci
+	make_geo,file=gacfile,lon_gac,lat_gac,grid=gac_grid ; ref
+	if ls then begin
+		dem_cci = get_dem(grid_res=cci_grid)
+		dem_gac = get_dem(grid_res=gac_grid)
+	endif
+
 	if hct eq '1d' or hct eq '1d_cot' or hct eq '1d_ctp' then begin
 
 		if keyword_set(limit)     then dumlimit = limit
@@ -3990,23 +4065,23 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 
 		if is_jch(varname,/rat) then begin
 			liq = get_1d_hist_from_jch(cci[*,*,*,*,0],algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found1)
+						land=land, sea=sea,fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,lon=lon_cci,lat=lat_cci,dem=dem_cci)
 			ice = get_1d_hist_from_jch(cci[*,*,*,*,1],algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found1)
+						land=land, sea=sea,fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,lon=lon_cci,lat=lat_cci,dem=dem_cci)
 			cci_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
 					ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
 			liq = get_1d_hist_from_jch(gac[*,*,*,*,0],algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found2)
+						land=land, sea=sea,fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,lon=lon_gac,lat=lat_gac,dem=dem_gac)
 			ice = get_1d_hist_from_jch(gac[*,*,*,*,1],algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found2)
+						land=land, sea=sea,fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,lon=lon_gac,lat=lat_gac,dem=dem_gac)
 			gac_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
 					ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
 			ytitle = 'Liquid Fraction [%]'
 		endif else begin
 			cci_histos = get_1d_hist_from_jch(cci,algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found1)
+						land=land, sea=sea,fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,lon=lon_cci,lat=lat_cci,dem=dem_cci)
 			gac_histos = get_1d_hist_from_jch(gac,algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found2)
+						land=land, sea=sea,fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,lon=lon_gac,lat=lat_gac,dem=dem_gac)
 			cci_histos = {	cot:cci_histos.cot/total(cci_histos.cot)*100.,$
 					ctp:cci_histos.ctp/total(cci_histos.ctp)*100.}
 			gac_histos = {	cot:gac_histos.cot/total(gac_histos.cot)*100.,$
@@ -4050,26 +4125,24 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		return
 	endif
 
-	; get grid res of both and create final gridsize
-	cci_grid = get_grid_res(cci[*,*,0,0,0,0],found=found)
-	if not found then begin print,'Stop! this should not happen, except an unknown regular grid resolution is used ' & stop & end
-	gac_grid = get_grid_res(gac[*,*,0,0,0,0],found=found)
-	if not found then begin print,'Stop! this should not happen, except an unknown regular grid resolution is used ' & stop & end
-	out_grid = max([cci_grid,gac_grid])
-
 	make_geo, lon_c, lat_c, grid_res = out_grid
 	if ls then dem_c = get_dem(grid_res=out_grid)
 
+	if keyword_set(shape_file) then begin
+		print,'Using shape_file, ',shape_file
+		shp = get_coverage(lon_c,lat_c,shape_file=shape_file)
+	endif else shp = byte(lon_c * 0) +1b
+
 	; CCI
-	make_geo,file=ccifile,lon,lat,grid=cci_grid
+	make_geo,file=ccifile,lon_cci,lat_cci,grid=cci_grid
 	if hct eq 'max' then begin
 		; -------maxtype
-		cci = get_hct_maxtype( cci, algo1, grid_res = out_grid,lon=lon,lat=lat,fillvalue=fillvalue,htypes=htypes)
+		cci = get_hct_maxtype( cci, algo1, grid_res = out_grid,lon=lon_cci,lat=lat_cci,fillvalue=fillvalue1,htypes=htypes)
 		; -------
 	endif else if hct eq 'hist2d' or hct eq 'hist_2d' then begin
 		; cci
-		cci = get_2d_rel_hist_from_jch( cci, algo1, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-						lon = lon, lat = lat, fillvalue = fillvalue, found = found)
+		cci = get_2d_rel_hist_from_jch( cci, algo1, dem = dem_cci, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
+						lon = lon_cci, lat = lat_cci, fillvalue = fillvalue1, fillv_index = fillv_index_cci, found = found,shape_file=shape_file)
 		if not found then return
 	endif else begin
 		if is_jch(varname,/rat) then begin
@@ -4079,23 +4152,22 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			bar_title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 		endif else begin
 			cci = get_hct_data(hct,cci,algo1,sdum=sdum,found=found,grid=out_grid,/relative)
-			ratio_cci = get_hct_ratio(cci,sdum,limit=limit,antarctic=antarctic,arctic=arctic,$
-						lon=lon_c,lat=lat_c,dem=dem_c,land=land,sea=sea,/relative)
+			ratio_cci = get_hct_ratio(cci,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon_c,lat=lat_c, $
+						dem=dem_c,land=land,sea=sea,fillv_index=fillv_index_out,shape_file=shape_file,/relative)
 		endelse
 	endelse
 
-	make_geo, lon_g, lat_g, grid_res = out_grid
-	if ls then dem_g = get_dem(grid_res=out_grid)
+	lon_g=lon_c
+	lat_g=lat_c
+	if ls then dem_g = dem_c
 
-	; ref
-	make_geo,file=gacfile,lon,lat,grid=gac_grid
 	if hct eq 'max' then begin
 		; -------maxtype
-		gac = get_hct_maxtype( gac, algo2, grid_res = out_grid,lon=lon,lat=lat,fillvalue=fillvalue, htypes=htypes)
+		gac = get_hct_maxtype( gac, algo2, grid_res = out_grid,lon=lon_gac,lat=lat_gac,fillvalue=fillvalue2, htypes=htypes)
 		; -------
 	endif else if hct eq 'hist2d' or hct eq 'hist_2d' then begin
-		gac = get_2d_rel_hist_from_jch( gac, algo2, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-						lon = lon, lat = lat, fillvalue = fillvalue, found = found)
+		gac = get_2d_rel_hist_from_jch( gac, algo2, dem = dem_gac, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
+						lon = lon_gac, lat = lat_gac, fillvalue = fillvalue2, fillv_index = fillv_index_gac, found = found, shape_file=shape_file)
 		if not found then return
 		if keyword_set(save_as) then begin
 			!p.multi=0
@@ -4104,10 +4176,9 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			(keyword_set(land) ? '_land':'')+ (keyword_set(sea) ? '_sea':''),/rem)
 		endif else begin
 			if win_nr ne -1 then win, win_nr,title=data
-; 			if ~keyword_set(difference) then !p.multi=[0,2,1]
 		endelse
 		plot_2d_rel_hist, cci, algon1, bild2=gac, name2=algon2, col_tab=col_tab, brewer=brewer, $
-		mini=mini, maxi=maxi, save_as=save_dum, difference = difference, appendix = apx
+				mini=mini, maxi=maxi, save_as=save_dum, difference = difference, appendix = apx,nobar=nobar
 		return
 	endif else begin
 		if is_jch(varname,/rat) then begin
@@ -4117,13 +4188,13 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			bar_title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 		endif else begin
 			gac = get_hct_data(hct,gac,algo2,/relative,found=found,sdum=sdum,grid=out_grid)
-			ratio_gac = get_hct_ratio(gac,sdum,limit=limit,antarctic=antarctic,arctic=arctic,$
-						lon=lon_g,lat=lat_g,dem=dem_g,land=land,sea=sea,/relative)
+			ratio_gac = get_hct_ratio(gac,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon_g,lat=lat_g, $
+						dem=dem_g,land=land,sea=sea,fillv_index=fillv_index_out,shape_file=shape_file,/relative)
 		endelse
 	endelse
 
-	good_idx_g = where(lon_g ne -999 and lat_g ne -999 and finite(gac), gidx_cnt_g, ncomplement = bidx_cnt_g)
-	good_idx_c = where(lon_c ne -999 and lat_c ne -999 and finite(cci), gidx_cnt_c, ncomplement = bidx_cnt_c)
+	good_idx_g = where(lon_g ne -999 and lat_g ne -999 and finite(gac) and gac ne fillvalue2 and shp eq 1, gidx_cnt_g, ncomplement = bidx_cnt_g)
+	good_idx_c = where(lon_c ne -999 and lat_c ne -999 and finite(cci) and cci ne fillvalue1 and shp eq 1, gidx_cnt_c, ncomplement = bidx_cnt_c)
 
 	if gidx_cnt_c eq 0 or gidx_cnt_g eq 0 then begin
 		print,'no valid Lon Lat points!'
@@ -4146,8 +4217,9 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	max_cci = max(cci)
 	max_gac = max(gac)
 	if hct ne 'max' and ~is_jch(varname,/rat) then begin
-		print,strupcase(hct)+'/all Ratio '+algon1+' : '+ratio_cci;rat_cci+'%'
-		print,strupcase(hct)+'/all Ratio '+algon2+' : '+ratio_gac;rat_gac+'%'
+		str_pholder = strjoin(replicate(' ',max([strlen(algon1),strlen(algon2)])))
+		print,strupcase(hct)+'/all Ratio '+string(algon1,f='(A'+strcompress(strlen(str_pholder),/rem)+')')+' : '+ratio_cci
+		print,strupcase(hct)+'/all Ratio '+string(algon2,f='(A'+strcompress(strlen(str_pholder),/rem)+')')+' : '+ratio_gac
 	endif
 	minvalue = 0
 	maxvalue = 1
@@ -4196,6 +4268,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg	, $
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert, $
   		  lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position	,no_grid=no_grid,horizon=horizon
+
+  	if keyword_set(shape_file) and limit_test eq 0 then limit = set_limits(lon_c,lat_c, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
 
 	if hct eq 'max' then begin
 		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_max_type.eps'
@@ -4319,7 +4393,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	endif
 
 	if keyword_set(show_values) and keyword_set(difference) and ~total(hct eq ['hist2d','hist_2d','max']) then $
-	out = {bild:(cci-gac),lon:lon_g,lat:lat_g,unit:'[%]',fillvalue:fillvalue,longname:lname}
+	out = {bild:(cci-gac),lon:lon_g,lat:lat_g,unit:'[%]',fillvalue:fillvalue1,longname:lname}
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------

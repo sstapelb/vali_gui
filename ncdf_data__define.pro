@@ -4378,6 +4378,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				return
 			endif
 
+			if keyword_set(verbose) then start_seconds = systime(1)
+
 			algo = self.compare_algo1
 			
 			names    = strsplit(varname,',',/ext)
@@ -4423,11 +4425,15 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 							file =	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
 							filter=self.extension)
 				file = 	self.file2
-				if file eq '' then return
+				if file eq '' then begin
+					if keyword_set(verbose) then goto, print_verbose1
+					return
+				endif
 				if ~is_hdf(file) then begin
 					if ~is_ncdf(file) then begin
 						ok = dialog_message('The file '+file+' is neither a netcdf nor a hdf file. '+$
 								'Note netcdf4 files are not supported in IDL versions below 8!')
+								if keyword_set(verbose) then goto, print_verbose1
 						return
 					endif
 				endif
@@ -4442,8 +4448,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 								 dirname = (sel ? self.directory:0))
 				datum=strjoin([year,month,day,orbit])
 			endelse
-			if ~found then return
-
+			if ~found then begin
+				if keyword_set(verbose) then goto, print_verbose1
+				return
+			endif
 			if not keyword_set(maxi) then free,maxi
 			if not keyword_set(mini) then free,mini
 
@@ -4460,12 +4468,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
 				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum,magnify=magnify, $
-				countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,shape_file=shape_file
 				if show_values and pcdts and ~total(strlowcase(hct[0]) eq ['hist2d','hist_2d','max']) then $
 				show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 				if ~(pcdts and ~total(strlowcase(hct[0]) eq ['max','1d'])) then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				if save_as then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
+				if keyword_set(verbose) then goto, print_verbose1
 				return
 			endif
 
@@ -4483,6 +4492,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,ts_extras=ts_extras,$
 				no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
+				if keyword_set(verbose) then goto, print_verbose1
 				return
 			endif
 
@@ -4490,6 +4500,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			; print,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov
 			if (pcms) or (pcts and pcsing) then begin
 				ok = dialog_message(pcmatts ? 'This combi is currently not set!':'This combi is currently not set! Try "Multi Time Steps" instead!')
+				if keyword_set(verbose) then goto, print_verbose1
 				return
 			endif
 			; compare this var
@@ -4510,6 +4521,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Diff2D Single Time Step'
 				if (histo1d and strlowcase(hct[0]) eq '1d') then begin
 					ok = dialog_message('Diff2D not possible for this combi!')
+					if keyword_set(verbose) then goto, print_verbose1
 					return
 				endif
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, level = level,$
@@ -4624,6 +4636,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
  			Widget_Control, self.zoomID  , Set_Button=0
 ; 			Widget_Control, self.saveID  , Set_Button=0
 			if save_as then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
+
+			;this needs to be always at the end
+			print_verbose1:
+			if keyword_set(verbose) then begin
+				caldat, systime(/utc, /julian), mo, da, ye, ho, mi, se
+				dat_str	= string(da, mo, ye, ho, mi, format = '(i2.2,".",i2.2,".",i4.4," ",i2.2,":",i2.2,"[UTC] / ")')
+				print, dat_str + 'NCDF_DATA::JUST_COMPARE_CCI_WITH -> '+string((systime(1)-start_seconds),f='("Duration        : ", f7.3, " seconds")')
+			endif
 		end
 
 		'PLOT_DIFF'	: BEGIN
@@ -4640,16 +4660,20 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if ~found then return
 
+			if keyword_set(verbose) then start_seconds = systime(1)
+
 			;set System Variables
 			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET)
 
 			if (pcms and ~save_as) or pchov then begin
 				ok = dialog_message('This combi is currently not set! Try "Compare" or "Multi Time Steps" instead!')
+				if keyword_set(verbose) then goto, print_verbose2
 				return
 			endif
 
 			if pcmat and (total(self.leveltype eq ['L2','L3U','L1','L3DH','L2B_SUM'])) then begin 
 				ok = dialog_message('This works with Monthly Means only!')
+				if keyword_set(verbose) then goto, print_verbose2
 				return
 			endif
 			algo     = self.algoname
@@ -4665,6 +4689,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if sel then file1  = self.directory+'/'+self.filename else begin
 				datum1 = strjoin([year,month,day,orbit])
 				file1  = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, level = level, found = found,dirname = self.directory)
+				if keyword_set(verbose) then goto, print_verbose2
 				if ~found then return
 			endelse
 
@@ -4683,11 +4708,15 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 								; following needs to be done for filenames that include white spaces
 								file = 	strmid(strjoin('\ '+strsplit(self.file2 eq '' ? file_basename(file1):file_basename(self.file2),/ext)),2),$
 								filter=self.extension)
-					if self.file2 eq '' then return
+					if self.file2 eq '' then begin
+						if keyword_set(verbose) then goto, print_verbose2
+						return
+					endif
 					if ~is_hdf(self.file2) then begin
 						if ~is_ncdf(self.file2) then begin
 							ok = dialog_message('The file '+self.file2+' is neither a netcdf nor a hdf file. '+$
 									'Note netcdf4 files are not supported in IDL versions below 8!')
+							if keyword_set(verbose) then goto, print_verbose2
 							return
 						endif
 					endif
@@ -4731,6 +4760,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if not found then begin
 						self.file2 = self.directory+'/'+self.filename
 						sat  = self.satname
+						if keyword_set(verbose) then goto, print_verbose2
 						return
 					endif
 					datum2 = strjoin([year,month,day,orbit])
@@ -4740,12 +4770,16 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if sel then sat  = self.satname
 			if self-> filematch(file1,self.file2) and strmatch(varname,varname2) then begin
 				ok = dialog_message('File1 and File2 are the same!',/cancel,/default_cancel)
+				if keyword_set(verbose) then goto, print_verbose2
 				if ok eq 'Cancel' then return
 			endif
 			; plotte serie und speichere in pdf für feedback loop (Varnames intern gesetzt!)
 			if pcms and save_as then begin
 				ok = dialog_message("This combination will create PDF's for the Feedbackloop!",/cancel)
-				if ok eq 'Cancel' then return
+				if ok eq 'Cancel' then begin
+					if keyword_set(verbose) then goto, print_verbose2
+					return
+				endif
 				!p.multi = 0
 				compare_l2_save_serie,file1,self.file2,data1=varname,data2=varname,mini=mini,maxi=maxi	, $
 				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
@@ -4852,6 +4886,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			Widget_Control, self.zoomID  , Set_Button=0
 ; 			Widget_Control, self.saveID  , Set_Button=0
 			if ~pchist and ~pczm and ~pcdts and ~pcmts then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
+
+			;this needs to be always at the end
+			print_verbose2:
+			if keyword_set(verbose) then begin
+				caldat, systime(/utc, /julian), mo, da, ye, ho, mi, se
+				dat_str	= string(da, mo, ye, ho, mi, format = '(i2.2,".",i2.2,".",i4.4," ",i2.2,":",i2.2,"[UTC] / ")')
+				print, dat_str + 'NCDF_DATA::PLOT_DIFF -> '+string((systime(1)-start_seconds),f='("Duration        : ", f7.3, " seconds")')
+			endif
 		END
 
 		'PLOT_AND_STAY'	: BEGIN
@@ -4877,6 +4919,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('This combi is currently not set! Try "Compare" oder "Multi Time Steps" instead!')
 				return
 			endif
+			
+			if keyword_set(verbose) then start_seconds = systime(1)
+
 			if none   then begin & algo = self.algoname & ref = self.reference & end
 			if modi   then begin & algo = 'coll5'       & sat = 'terra'   & ref = 'mod'  & end
 			if modi2  then begin & algo = 'coll6'       & sat = 'terra'   & ref = 'mod2' & end
@@ -4907,7 +4952,10 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 							; following needs to be done for filenames that include white spaces
 							file=strmid(strjoin('\ '+strsplit(self.file2 eq '' ? self.filename:file_basename(self.file2),/ext)),2),$
 							filter=self.extension)
-				if self.file2 eq '' then return
+				if self.file2 eq '' then begin
+					if keyword_set(verbose) then goto, print_verbose3
+					return
+				endif
 				ok     = self -> get_file_infos(infile=self.file2)
 				sat    = ok.satname ne '' ? ok.satname : sat
 				algo   = ok.algoname
@@ -4953,6 +5001,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if ~found then begin
 				opl = 0 > (self.oplotnr -=1 )
+				if keyword_set(verbose) then goto, print_verbose3
 				return
 			endif ;else if ~pcmult then print,'ncdf_data_def: File1: ',file[0]
 
@@ -4966,12 +5015,16 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			hist1d = is_h1d(varname)
 			if hist1d and ~(pcvar or pchov) then begin
 				ok=dialog_message('For hist1d choose plot style "Map2D" or "Hovmoell"')
+				if keyword_set(verbose) then goto, print_verbose3
 				return
 			endif
 
 			if pcms and save_as then begin
 				ok = dialog_message("This combination will create PUG/PVIR Pictures! Make sure that Date, Projection and Limit is properly set. ",/cancel)
-				if ok eq 'Cancel' then return
+				if ok eq 'Cancel' then begin
+					if keyword_set(verbose) then goto, print_verbose3
+					return
+				endif
 				plot_l2_save_serie,year[0],month[0],day[0],sat=sat[0],algo=algo[0],file=file, $
 				sea = sea,land=land,save_as=save_as,limit=limit,timeseries=pcmult,pvir=pvir, $
 				p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
@@ -4982,8 +5035,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif else if pchov then begin
 				; hovmoeller
 				if hist2d then begin 
-					   ok=dialog_message('Hovmoeller Diagram Not available for '+varname)
-					   return
+						ok=dialog_message('Hovmoeller Diagram Not available for '+varname)
+						if keyword_set(verbose) then goto, print_verbose3
+						return
 				endif
 				if ptr_valid(self.out_hovmoeller) then begin
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
@@ -5010,7 +5064,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				; histogram
 				if hist2d then begin
 					   ok=dialog_message('Not available for '+varname)
-					   return
+						if keyword_set(verbose) then goto, print_verbose3
+						return
 				endif
 				plot_histogram,year[0],month[0],day[0],file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,$
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], found = found,addtext = addtext[0], $
@@ -5021,6 +5076,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				; zonal median
 				if hist2d then begin 
 					   ok=dialog_message('Not available for '+varname)
+					   if keyword_set(verbose) then goto, print_verbose3
 					   return
 				endif
 				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,$
@@ -5069,6 +5125,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 ; 			if reset_selfbutton then Widget_Control, self.refself , Set_Button=1
 ; 			Widget_Control, self.saveID  , Set_Button=0	
 			if save_as then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
+
+			;this needs to be always at the end
+			print_verbose3:
+			if keyword_set(verbose) then begin
+				caldat, systime(/utc, /julian), mo, da, ye, ho, mi, se
+				dat_str	= string(da, mo, ye, ho, mi, format = '(i2.2,".",i2.2,".",i4.4," ",i2.2,":",i2.2,"[UTC] / ")')
+				print, dat_str + 'NCDF_DATA::PLOT_AND_STAY -> '+string((systime(1)-start_seconds),f='("Duration        : ", f7.3, " seconds")')
+			endif
 		END
 
 		'QUIT_PLOT_VARIABLE_GUI': Widget_Control, event.top, /DESTROY
