@@ -433,7 +433,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'cma'	: begin & histv = [1.,0.,1.]     & bar_discontinous = 1 & end
 		'cph'	: begin
 				if stregex(vollername1,'Cloud Phase',/fold,/bool) then begin
-					histv = [1.,1.,2.] 
+					histv = [1.,0.,2.] 
 					bar_discontinous = 1
 				endif else begin
 					histv = [0.01,0.,1.] 
@@ -536,10 +536,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			ok = dialog_message('compare_cci: Data '+dat[0]+' not found in '+level+' '+algo1+' '+sat+' file. Right satellite?, product name? e.g. cc_mask_asc')
 			return
 		endif
-		if (strmid(dat[0],0,3) eq 'cph') and (level eq 'l3u' or level eq 'l2') and (n_elements(join_nodes) eq 0) then begin
-			ncs = where(bild_cci eq 0,ncs_cnt)
-			if ncs_cnt gt 0 then bild_cci[ncs] = fillvalue1[0]
-		endif
 		free, join_nodes
 		; ref l3u files
 		select = strlowcase(algo2) eq 'select'
@@ -556,10 +552,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			datum2    = yyyy+(mm eq '??' ? '' : mm)+dd
 		endif
 
-		if (strmid(dat[1],0,3) eq 'cph') and (level eq 'l3u' or level eq 'l2') and (n_elements(join_nodes) eq 0) then begin
-			ncs = where(bild_gac eq 0,ncs_cnt)
-			if ncs_cnt gt 0 then bild_gac[ncs] = fillvalue2[0]
-		endif
 		free, join_nodes
 	endelse
 
@@ -572,9 +564,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			;make sure both algos see the same and mark areas where one of both is not seeing anything
 			;e.g compare to claas
 			si_cci = size(bild_cci,/dim)
-			ndv_cci_array = total(total((bild_cci eq fillvalue1),3),3) eq product(si_cci[2:3]) ; no observations on cci grid
+			ndv_cci_array = total((bild_cci eq fillvalue1),3) eq product(si_cci[2]) ; no observations on cci grid
 			si_gac = size(bild_gac,/dim)
-			ndv_gac_array = total(total((bild_gac eq fillvalue2),3),3) eq product(si_gac[2:3])
+			ndv_gac_array = total((bild_gac eq fillvalue2),3) eq product(si_gac[2])
 			;make it available for each other
 			ndv_cci_array_gac = congrid(ndv_cci_array,si_gac[0],si_gac[1]) ; no observations on cci grid brought to gac grid
 			ndv_gac_array_cci = congrid(ndv_gac_array,si_cci[0],si_cci[1]) ; no observations on gac grid brought to cci grid
@@ -849,7 +841,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			if keyword_set(sea)  then void_index2 = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2 or dem ne 0,complement=cidx)
 			if keyword_set(land) then void_index2 = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2 or dem eq 0,complement=cidx)
 		endif else void_index2 = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2,complement=cidx)
-		bild_gac   = bild_cci-bild_gac
+		bild_gac   = float(bild_cci)-float(bild_gac)
 		if keyword_set(save_dir) then save_as2 = save_as_diff
 		if ~keyword_set(notitle) then begin
 			if strmatch(dat[0],dat[1]) then begin
@@ -1004,7 +996,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		if chk_idx gt 0 then begin
 			regr = linfit(bild_cci[idx],bild_gac[idx], YFIT=yfit)
 			aa = hist_2d(bild_cci[idx],bild_gac[idx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
-			if total(size(aa,/dim)) eq 4. then begin
+			if bar_discontinous then begin
 				aa = aa/total(aa)*100. ; prozente
 				bar_title= 'nr of occurrence [%]'
 				bar_format='(f5.2)'
@@ -1017,23 +1009,53 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 		start_save, save_as3, thick = thick, size = [32, 20]
 			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1
-			if bar_discontinous then bar_tickname = string(aa[sort(aa)],f=bar_format)
-; stop
+			if bar_discontinous and n_elements(aa) le 9 then bar_tickname = string(aa[sort(aa)],f=bar_format)
+; 			xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1)
+; 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1)
+			xtickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
+			ytickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
+			xmargin=[7,5]
+			ymargin=[3,2]+(keyword_set(save_dir) ? [0,2]:0)
+			if keyword_set(flag_meanings1) then begin
+				strdum = strarr(n_elements(flag_meanings1)*2+1)+' '
+				for i = 0,n_elements(flag_meanings1)-1 do strdum[i*2+1] = flag_meanings1[i]
+				xtickname = strdum
+				xticklen=0.00001
+				xoplot_lines = 1
+				bar_nlev = n_elements(aa)< 9.
+			endif
+			if keyword_set(flag_meanings2) then begin
+				strdum = strarr(n_elements(flag_meanings2)*2+1)+' '
+				for i = 0,n_elements(flag_meanings2)-1 do strdum[i*2+1] = flag_meanings2[i]
+				ytickname = strdum
+				yticklen=0.00001
+				yoplot_lines = 1
+				bar_nlev = n_elements(aa)< 9.
+			endif
+
 			view2d,aa,no_data_val=0,$
 			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum )),$
 			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2)),$
 			bar_title=bar_title, bar_discontinous = bar_discontinous, $
-			xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
-			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_format=bar_format,$
-			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), bar_nlev = 4, $
-			log=~bar_discontinous,col_table=col_tab,$
+			xticks = n_elements(xtickname)-1, xtickv = xtickv,yticks = n_elements(ytickname)-1, ytickv = ytickv, $
+			xtickname=xtickname,ytickname=ytickname, bar_format=bar_format, bar_nlev = bar_nlev, $
+			log=~bar_discontinous,col_table=col_tab,orientation=-90,xticklen=xticklen,yticklen=yticklen, $
 			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
-			bar_tickname = bar_tickname,xmargin=[7,3],ymargin=[3,2]+(keyword_set(save_dir) ? [0,2]:0)
-			if chk_idx gt 0 and total(size(aa,/dim)) gt 4 then begin
+			bar_tickname = bar_tickname,xmargin=xmargin,ymargin=ymargin
+			if chk_idx gt 0 and bar_discontinous eq 0 then begin
 				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
 				oplot,!x.crange,!y.crange,thick=thick
-			endif
+			endif else begin
+				si=size(aa,/dim)
+				if keyword_set(xoplot_lines) then for i=0,si[0] do oplot,[i,i],!y.crange,thick=2
+				if keyword_set(yoplot_lines) then for i=0,si[1] do oplot,!x.crange,[i,i],thick=2
+				for i = 0, si[0]-1 do begin & $
+					for j = 0,si[1]-1 do begin & $
+						xyouts,i+0.5,j+0.5,strcompress(string(aa[i,j],f='(f6.2)'),/rem)+'%',align=0.5 & $
+					endfor & $
+				endfor
+			endelse
 		end_save, save_as3
 	endif
 	; zonal median

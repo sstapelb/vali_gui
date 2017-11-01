@@ -453,11 +453,11 @@ PRO cgDrawShapes, shapeFile, $
        RETURN
     
    ENDIF
-   
+ 
    ; If a graphics window isn't open, open one now. Necessary to make
    ; sure the drawing is not done white on white.
    IF ~noWindows AND (!D.Window EQ -1) THEN cgDisplay
-   
+  
    ; Check parameters.
    IF N_Elements(shapeFile) EQ 0 THEN BEGIN
       shapeFile = Filepath(Subdirectory=['examples', 'data'], 'states.shp')
@@ -481,6 +481,7 @@ PRO cgDrawShapes, shapeFile, $
    IF N_Elements(minNumVerts) EQ 0 THEN minNumVerts = 3
    projected_xy = Keyword_Set(projected_xy)
    IF N_Elements(attrvalues) EQ 0 THEN attrvalues = 'ALL'
+ 
    
    ; Is there a map projection in effect, or do I have a map coordinate object
    ; to create one? If not, then turn autodraw mode on.
@@ -530,7 +531,7 @@ PRO cgDrawShapes, shapeFile, $
        shapefileObj -> GetProperty, ATTRIBUTE_NAMES=theNames
        theNames = StrUpCase(StrTrim(theNames, 2))
    ENDIF
-   
+  
    ; Find the attribute index.
    attIndex = Where(theNames EQ attrname, count)
    IF count EQ 0 THEN Message, 'Unable to find attribute ' + attrname + ' in file. Returning...'
@@ -538,7 +539,7 @@ PRO cgDrawShapes, shapeFile, $
    ; Get all the attribute pointers from the file. These are the entities.
    entities = Ptr_New(/Allocate_Heap)
    *entities = shapefileObj -> GetEntity(/All, /Attributes)
-   
+  
    ; Automatic drawing turned on and no map coordinate? 
    ; Then set up a drawing window with a data
    ; coordinate system established.
@@ -567,7 +568,7 @@ PRO cgDrawShapes, shapeFile, $
    
    ; If you have a map coordinate, then set the data range appropriately.
    IF Obj_Valid(mapCoord) THEN BEGIN
-      
+     
        ; This is only necessary, if a LIMIT wasn't specified.
        IF ~Keyword_Set(uselimit) THEN BEGIN
            entityMinX = FltArr(N_Elements(*entities))
@@ -587,7 +588,7 @@ PRO cgDrawShapes, shapeFile, $
        ENDIF
        
    ENDIF
-   
+
    ; Cycle through each entity and draw it, if required. Free each pointer
    ; as you go, because it take at least 10 times as long to free them with
    ; HEAP_FREE at the end if you don't do this!

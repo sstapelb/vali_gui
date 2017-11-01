@@ -36,7 +36,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 		if keyword_set(path) then begin
 			datd = dat
 			if strmid(dat,0,3) eq 'cph' 	then datd = 'cph'
-			if dat eq 'cfc_day'		then datd = 'cfc'
+			if dat eq 'cfc_day'			then datd = 'cfc'
 			if dat eq 'cfc_night' 		then datd = 'cfc'
 			if dat eq 'cfc_twl' 		then datd = 'cfc'
 			if dat eq 'cfc_middle' 		then datd = 'cfc'
@@ -68,6 +68,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if strmid(dat,0,6) eq 'hist2d' then datd = 'jch'
 			if total(strmid(dat,0,10) eq ['hist1d_cwp','hist1d_cot','hist1d_ref','hist1d_cer']) then datd = 'cwp'
  			if total(strmid(dat,0,3) eq ['ctp','ctt','cth']) then datd = 'cto'
+ 			if total(dat eq ['satzen','satza','pixel_area','alt','altitude','lsm','land_sea','land_sea_mask']) then datd = 'aux'
 			return, keyword_set(upper_case) ? strupcase(datd) : strlowcase(datd)
 		endif else begin
 			case dat of
@@ -80,8 +81,12 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cfc_cloudsgt01'	: dat = 'cfc'
 				'cfc_allclouds'		: dat = 'cfc'
 				'cfc_allclouds_day'	: dat = 'cfc_day'
-				'cfc_allclouds_night'	: dat = 'cfc_night'
-				else			:
+				'cfc_allclouds_night': dat = 'cfc_night'
+				'satza'				: dat = 'satzen'
+				'altitude'			: dat = 'alt'
+				'land_sea'			: dat = 'lsm'
+				'land_sea_mask'		: dat = 'lsm'
+				else				:
 			endcase
 		endelse
 	endif
@@ -2920,7 +2925,7 @@ end
 ; 
 function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, found = found, nan_fillv = nan_fillv, $
 						  sample = sample, stddev = stddev, variance = variance, total = total
- 
+
 	fillvalue = keyword_set(no_data_value) ? double(no_data_value[0]) : -999d0
 	std = keyword_set(stddev)
 	var = keyword_set(variance)
@@ -2932,7 +2937,14 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, fou
 	endif
 	found = 1
 	gres  = float(grid_res)
-	array = double(array_in)
+	array = double(array_in) 	; if input array is an (long-) integer, rebin wont work properly
+								; because the output(average) is of same datatype, so we have to do this!!
+								; for most accuracy I decided to go double precision. But this step is quite slow
+								; takes almost half the time that rebin needs!! 
+
+	odims = size(array,/dim)
+	odims[0:1] = [360.,180.]/gres ; first 2 dims must be the ones to change
+
 	fvidx = where(~finite(array),fvcnt)
 	if fvcnt gt 0 then array[fvidx] = fillvalue
 
@@ -2946,22 +2958,23 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, fou
 	endif
 
 	if keyword_set(sample) then begin
-		result = rebin(array,[360.,180.]/gres,/sample)
+		result = rebin(array,odims,/sample)
 		if keyword_set(nan_fillv) then begin
-			fvidx = where(result eq fillvalue,fvcnt) 
+			fvidx = where(result eq fillvalue,fvcnt)
 			if fvcnt gt 0 then result[fvidx] = !values.f_nan
 		endif
 	endif else begin
-		N       = double(product(size(array,/dim)/([360.,180.]/gres))) ; number of elements of new grid
-		avg_all = rebin(array,360./gres,180./gres)  ; average over new grid
-		if (std or var) then avg_all2 = rebin(array^2.,360./gres,180./gres) ; mean of squares
-		
+		; This is how it works with rebin and fillvalues
+		; AVG = ( rebin(array) * N - ( N_fv * fill_value ) / (N - N_fv)
+		avg_all = rebin(array,odims)
 		; fillvalues included?
 		dum = array eq fillvalue
-
 		if total(dum) eq 0. and ~(std or var or sum) then return, avg_all
 
-		anz_fv  = round(rebin(double(temporary(dum)),360./gres,180./gres) * N) ; number of fillvalues
+		N       = double(product(size(array,/dim)/([360.,180.]/gres))) ; number of elements of new grid
+		if (std or var) then avg_all2 = rebin(array^2.,odims) ; mean of squares
+
+		anz_fv  = round(rebin(double(temporary(dum)),odims) * N) ; number of fillvalues
 		tot_fv  = anz_fv * fillvalue
 
 		divisor = double( N - anz_fv)
@@ -2970,16 +2983,16 @@ function grid_down_globe, array_in, grid_res, no_data_value = no_data_value, fou
 		if (std or var) then begin
 			avg_all = ( avg_all * N - temporary(tot_fv) ) / divisor
 			sum2    = ( temporary(avg_all2) * N - temporary(anz_fv) * (fillvalue)^2. )
-			result  = ( (temporary(sum2) - (divisor) * temporary(avg_all)^2) > 0.) / ((temporary(divisor-1)) > 1.) ; variance
-			if std then result = sqrt(result > 0.)
+			result  = ( (temporary(sum2) - (divisor) * temporary(avg_all)^2) > 0.) / ((temporary(divisor-1)) > 1.) 	; variance
+			if std then result = sqrt(result > 0.)																	; stddev
 		endif else begin
-			summe   = ( temporary(avg_all) * N - temporary(tot_fv) )
-			result  = summe / temporary(divisor)
+			result  = ( temporary(avg_all) * N - temporary(tot_fv) ) 												; sum
+			if ~sum then result = result / temporary(divisor)														; average
 		endelse
 		if fvcnt gt 0 then result[fvidx] = keyword_set(nan_fillv) ? !values.f_nan : fillvalue
 	endelse
 
-	return, sum ? float(summe) : float(result)
+	return, float(result)
 
 end
 ;------------------------------------------------------------------------------------------
@@ -3441,8 +3454,8 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 	unit         = string(get_ncdf_data_by_name(ff,data,attr='units',verbose=verbose,found=found_attr))
 	unit         = total(strcompress(unit,/rem) eq ['1','[1]','[]','-1','none','',"''",' ']) ? '' : ' ['+unit+']'
 	flag_meanings = string(get_ncdf_data_by_name(ff,data,attr='flag_meanings',verbose=verbose,found=found_attr))
-	flag_meanings = found_attr ? strreplace(strsplit(string(flag_meanings),/ext),['_','-'],['!C','']) : '' 
-
+	flag_meanings = found_attr ? strreplace(strsplit(string(flag_meanings),/ext),['_','-','supercooled','over'],['!C','','super!Ccooled','over!C'],/fold) : '' 
+	
 	if strlowcase(unit) eq ' [percent]' then unit = ' ['+string(37b)+']'
 
 	if minvalue ge maxvalue then maxvalue = minvalue + 1.
@@ -3892,7 +3905,8 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 		if strmatch(name,'*fillvalue*',/fold)    then raw_fill_value = datatt
 		if strmatch(name,'*minvalue*',/fold)     then minvalue = datatt
 		if strmatch(name,'*maxvalue*',/fold)     then maxvalue = datatt
-		if strmatch(name,'flag_meanings',/fold)  then flag_meanings = strreplace(strsplit(string(datatt),/ext),['_','-'],[' !C ',''])
+		if strmatch(name,'flag_meanings',/fold)  then $
+		flag_meanings = strreplace(strsplit(string(datatt),/ext),['_','-','supercooled','over'],['!C','','super!Ccooled','over!C'],/fold)
 		if strmatch(name,'unit*',/fold) then begin
 			unit = datatt
 			unit = total(strcompress(unit,/rem) eq ['1','[1]''[]','-1','none','',"''",' ']) ? '' : ' ['+unit+']'
@@ -4153,8 +4167,8 @@ pro read_hdf, 	hdf_file, data, verbose = verbose ,find_tagnames=find_tagnames, a
 				if pos_cnt ne 0 then maxvalue = att.(pos[0]) * scale + offset
 
 				pos = where(stregex(tag_names(att),'flag_meanings',/fold,/bool) eq 1, pos_cnt)
-				if pos_cnt ne 0 then flag_meanings = strreplace(strsplit(string(att.(pos[0])),/ext),['_','-'],[' !C ',''])
-
+				if pos_cnt ne 0 then flag_meanings = $
+				strreplace(strsplit(string(att.(pos[0])),/ext),['_','-','supercooled','over'],['!C','','super!Ccooled','over!C'],/fold)
 			endif else begin
 				bild = bild_raw
 				fillvalue = make_array(1,val=(sfv ? set_fillvalue[0] : -999),type=size(bild,/type))
@@ -4489,21 +4503,28 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 						apx   = (dd ? 'dm' : 'mm')
 						if is_h1d(dat) or is_jch(dat) then apx = (dd ? 'dh' : 'mh')
 						pathdat = get_product_name(dat,algo=alg,level=lev,/path)
-						dat     = get_product_name(dat,algo=alg,/lower)
-						if dat eq 'cwp' then dat = 'iwp' else $
-						if dat eq 'iwp' then dat = 'iwp' else $
-						if dat eq 'lwp' then dat = 'lwp' else $
- 						if dat eq 'cwp_allsky' then dat = 'cfc' else $
-						if dat eq 'lwp_allsky' then dat = 'lwp' else $
-						if dat eq 'iwp_allsky' then dat = 'iwp' else $
-						if dat eq 'ref' then dat = 'iwp'  else $
-						if dat eq 'cot' then dat = 'iwp'  else $
-						if dat eq 'ref_ice' then dat = 'iwp'  else $
-						if dat eq 'ref_liq' then dat = 'lwp'  else $
-						if dat eq 'cot_ice' then dat = 'iwp'  else $
-						if dat eq 'cot_liq' then dat = 'lwp'  else dat = pathdat
-						dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level3/'+pathdat+'/'+yyyy+'/'+mm+'/'+dd+'/'
-						filen = dir+strupcase(dat)+apx+yyyy+mm+dd+'*MA.nc'
+						if pathdat eq 'aux' then begin
+							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/aux/'
+							;how do I decide between(0.05 or 0.25 degree?)
+							;decision read 005 and resample if necassary
+							filen = dir+'claas2_level3_aux_data_005deg.nc'
+						endif else begin
+							dat     = get_product_name(dat,algo=alg,/lower)
+							if dat eq 'cwp' then dat = 'iwp' else $
+							if dat eq 'iwp' then dat = 'iwp' else $
+							if dat eq 'lwp' then dat = 'lwp' else $
+							if dat eq 'cwp_allsky' then dat = 'cfc' else $
+							if dat eq 'lwp_allsky' then dat = 'lwp' else $
+							if dat eq 'iwp_allsky' then dat = 'iwp' else $
+							if dat eq 'ref' then dat = 'iwp'  else $
+							if dat eq 'cot' then dat = 'iwp'  else $
+							if dat eq 'ref_ice' then dat = 'iwp'  else $
+							if dat eq 'ref_liq' then dat = 'lwp'  else $
+							if dat eq 'cot_ice' then dat = 'iwp'  else $
+							if dat eq 'cot_liq' then dat = 'lwp'  else dat = pathdat
+							dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld6/SEVIRI/repr2/level3/'+pathdat+'/'+yyyy+'/'+mm+'/'+dd+'/'
+							filen = dir+strupcase(dat)+apx+yyyy+mm+dd+'*MA.nc'
+						endelse
 					endelse
 				endif
 				if alg eq 'PATMOS' then begin
@@ -7532,38 +7553,47 @@ endif
 	if is_defined(maxvalue) then maxvalue = maxvalue[0]
 
 	if alg eq 'claas' and (is_jch(dat) or is_h1d(dat)) then begin
-		x=systime(1)
+
+		;regrid 0.05 histograms to 0.25 (same as JCH)
+		; noone needs this high resolution
+ 		x=systime(1)
+; 		if is_h1d(dat) then begin
+; 			si = size(outdata,/dim)
+; 			si[0:1]=[720,720]
+; 			stop
+; 			tic & outdata1 = (rebin(float(outdata),si) * 25.) & toc
+; 			print,'get_data::CLAAS Histos: Regridding Histo1d from 0.05 to 0.25 took [seconds]:', systime(1)-x
+; 			x=systime(1)
+; 		endif
+		; CLAAS histos dont have fillvalues and have rectangle areas
+		; we read claas aux data satza at 0 degree SSP to get the mask we need
+		; the files are preprocessed sav files to make it faster
+		; fillvalues are defined where sza[*,*,1] gt 79.5
+		if is_jch(dat) then sav_file = !SAVS_DIR + 'CLAAS_AUX/claas2_level3_field_of_view_aux_data_025deg.sav'
+		if is_h1d(dat) then sav_file = !SAVS_DIR + 'CLAAS_AUX/claas2_level3_field_of_view_aux_data_005deg.sav'
+		fov = restore_var(sav_file,found=ffov)
+		if ffov then begin
+			si = size(outdata,/dim)
+			outdata = (outdata * rebin(fov,si)) + ( rebin(fov,si) eq 0) * (no_data_value)
+			print,'get_data::CLAAS Histos: Including Fillvalues based on SatZA >80° took [seconds]:', systime(1)-x
+			x=systime(1)
+		endif
 		help,outdata
 		;bring claas to regular grid
-		si  = size(outdata,/dim)
-		if n_elements(si) eq 3 then begin
-			dum_cla = make_array(si[0]*2,si[1],si[2],type=size(outdata,/type),value=no_data_value) 
-			for i = 0,si[2]-1 do begin & $
-				pic_dum = reform(outdata[*,*,i]) & $
-				dum_cla[(si[0]/2-1):(si[0]/2-1)+si[0]-1,*,i] = pic_dum & $
-			endfor
-		endif else if n_elements(si) eq 4 then begin
-			dum_cla = make_array(si[0]*2,si[1],si[2],si[3],type=size(outdata,/type),value=no_data_value) 
-			for i = 0,si[2]-1 do begin & $
-				for j=0,si[3]-1 do begin & $
-					pic_dum = reform(outdata[*,*,i,j]) & $
-					dum_cla[(si[0]/2-1):(si[0]/2-1)+si[0]-1,*,i,j] = pic_dum & $
-				endfor & $
-			endfor
-		endif else if n_elements(si) eq 5 then begin
-			dum_cla = make_array(si[0]*2,si[1],si[2],si[3],si[4],type=size(outdata,/type),value=no_data_value)
-			for i = 0,si[2]-1 do begin & $
-				for j=0,si[3]-1 do begin & $
-					for k=0,si[4]-1 do begin & $
-						pic_dum = reform(outdata[*,*,i,j,k]) & $
-						dum_cla[(si[0]/2-1):(si[0]/2-1)+si[0]-1,*,i,j,k] = pic_dum & $
-					endfor & $
-				endfor & $
-			endfor
+		si  = size(outdata)
+		if si[0] eq 3 then begin
+			dum_cla = make_array(si[1]*2,si[2],si[3],type=size(outdata,/type),value=no_data_value) 
+			dum_cla[(si[1]/2-1):(si[1]/2-1)+si[1]-1,*,*] = outdata
+		endif else if si[0] eq 4 then begin
+			dum_cla = make_array(si[1]*2,si[2],si[3],si[4],type=size(outdata,/type),value=no_data_value) 
+			dum_cla[(si[1]/2-1):(si[1]/2-1)+si[1]-1,*,*,*] = outdata
+		endif else if si[0] eq 5 then begin
+			dum_cla = make_array(si[1]*2,si[2],si[3],si[4],si[5],type=size(outdata,/type),value=no_data_value)
+			dum_cla[(si[1]/2-1):(si[1]/2-1)+si[1]-1,*,*,*,*] = outdata
 		endif
 		outdata = dum_cla
 		help,outdata
-		print,'conversion of claas histos to global grid took [seconds]:', systime(1)-x
+		print,'get_data::CLAAS Histos: Conversion to global grid took [seconds]:', systime(1)-x
 	endif
 
 	if is_gewex and keyword_set(month) then begin
@@ -7706,7 +7736,7 @@ endif
 					if keyword_set(random_sample) then if is_tag(outdata,'random_sample') then outdata = outdata.random_sample else found = 0
 				endif else found = 0
 			endelse
-		endif else print,'Array has needs exactly 2 dimensions! Skip regridding!'
+		endif else print,'Array needs exactly 2 dimensions! Skip regridding!'
 	endif else if adv_keyword_set(no_data_value) and keyword_set(nan_fillv) then begin
 		idx = where(outdata eq no_data_value,idxcnt)
 		if idxcnt gt 0 then begin
@@ -8683,7 +8713,7 @@ function get_hct_ratio, array, sdum, limit=limit, antarctic = antarctic, arctic=
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_hct_maxtype, array, algo, grid_res = grid_res,lon=lon,lat=lat,fillvalue=fillvalue, htypes=htypes,found=found
+function get_hct_maxtype, array, algo, grid_res = grid_res, lon=lon, lat=lat, fillvalue=fillvalue, htypes=htypes, found=found
 
 	found=1
 	if size(array,/n_dim) ne 4 then begin
@@ -8692,53 +8722,58 @@ function get_hct_maxtype, array, algo, grid_res = grid_res,lon=lon,lat=lat,fillv
 		return, -1.
 	endif
 	arr    = (array > 0)
+	si_arr = size(arr,/dim)
 	o_grid = get_grid_res(arr[*,*,0,0])
 	htypes = ['cu','sc','st','ac','as','ns','ci','cs','cb']
 	if keyword_set(grid_res) then begin
 		gres = grid_res
 		si   = [360.,180.]/float(gres)
-		if o_grid eq gres[0] then begin
-			gres=0
-		endif else begin
-			if rebinable(o_grid,gres) then begin
-				;do nothing
-			endif else begin
-				if ~keyword_set(lon) and ~keyword_set(lat) then begin
-					if o_grid ne 0 then make_geo,lon,lat,grid=o_grid else begin
-						found=0
-						return,-1
-					endelse
-				endif
-			endelse
-		endelse
-	endif else si = (size(arr,/dim))[0:1]
-	max_type     = intarr(si[0],si[1])-1
-	dum_maxtype  = lonarr(si[0],si[1],n_elements(htypes))
+	endif else begin
+		gres = o_grid
+		si = (size(arr,/dim))[0:1]
+	endelse
 
-	for i =0,n_elements(htypes)-1 do begin
-		dum = get_hct_data(htypes[i],arr,algo,found=found)
-		if found then begin
-			if keyword_set(gres) then begin
-				if rebinable(o_grid,gres) then begin
-					dumsat = grid_down_globe(dum,gres,found=found,no_data_value=fillvalue,/total)
-					if found then dum = dumsat else stop ; dont know what to do else, check out
-				endif else begin
-					dumsat = sat2global(lon,lat,dum,grid=gres,found=found,no_data_value=fillvalue)
-					if found then dum = dumsat.sum else stop ; dont know what to do else, check out
-				endelse
+	dum_maxtype  = lonarr(si[0],si[1],n_elements(htypes))
+	max_count    = intarr(si[0],si[1])
+
+	if rebinable(o_grid,gres) then begin
+		;first regrid then hct faster
+		arr_regrid = o_grid gt gres ? arr : (rebin(float(arr),si[0],si[1],si_arr[2],si_arr[3]) * (gres/o_grid)^2); sum up always works because of (arr >0)
+		for i =0,n_elements(htypes)-1 do begin
+			dum = get_hct_data(htypes[i],arr_regrid,algo,found=found)
+			if found then begin
+				dum_maxtype[*,*,i] = dum
+				max_count += dum
 			endif
-			dum_maxtype[*,*,i] = dum
-		endif else begin
-			found=0
-			return,-1
-		endelse
-	endfor
-	for i =0,si[0]-1 do begin
-		for j =0,si[1]-1 do begin
-			dum_idx = where(dum_maxtype[i,j,*] eq max(dum_maxtype[i,j,*]),dum_cnt)
-			if dum_cnt ne n_elements(htypes) then max_type[i,j] = dum_idx[0]
 		endfor
-	endfor
+	endif else begin
+		if ~keyword_set(lon) and ~keyword_set(lat) then begin
+			if o_grid ne 0 then make_geo,lon,lat,grid=o_grid else begin
+				found=0
+				return,-1
+			endelse
+		endif
+		for i =0,n_elements(htypes)-1 do begin
+			dum = get_hct_data(htypes[i],arr,algo,found=found)
+			if found then begin
+				if keyword_set(gres) then begin
+					dumsat = sat2global(lon,lat,dum,grid=gres,found=found,no_data_value=fillvalue)
+					if found then begin
+						dum_maxtype[*,*,i] = dumsat.sum
+						max_count += dumsat.sum
+					endif
+				endif
+			endif else begin
+				found=0
+				return,-1
+			endelse
+		endfor
+	endelse
+
+	dum = max(dum_maxtype,dim=3,max_index)
+	max_type = fix(max_index / product(si))
+	idx = where(max_count eq 0,idxcnt)
+	if idxcnt gt 0 then max_type[idx] = -1
 
 	return, max_type
 end
@@ -8880,7 +8915,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		lon = longitude
 		lat = latitude
 	endelse
-	
+
 	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, fillv_index = fillv_index, $
 				antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt,shape_file=shape_file)
 
