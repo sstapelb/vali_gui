@@ -418,6 +418,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	vollername1 = full_varname(dat[0],/universal)
 	vollername2 = full_varname(dat[1],/universal)
+	unc1 		= stregex(vollername1,'Uncertainty',/fold,/bool)
+	unc2 		= stregex(vollername2,'Uncertainty',/fold,/bool)
 ; 	dtn      	= [appendix(dat[0]),appendix(dat[1])]; should be obsolete now, full_varname should do it.
 	dtn 		= ['','']
 
@@ -432,17 +434,17 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		'cfc'	: begin & histv = [0.01,0.,1.]   & end
 		'cma'	: begin & histv = [1.,0.,1.]     & bar_discontinous = 1 & end
 		'cph'	: begin
-				if stregex(vollername1,'Cloud Phase',/fold,/bool) then begin
+				if stregex(vollername1,'Cloud Phase',/fold,/bool) and ~unc1 then begin
 					histv = [1.,0.,2.] 
 					bar_discontinous = 1
 				endif else begin
-					histv = [0.01,0.,1.] 
+					histv = unc1 ? [1.,0.,100.] : [0.01,0.,1.] 
 				endelse
 			  end
 		'ref'	: begin & histv = [1.,0.,100.]   & end
 		'cer'	: begin & histv = [1.,0.,100.]   & end
-		'cty'	: begin & histv = [1.,0.,6.]     & bar_discontinous = 1 & end
-		'cld'	: begin & histv = [1.,0.,6.]     & bar_discontinous = 1 & end
+		'cty'	: begin & histv = [1.,0.,5.]     & bar_discontinous = 1 & end
+		'cld'	: begin & histv = [1.,0.,5.]     & bar_discontinous = 1 & end
  		else		: begin 
 					histv = adv_keyword_set(maxi) and adv_keyword_set(mini) ? $
 						[(10.^(strlen(strcompress(string(maxi,f='(i)'),/rem)))/1000.) < 10.,mini,maxi] : [1,0,100.]
@@ -1752,10 +1754,12 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 					bar_tickname[i] = strjoin(dum[0:middle],' ')+'!C'+strjoin(dum[middle+1:*],' ')
 				endif
 			endfor
-			discrete     = findgen(n_elements(flag_meanings)+1)+(adv_keyword_set(mini) ? mini[0]:minvalue)
-			n_lev        = n_elements(flag_meanings)
-			g_eq         = 0
-			l_eq         = 0
+			mini 	= minvalue[0]; this always! overwrites mini input
+			maxi 	= maxvalue[0]; this always! overwrites maxi input
+			discrete= findgen(n_elements(flag_meanings)+1) + mini[0]
+			n_lev	= n_elements(flag_meanings)
+			g_eq	= 0
+			l_eq	= 0
 		endif
 		;otherwise title and figue_title are ambigous
 		if ((keyword_set(mollweide) or keyword_set(goode) or keyword_set(hammer) or keyword_set(stereographic) or $
@@ -2391,7 +2395,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 	if ~keyword_set(no_gridding) then bring_to_same_grid_and_unit,dat,bild1,bild2,fillvalue1,fillvalue2,file1=file1,file2=file2, $
 							algo1,algo2,unit1,unit2,level=level,lon,lat,grid_res_out,verbose = verbose, $
-							flag_meanings1=flag_meanings1, flag_meanings2=flag_meanings2,no_unit=ts
+							flag_meanings1=flag_meanings1,flag_meanings2=flag_meanings2,no_unit=ts
 
 	n_lev1 =6
 	n_lev2 =6

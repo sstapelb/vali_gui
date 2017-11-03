@@ -1883,6 +1883,8 @@ END ;---------------------------------------------------------------------------
 ; stapel get_file_infos
 function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 
+	verb = keyword_set(verbose)
+
 	if keyword_set(infile) then begin
 		filen = file_basename(infile)
 		pathn = file_dirname(infile)
@@ -1912,9 +1914,12 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		self.satnode   = ''
 	endelse
 
-	; reset
+	; read the global attributes
+	theglobattr = self -> ReadGlobalAttr(Success=success,infile = infile)
+
+	; first read filenames
+	; this will all be overwritten by global attributes if found
 	datum     = stregex(strmid(filen,stregex(filen,'[0-9]{4}')),'[0-9]+',/ext)
-;	datum     = stregex(filen,'[0-9]+',/ext)
 	algoname  = stregex(filen,'calipso',/bool,/fold) ? 'CALIPSO' : (stregex(filen,'esacci',/bool,/fold) ? 'ESACCI' : '')
 	satname   = stregex(filen,'calipso',/bool,/fold) ? 'calipso' : ''
 	level     = ''
@@ -1934,8 +1939,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	version   = ''
 	satnode   = ''
 
-	verb = keyword_set(verbose)
-	; hier mal ein versuch für die L1 avhrr dateien
+	; attempt for L1 avhrr files, might be obsolete
 	if H5F_IS_HDF5(pathn+'/'+filen) and stregex(filen,'99999_satproj',/bool) then begin
 		dum = strsplit(filen,'_',/ext)
 		satname  = dum[0] eq 'metop02' ? 'metopa' : dum[0]
@@ -1948,9 +1952,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		datum    = year+month+day+orbit
 	endif
 
-	theglobattr = self -> ReadGlobalAttr(Success=success,infile = infile)
-
-	; first read from filename
+	; Collection 5 MODIS ? filename
 	if stregex(pathn+'/'+filen,'m?d08',/fold,/bool) then begin
 		algoname = 'COLL5'
 		level    = 'l3c'

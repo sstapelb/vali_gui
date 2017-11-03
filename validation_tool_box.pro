@@ -7708,13 +7708,13 @@ endif
 			endif
 		endif
 	endif else begin
-		if dat eq 'cph_extended_asc' and alg eq 'clara2' then begin
-			if min(outdata[where(outdata ne no_data_value)]) eq 1 then begin
-				idx = where(outdata eq no_data_value,idxcnt)
-				outdata -= 1
-				if idxcnt gt 0 then outdata[idx] = no_data_value
-			endif
-		endif
+; 		if strmid(dat,0,12) eq 'cph_extended' and alg eq 'clara2' then begin
+; 			if min(outdata[where(outdata ne no_data_value)]) eq 1 then begin
+; 				idx = where(outdata eq no_data_value,idxcnt)
+; 				outdata -= 1
+; 				if idxcnt gt 0 then outdata[idx] = no_data_value
+; 			endif
+; 		endif
 	endelse
 
 	if keyword_set(global_grid) then begin
@@ -8263,40 +8263,88 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			endif
 	endif else if get_product_name(dat,algo='patmos') eq 'cloud_type' and lev eq 'l3u' then begin
 			if total(alg1 eq ['clara2','esacci','esacciv3','patmos']) then begin
-; 				fillvalue1 = -999.
-				; leave out fillvalue(-999),clear(0) and N/A(1)
-				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
-				bild1 -= (alg1 eq 'clara2' ? 1:2)
-				mixed  = where(bild1 eq 3,mix_cnt)
-				ice_idx = where(bild1 gt 3,ice_cnt)
-				if ice_cnt gt 0 then bild1[ice_idx] -= 1
-				idx = where(~between(bild1,0,10),vi_count)
-				if vi_count gt 0 then bild1[idx] = fillvalue1
-				if mix_cnt gt 0 then bild1[mixed] = fillvalue1
-				minv1 = 0
-				maxv1 = 6
-				unit1 = ' '
-				longname = 'Pavolonis Cloud Types'
-				if keyword_set(flag_meanings1) then flag_meanings1 = alg1 eq 'clara2' ? [flag_meanings1[[1,2,3,5,6,7]],'overshooting'] : $
-													 flag_meanings1[[2,3,4,6,7,8,9]]
+				; compare pavolonis cloud types ; 
+				; keep only fog, liquid(water),supercooled,opaque,cirrus,overlap and re-order
+				if keyword_set(flag_meanings1) then begin
+					;combine synonym meanings with a "+", e.g. CCI calls it liquid while clara and patmos call it water, but the meaning is the same
+					;we also patmos classify Patmos "overshooting" into "opaque_ice"
+					flgms          = strlowcase(strreplace(flag_meanings1,['!C',' '],['','']))
+					search_flags   = ['fog','liquid+water','supercooled+supercooledwater','opaque+opaqueice+overshooting','cirrus','overlap+overlapping']
+					flag_meanings1 = ['fog','liquid','super!Ccooled','opaque!Cice','cirrus','overlap'] ; overwrite actual flag meanings
+					new_bild       = make_array(size(bild1,/dim),type=size(bild1,/type),value=fillvalue1)
+					minmaxv        = minmax(bild1,no_data_value=fillvalue1)
+					for i = 0, n_elements(search_flags) -1 do begin
+						dum = strsplit(search_flags[i],'+',/ext)
+						for j = 0,n_elements(dum) -1 do begin
+							flagn_idx = where(strmatch(flgms,dum[j]),flagn_idxcnt) +minmaxv[0]; e.g., clara starts with 1 not 0
+							if flagn_idxcnt gt 0 then begin
+								index = where(bild1 eq flagn_idx[0],indexcnt)
+								if indexcnt gt 0 then new_bild[index] = i
+							endif
+						endfor
+					endfor
+					bild1 = new_bild
+					minv1 = 0
+					maxv1 = n_elements(search_flags) -1 
+					unit1 = ' '
+					longname = 'Pavolonis Cloud Types'
+				endif else begin			
+					; leave out fillvalue(-999),clear(0) and N/A(1)
+					; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
+					bild1 -= (alg1 eq 'clara2' ? 1:2)
+					mixed  = where(bild1 eq 3,mix_cnt)
+					ice_idx = where(bild1 gt 3,ice_cnt)
+					if ice_cnt gt 0 then bild1[ice_idx] -= 1
+					idx = where(~between(bild1,0,10),vi_count)
+					if vi_count gt 0 then bild1[idx] = fillvalue1
+					if mix_cnt gt 0 then bild1[mixed] = fillvalue1
+					minv1 = 0
+					maxv1 = 5
+					unit1 = ' '
+					longname = 'Pavolonis Cloud Types'
+					flag_meanings1 = ['fog','liquid','super!Ccooled','opaque!Cice','cirrus','overlap'] ; this should be right
+				endelse
 			endif
 			if total(alg2 eq ['clara2','esacci','esacciv3','patmos']) then begin
-; 				fillvalue2 = -999.
-				; leave out fillvalue(-999),clear(0) and N/A(1)
-				; remove 0:clear, 1:(N/A) and 5(mixed) from outdata
-				bild2 -= (alg2 eq 'clara2' ? 1:2)
-				mixed  = where(bild2 eq 3,mix_cnt)
-				ice_idx = where(bild2 gt 3,ice_cnt)
-				if ice_cnt gt 0 then bild2[ice_idx] -= 1
-				idx = where(~between(bild2,0,10),vi_count)
-				if vi_count gt 0 then bild2[idx] = fillvalue2
-				if mix_cnt gt 0 then bild2[mixed] = fillvalue2
-				minv2 = 0
-				maxv2 = 6
-				unit2 = ' '
-				longname = 'Pavolonis Cloud Types'
-				if keyword_set(flag_meanings2) then flag_meanings2 = alg2 eq 'clara2' ? [flag_meanings2[[1,2,3,5,6,7]],'overshooting'] : $
-													 flag_meanings2[[2,3,4,6,7,8,9]]
+				; compare pavolonis cloud types ; 
+				; keep only fog, liquid(water),supercooled,opaque,cirrus,overlap and re-order
+				if keyword_set(flag_meanings2) then begin				
+					;combine synonym meanings with a "+", e.g. CCI calls it liquid while clara and patmos call it water, but the meaning is the same
+					;we also patmos classify Patmos "overshooting" into "opaque_ice"
+					flgms          = strlowcase(strreplace(flag_meanings2,['!C',' '],['','']))
+					search_flags   = ['fog','liquid+water','supercooled+supercooledwater','opaque+opaqueice+overshooting','cirrus','overlap+overlapping']
+					flag_meanings2 = ['fog','liquid','super!Ccooled','opaque!Cice','cirrus','overlap'] ; overwrite actual flag meanings
+					new_bild       = make_array(size(bild2,/dim),type=size(bild2,/type),value=fillvalue2)
+					minmaxv        = minmax(bild2,no_data_value=fillvalue2)
+					for i = 0, n_elements(search_flags) -1 do begin
+						dum = strsplit(search_flags[i],'+',/ext)
+						for j = 0,n_elements(dum) -1 do begin
+							flagn_idx = where(strmatch(flgms,dum[j]),flagn_idxcnt) +minmaxv[0]; e.g., clara starts with 1 not 0
+							if flagn_idxcnt gt 0 then begin
+								index = where(bild2 eq flagn_idx[0],indexcnt)
+								if indexcnt gt 0 then new_bild[index] = i
+							endif
+						endfor
+					endfor
+					bild2 = new_bild
+					minv2 = 0
+					maxv2 = n_elements(search_flags) -1 
+					unit2 = ' '
+					longname = 'Pavolonis Cloud Types'
+				endif else begin			
+					bild2 -= (alg2 eq 'clara2' ? 1:2)
+					mixed  = where(bild2 eq 3,mix_cnt)
+					ice_idx = where(bild2 gt 3,ice_cnt)
+					if ice_cnt gt 0 then bild2[ice_idx] -= 1
+					idx = where(~between(bild2,0,10),vi_count)
+					if vi_count gt 0 then bild2[idx] = fillvalue2
+					if mix_cnt gt 0 then bild2[mixed] = fillvalue2
+					minv2 = 0
+					maxv2 = 5 
+					unit2 = ' '
+					longname = 'Pavolonis Cloud Types'
+					flag_meanings2 = ['fog','liquid','super!Ccooled','opaque!Cice','cirrus','overlap'] ; this should be right
+				endelse
 			endif
 	endif else if total(dat eq ['cph','cph_day']) then begin
 		if total(alg1 eq ['clara2','clara','claas','isccp_old','hector']) or is_gewex1 then begin
