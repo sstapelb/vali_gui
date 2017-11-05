@@ -356,6 +356,7 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			else	:
 		endcase
 	endif
+
 	if alg eq 'esacci_old' or alg eq 'cci_old' then begin ; version 1.4
 		case dat of
 			'cer'			: dat = 'ref'
@@ -3447,7 +3448,8 @@ pro read_ncdf, 	nc_file, data, verbose = verbose, found = found	, algoname = alg
 			n_miss    = 0
 		endelse
 	endelse
-	minvalue = min((n_miss gt 0 ? bild[where(bild ne fillvalue[0])] : bild),max=maxvalue)
+
+	minvalue = min((n_miss gt 0 ? bild[where(bild ne fillvalue[0])>0] : bild),max=maxvalue)
 
 	longname     = string(get_ncdf_data_by_name(ff,data,attr='long_name',verbose=verbose,found=found_attr))
 	if not found_attr then longname = 'long_name unknown'

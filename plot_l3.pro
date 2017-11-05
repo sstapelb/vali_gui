@@ -1861,13 +1861,13 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if void_index[0] ne -1 then begin
 			lon[void_index] = !values.f_nan
 			lat[void_index] = !values.f_nan
-			if get_product_name(dat,algo='pmx') eq 'cloud_mask' then begin
+; 			if get_product_name(dat,algo='pmx') eq 'cloud_mask' then begin
 				idx = where(bild eq 0,idxcnt)
 				if idxcnt gt 0 then begin
 					lon[idx] = !values.f_nan
 					lat[idx] = !values.f_nan
 				endif
-			endif
+; 			endif
 			void_index = -1
 		endif
 		obj_out -> project, image = bild, lon = lon, lat = lat,/no_erase, no_color_bar=1, void_index=void_index,n_lev=n_lev, $
@@ -1935,9 +1935,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
 			if keyword_set(arctic) then dumlimit = [ 60.0,-180, 90.0,180]
 			if n_elements(dumlimit) eq 4 then begin
-				dumidx=where(between(lon[nv_idx],dumlimit[1],dumlimit[3]) and between(lat[nv_idx],dumlimit[0],dumlimit[2]))
+				dumidx=where(between(lon[nv_idx],dumlimit[1],dumlimit[3]) and between(lat[nv_idx],dumlimit[0],dumlimit[2]),dumcnt)
 				print,'-----------'+dat+lim+'--------------'
-				print,'Global Mean '+algon+'  :',string(gmean(bild[nv_idx[dumidx]],lat[nv_idx[dumidx]]),f='(f12.4)')
+				print,'Global Mean '+algon+'  :',string(dumcnt eq 0 ? fillvalue[0] : gmean(bild[nv_idx[dumidx]],lat[nv_idx[dumidx]]),f='(f12.4)')
 				print,'------------------------------------'
 			endif else begin
 				print,'-----------'+dat+lim+'--------------'
