@@ -86,7 +86,7 @@ FUNCTION cgCOLOR24, color
     ON_ERROR, 2
     
     s = Size(color)
-    
+
     IF s[0] EQ 1 THEN BEGIN
        IF s[1] NE 3 THEN Message, 'Input color parameter must be a 3-element vector.'
        RETURN, color[0] + (color[1] * 2L^8) + (color[2] * 2L^16)

@@ -1099,7 +1099,7 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 	filled = BYTARR(x_dim,y_dim)
 	!quiet=1 ; suppress "No points in polygon" warnings by polyfillv
 
-	FOR x=0,num_ent-1 DO BEGIN
+	FOR x=0l,num_ent-1 DO BEGIN
 		entity  = myshape->GetEntity(x)
 		if 	entity.shape_type EQ 5 OR $    		; Polygon.
 			entity.shape_type EQ 15 OR $   		; PolygonZ (ignoring Z)
@@ -1108,7 +1108,7 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 			IF Ptr_Valid(entity.parts) THEN BEGIN
 					cuts = [*entity.parts, entity.n_vertices]
 					if grd eq 0 then o_myt_orb = obj_new('my_timer',entity.n_parts)
-					FOR j=0, entity.n_parts-1 DO BEGIN
+					FOR j=0l, entity.n_parts-1 DO BEGIN
 						lon = reform((*entity.vertices)[0, cuts[j]:cuts[j+1]-1])
 						lat = reform((*entity.vertices)[1, cuts[j]:cuts[j+1]-1])
 						if grd eq 0 then begin
@@ -1481,9 +1481,9 @@ pro set_coverage, cov
 end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
-			complement = complement, antarctic = antarctic, arctic = arctic, $ 
-			shape_file = shape_file, index = index, count= count, found = found,$
-			l3u_index=l3u_index, fillv_index = fillv_index
+						antarctic = antarctic, arctic = arctic, shape_file = shape_file, opposite = opposite, $
+						l3u_index = l3u_index, fillv_index = fillv_index, found = found, $
+						index = index, count = count, complement = complement, ncomplement = ncomplement ; where indizes and counts
 
 	found = 1
 	count = 0
@@ -1499,6 +1499,11 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	fvi_cnt = n_elements(fillv_index)
 	if fvi_cnt eq 1 then begin
 		if fillv_index[0] eq -1 then fvi_cnt = 0
+	endif
+
+	l3ui_cnt = n_elements(l3u_index)
+	if l3ui_cnt eq 1 then begin
+		if l3u_index[0] eq -1 then l3ui_cnt = 0
 	endif
 
 	if keyword_set(coverage) then begin
@@ -1571,14 +1576,14 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 			found = 0.
 			return,-1
 		endelse
-	endif 
+	endif
 
 	if keyword_set(shape_file) then begin
 		if get_grid_res(lon) then begin
 			result = shape2grid(shape_file,grid=get_grid_res(lon))
 		endif else begin
 			ok = dialog_message('get_coverage:: Try to read a shape_file on a non regular grid! On non-regular grids nearest neighbor '+$
-								'will be applied. Depending on the size of shape_file, this might take a while.',/cancel)
+								'will be applied. Depending on the size of the shape_file, this might take a while.',/cancel)
 			if ok eq 'Cancel' then begin
 				found=0.
 				return,-1
@@ -1599,20 +1604,28 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endelse
 
 	if keyword_set(land) then begin
-		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+		if get_grid_res(lon) and ~keyword_set(mnts) then begin
+			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon))
+		endif else begin
+			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+		endelse
 		result = keyword_set(mnts) ? (result eq 1) and (ddem gt 1000.) : (result eq 1) and (ddem ne 0)
 	endif else if keyword_set(sea) then begin
-		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+		if get_grid_res(lon) and ~keyword_set(mnts) then begin
+			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon))
+		endif else begin
+			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+		endelse
 		result = (result eq 1) and (ddem eq 0)
 	endif
 
 	if fvi_cnt gt 0 then result[fillv_index] = 0
-	
-	if keyword_set(complement) then result = (result eq 0)
 
-	if keyword_set(l3u_index) then result = result[l3u_index]
+	if keyword_set(opposite) then result = (result eq 0)
 
-	index = where(result eq 1,count)
+	if l3ui_cnt gt 0 then result = result[l3u_index]
+
+	index = where(result eq 1,count,complement=complement,ncomplement=ncomplement)
 
 	return, result
 
@@ -2033,7 +2046,7 @@ function pbias, data1,data2,latitude
 		print,'% PBIAS: At least one input Variable is undefined: data1, data2 [ optional:, latitude]'
 		return,-1
 	endif
-	
+
 	if n_params() eq 3 then begin
 		weight   = cosd(float(latitude))
 		sum_diff = total((data1 - data2) * weight )
@@ -2575,7 +2588,8 @@ function sat_name,algoname,sat,only_sat=only_sat,year=year,month=month,version=v
 	; e.g. convert noaa18 -> Cloud_cci-NOAA-18
 	satn  = keyword_set(sat)       ? strlowcase(sat)   : ''
 	lev   = keyword_set(level)     ? strlowcase(level) : ''
-	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
+; 	algo  = keyword_set(algoname)  ? algo2ref(algoname,sat=satn) : ''
+	algo  = algo2ref(algoname,sat=satn)
 
 	if total(satn eq ['aatme','aatsrmeris','merisaatsr','meris-aatsr']) then satn = 'MERIS+AATSR'
 	if total(satn eq ['atsr','atsr2','ers','ers2']) then satn = 'ATSR2'
@@ -2720,6 +2734,11 @@ function set_limits, longitude, latitude, four_elements = four_elements, bounds 
 
 	;seperate between neg. and positive longitudes
 	idx_total = where(finite(longitude),anz_total)
+	if anz_total eq 0 then begin
+		p0lon = 0.
+		limit = four_elements eq 1 ? [-90,-180,90,180] : [0,-180,90,0,0,180,-90,0]
+		return, limit
+	endif
 	idx_neg   = where(longitude lt 0,anz_neg)
 	idx_pos   = where(longitude ge 0,anz_pos)
 	rat_neg   = float(anz_neg)/float(anz_total)
@@ -8025,7 +8044,7 @@ function get_all_avail_data, year, month, day, orbit = orbit, data = data, level
 			if found then begin
 				make_geo,lon,lat,grid=get_grid_res(dum[*,*,0,0,0,0]),found=found, algo=alle[i]
 				area = 	get_coverage( lon, lat, coverage = coverage,limit = limit, found = found, $
-					antarctic=antarctic,arctic=arctic,land=land,sea=sea,index=ndidx,count=ndidx_cnt,/complement)
+					antarctic=antarctic,arctic=arctic,land=land,sea=sea,index=ndidx,count=ndidx_cnt,/opposite)
 				if ndidx_cnt gt 0 then dum[ndidx] = ndv
 				algoname = sat_name(alle[i],strmid(alle[i],0,3) eq 'gac' and (strlowcase(satellite) eq 'aatme' or $
 					   strlowcase(satellite) eq 'aatsr')?'noaa17':satellite,year=year,month=month,level=level)
@@ -8091,7 +8110,8 @@ pro read_all_avail_struc, struc, tagname, lat = lat, lon = lon, limit = limit, l
 	arr = struc.(num).data
 	if get_grid_res(lat) ne get_grid_res(arr) then make_geo,lon,lat,grid=get_grid_res(arr)
 	if ls then begin
-		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_dem(grid=get_grid_res(arr))
+; 		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_dem(grid=get_grid_res(arr))
+		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_coverage(lon, lat, /land)
 	endif
 	if keyword_set(limit) then begin
 		qw  = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),qw_cnt)
@@ -8860,7 +8880,7 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 	endif
 
 	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage,shape_file=shape_file, $
-			antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt, fillv_index=fillv_index)
+			antarctic = antarctic, arctic = arctic, /opposite, index = lidx, count = lidx_cnt, fillv_index=fillv_index)
 
 	if lidx_cnt gt 0 then begin & $
 		for i = 0,si[2] -1 do begin & $
@@ -8967,7 +8987,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 	endelse
 
 	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, fillv_index = fillv_index, $
-				antarctic = antarctic, arctic = arctic, /complement, index = lidx, count = lidx_cnt,shape_file=shape_file)
+				antarctic = antarctic, arctic = arctic, /opposite, index = lidx, count = lidx_cnt,shape_file=shape_file)
 
 	bild = fltarr(si[2:3])
 	for i = 0,si[2] -1 do begin & $
@@ -9718,8 +9738,9 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 	grid = max([gridc,gridr])
 	help,grid	
-	dem = get_dem(grid=grid)
+; 	dem = get_dem(grid=grid)
 	make_geo,lon,lat,grid=grid
+	dem = get_coverage(lon, lat, /land)
 
 	vollername = full_varname(dat)
 
@@ -10281,7 +10302,8 @@ pro create_time_series,data,algon,coverage,period=period
 		return
 	endif
 	make_geo,lon,lat,grid=grid,algo=cli
-	dem = get_dem(lon,lat,grid=grid)
+; 	dem = get_dem(lon,lat,grid=grid)
+	dem = get_coverage(lon, lat, /land)
 
 	case strmid(dat,0,3) of
 		'cot'	: begin & histv = [0.1,0.,100.]    & vollername = 'Cloud Optical Thickness' & end

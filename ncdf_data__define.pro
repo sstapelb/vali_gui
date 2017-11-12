@@ -3242,7 +3242,7 @@ function NCDF_DATA::make_VARList, data_only = data_only
 		endfor
 		thelist = thenewList
 	endif
-	
+
 	theList=[theList,'---Additional-Variables---','blue_marble','usgs_lus','usgs_dem']
 
 	if self.level eq 'l3u' then begin
@@ -3570,6 +3570,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	self.day_idx   = (dd_idx>0)
 	self.level_idx = (lidx>0)
 	self.compare_algo1 = self.algoname
+
 	IF count GT 0 THEN BEGIN
 		Widget_Control, self.variablelistID, SET_COMBOBOX_SELECT=index[0]
 		Widget_Control, self.ctlistID, SET_COMBOBOX_SELECT=0
@@ -3698,6 +3699,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 		Widget_Control, self.pchov     , Set_Button=0
 		;--
 	ENDIF
+
 	; Get it going...
 	Widget_Control, tlb2, /REALIZE
 	;stapel Set the draw widget as the current drawable area.
@@ -4592,9 +4594,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
-				plot_taylor_diagram, year, month, day, file1=file, sat=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
+				plot_taylor_diagram, year, month, day, file1=file, sat1=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
 				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,$
-				time_series=pcmult,notitle=notitle
+				time_series=pcmult,notitle=notitle,sat2=satn
 			endif
 			if pcms and pcmult then begin
  				if verbose then print,'Currently Unset'
@@ -4858,7 +4860,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
-				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat=sat,save_as=save_as		, $
+				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat1=sat,sat2=satn,save_as=save_as, $
 				win_nr=win_nr,reference=algo2,verbose=verbose,varname=varname,mini=mini,maxi=maxi,limit=limit	, $
 				unit=unit,other=oth,antarctic=ant,arctic=arc,algo = algo,level=level,time_series=pcmult,notitle=notitle
 			endif else if pcmat then begin

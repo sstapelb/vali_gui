@@ -173,15 +173,15 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 
 end
 ;------------------------------------------------------------------------------------------
-pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,sat=sat,algo=algo,save_as=save_as,win_nr=win_nr,$
+pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,sat1=sat1,algo=algo,save_as=save_as,win_nr=win_nr,$
 			 reference=reference, verbose = verbose,level=level,mini=mini,maxi=maxi,limit=limit,unit=unit,$
-			 other=other,antarctic=antarctic,arctic=arctic,time_series=time_series,notitle=notitle
+			 other=other,antarctic=antarctic,arctic=arctic,time_series=time_series,notitle=notitle,sat2=sat2
 
 	datum = keyword_set(time_series) ? 'time_series' : string(year,f='(i4.4)')+string(month,f='(i2.2)')+string(day,f='(i2.2)')
 	ts    = keyword_set(time_series)
 
-	algon1 = sat_name(algo,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
-	algon2 = sat_name(reference,sat,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
+	algon1 = sat_name(algo,sat1,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
+	algon2 = sat_name(reference,sat2,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
 
 	if keyword_set(save_as) then begin
 		if strcompress(save_as,/rem) eq '1' then begin
@@ -203,7 +203,7 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 		stdd_arr_gac = fltarr(ncov) -999.
 		max_bild_gac = fltarr(ncov) -999.
 		for ii = 0, ncov-1 do begin
-			d = get_available_time_series( 	algo, varname, sat, coverage = coverage[ii], reference = reference, unit = unit, $
+			d = get_available_time_series( 	algo, varname, sat1, coverage = coverage[ii], reference = reference, unit = unit, $
 							period = period, sav_file = sav_file, found = found, trend = trend, tr_corr = tr_corr, $
 							anomalies = anomalies, no_trend_found = no_trend_found)
 			if not found then begin
@@ -220,20 +220,21 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 			datum            = d.actual_date
 		endfor
 	endif else begin
-		bild_cci  = get_data(year,month,day,file=file1,sat = sat,algo=algo,data=varname,level=level,no_data_value=fillv_b_cci,$
+		bild_cci  = get_data(year,month,day,file=file1,sat = sat1,algo=algo,data=varname,level=level,no_data_value=fillv_b_cci,$
 			   found=found,unit=unit,verbose= verbose,finfo=cci_info,dim3=dim3,/print_filename)
 		if ~found then begin
 			print,'plot_taylor_diagram: No data found!'
 			return
 		endif
 
-		bild_gac = get_data(year,month,day,file=file2,sat = sat,data=varname,algo=reference,level=level,no_data_value=fillv_b_gac,$
+		bild_gac = get_data(year,month,day,file=file2,sat = sat2,data=varname,algo=reference,level=level,no_data_value=fillv_b_gac,$
 			   unit=unit2,found=found,verbose= verbose,finfo=ref_info,print_filename=2)
 		if ~found then begin
 			print,'plot_taylor_diagram: No reference data found!'
 			return
 		endif
-		if is_the_same(algo,reference,sat=sat) then begin
+;  		if is_the_same(algo,reference,sat=sat) then begin
+ 		if strmatch(algon1,algon2) then begin
 			if ref_info.mtime gt cci_info.mtime then apx = ' (new)'
 			if cci_info.mtime gt ref_info.mtime then apx = ' (old)'
 		endif else new = -1
@@ -771,7 +772,8 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	ls = ( keyword_set(land) or keyword_set(sea)) ? 1:0
 	if ls then begin
-		dem = get_dem(lon,lat,grid_res=get_grid_res(bild_cci))
+; 		dem = get_dem(lon,lat,grid_res=get_grid_res(bild_cci))
+		dem = get_coverage(lon, lat, /land)
 		if keyword_set(sea)  then begin
 			void_index1 = where(bild_cci eq fillvalue1 or dem ne 0)
 			void_index2 = where(bild_gac eq fillvalue2 or dem ne 0)
@@ -799,7 +801,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		de  = get_coverage(lon,lat,shape_file=shape_file)
 		idx = where(de eq 0,idxcnt)
 		if idxcnt gt 0 then begin
-			bild_cci[idx] = fillvalue1 
+			bild_cci[idx] = fillvalue1
 			bild_gac[idx] = fillvalue2
 			lon[idx] = !values.f_nan
 			lat[idx] = !values.f_nan
@@ -1492,12 +1494,13 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,no_data_value=fillvalue,level=level,dim3=dim3, $
 			minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found_ls,verbose=verbose)
 		endif
- 		if found_ls eq 0 then dem = get_dem(lon,lat,res=0.01,grid_res=get_grid_res(bild[*,*,0,0,0]),found=found_dem)
+ 		if found_ls eq 0 then dem = get_coverage(lon, lat, /land)
 	endif
+
 	if (~found_geo and ~histo2d) then begin
 		if ndims gt 3 then return
 		no_data_idx = 	ls and found_dem ? ( keyword_set(land) ? where(dem eq 0 and bild eq fillvalue[0]) : $
-				where(dem ne 0 and bild eq fillvalue[0]) ) : where(bild eq fillvalue[0])
+						where(dem ne 0 and bild eq fillvalue[0]) ) : where(bild eq fillvalue[0])
 		start_save, save_dum, thick = thick
 			view2d,bild,no_data_idx=no_data_idx,n_lev=n_lev,maxi=adv_keyword_set(maxi) ? maxi:max(bild),mini=adv_keyword_set(mini)?mini:min(bild[where(bild ne fillvalue[0])]), $
 			title = keyword_set(notitle) ? '' : keyword_set(save_as) ? '' : algon+' '+longname, $
@@ -1727,7 +1730,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
 			if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0]) and bild ne 0]) lt mini[0] then l_eq = 1
 		endif else begin
-			; true_color_images only land / sea 
+			; true_color_images only land / sea
 			if t_c_i then begin
 				if ls then begin
 					if keyword_set(land) then void_index = where(dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
@@ -1816,7 +1819,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			lat[idx] = !values.f_nan
 		endif
 
-		if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
+		if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat,/four_elements,bounds=2,verbose=verbose)
 
 		rotate_globe = 0
 	endif
@@ -2431,7 +2434,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if stregex(dat,'cmask',/bool,/fold) then bin = 1
 	if is_jch(dat) then bin = 1
 
-	if ls then dem = get_dem(lon,lat,grid_res=get_grid_res(lon))
+; 	if ls then dem = get_dem(lon,lat,grid_res=get_grid_res(lon))
+	if ls then dem = get_coverage(lon, lat, /land)
+
 	lat_res = 1. > get_grid_res(lon)
 
 	good_idx = where(lon ne -999 and lat ne -999, gidx_cnt)
@@ -5149,7 +5154,8 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	endif
 
 	if keyword_set(land) or keyword_set(sea) then begin
-		dem = get_dem(lon,lat,grid=get_grid_res(bild))
+; 		dem = get_dem(lon,lat,grid=get_grid_res(bild))
+		dem = get_coverage(lon, lat, /land)
 		if keyword_set(sea) then lat[where(dem ne 0)] = fillvalue
 		if keyword_set(land) then lat[where(dem eq 0)] = fillvalue
 	endif
