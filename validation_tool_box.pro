@@ -2869,7 +2869,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if keyword_set(aitoff) then begin & aitoff = 1 & no_color_bar = 0 & ortho = 0 & limit = other_limit & end
 		if keyword_set(mollweide) then begin & mollweide = 1 & no_color_bar = 0 & ortho = 0  & limit = other_limit & end
 		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & bar_horizontal = 0 & limit = [-90,((p0lon mod 360) -90),90,((p0lon mod 360) +90)] & end
-		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end 
+		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end
 		if keyword_set(msg) then begin
 			p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 			p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360

@@ -5095,7 +5095,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if opl eq 0 then begin
 					if obj_valid(obj_out) then obj_destroy,obj_out
 					if obj_valid(self.map_objout) then obj_destroy,self.map_objout
-; 					device, decompose = self.decompose
+					device, decompose = self.decompose
 				endif
 				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi=[0,2,1]
 
@@ -5107,13 +5107,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],addtext = addtext[0],$
 				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
 				no_label=no_label,no_box=no_box,version=version,ts_extras=ts_extras,obj_out=obj_out
-
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
 					; cleanup wird hier nicht aufgerufen also decompose=1 sonst gibts verrückte farben
 ; 					device, decompose = self.decompose
 				endelse
-
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
 				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endelse
