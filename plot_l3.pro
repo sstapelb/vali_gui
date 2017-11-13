@@ -1849,16 +1849,14 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				if win_nr ne -1 then m -> zoom, win = win_nr,/print_new else m -> zoom,/print_new,ztext=ztext, $
 				figure_title = figure_title,void_index=void_index,magnify=magnify
 			endif
+		if opl eq 0 then end_save, save_dum
 		if arg_present(obj_out) then begin
 			obj_out = m
 			; within map_image, decompose is set to 0 for non true color images, the cleanup resets this then,
 			; since we dont destroy the map object we have to reset it manually to avoid crazy colors
 			if ~rotate_globe then device, decompose = decomp
 		endif else begin
-			if ~rotate_globe then begin
-				obj_destroy, m
-				if opl eq 0 then end_save, save_dum
-			endif
+			if ~rotate_globe then obj_destroy, m
 		endelse
 	endif else begin
 		if void_index[0] ne -1 then begin
