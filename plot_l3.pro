@@ -117,7 +117,7 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 		if keyword_set(save_as) then start_save, save_d, thick = thick, size=[40,40] else thick = 2
 			view2d,bild1-bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
 			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
-			title='Diff. '+name1+' - '+name2, mini = mini, maxi = maxi, color=~keyword_set(nobar), $
+			title=keyword_set(notitle)? '' : 'Diff. '+name1+' - '+name2, mini = mini, maxi = maxi, color=~keyword_set(nobar), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
@@ -134,8 +134,8 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 	endif else begin
 		if keyword_set(save_as) then start_save, save_1, thick = thick, size=[40,40] else thick = 2
 		view2d,bild1,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
-			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name1+apx, $
-			mini = mini, maxi = maxi, color=~keyword_set(nobar),$
+			xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
+			title=keyword_set(notitle) ? '':name1+apx, mini = mini, maxi = maxi, color=~keyword_set(nobar),$
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 			xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
 			; plot cloud type boxes
@@ -152,8 +152,8 @@ pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, b
 		if keyword_set(bild2) then begin
 			if keyword_set(save_as) then start_save, save_2, thick = thick, size=[40,40] else thick = 2
 				view2d,bild2,xtickname=xtickname,ytickname=ytickname,xticks=n_elements(xtickname)-1,yticks=n_elements(ytickname)-1, $
-				xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', title=name2+apx, $
-				mini = mini, maxi = maxi, color=~keyword_set(nobar),$
+				xtitle=apx+'Cloud Optical Thickness',ytitle=apx+'Cloud Top Pressure',bar_title= 'Relative Occurrence [%]', $
+				title=keyword_set(notitle) ? '' : name2+apx, mini = mini, maxi = maxi, color=~keyword_set(nobar),$
 ; 				charsize = (keyword_set(save_as) ? 3. : 1.5),charthick = (keyword_set(save_as) ? 2. : 1), $
 				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
 				xmargin = [8,9], ymargin = [keyword_set(save_as)?6:4,5], bar_format=('(f5.1)'),col_tab=col_tab,brewer=brewer
@@ -810,13 +810,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		rotate_globe = 0
 	endif
 
-	if keyword_set(position) and keyword_set(nobar) then begin
-		if nobar eq 99 and ~keyword_set(difference) and ~keyword_set(zonal_only) then begin
-			position1 = [0.,0.5,0.5,1.]
-			position  = [0.5,0.5,1.,1.]
-		endif
-	endif
-
 	if ~keyword_set(difference) and ~keyword_set(zonal_only) then begin
 		figure_title1 = keyword_set(notitle) ? '' : datum + ' ' + vollername1
 		start_save, save_as1, thick = thick, size = [32, 20]
@@ -830,7 +823,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 						ortho = ortho,bar_horizontal = bar_horizontal, grid=grid,londel=londel,latdel=latdel,lambert=lambert		, $
 						noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar,g_eq=g_eq,l_eq=l_eq	, $
 						p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine,discrete=discrete1	, $
-						lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,position = position1, $
+						lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,position = position, $
 						mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson		, $
 						stereographic=stereographic,label=label	,no_continents=no_continents,no_grid=no_grid, $
 						bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow,magnify=magnify		, $
@@ -1675,7 +1668,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			bild = get_2d_rel_hist_from_jch(bild, algo, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
 							lon = lon, lat = lat, fillvalue = fillvalue, found = found, shape_file = shape_file)
 			if not found then return
-			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum, appendix = apx,nobar=nobar
+			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum, appendix = apx,nobar=nobar, notitle = notitle
 			return
 		endif else begin
 			if is_jch(dat,/ratio) then begin
@@ -2265,7 +2258,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			bild2 = get_2d_rel_hist_from_jch(bild2, algo2, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
 							lon = lon, lat = lat, fillvalue = fillvalue2, found = found2)
 			plot_2d_rel_hist, bild1, f1str+satn1, bild2=bild2, name2=f2str+satn2, col_tab=col_tab, brewer=brewer, $
-					mini=mini, maxi=maxi, save_as=save_as, difference = diff_only, appendix = apx,nobar=nobar
+					mini=mini, maxi=maxi, save_as=save_as, difference = diff_only, appendix = apx,nobar=nobar, notitle = notitle
 			bild=(bild1-bild2)
 			idx = where(bild1 eq fillvalue1 or bild eq fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild[idx]=fillvalue2
@@ -2513,7 +2506,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	start_save, save_as, thick = thick, size = [40.,24. ];,size = 'A4',/landscape;[32,16];
 
 	if keyword_set(box_only) then begin
-		boxplot,year,month,day,data=dat,sat=sat1,limit=limit,mini = mini, maxi = maxi		, $
+		boxplot,year,month,day,data=dat,sat=sat1,limit=limit,mini = mini, maxi = maxi	, $
 			coverage = coverage,algo=algo1,reference=algo2,error=error,win_nr=win_nr	, $
 			datum = datum1,filename1=file1,filename2=file2,level=level
 		end_save, save_as
@@ -2758,13 +2751,6 @@ bin= ( bin/100.) > 0.01
 		endelse
 	endif
 
-	if keyword_set(map_position) and keyword_set(nobar) then begin
-		if nobar eq 99 and ~keyword_set(diff_only) and ~keyword_set(hist_only) then begin
-			map_position1 = [0.,0.5,1.,1.]
-			map_position  = [0.,0.,1.,0.5]
-		endif
-	endif
-
 	if ~keyword_set(hist_only) then begin
 		if keyword_set(maps_only) then begin
 			figure_title = keyword_set(notitle) ? '' : f1str+satn1+' '+datum1
@@ -2789,7 +2775,7 @@ bin= ( bin/100.) > 0.01
 				format=bar_format,  limit = limit,lambert=lambert, bar_tickname=bar_tickname1,discrete =discrete1, $
 				ortho = ortho,bar_horizontal = bar_horizontal, grid=grid,londel=londel,latdel=latdel, g_eq=g_eq, l_eq=l_eq, $
 				noborder=noborder, no_draw_border=no_draw_border, no_color_bar=no_color_bar, flip_colours = flip_colours,$
-				p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine,position = map_position1, $
+				p0lon= p0lon, p0lat = p0lat, iso = iso , goodeshomolosine = goodeshomolosine,position = map_position, $
 				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_continents=no_continents,no_grid=no_grid, $
 				mollweide=mollweide,hammer=hammer,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,$
 				stereographic=stereographic,label=label, $
@@ -4206,8 +4192,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		endif else begin
 			if win_nr ne -1 then win, win_nr,title=data
 		endelse
-		plot_2d_rel_hist, cci, algon1, bild2=gac, name2=algon2, col_tab=col_tab, brewer=brewer, $
-				mini=mini, maxi=maxi, save_as=save_dum, difference = difference, appendix = apx,nobar=nobar
+		plot_2d_rel_hist, cci, algon1, bild2=gac, name2=algon2, col_tab=col_tab, brewer=brewer, notitle = notitle, $
+				mini=mini, maxi=maxi, save_as=save_dum, difference = difference, appendix = apx, nobar=nobar
 		return
 	endif else begin
 		if is_jch(varname,/rat) then begin

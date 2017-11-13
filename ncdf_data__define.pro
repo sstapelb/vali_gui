@@ -3908,9 +3908,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	;Full Screen overwrites bar and pmulti settings
 	if Widget_Info(self.fscrID, /BUTTON_SET) then begin
 		nobar  = 99 ; sets position and no_color_bar in set_proj (validation_tool_box.pro)
-		pmulti = '0,1,1'
 	endif else begin
-		pmulti=strjoin(['0',strsplit(self.pmulti,'x',/ext)],',')
 		case strlowcase(self.handlebar) of
 			'color bar'	: nobar = 0
 			'no bar'	: nobar = 1
@@ -3921,8 +3919,9 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 			else		: nobar = 0
 		endcase
 	endelse
-	ctab = strcompress((strsplit(self.ctab,/ext,':'))[0],/rem)
-	inv  = Widget_Info(self.invID, /BUTTON_SET)
+	pmulti = strjoin(['0',strsplit(self.pmulti,'x',/ext)],',')
+	ctab   = strcompress((strsplit(self.ctab,/ext,':'))[0],/rem)
+	inv    = Widget_Info(self.invID, /BUTTON_SET)
 	if ~is_number(ctab) then begin
 		case ctab of 
 			'Default(Rainbow)'	: oth = 'rainbow'
