@@ -1482,9 +1482,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	ls = ( keyword_set(land) or keyword_set(sea) and ndims ne 1)
 	if ls then begin
 		; first check if file includes an land_sea flag, otherwise try to create it
-; 		if not get_grid_res(bild[*,*,0,0,0]) and level eq 'l2' then begin
-; 			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,level=level,found=found_dem,verbose=verbose)
-; 		endif
+		if not get_grid_res(bild[*,*,0,0,0]) and level eq 'l2' then begin
+			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,level=level,found=found_dem,verbose=verbose)
+		endif
 		if found_dem eq 0 then dem = get_coverage(lon, lat, /land,found = found_dem)
 	endif
 
@@ -1804,7 +1804,11 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	if use_shape_file then begin
 		print,'Using shape_file, ',shape_file
 		de  = get_coverage(lon,lat,shape_file=shape_file)
-		idx = where(de eq 0,idxcnt)
+		idx = where(de eq 0,idxcnt,ncomplement=validpix)
+		if validpix eq 0 then begin
+			ok=dialog_message('plot_l2: Image not defined at area of choosen Shape File ! Cannot plot anything.')
+			return
+		endif
 		if idxcnt gt 0 then begin
 			lon[idx] = !values.f_nan
 			lat[idx] = !values.f_nan
