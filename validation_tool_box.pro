@@ -1040,15 +1040,25 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 	grd = adv_keyword_set(grid) ? float(grid) : 0.05
 
 	if grd le 0 or ~file_test(shape_file,/read) then begin
-		if grd eq 0. then begin
+		if grd le 0. then begin
 			;check if lon/lat are available
 			if keyword_set(longitude) and keyword_set(latitude) then begin
 				lon_in = longitude
 				lat_in = latitude
 				si = size(lon_in,/dim)
 				if n_elements(si) eq 2 then begin
-					x_dim = si[0]
-					y_dim = si[1]
+					print,'shape2grid: Reading shape_file onto a non-regular grid! Will now set up a fake regular 0.05° Grid and do bilinear interpolation!'
+					grd   = 1/20.
+					x_dim = 360./grd
+					y_dim = 180./grd
+					;check if lon_in is from-180-+180°
+					ilondum	= WHERE(lon_in GT 180.,icnt)
+					if icnt gt 0 then begin
+						print,'shape2grid: Bring longitude to [-180,180]'
+						lon_in[ilondum]= 360.-lon_in[ilondum]
+					endif
+					index_lon = fix((lon_in + 180.)*(1./grd))
+					index_lat = fix((lat_in +  90.)*(1./grd))
 				endif else begin
 					found = 0
 					return,-1
@@ -1057,45 +1067,21 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 				found = 0
 				return,-1
 			endelse
-		endif
+		endif else begin
+			print,'shape2grid: Shape_file does not exist or is not readable!', shape_file
+			found = 0
+			return,-1
+		endelse
 	endif else begin
 		x_dim = 360./grd
 		y_dim = 180./grd
 	endelse
-
+	
 	;use adm0 file for this, if available
 	sfile = strreplace(shape_file,'_adm1.shp','_adm0.shp')
 
 	myshape = OBJ_NEW('IDLffShape', file_test(sfile) ? sfile : shape_file)
 	myshape -> GetProperty, N_ENTITIES=num_ent
-
-	if grd eq 0 then begin
-		;check_bounds
-		min_lat =  90.
-		max_lat = -90.
-		min_lon = 180.
-		max_lon =-180.
-		FOR x=0,num_ent-1 DO BEGIN
-			entity  = myshape->GetEntity(x)
-			if 	entity.shape_type EQ 5 OR $    		; Polygon.
-				entity.shape_type EQ 15 OR $   		; PolygonZ (ignoring Z)
-				entity.shape_type EQ 25 then begin 	; PolygonM (ignoring M)
-				IF Ptr_Valid(entity.parts) then begin
-					min_lon = min([min_lon,entity.bounds[0]])
-					max_lon = max([max_lon,entity.bounds[4]])
-					min_lat = min([min_lat,entity.bounds[1]])
-					max_lat = max([max_lat,entity.bounds[5]])
-				endif
-			endif
-		endfor
-; 		print,min_lon,max_lon,min_lat,max_lat
-		idx = where(between(lon_in,min_lon,max_lon) and between(lat_in,min_lat,max_lat),idx_cnt) 
-		if idx_cnt lt 1 then begin
-			found = 0
-			return,-1
-		endif
-		triangulate, lon_in[idx], lat_in[idx], c
-	endif
 
 	filled = BYTARR(x_dim,y_dim)
 	!quiet=1 ; suppress "No points in polygon" warnings by polyfillv
@@ -1107,43 +1093,29 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 			entity.shape_type EQ 25 then begin 	; PolygonM (ignoring M)
 
 			IF Ptr_Valid(entity.parts) THEN BEGIN
-					cuts = [*entity.parts, entity.n_vertices]
-					if grd eq 0 then o_myt_orb = obj_new('my_timer',entity.n_parts)
-					FOR j=0l, entity.n_parts-1 DO BEGIN
-						lon = reform((*entity.vertices)[0, cuts[j]:cuts[j+1]-1])
-						lat = reform((*entity.vertices)[1, cuts[j]:cuts[j+1]-1])
-						if grd eq 0 then begin
-							index = GRIDDATA(lon_in[idx],lat_in[idx], LINDGEN(idx_cnt), XOUT=lon, YOUT=lat, /NEAREST_N,TRIANGLES = c)
-							dist  = great_circle(lon_in[idx[index]],lat_in[idx[index]],lon,lat)
-							ddd   = where(dist lt 10000.,ddd_cnt); not if distance is more than 10km
-							if ddd_cnt gt 0 then begin
-								dum   = array_indices(lon_in,idx[index[ddd]])
-								xxx   = reform(dum[0,*])
-								yyy   = reform(dum[1,*])
-								subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
-								if subscripts[0] ne -1 then filled[subscripts] += 1
-							endif
-						endif else begin
-							;convert lon/lat to x/y
-							xxx = fix((lon + 180.)*(1./grd))
-							yyy = fix((lat +  90.)*(1./grd))
-							subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
-							if subscripts[0] ne -1 then filled[subscripts] += 1
-						endelse 
-						if grd eq 0 then o_myt_orb -> wie_lang_noch
-					endfor
+				cuts = [*entity.parts, entity.n_vertices]
+				FOR j=0l, entity.n_parts-1 DO BEGIN
+					lon = reform((*entity.vertices)[0, cuts[j]:cuts[j+1]-1])
+					lat = reform((*entity.vertices)[1, cuts[j]:cuts[j+1]-1])
+					;convert lon/lat to x/y
+					xxx = fix((lon + 180.)*(1./grd))
+					yyy = fix((lat +  90.)*(1./grd))
+					subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
+					if subscripts[0] ne -1 then filled[subscripts] += 1
+				endfor
 			endif
-			if grd eq 0 then obj_destroy, o_myt_orb
-		endif else print,'Entity Type: ',entity.shape_type
+		endif else print,'shape2grid: Entity Type: ',entity.shape_type
 	endfor
 	!quiet=0
 	OBJ_DESTROY, myshape
+
+	if is_defined(index_lon) then filled = bilinear(filled, index_lon, index_lat)
 
 	if keyword_set(plot_it) then begin
 		make_geo,lon_g,lat_g,grid = grd
 		map_image,filled,lat_g,lon_g,/rainbow,min=0,max=1,/countries,limit=limit
 	endif
-	
+
 	return, (filled < 1b)
 
 end
@@ -1579,17 +1551,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endif
 
 	if keyword_set(shape_file) then begin
-		if get_grid_res(lon) then begin
-			result = shape2grid(shape_file,grid=get_grid_res(lon))
-		endif else begin
-			ok = dialog_message('get_coverage:: Try to read a shape_file on a non regular grid! On non-regular grids nearest neighbor '+$
-								'will be applied. Depending on the size of the shape_file, this might take a while.',/cancel)
-			if ok eq 'Cancel' then begin
-				found=0.
-				return,-1
-			endif
-			result = shape2grid(shape_file,grid=get_grid_res(lon),lon=lon,lat=lat)
-		endelse
+		result = shape2grid(shape_file,grid=get_grid_res(lon),lon=lon,lat=lat)
 	endif else begin
 		if n_elements(lim) eq 4 then begin
 			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
@@ -1604,15 +1566,15 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endelse
 
 	if keyword_set(land) then begin
-		if get_grid_res(lon) and ~keyword_set(mnts) then begin
-			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon))
+		if ~keyword_set(mnts) then begin
+			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon),lon=lon,lat=lat)
 		endif else begin
 			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
 		endelse
 		result = keyword_set(mnts) ? (result eq 1) and (ddem gt 1000.) : (result eq 1) and (ddem ne 0)
 	endif else if keyword_set(sea) then begin
-		if get_grid_res(lon) and ~keyword_set(mnts) then begin
-			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon))
+		if ~keyword_set(mnts) then begin
+			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon),lon=lon,lat=lat)
 		endif else begin
 			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
 		endelse
