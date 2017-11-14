@@ -1481,9 +1481,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	ls = ( keyword_set(land) or keyword_set(sea) and ndims ne 1)
 	if ls then begin
+		; first check if file includes an land_sea flag otherwise try to create it
 		if not get_grid_res(bild[*,*,0,0,0]) and level eq 'l2' then begin
-			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,no_data_value=fillvalue,level=level,dim3=dim3, $
-			minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found_dem,verbose=verbose)
+			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,level=level,found=found_dem,verbose=verbose)
 		endif
 		if found_dem eq 0 then dem = get_coverage(lon, lat, /land,found=found_dem)
 	endif
