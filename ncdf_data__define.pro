@@ -3437,7 +3437,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	        self.errID     = Widget_Button(bla, Value='Error  '   , UVALUE='SET_PLOT_DEFAULTS',tooltip='Shows Error- (Uncertainty-) Bars on TS plots.')
 	        self.verbID    = Widget_Button(bla, Value='Verbose '  , UVALUE='SET_PLOT_DEFAULTS',tooltip='Writes some Infos into command line.')
 	        self.logID     = Widget_Button(bla, Value='Log-Plot ' , UVALUE='SET_PLOT_DEFAULTS',tooltip='Creates logarithmic plots')
-	        self.fscrID    = Widget_Button(bla, Value='Full Screen', UVALUE='SET_PLOT_DEFAULTS',tooltip='Plot 2D maps in Fullscreen, without Colorbar! Overwrites P.multi settings.')
+	        self.fscrID    = Widget_Button(bla, Value='Full Screen', UVALUE='SET_PLOT_DEFAULTS',tooltip='Plot 2D maps in Fullscreen, without Colorbar!')
 	        self.pvirID    = Widget_Button(bla, Value='PVIR Period ', UVALUE='SET_PLOT_DEFAULTS',tooltip='PVIR settings, set TS period to 2003-2011')
 
 	        self.noTitleID = Widget_Button(bla, Value='Title'    , UVALUE='SET_PLOT_DEFAULTS',tooltip='Show Figure Titles')
@@ -3894,7 +3894,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 ; 	oth = strlowcase(oth[0])
 
 	widget_control,self.selftxt,get_value=addtext
- 	addtext = addtext eq '  Add Text' ? '' : addtext
+	addtext = addtext eq '  Add Text' ? '' : addtext
 ;  	addtext = '' ; this is a dummy remove this if you want to reinstate the addtext 
 
 	hct = self.hct eq '--' ? '' : strlowcase(self.hct)

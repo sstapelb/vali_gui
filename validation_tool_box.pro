@@ -1036,8 +1036,9 @@ end
 function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid, plot_it = plot_it,found=found, germany = germany
 
 	found = 1
-	if keyword_set(germany) then shape_file = '/cmsaf/cmsaf-cld1/sstapelb/shapefiles/Germany/DEU_adm1.shp'
+	if keyword_set(germany) then shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
 	grd = adv_keyword_set(grid) ? float(grid) : 0.05
+
 	if grd le 0 or ~file_test(shape_file,/read) then begin
 		if grd eq 0. then begin
 			;check if lon/lat are available
@@ -1116,7 +1117,6 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 							dist  = great_circle(lon_in[idx[index]],lat_in[idx[index]],lon,lat)
 							ddd   = where(dist lt 10000.,ddd_cnt); not if distance is more than 10km
 							if ddd_cnt gt 0 then begin
-								print,minmax(dist[ddd]) 
 								dum   = array_indices(lon_in,idx[index[ddd]])
 								xxx   = reform(dum[0,*])
 								yyy   = reform(dum[1,*])
@@ -9738,7 +9738,6 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 
 	grid = max([gridc,gridr])
 	help,grid	
-; 	dem = get_dem(grid=grid)
 	make_geo,lon,lat,grid=grid
 	dem = get_coverage(lon, lat, /land)
 

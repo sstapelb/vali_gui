@@ -772,7 +772,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	ls = ( keyword_set(land) or keyword_set(sea)) ? 1:0
 	if ls then begin
-; 		dem = get_dem(lon,lat,grid_res=get_grid_res(bild_cci))
 		dem = get_coverage(lon, lat, /land)
 		if keyword_set(sea)  then begin
 			void_index1 = where(bild_cci eq fillvalue1 or dem ne 0)
@@ -1482,12 +1481,11 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	ls = ( keyword_set(land) or keyword_set(sea) and ndims ne 1)
 	if ls then begin
-		found_ls = 0
 		if not get_grid_res(bild[*,*,0,0,0]) and level eq 'l2' then begin
 			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,no_data_value=fillvalue,level=level,dim3=dim3, $
-			minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found_ls,verbose=verbose)
+			minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found_dem,verbose=verbose)
 		endif
- 		if found_ls eq 0 then dem = get_coverage(lon, lat, /land)
+		if found_dem eq 0 then dem = get_coverage(lon, lat, /land,found=found_dem)
 	endif
 
 	if (~found_geo and ~histo2d) then begin
@@ -1638,7 +1636,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			longname ='most frequent Cloud Type'
 			g_eq = 0
 			l_eq = 0
-			if ls then begin
+			if ls and found_dem then begin
 				if keyword_set(land) then void_index = where(bild eq -1 or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
 				if keyword_set(sea)  then void_index = where(bild eq -1 or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
 			endif else void_index = where(bild eq -1,complement = nv_idx,ncomplement=nv_cnt)
@@ -1716,7 +1714,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		endif
 
 		if stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool) then begin
-			if ls then begin
+			if ls and found_dem then begin
 				if keyword_set(land) then void_index = where(bild eq fillvalue[0] or bild eq 0 or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
 				if keyword_set(sea)  then void_index = where(bild eq fillvalue[0] or bild eq 0 or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
 			endif else void_index = where(bild eq fillvalue[0] or bild eq 0,complement = nv_idx,ncomplement=nv_cnt)
@@ -1725,12 +1723,12 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		endif else begin
 			; true_color_images only land / sea
 			if t_c_i then begin
-				if ls then begin
+				if ls and found_dem then begin
 					if keyword_set(land) then void_index = where(dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
 					if keyword_set(sea)  then void_index = where(dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
 				endif else void_index = where(reform(bild[*,*,0]) lt 0,complement = nv_idx,ncomplement=nv_cnt) ; dummy
 			endif else begin
-				if ls then begin
+				if ls and found_dem then begin
 					if keyword_set(land) then void_index = where(bild eq fillvalue[0] or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
 					if keyword_set(sea)  then void_index = where(bild eq fillvalue[0] or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
 				endif else void_index = where(bild eq fillvalue[0],complement = nv_idx,ncomplement=nv_cnt)
@@ -2425,7 +2423,6 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if stregex(dat,'cmask',/bool,/fold) then bin = 1
 	if is_jch(dat) then bin = 1
 
-; 	if ls then dem = get_dem(lon,lat,grid_res=get_grid_res(lon))
 	if ls then dem = get_coverage(lon, lat, /land)
 
 	lat_res = 1. > get_grid_res(lon)
@@ -4060,8 +4057,8 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	make_geo,file=ccifile,lon_cci,lat_cci,grid=cci_grid ; cci
 	make_geo,file=gacfile,lon_gac,lat_gac,grid=gac_grid ; ref
 	if ls then begin
-		dem_cci = get_dem(grid_res=cci_grid)
-		dem_gac = get_dem(grid_res=gac_grid)
+		dem_cci = get_coverage(lon_cci,lat_cci,/land)
+		dem_gac = get_coverage(lon_gac,lat_gac,/land)
 	endif
 
 	if hct eq '1d' or hct eq '1d_cot' or hct eq '1d_ctp' then begin
@@ -4141,7 +4138,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	endif
 
 	make_geo, lon_c, lat_c, grid_res = out_grid
-	if ls then dem_c = get_dem(grid_res=out_grid)
+	if ls then dem_c = get_coverage(lon_c,lat_c,/land)
 
 	if keyword_set(shape_file) then begin
 		print,'Using shape_file, ',shape_file
@@ -4462,7 +4459,6 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		return
 	endif
 	make_geo, lon,lat, grid=1
-; 	dem  = get_dem(lon,lat,grid=1)
 	dem  = get_coverage(lon,lat,coverage = coverage)
 	dem = [[dem,dem,dem],[dem,dem,dem],[dem,dem,dem]]
 
@@ -5138,7 +5134,6 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	endif
 
 	if keyword_set(land) or keyword_set(sea) then begin
-; 		dem = get_dem(lon,lat,grid=get_grid_res(bild))
 		dem = get_coverage(lon, lat, /land)
 		if keyword_set(sea) then lat[where(dem ne 0)] = fillvalue
 		if keyword_set(land) then lat[where(dem eq 0)] = fillvalue
