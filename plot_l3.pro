@@ -85,7 +85,7 @@ end
 ;------------------------------------------------------------------------------------------
 pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, brewer=brewer, mini = mini, maxi = maxi, save_as=save_as, $
 			difference = difference,notitle=notitle, appendix = appendix,nobar=nobar
-
+; col_tab=2
 	apx = keyword_set(appendix) ? appendix : ''
 	xtickname = ['0.3','1.3','3.6','9.4','23','60','100'] ; tau
 	ytickname = reverse(['10','180','310','440','560','680','800','1100']) ; plev

@@ -6850,7 +6850,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		ls = get_coverage(grid=get_grid_res(ctt),/land)
 
 		; cdnc = tr2nh_export(cot,cer,ctt,ctp) ; R.Bennartz et.al
-		data_idx = where(cot gt 0. and cer gt 4. and ctp gt 10000. and between(ctt,268,300) and cph eq 1 and between(sza,0.,84.) and ls eq 0,cnt_il)
+		data_idx = where(cot gt 0. and cer gt 4. and ctp gt 10000. and between(ctt,268,300) and cph eq 1 and between(sza,0.,75.) and ls eq 0,cnt_il)
 		outdata  = cot * 0. -999.
 		if cnt_il gt 0 then outdata[data_idx] = tr2nh_export(cot[data_idx], cer[data_idx], ctt = ctt[data_idx], p = ctp[data_idx])
 		longname = 'Cloud Droplet Number concentration'
@@ -7839,7 +7839,6 @@ endif
 				unit = textoidl(' [ km]')
 			endif
 		endif else if total(datd eq ['ref','ref_liq','ref_ice','cer','cer_liq','cer_ice']) then begin
-; 			if total(alg eq ['clara2','claas','hector']) and lev ne 'l3u' then begin
 			if total(alg eq ['clara2','claas','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
@@ -8587,7 +8586,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			if verb then print,'Divide now '+dat+' of '+alg2+' by 1000.'
 		endif
 	endif else if total(strmid(dat,0,3) eq ['ref','cer']) then begin
-		if total(alg1 eq ['clara2','claas','hector']) and lev ne 'l3u' then begin
+		if total(alg1 eq ['clara2','claas','hector']) then begin
 			bild1 = float(bild1)
 			idx = where(bild1 ne fillvalue1,idxcnt)
 			if idxcnt gt 0 then bild1[idx] /= 1.e-06
@@ -8596,7 +8595,7 @@ pro bring_to_same_unit,	data,bild1,bild2,fillvalue1,fillvalue2,algo1,algo2,unit1
 			unit1 = textoidl(' [ \mum]')
 			if verb then print,'Divide now '+dat+' of '+alg1+' by 1.e-08'
 		endif
-		if total(alg2 eq ['clara2','claas','hector']) and lev ne 'l3u' then begin
+		if total(alg2 eq ['clara2','claas','hector']) then begin
 			bild2 = float(bild2)
 			idx = where(bild2 ne fillvalue2,idxcnt)
 			if idxcnt gt 0 then bild2[idx] /= 1.e-06
