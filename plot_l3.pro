@@ -427,11 +427,12 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	case strmid(dat[0],0,3) of
 		'cot'	: begin & histv = [0.1,0.,50.]   & end
 		'cth'	: begin & histv = [0.1,0.,16.]   & end
-		'cwp'	: begin & histv = [10.,0.,1500.] & end
-		'iwp'	: begin & histv = [10.,0.,1500.] & end
-		'lwp'	: begin & histv = [10.,0.,1500.] & end
+		'cwp'	: begin & histv = [10.,0.,500.] & end
+		'iwp'	: begin & histv = [10.,0.,500.] & end
+		'lwp'	: begin & histv = [10.,0.,500.] & end
 		'ctp'	: begin & histv = [10.,0.,1100.] & end
 		'ctt'	: begin & histv = [1.,150.,320.] & end
+		'cdn'	: begin & histv = [1.,0.,300.] & end
 		'cfc'	: begin & histv = [0.01,0.,1.]   & end
 		'cma'	: begin & histv = [1.,0.,1.]     & bar_discontinous = 1 & end
 		'cph'	: begin
@@ -1036,7 +1037,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			xticks = n_elements(xtickname)-1, xtickv = xtickv,yticks = n_elements(ytickname)-1, ytickv = ytickv, $
 			xtickname=xtickname,ytickname=ytickname, bar_format=bar_format, bar_nlev = bar_nlev, $
 			log=~bar_discontinous,col_table=col_tab,orientation=-90,xticklen=xticklen,yticklen=yticklen, $
-			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
+			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')), $;+' (Binsize='+string(bin,f='(f6.3)')+')'), $
 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
 			bar_tickname = bar_tickname,xmargin=xmargin,ymargin=ymargin
 			if chk_idx gt 0 and bar_discontinous eq 0 then begin
@@ -1066,24 +1067,12 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif
 
 	if keyword_set(save_dir) then begin
-		charthick = !p_charthick ;1.5
-		xcharsize = !p_xcharsize ;1.7 
-		ycharsize = !p_ycharsize ;1.7
-		lcharsize = !l_charsize  ;2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if keyword_set(white_bg) and keyword_set(zonal_only) then begin
-		charthick = !p_charthick ;3.0
-		xcharsize = !p_xcharsize ;2.5
-		ycharsize = !p_ycharsize ;2.5
-		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = 1.2
-		xcharsize = 1.2 
-		ycharsize = 1.2
-		lcharsize = 1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -1098,15 +1087,15 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 ; 	DEVICE, SET_FONT='-adobe-helvetica-medium-r-normal--10-100-75-75-p-56-iso8859-1'
 
 	start_save, save_as4, thick = thick, size = [32, 20]
+		ytitle= vollername1+(strmatch(dat[0],dat[1]) ? dtn[0]:'')+unit
 		title = keyword_set(notitle) ? '' : $
 		'bias: '+string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f7.2)')+ $
 		' ; rmse: '+string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f6.2)') + $
 		' ; stdd: '+string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - gbias(bild_cci[idx],bild_gac[idx],lat[idx])^2),f='(f6.2)')+unit
 		yr = [(adv_keyword_set(mini) ? mini : (unit eq ' [K]' ? 200:0)),(adv_keyword_set(maxi) ? maxi : max([medi_c,medi_g])*1.05)] 
 		plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
-		xtitle='latitude [degrees]',ytitle=vollername1+(strmatch(dat[0],dat[1]) ?dtn[0]:'')+unit,yr=yr,title=title, ylog=logarithmic,$
-		charthick = charthick, xcharsize = xcharsize, ycharsize = ycharsize, xmargin=xmargin,ymargin=ymargin
-
+		xtitle='latitude [degrees]',ytitle=ytitle,yr=yr,title=title, ylog=logarithmic,$
+		charthick = !p_charthick, xcharsize = !p_xcharsize, ycharsize = (str_size(ytitle,0.3) < !p_ycharsize ), xmargin=xmargin,ymargin=ymargin
 		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
 		print,'-----------'+data+'-'+cov+'--------------'
 		if stregex(dat[0],'npoints',/fold,/bool) then begin
@@ -1127,7 +1116,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		oplot,lat1dg,medi_g,thick=thick,col=cgColor(!compare_col2)
  		lnames = strmatch(dat[0],dat[1]) ? ['',''] : strupcase(' '+[dat[0],dat[1]]) 
 		legend,[(ed ? '': datum +' ') +algon_cci,(ed ? '': datum2 +' ')+algon_gac]+lnames,$
-		thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize=lcharsize, $
+		thick=replicate(thick,2),spos=(keyword_set(show_values)?'bot':'top'),charsize = !l_charsize, $
 		color=[cgcolor(!compare_col1), cgColor(!compare_col2)]
 	end_save, save_as4
 
@@ -1202,7 +1191,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	algo     = ref2algo(algoname)
 	level    = keyword_set(level)   ? level  : ''
 	fidx     = keyword_set(orbit)   ? orbit  : 0
-	dat      = get_product_name(data,algo=algo,level=level,/upper)
+	dat      = get_product_name(data,algo=algo,level=level,/upper);,node=node)
 	histo2d  = is_jch(dat)
 	histo1d  = is_h1d(dat)
 	save_dir = !SAVE_DIR + '/plot_l2/'
@@ -1291,7 +1280,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		make_compareable = 1
 		bild = get_data(year,month,day,file=file[fidx],data=dat,algo=algo,no_data_value=fillvalue,level=level,sat=sat,dim3=dim3,/print_filename, $
 		minvalue=minvalue,maxvalue=maxvalue,longname=longname,unit=unit,found=found,verbose=verbose,error=error,make_compareable=make_compareable,$
-		var_dim_names=var_dim_names,flag_meanings=flag_meanings)
+		var_dim_names=var_dim_names,flag_meanings=flag_meanings,node=node)
 		if is_string(bild) then begin
 			ok = dialog_message('plot_l2: Dont know what to do with an Array of type string')
 			return
@@ -3215,29 +3204,22 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 	sn_cov = short_cov_name(coverage)
 	if keyword_set(sn_cov) and keyword_set(no_compare) and ~keyword_set(smoothTS) then dtn += ' ('+ sn_cov+')'
 
+	charthick = !p_charthick
+	xcharsize = !p_xcharsize 
+	ycharsize = !p_ycharsize
+	lcharsize = !l_charsize
+
 	if sav then begin
-		charthick = !p_charthick ;1.5
-		xcharsize = !p_xcharsize ;1.7 
-		ycharsize = !p_ycharsize ;1.7
-		lcharsize = !l_charsize  ;2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg then begin
-		charthick = !p_charthick ;3.0
-		xcharsize = !p_xcharsize ;2.5
-		ycharsize = !p_ycharsize ;2.5
-		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = !p_charthick ;1.2
-		xcharsize = !p_xcharsize ;1.2 
-		ycharsize = !p_ycharsize ;1.2
-		lcharsize = !l_charsize  ;1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
-
+	
 	if sav then begin
 		!p.multi = 0
 		save_dum = file_dirname(save_as)+'/'+file_basename(save_as,'.eps')
@@ -3350,8 +3332,13 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					oplot,ts_data[nc1,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col1)
 					oplot,ts_data[nc2,*],psym=cgsymcat(psym),thick=thick,symsize=syms,col=cgColor(!compare_col2) 
 				endelse
+; stop
+; lcharsize = (str_size(algon1+dtn[0],0.45) < !l_charsize )
+
 				legend,algon1+dtn[0],psym=cgsymcat(psym),thick=thick,color=[cgColor(!compare_col1)] ,spos='tl',$
 				charsize=lcharsize,charthick=charthick,ystretch=1.5
+
+; lcharsize = (str_size(ref+dtn[0],0.45) < !l_charsize )
 				legend,ref+dtn[0],psym=cgsymcat(psym),thick=thick,color=cgColor(!compare_col2) ,spos='tr',charsize=lcharsize,charthick=charthick,ystretch=1.5
 			endif
 
@@ -3539,7 +3526,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 						legend,'Coverage: '+strupcase(coverage),color=-1,spos='top',charsize=lcharsize,charthick=charthick, numsym=1
 					endif
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,symsize=syms
-; 				if ~keyword_set(show_trend) and ~keyword_set(smoothTS) then $
+
+; lcharsize = (str_size(algon1+dtn[0]+hct+apx,0.5) < !l_charsize )
 				if ~keyword_set(smoothTS) then $
 				legend,algon1+dtn[0]+hct+apx,psym=cgsymcat(psym),thick=thick,color=-1,spos=spos,charsize=lcharsize,charthick=charthick
 			endif else begin
@@ -3563,6 +3551,8 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 					oplot,sm_data,psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
 				endif else oplot,ts_data[nc,*],psym=cgsymcat(psym),thick=thick,col=cgcolor(cols),linestyle=linestyle,symsize=syms
 				ystretch = mst_paper ? (0.8 * ystretch) : ystretch*(opl le 2 ? 1.3 : 1.1)
+
+; lcharsize = (str_size(algon1+dtn+hct+apx,0.5) < !l_charsize )
 				legend,algon1+dtn+hct+apx,thick=thick,color=cgcolor(cols),spos=spos,ystretch=ystretch,$
 				charsize=lcharsize,charthick=charthick, linestyle = linestyle,psym=cgsymcat(psym)
 			endelse

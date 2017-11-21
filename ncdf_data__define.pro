@@ -3246,7 +3246,7 @@ function NCDF_DATA::make_VARList, data_only = data_only
 	theList=[theList,'---Additional-Variables---','blue_marble','usgs_lus','usgs_dem']
 
 	if self.level eq 'l3u' then begin
-		theList=[theList,'rgb_asc','rgb_desc','rgb']
+		theList=[theList,'rgb_asc','rgb_desc','cdnc_asc','cdnc_desc','fci_asc','fci_desc']
 	endif else if self.level eq 'l3c' then begin
 		self.c6_list = ptr_new(['cwp_16','iwp_16','lwp_16','cot_16','cer_16','cot_16_liq','cer_16_liq','cot_16_ice','cer_16_ice', $
 								'cwp_37','iwp_37','lwp_37','cot_37','cer_37','cot_37_liq','cer_37_liq','cot_37_ice','cer_37_ice', $
@@ -4213,8 +4213,8 @@ function ncdf_data::get_new_filename, sat, year, month, day, orbit, algo, versio
 	endif
 
 	; das alles hier muss noch getestet werden!!
-	set_dummy = total(strlowcase(varname) eq ['blue_marble','usgs_lus','usgs_dem','usgs_ls','usgs_lsm',$
-						  'refl1','refl2','refl3a','rad3b','rad4','rad5','rad4,rad5'])
+	set_dummy = total(strlowcase(varname) eq ['blue_marble','usgs_lus','usgs_dem','usgs_ls','usgs_lsm', $
+				'refl1','refl2','refl3a','rad3b','rad4','rad5','rad4,rad5'])
 	if keyword_set(set_dummy) then begin
 		found=1
 		return,self.directory+'/'+self.filename

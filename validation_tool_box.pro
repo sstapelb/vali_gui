@@ -1,5 +1,5 @@
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_product_name, data, algo=algo, upper_case = upper_case, lower_case = lower_case, level = level,path=path ,h_types=h_types
+function get_product_name, data, algo=algo, upper_case = upper_case, lower_case = lower_case, level = level, path=path ,h_types=h_types, node = node
 
 	if n_params() ne 1 then return,'-1'
 	if ~keyword_set(algo) then return, (keyword_set(upper_case) ? strupcase(data) : strlowcase(data))
@@ -152,6 +152,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if dat eq 'cot_desc'  		then datd = 'cwp'
 			if dat eq 'cwp_asc'   		then datd = 'cwp'
 			if dat eq 'cwp_desc'  		then datd = 'cwp'
+			if dat eq 'cdnc_asc'   		then datd = 'cwp'
+			if dat eq 'cdnc_desc'  		then datd = 'cwp'
 			if strmid(dat,0,3) eq 'lwp' 	then datd = 'lwp'
 			if strmid(dat,0,3) eq 'iwp' 	then datd = 'iwp'
  			if dat eq 'cwp' and total(lev eq ['l3c','l3s']) then datd = 'iwp'
@@ -238,6 +240,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'time_desc'		: dat = 'scanline_time_desc'
 				'cer_ice'		: dat = 'ref_ice'
 				'cer_liq'		: dat = 'ref_liq'
+				'cer_asc'   	: dat = 'ref_asc'
+				'cer_desc'  	: dat = 'ref_desc'
 				'cer'			: dat = 'ref'
 				'lwp_unc'		: dat = 'lwp_error'
 				'iwp_unc'		: dat = 'iwp_error'
@@ -415,6 +419,24 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'cph_daynight'	: dat = 'cph'
 			'sunzen_asc'	: dat = 'solzen_asc'
 			'sunzen_desc'	: dat = 'solzen_desc'
+			'sunza_asc'		: dat = 'solzen_asc'
+			'sunza_desc'	: dat = 'solzen_desc'
+			'satza_asc'		: dat = 'satzen_asc'
+			'satza_desc'	: dat = 'satzen_desc'
+			'refl1_asc'			: dat = 'refl_vis006_asc'
+			'refl2_asc'			: dat = 'refl_vis008_asc'
+			'refl3a_asc'		: dat = 'refl_vis016_asc'
+			'refl_nir016_asc'	: dat = 'refl_vis016_asc'
+			'rad3b_asc'			: dat = 'bt_nir037_asc'
+			'rad4_asc'			: dat = 'bt_tir108_asc'
+			'rad5_asc'			: dat = 'bt_tir120_asc'
+			'refl1_desc'		: dat = 'refl_vis006_desc'
+			'refl2_desc'		: dat = 'refl_vis008_desc'
+			'refl3a_desc'		: dat = 'refl_vis016_desc'
+			'refl_nir016_desc'	: dat = 'refl_vis016_desc'
+			'rad3b_desc'		: dat = 'bt_nir037_desc'
+			'rad4_desc'			: dat = 'bt_tir108_desc'
+			'rad5_desc'			: dat = 'bt_tir120_desc'
 			else			:
 		endcase
 	endif
@@ -432,8 +454,25 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if stregex(dat,'toa_',/bool)    then dumdat = 'rad_products'
 			if stregex(dat,'illum_',/bool)  then dumdat = 'cld_angles'
 			if stregex(dat,'satzen_',/bool) then dumdat = 'cld_angles'
+			if stregex(dat,'satza_',/bool)  then dumdat = 'cld_angles'
 			if stregex(dat,'solzen_',/bool) then dumdat = 'cld_angles'
+			if stregex(dat,'sunzen_',/bool) then dumdat = 'cld_angles'
+			if stregex(dat,'sunza_',/bool)  then dumdat = 'cld_angles'
 			if stregex(dat,'relazi_',/bool) then dumdat = 'cld_angles'
+			if stregex(dat,'refl_vis006_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'refl_vis008_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'refl_vis016_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'refl_nir016_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'bt_nir037_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'bt_tir108_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'bt_tir120_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'refl1_',/bool)  then dumdat = 'sat_measurements'
+			if stregex(dat,'refl2_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'refl3a_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'refl3b_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'rad3b_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'rad4_',/bool) then dumdat = 'sat_measurements'
+			if stregex(dat,'rad5_',/bool) then dumdat = 'sat_measurements'
 			return, keyword_set(upper_case) ? strupcase(dumdat) : strlowcase(dumdat)
 		endif else begin
 			case dat of
@@ -449,6 +488,27 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'ctp_mean_liq'		: dat = 'ctp'
 				'ctp_mean_th_ice'	: dat = 'ctp'
 				'ctp_mean_sc_liq'	: dat = 'ctp'
+				;------------------------------------------
+				'refl1_asc'			: dat = 'refl_vis006_asc'
+				'refl2_asc'			: dat = 'refl_vis008_asc'
+				'refl3a_asc'		: dat = 'refl_vis016_asc'
+				'refl_nir016_asc'	: dat = 'refl_vis016_asc'
+				'rad3b_asc'			: dat = 'bt_nir037_asc'
+				'rad4_asc'			: dat = 'bt_tir108_asc'
+				'rad5_asc'			: dat = 'bt_tir120_asc'
+				'refl1_desc'		: dat = 'refl_vis006_desc'
+				'refl2_desc'		: dat = 'refl_vis008_desc'
+				'refl3a_desc'		: dat = 'refl_vis016_desc'
+				'refl_nir016_desc'	: dat = 'refl_vis016_desc'
+				'rad3b_desc'		: dat = 'bt_nir037_desc'
+				'rad4_desc'			: dat = 'bt_tir108_desc'
+				'rad5_desc'			: dat = 'bt_tir120_desc'
+				'sunzen_asc'		: dat = 'solzen_asc'
+				'sunzen_desc'		: dat = 'solzen_desc'
+				'sunza_asc'			: dat = 'solzen_asc'
+				'sunza_desc'		: dat = 'solzen_desc'
+				'satza_asc'			: dat = 'satzen_asc'
+				'satza_desc'		: dat = 'satzen_desc'
 				;------------------------------------------
 				'a_cod'			: dat = 'cot_log'
 				'h_cp'			: dat = 'hist1d_ctp'
@@ -472,8 +532,6 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'jch_liq'		: dat = 'hist2d_cot_ctp_liq'
 				'jch_ice'		: dat = 'hist2d_cot_ctp_ice'
 				'cph_daynight'	: dat = 'cph'
-				'sunzen_asc'	: dat = 'solzen_asc'
-				'sunzen_desc'	: dat = 'solzen_desc'
 				else			:
 			endcase
 		endelse
@@ -563,7 +621,9 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			if total(node eq ['asc','des','desc']) then dat = strreplace(dat,'_'+node,'')
 			case dat of 
 				'satzen'	: dat = 'sensor_zenith_angle'
+				'satza'		: dat = 'sensor_zenith_angle'
 				'sunzen'	: dat = 'solar_zenith_angle'
+				'sunza'		: dat = 'solar_zenith_angle'
 				'solzen'	: dat = 'solar_zenith_angle'
 				'relazi'	: dat = 'relative_azimuth_angle'
 				'cfc'		: dat = 'cloud_fraction'
@@ -571,12 +631,14 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'cwp'		: dat = 'cloud_water_path'
 				'cot'		: dat = 'cld_opd_dcomp'
 				'ref'		: dat = 'cld_reff_dcomp'
+				'cer'		: dat = 'cld_reff_dcomp'
 				'ctp'		: dat = 'cld_press_acha'
 				'ctt'		: dat = 'cld_temp_acha'
 				'cth'		: dat = 'cld_height_acha'
 				'cc_mask'	: dat = 'cloud_mask'
 				'cmask'		: dat = 'cloud_mask'
 				'cph'		: dat = 'cloud_phase'
+				'phase'		: dat = 'cloud_phase'
 				'cty'		: dat = 'cloud_type'
 				'cph_extended'	: dat = 'cloud_type'
 				else		: 
@@ -685,48 +747,48 @@ function full_varname, varname, unit = unit, universal = universal
 		'ctp'	: begin & vollername = 'Cloud Top Pressure' & unit = ' [hPa]' & end
 		'ctt'	: begin & vollername = 'Cloud Top Temperature' & unit = ' [K]' & end
 		'cfc'	: vollername = 'Cloud Fraction'
+		'cdn'	: begin & vollername = 'Cloud Droplet Number Concentration' & unit = textoidl(' [cm^{-3}]') & end
 		'cph'	: begin
-				vollername = 'Liquid Cloud Fraction'
-				if stregex(dat,'cph_asc',/fold,/bool) or stregex(dat,'cph_desc',/fold,/bool) then vollername = 'Cloud Phase'
-			  end
+					vollername = 'Liquid Cloud Fraction'
+					if stregex(dat,'cph_asc',/fold,/bool) or stregex(dat,'cph_desc',/fold,/bool) then vollername = 'Cloud Phase'
+				  end
 		'cer'	: begin & vollername = 'Cloud Effective Radius' & unit = textoidl(' [\mum]') & end
 		'cma'	: vollername = 'Cloud Mask'
 		'cty'	: vollername = 'Cloud Type'
 		'sal'	: begin & vollername = 'Surface Albedo' & unit = ' [%]' & end
 		'cee'	: vollername = 'Cloud Effective Emissivity'
 		'cla'	: begin
-				vollername = 'Cloud Albedo'
-				if ~keyword_set(universal) then begin
-					if stregex(dat,'vis006',/fold,/bool) then vollername = vollername+textoidl(' at 0.6 \mum')
-					if stregex(dat,'vis008',/fold,/bool) then vollername = vollername+textoidl(' at 0.8 \mum')
-				endif
-			  end
+					vollername = 'Cloud Albedo'
+					if ~keyword_set(universal) then begin
+						if stregex(dat,'vis006',/fold,/bool) then vollername = vollername+textoidl(' at 0.6 \mum')
+						if stregex(dat,'vis008',/fold,/bool) then vollername = vollername+textoidl(' at 0.8 \mum')
+					endif
+				  end
 		'nob'	: vollername = 'Number of Observations'
 		'rad'	: begin 
-				vollername = 'Brightness Temperature' & unit = ' [K]' 
-				if ~keyword_set(universal) then begin
-					if stregex(dat,'rad3b',/fold,/bool) then vollername = vollername+textoidl(' at 3.7 \mum')
-					if stregex(dat,'rad4',/fold,/bool)  then vollername = vollername+textoidl(' at 10.8 \mum')
-					if stregex(dat,'rad5',/fold,/bool)  then vollername = vollername+textoidl(' at 12.0 \mum')
-				endif
-			  end
-		'ref'	: begin 
-				if stregex(dat,'refl',/fold,/bool) then begin
-					vollername = 'Reflectance' & unit = ' [%]'
+					vollername = 'Brightness Temperature' & unit = ' [K]' 
 					if ~keyword_set(universal) then begin
-						if stregex(dat,'refl1',/fold,/bool)  then vollername = vollername+textoidl(' at 0.6 \mum')
-						if stregex(dat,'refl2',/fold,/bool)  then vollername = vollername+textoidl(' at 0.8 \mum')
-						if stregex(dat,'refl3a',/fold,/bool) then vollername = vollername+textoidl(' at 1.6 \mum')
+						if stregex(dat,'rad3b',/fold,/bool) then vollername = vollername+textoidl(' at 3.7 \mum')
+						if stregex(dat,'rad4',/fold,/bool)  then vollername = vollername+textoidl(' at 10.8 \mum')
+						if stregex(dat,'rad5',/fold,/bool)  then vollername = vollername+textoidl(' at 12.0 \mum')
 					endif
-				endif else begin
-					vollername = 'Cloud Effective Radius' & unit = textoidl(' [\mum]')
-				endelse
-			  end
+				  end
+		'ref'	: begin 
+					if stregex(dat,'refl',/fold,/bool) then begin
+						vollername = 'Reflectance' & unit = ' [%]'
+						if ~keyword_set(universal) then begin
+							if stregex(dat,'refl1',/fold,/bool)  then vollername = vollername+textoidl(' at 0.6 \mum')
+							if stregex(dat,'refl2',/fold,/bool)  then vollername = vollername+textoidl(' at 0.8 \mum')
+							if stregex(dat,'refl3a',/fold,/bool) then vollername = vollername+textoidl(' at 1.6 \mum')
+						endif
+					endif else begin
+						vollername = 'Cloud Effective Radius' & unit = textoidl(' [\mum]')
+					endelse
+				  end
 		else : vollername = varname
 	endcase
 
 	if stregex(dat,'ctp2',/bool,/fold) then vollername = 'Cloud Top Pressure (MERIS only)'
-
 	if stregex(dat,'cph_extended',/bool,/fold) then vollername = 'Cloud Type'
 	if stregex(dat,'cloud_type',/bool,/fold) then vollername = 'Cloud Type'
 	if stregex(dat,'prop_unc',/bool,/fold) then vollername = vollername + ' - propagated Uncertainty' else $
@@ -1454,7 +1516,7 @@ end
 ;------------------------------------------------------------------------------------------
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
 						antarctic = antarctic, arctic = arctic, shape_file = shape_file, opposite = opposite, $
-						l3u_index = l3u_index, fillv_index = fillv_index, found = found, $
+						l3u_index = l3u_index, fillv_index = fillv_index, found = found, grid_res = grid_res, $
 						index = index, count = count, complement = complement, ncomplement = ncomplement ; where indizes and counts
 
 	found = 1
@@ -1541,7 +1603,9 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endif
 
 	if ~keyword_set(lon) or ~keyword_set(lat) then begin
-		if keyword_set(l3u_index) then begin
+		if keyword_set(grid_res) then begin
+			make_geo,lon,lat,grid=grid_res
+		endif else if keyword_set(l3u_index) then begin
 			make_geo,lon,lat,grid=0.05
 		endif else begin
 			ok = dialog_message('get_coverage: Need Lon / Lat info:')
@@ -4539,8 +4603,13 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								orbdum = strlen(orb) eq 4 ? orb : '' 
 							endif else orbdum = ''
 							vers  = keyword_set(version) ? strlowcase(version[0]) : 'v3.0'
-							pathdat = lev eq 'l3u' ? get_product_name(dat,algo=alg,level=lev,/path,/upper) : ''
+							if strmid(dat,0,3) eq 'rgb' or strmid(dat,0,3) eq 'fci' then begin
+								pathdat = lev eq 'l3u' ? get_product_name('refl_vis006_asc',algo=alg,level=lev,/path,/upper) : ''
+							endif else begin
+								pathdat = lev eq 'l3u' ? get_product_name(dat,algo=alg,level=lev,/path,/upper) : ''
+							endelse
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*'+pathdat+'-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
+
 						end
 					'ESACCI': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
@@ -4557,6 +4626,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								dir   = din ? dirname+'/' : '/cmsaf/cmsaf-cld8/esa_cloud_cci/pics/v2.0/jpg/'+yyyy+'/'
 								ampm  = sat_ampm(sat)
 								filen = dir + 'Cloudcci_v2.0_'+strupcase(ampm)+'_*_'+dat+'_'+yyyy+mm+dd+'*.jpg'
+							endif else if strmid(dat,0,3) eq 'fci' then begin
+								filen = 'Cloud_cci v2.0 has no Measurements available. FCI not possible! Try Clara-A2 or Cloud_cci v3.0!'
 							endif else begin
 								vers  = keyword_set(version) ? strlowcase(version[0]) : 'v2.0'
 								filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
@@ -4722,7 +4793,8 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 									sat   = noaa_primes(yyyy,mm,ampm=sat_ampm(sat,/ampm),/no_zero,found=found_prime)
 								endif
 								node  = keyword_set(node) ? strmid(node,0,3) : strlowcase(strmid((reverse(strsplit(dat,'_',/ext)))[0],0,3))
-								node  = node eq 'asc' or node eq 'des' ? node : '*'
+								node  = node eq 'asc' or node eq 'des' ? node : sat_ampm(sat) eq 'pm' ? 'asc' : 'desc'
+
 								doy   = string(doy(yyyy,mm,dd eq '' ? 1:(dd eq '??' ? dom(yyyy,mm):dd)),f='(i3.3)')
 								satd  = sat eq 'METOPA' ? 'metop-02' : (sat eq 'METOPB' ? 'metop-01' : strlowcase(sat))
 								if stregex(satd,'noaa',/bool) then begin
@@ -6535,7 +6607,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			longname = 'Cloud Fraction' + dat eq 'cfc_std' ? ' standard deviation' : ''
 			free,tmp
 		endif else return,-1
-	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and alg eq 'esacci') then begin
+	endif else if ( strmid(dat,0,3) eq 'rgb' and lev eq 'l3u' and alg eq 'esacci' ) then begin
 		found = is_image(filename[0])
 		if arg_present(finfo) then finfo = file_info(filename[0])
 		if found then begin
@@ -6551,21 +6623,34 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			maxvalue = 1
 			unit=''
 		endif else return,-1
-	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and alg eq 'clara2') then begin
+	endif else if ( strmid(dat,0,3) eq 'rgb' and total(lev eq ['l3u','l3ue']) and total(alg eq ['clara2','esacciv3','esacci'])) then begin
+		if alg eq 'esacci' and lev ne 'l3ue' then begin
+			if ~sil then print, ' Cloud_cci v2.0 has only measurements in "L3Ue" (MODIS-Europe) data. Try Cloud_cci v3.0 instead or change level to "L3ue"'
+			found=0
+			return,-1
+		endif
 		node = strmid(dat,3)
 		if node eq '' then node = sat_ampm(sat) eq 'pm' ? '_asc' : '_desc'
-		read_ncdf,filename[0],'REFL_VIS006'+node,rad1 ,found=found,set_fillvalue=-999.
-		read_ncdf,filename[0],'REFL_VIS008'+node,rad2 ,found=f2,set_fillvalue=-999.
-		read_ncdf,filename[0],'REFL_NIR016'+node,rad3a,found=f3,set_fillvalue=-999.
-		read_ncdf,filename[0],'BT_NIR037'  +node,rad3b,found=f4,set_fillvalue=-999.
-		read_ncdf,filename[0],'BT_TIR108'  +node,rad4 ,found=f5,set_fillvalue=-999.
-		ang_file = strreplace(filename[0],'CAC','CAA')
-		read_ncdf,ang_file[0],'SUNZEN'     +node,sunza,found=f6,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('REFL_VIS006'+node,algo=alg,level=lev),rad1 ,found=found,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('REFL_VIS008'+node,algo=alg,level=lev),rad2 ,found=f2,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('REFL_NIR016'+node,algo=alg,level=lev),rad3a,found=f3,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('BT_NIR037'  +node,algo=alg,level=lev),rad3b,found=f4,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('BT_TIR108'  +node,algo=alg,level=lev),rad4 ,found=f5,set_fillvalue=-999.
 
+		dumdat   = get_product_name('SUNZEN'+node,algo=alg,level=lev)
+		ang_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,instrument=instrument,$
+					silent=silent,dirname=dirname,found=f6)
+		if f6 then read_ncdf,ang_file[0],dumdat,sunza,found=f6,set_fillvalue=-999.
 		if total([found,f2,f3,f4,f5,f6]) eq 6. then begin
 			refl_nir = (total(rad3a gt 0) gt 0)
-			if ~sil then print, ' Calculating RGB image for CLARA-A2 (0.05 degree). Be patient ...'
-			outdata = calc_rgb(rad1,rad2,(refl_nir ? rad3a:rad3b),rad4,sunza,0,/enhance,refl_nir037=refl_nir)
+			fac      = stregex(alg,'esacci',/bool) ? 100. : 1. ; reflectance in percent oder normalized?
+			if sat eq 'aqua' or sat eq 'terra' then begin
+				;MODIS vis008 channel gets saturated at high reflectances 
+				idx = where(rad1 gt (50./fac) and rad2 le 0.,idxcnt )
+				if idxcnt gt 0 then rad2[idx] = rad1[idx] * 1.02
+			endif
+			if ~sil then print, ' Calculating RGB image for '+sat_name(alg,sat)+' ('+string(get_grid_res(rad4),f='(f4.2)')+' degree). Be patient ...'
+			outdata = calc_rgb(rad1*fac,rad2*fac,(refl_nir ? rad3a*fac:rad3b),rad4,sunza,0,/enhance,refl_nir037=refl_nir)
 		endif else begin
 			if ~sil then print, ' At least one of the measurements neeeded for RGB is missing!'
 			found=0
@@ -6576,18 +6661,25 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		maxvalue = 1
 		unit=''
-	endif else if ( strmid(dat,0,3) eq 'fci' and total(lev eq ['l3u','l3ue']) and alg eq 'clara2') then begin
+	endif else if ( strmid(dat,0,3) eq 'fci' and total(lev eq ['l3u','l3ue']) and total(alg eq ['clara2','esacciv3','esacci'])) then begin
+		if alg eq 'esacci' and lev ne 'l3ue' then begin
+			if ~sil then print, ' Cloud_cci v2.0 has only measurements in "L3Ue" (MODIS-Europe) data. Try Cloud_cci v3.0 instead or change level to "L3ue"'
+			found=0
+			return,-1
+		endif
 		dum  = strsplit(dat,'_',/ext)
 		node = n_elements(dum) gt 1 ? '_'+dum[n_elements(dum)-1] : ''
 		if node eq '' then node = sat_ampm(sat) eq 'pm' ? '_asc' : '_desc'
-		read_ncdf,filename[0],'REFL_VIS006'+node,rad1 ,found=found,set_fillvalue=-999.
-		read_ncdf,filename[0],'REFL_VIS008'+node,rad2 ,found=f2,set_fillvalue=-999.
-		read_ncdf,filename[0],'REFL_NIR016'+node,rad3a,found=f3,set_fillvalue=-999.
-		read_ncdf,filename[0],'BT_NIR037'  +node,rad3b,found=f4,set_fillvalue=-999.
-		read_ncdf,filename[0],'BT_TIR108'  +node,rad4 ,found=f5,set_fillvalue=-999.
-		read_ncdf,filename[0],'BT_TIR120'  +node,rad5 ,found=f6,set_fillvalue=-999.
-		ang_file = strreplace(filename[0],'CAC','CAA')
-		read_ncdf,ang_file[0],'SUNZEN'     +node,sunza,found=f7,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('REFL_VIS006'+node,algo=alg,level=lev),rad1 ,found=found,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('REFL_VIS008'+node,algo=alg,level=lev),rad2 ,found=f2,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('REFL_NIR016'+node,algo=alg,level=lev),rad3a,found=f3,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('BT_NIR037'  +node,algo=alg,level=lev),rad3b,found=f4,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('BT_TIR108'  +node,algo=alg,level=lev),rad4 ,found=f5,set_fillvalue=-999.
+		read_ncdf,filename[0],get_product_name('BT_TIR120'  +node,algo=alg,level=lev),rad5 ,found=f6,set_fillvalue=-999.
+		dumdat   =  get_product_name('SUNZEN'+node,algo=alg,level=lev)
+		ang_file =  get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,instrument=instrument,$
+					silent=silent,dirname=dirname,found=f7)
+		if f7 then read_ncdf,ang_file[0],dumdat,sunza,found=f7,set_fillvalue=-999.
 
 		if total([found,f2,f3,f4,f5,f6,f7]) eq 7. then begin
 			filter = is_number(strmid(dum[0],3)) ? fix(strmid(dum[0],3)) : 0; default is 0
@@ -6598,8 +6690,14 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			idx     = where(rad3b eq -999. or rad4 eq -999. or sunza eq -999.,idxcnt)
 			if idxcnt gt 0 then ref3b[idx]=-999.
 			;--------------------------------
-			if ~sil then print, ' Calculating False Color Image for CLARA-A2 (0.05 degree). Be patient ...'
-			outdata = false_color_max(filter, rad1, rad2, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
+			fac     = (alg eq 'esacciv3') ? 100. : 1. ; reflectance in percent oder normalized?
+			if sat eq 'aqua' or sat eq 'terra' then begin
+				;MODIS vis008 channel gets saturated at high reflectances 
+				idx = where(rad1 gt (50./fac) and rad2 le 0.,idxcnt )
+				if idxcnt gt 0 then rad2[idx] = rad1[idx] * 1.02
+			endif
+			if ~sil then print, ' Calculating False Color Image for '+sat_name(alg,sat)+' ('+string(get_grid_res(rad4),f='(f4.2)')+' degree). Be patient ...'
+			outdata = false_color_max(filter, rad1*fac, rad2*fac, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
 		endif else begin
 			if ~sil then print, ' At least one of the measurements neeeded for FCI is missing!'
 			found=0
@@ -6627,7 +6725,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			idx     = where(rad3b eq -999. or rad4 eq -999. or sunza eq -999.,idxcnt)
 			if idxcnt gt 0 then ref3b[idx]=-999.
 			;--------------------------------
-			if ~sil then print, ' Calculating False Color Image for PATMOS-X (0.10 degree). Be patient ...'
+			
+			if ~sil then print, ' Calculating False Color Image for PATMOS-X ('+string(get_grid_res(rad4),f='(f4.2)')+' degree). Be patient ...'
 			outdata = false_color_max(filter, rad1, rad2, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
 		endif else begin
 			if ~sil then print, ' At least one of the measurements neeeded for FCI is missing!'
@@ -6681,6 +6780,85 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		maxvalue = 5
 		unit = ''
+	endif else if ( strmid(dat,0,4) eq 'cdnc' and total(alg eq ['clara2','esacci','esacciv3','patmos']) and (lev eq 'l3u' or lev eq 'l2') ) then begin
+		if ~keyword_set(node) then begin
+			node   = strmid(lev,0,3) eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
+		endif else node = '_'+node
+		if alg eq 'patmos' then node=''
+		set_fillvalue = -999.
+		; 1) cot
+		dumdat = get_product_name('cot'+node,algo=alg,level=lev)
+		cot_file = get_filename(year,month,day,data=dumdat, satellite=sat,level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'cot_file: ',dumdat,'    : ',cot_file
+		read_data, cot_file[0], dumdat, cot, no_data_valuec, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
+		if not found then return,-1
+		; 2) cer
+		dumdat = get_product_name('cer'+node,algo=alg,level=lev)
+		cer_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'cer_file: ',dumdat,'    : ',cer_file
+		read_data, cer_file, dumdat, cer, no_data_valuer, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
+		if not found then return,-1
+		;e.g. clara cer in m, needs to be in µm
+		ui = strlowcase(strreplace(strcompress(unit,/rem),['\[','\]'],['','']))
+		if ui eq 'm' then cer /= 1.e-06
+		; 3) ctp
+		dumdat = get_product_name('ctp'+node,algo=alg,level=lev)
+		ctp_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'ctp_file: ',dumdat,': ',ctp_file
+		read_data, ctp_file, dumdat, ctp, no_data_valuep, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, $
+		set_fillvalue = set_fillvalue, silent=silent, count = count, offset = offset, stride = stride
+		if not found then return,-1
+		;e.g. clara cer in m, needs to be in µm
+		ui = strlowcase(strreplace(strcompress(unit,/rem),['\[','\]'],['','']))
+		if ui eq 'hpa' then ctp *= 100. else if ui ne 'pa' then begin
+			print,'CTP is not in Pascal not in hPa! Check unit.'
+			stop
+		endif
+		; 4) ctt
+		dumdat = get_product_name('ctt'+node,algo=alg,level=lev)
+		ctt_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'ctt_file: ',dumdat,': ',ctt_file
+		read_data, ctt_file, dumdat, ctt, no_data_valuet, verbose = verbose, found = found, set_fillvalue = set_fillvalue,$
+		silent=silent, count = count, offset = offset, stride = stride
+		if not found then return,-1
+		
+		;illum 1, über wasser, nur liquid clouds
+		; 5) cph
+		dumdat = get_product_name('cph'+node,algo=alg,level=lev)
+		cph_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'cph_file: ',dumdat,': ',ctt_file
+		;do this for Patmos L3U
+		cph = get_data(year,month,day,file=cph_file,data=dumdat, satellite=sat, level=lev, verbose = verbose,$
+				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valueh,found=found,/make_compare)
+		if not found then return,-1
+		; 6) SZA
+		dumdat = get_product_name('solzen'+node,algo=alg,level=lev)
+		sza_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
+		if not found then return,-1
+		if ~sil then print,'sza_file: ',dumdat,': ',sza_file
+		read_data, sza_file, dumdat, sza, no_data_valuez, verbose = verbose, found = found, set_fillvalue = set_fillvalue,$
+		silent=silent, count = count, offset = offset, stride = stride
+		if not found then return,-1
+		; 7) Land / Sea
+		ls = get_coverage(grid=get_grid_res(ctt),/land)
+
+		; cdnc = tr2nh_export(cot,cer,ctt,ctp) ; R.Bennartz et.al
+		data_idx = where(cot gt 0. and cer gt 4. and ctp gt 10000. and between(ctt,268,300) and cph eq 1 and between(sza,0.,84.) and ls eq 0,cnt_il)
+		outdata  = cot * 0. -999.
+		if cnt_il gt 0 then outdata[data_idx] = tr2nh_export(cot[data_idx], cer[data_idx], ctt = ctt[data_idx], p = ctp[data_idx])
+		longname = 'Cloud Droplet Number concentration'
+		unit = textoidl(' [cm^{-3}]')
+		no_data_value = -999.
+		minvalue = 0.
+		maxvalue = 300.
+		if ~sil then print,''
 	endif else if ( ((total(alg eq ['clara2','clara','claas']) or is_gewex) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
 			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
@@ -7661,7 +7839,8 @@ endif
 				unit = textoidl(' [ km]')
 			endif
 		endif else if total(datd eq ['ref','ref_liq','ref_ice','cer','cer_liq','cer_ice']) then begin
-			if total(alg eq ['clara2','claas','hector'])  and lev ne 'l3u' then begin
+; 			if total(alg eq ['clara2','claas','hector']) and lev ne 'l3u' then begin
+			if total(alg eq ['clara2','claas','hector']) then begin
 				outdata = float(outdata)
 				idx = where(outdata ne no_data_value,idxcnt)
 				if idxcnt gt 0 then outdata[idx] /= 1.e-06

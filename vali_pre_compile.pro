@@ -5,13 +5,14 @@
 @/cmsaf/nfshome/sstapelb/idl/rene/rmse.pro
 @/cmsaf/nfshome/sstapelb/idl/doy.pro
 @/cmsaf/nfshome/sstapelb/idl/great_circle.pro
-@/cmsaf/nfshome/sstapelb/idl/is_image.pro
+@./subtools/is_image.pro
 @./coyote/error_message.pro
 @./coyote/cgcolor.pro
 @./coyote/themonths.pro
 @./subtools/centertlb.pro
 @/cmsaf/nfshome/sstapelb/idl/trend/give_trend.pro
 @./subtools/get_grid_res.pro
+@/cmsaf/nfshome/sstapelb/idl/CDNC/tr2nh_export.pro
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
 @/cmsaf/nfshome/sstapelb/idl/file_name_info.pro
 @/cmsaf/nfshome/sstapelb/idl/win.pro
