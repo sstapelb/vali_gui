@@ -388,12 +388,12 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 				endif
 			endelse
 			if keyword_set(limit) then begin
-				if n_elements(limit) eq 8 then limit = [[6,1,2,5]]; reshape from map_set 8 elements limit vector to map_set 4 element limit vector
+				if n_elements(limit) eq 8 then limit = [[6,1,2,5]]; reshape map_set 8 elements limit vector to map_set 4 element limit vector
 				if n_elements(limit) eq 4 then begin
 					limit = [limit[0] > slat, limit[1] > slon, limit[2] < elat, limit[3] < elon] ; make sure limit bounds are not greater than array
 					if is_valid_idx(no_data_idx) or is_valid_idx(data_idx) then dum = float(reform(a[*,*,0])*0)
 					meridian_interval = keyword_set(meridian_interval) ? meridian_interval : 10
-					xx  = 0 > fix((limit[[1,3]]-slon)*1./grid_res) < (si[0]-1)
+					xx  = 0 > fix((limit[[1,3]]-slon)*1./grid_res-1) < (si[0]-1)
 					yy  = 0 > fix((limit[[0,2]]-slat)*1./grid_res-1) < (si[1]-1)
 					a   = a[xx[0]:xx[1],yy[0]:yy[1],*]
 					if found_geo then begin

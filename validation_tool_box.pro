@@ -3250,7 +3250,7 @@ end
 ;------------------------------------------------------------------------------------------
 pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, $
 		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets, claas=claas, $
-		msg = msg, cms_msg = cms_msg ; MSG with DIMS: [3712,3712]; CMS_MSG with DIMS: [3636,3636]
+		msg = msg, cms_msg = cms_msg ; MSG: MSG with DIMS: [3712,3712]; CMS_MSG: MSG with DIMS: [3636,3636]
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
 
@@ -3292,10 +3292,10 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 		found = 1
 	endif else begin
 		if keyword_set(nise) then begin
-			lon_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_nhk.sav')
-			lat_nhk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_nhk.sav')
-			lon_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lon_shk.sav')
-			lat_shk = restore_var('/cmsaf/cmsaf-cld1/sstapelb/savs/nise/NISE_lat_shk.sav')
+			lon_nhk = restore_var(!SAVS_DIR + 'nise/NISE_lon_nhk.sav')
+			lat_nhk = restore_var(!SAVS_DIR + 'nise/NISE_lat_nhk.sav')
+			lon_shk = restore_var(!SAVS_DIR + 'nise/NISE_lon_shk.sav')
+			lat_shk = restore_var(!SAVS_DIR + 'nise/NISE_lat_shk.sav')
 			lon_dum = [[[lon_nhk]],[[lon_shk]]]
 			lat_dum = [[[lat_nhk]],[[lat_shk]]]
 			found =1
