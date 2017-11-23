@@ -1,4 +1,4 @@
-@/cmsaf/nfshome/sstapelb/idl/vali_gui/subtools/modis_bright.pro
+@./modis_bright.pro
 
 function read_modis_l1b, filename, satellite, channel,radiance=radiance, found = found, index = index, $
 			no_data_value=no_data_value, minvalue=minvalue, maxvalue=maxvalue, longname=longname, unit=unit

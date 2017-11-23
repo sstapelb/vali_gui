@@ -111,8 +111,6 @@
 ;Copyright S.Mieruch (2009)
 ;sebastian.mieruch@iup.physik.uni-bremen.de
 ;
-;@~/idl/ncdf_read_matrix.pro
-;@~/wew/idl/read_matrix_my.pro
 @./H2O_edelson_krolik.pro
 @./replicate_array.pro
 function give_trend, dat0a, valmin, valmax, yearmin, yearmax, ectdat
