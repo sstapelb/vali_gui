@@ -1,7 +1,7 @@
 @./bw_to_color.pro
 @./make_color_bar.pro
 ;----------------------------------------------------
-; by M. Reuter
+; View2d by Max Reuter
 ;Stefans version 
 ;anders ist
 ;	- vertikale color_bar und cool_color sind hier default
@@ -54,7 +54,7 @@ function is_valid_idx, index
 end
 ;------------------------------------------------------------------------------------------
 ; by M. Reuter ; adapted to regular grids by stapel
-function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, msg = msg, found = found
+function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, msg = msg, found = found, hires = hires
 
 	; at the moment only regular grids
 	proz = 0.8
@@ -70,43 +70,28 @@ function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, 
 	gridy = float(y_1)/float(abs(slat-elat))
 
 	;filename bauen
-	path_map_high	= !dir + '/resource/maps/high/'
-	path_map_low	= !dir + '/resource/maps/low/'
-	b_ndx_file_high	= path_map_high  + 'bhigh.ndx'
-	b_dat_file_high	= path_map_high  + 'bhigh.dat'
-	p_ndx_file_high	= path_map_high  + 'phigh.ndx'
-	p_dat_file_high	= path_map_high  + 'phigh.dat'
-	c_ndx_file_high	= path_map_high  + 'chigh.ndx'
-	c_dat_file_high	= path_map_high  + 'chigh.dat'
-	r_ndx_file_high	= path_map_high  + 'rhigh.ndx'
-	r_dat_file_high	= path_map_high  + 'rhigh.dat'
-	b_ndx_file_low	= path_map_low   + 'blow.ndx'
-	b_dat_file_low	= path_map_low   + 'blow.dat'
-	p_ndx_file_low	= path_map_low   + 'plow.ndx'
-	p_dat_file_low	= path_map_low   + 'plow.dat'
-	c_ndx_file_low	= path_map_low   + 'clow.ndx'
-	c_dat_file_low	= path_map_low   + 'clow.dat'
-	r_ndx_file_low	= path_map_low   + 'rlow.ndx'
-	r_dat_file_low	= path_map_low   + 'rlow.dat'
-	if file_test(b_ndx_file_high) and file_test(p_dat_file_high) 	and $
-	   file_test(r_ndx_file_high) and file_test(c_ndx_file_high)  	then begin
-		filez_ndx = [p_ndx_file_high]
-		if keyword_set(border) then filez_ndx = [b_ndx_file_high,filez_ndx]
-		if keyword_set(rivers) then filez_ndx = [r_ndx_file_high,filez_ndx]
-		if keyword_set(lakes)  then filez_ndx = [c_ndx_file_high,filez_ndx]
+	res = keyword_set(hires) ? 'high' : 'low'
+	b_ndx_file = FILEPATH('b'+res+'.ndx', SUBDIR=['resource', 'maps',res])
+	b_dat_file = FILEPATH('b'+res+'.dat', SUBDIR=['resource', 'maps',res])
+	p_ndx_file = FILEPATH('p'+res+'.ndx', SUBDIR=['resource', 'maps',res])
+	p_dat_file = FILEPATH('p'+res+'.dat', SUBDIR=['resource', 'maps',res])
+	c_ndx_file = FILEPATH('c'+res+'.ndx', SUBDIR=['resource', 'maps',res])
+	c_dat_file = FILEPATH('c'+res+'.dat', SUBDIR=['resource', 'maps',res])
+	r_ndx_file = FILEPATH('r'+res+'.ndx', SUBDIR=['resource', 'maps',res])
+	r_dat_file = FILEPATH('r'+res+'.dat', SUBDIR=['resource', 'maps',res])
+
+	if file_test(b_ndx_file) and file_test(p_dat_file) and $
+	   file_test(r_ndx_file) and file_test(c_ndx_file) then begin
+		filez_ndx = [p_ndx_file]
+		if keyword_set(border) then filez_ndx = [b_ndx_file,filez_ndx]
+		if keyword_set(rivers) then filez_ndx = [r_ndx_file,filez_ndx]
+		if keyword_set(lakes)  then filez_ndx = [c_ndx_file,filez_ndx]
 	endif else begin
-		if file_test(b_ndx_file_low) and file_test(p_ndx_file_low) and $
-		   file_test(r_ndx_file_low) and file_test(c_ndx_file_low) then begin
-			filez_ndx = [p_ndx_file_low]
-			if keyword_set(border) then filez_ndx = [b_ndx_file_low,filez_ndx]
-			if keyword_set(rivers) then filez_ndx = [r_ndx_file_low,filez_ndx]
-			if keyword_set(lakes)  then filez_ndx = [c_ndx_file_low,filez_ndx]
-		endif else begin
-			print, 'map information not found at: ' + path_map_high + ' or: ' +path_map_low
-			found = 0
-			return, -1
-		endelse
+		print, res +'res map information not found! Try ',(keyword_set(hires) ? 'low' : 'high')
+		found = 0
+		return, -1
 	endelse
+
 	;einlesen
 	dum_vector	= 0b
 
@@ -193,7 +178,7 @@ function meridians, lon, lat, interval = interval, msg= msg, found = found, grid
 		gridx = 1./grid_res
 		gridy = 1./grid_res
 	endif else begin
-		print,'Need Lon/lat or gregular grid size Info!'
+		print,'Need Lon/lat or regular grid size Info!'
 		found = 0
 		return,-1
 	endelse
@@ -283,7 +268,7 @@ end
 ;------------------------------------------------------------------------------------------
 ;for the coast lines etc, map_set will be used (only on known regular grid sizes!)
 ;map_set, keywords can be parsed via _extra keywords
-;countries = countries,lakes = lakes,rivers = rivers,p0lon = p0lon,p0lat = p0lat, hires = hires, etc
+;countries = countries,lakes = lakes,coasts = coasts,p0lon = p0lon,p0lat = p0lat, hires = hires, etc
 ;------------------------------------------------------------------------------------------
 pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_bar, mini = mini, maxi = maxi		, $
 		col_table = col_table, dont_scale = dont_scale, col_center = col_center, position = position				, $
@@ -420,7 +405,10 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 				meridian_interval = keyword_set(meridian_interval) ? meridian_interval : 30
 			endelse
 			if found_geo then begin
-				coast_vec    = coast_line(lon,lat,border=countries,lakes=lakes,rivers=rivers,msg=msg,found=found)
+				rivers = is_tag(_extra,'coasts')
+				lakes  = is_tag(_extra,'lakes')
+				hires  = ~keyword_set(lowres_bounderies)
+				coast_vec = coast_line(lon,lat,border=countries,lakes=lakes,rivers=rivers,msg=msg,found=found,hires=hires)
 				if found eq 0 then free, coast_vec
 				meridian_vec = meridians(lon,lat,interval=meridian_interval,msg=msg,found=found)
 				if found eq 0 then free, meridian_vec
