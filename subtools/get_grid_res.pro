@@ -22,7 +22,9 @@ function get_grid_res, data, found = found, cci_l3u_eu = cci_l3u_eu, cci_l3u_af 
 				;CCI Africa L3U MODIS files
 				cci_l3u_af = 1.
 			endif else if dum[0] eq 0.1 and dum[1] eq 0.05 then begin
-				claas = 1.
+				claas = 1. ; claas at 0.05 resolution
+			endif else if dum[0] eq 0.5 and dum[1] eq 0.25 then begin
+				claas = 1. ; claas at 0.25 resolution
 			endif
 		endif
 	endif

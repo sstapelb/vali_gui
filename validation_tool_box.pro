@@ -437,6 +437,13 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 			'rad3b_desc'		: dat = 'bt_nir037_desc'
 			'rad4_desc'			: dat = 'bt_tir108_desc'
 			'rad5_desc'			: dat = 'bt_tir120_desc'
+			'cph'				: begin & if lev eq 'l2' then dat = 'phase' & end
+			'solzen'			: begin & if lev eq 'l2' then dat = 'solar_zenith_view_no1' & end
+			'sunzen'			: begin & if lev eq 'l2' then dat = 'solar_zenith_view_no1' & end
+			'sunza' 			: begin & if lev eq 'l2' then dat = 'solar_zenith_view_no1' & end
+			'satzen'			: begin & if lev eq 'l2' then dat = 'satellite_zenith_view_no1' & end
+			'satza'				: begin & if lev eq 'l2' then dat = 'satellite_zenith_view_no1' & end
+			'relazi'			: begin & if lev eq 'l2' then dat = 'rel_azimuth_view_no1' & end
 			else			:
 		endcase
 	endif
@@ -1093,9 +1100,9 @@ function ihistogram,data,bin_borders
 	return,histo
 
 end
-; maps a filled shapefile onto a regular grid 
 ;------------------------------------------------------------------------------------------
-function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid, plot_it = plot_it,found=found, germany = germany
+; maps a filled shapefile (polygons only) onto a regular grid, also orbits via regular grid
+function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,plot_it=plot_it,found=found,germany=germany
 
 	found = 1
 	if keyword_set(germany) then shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
@@ -1109,18 +1116,40 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 				lat_in = latitude
 				si = size(lon_in,/dim)
 				if n_elements(si) eq 2 then begin
-					print,'shape2grid: Reading shape_file onto a non-regular grid! Will now set up a fake regular 0.05° Grid and do bilinear interpolation!'
-					grd   = 1/20.
-					x_dim = 360./grd
-					y_dim = 180./grd
-					;check if lon_in is from-180-+180°
-					ilondum	= WHERE(lon_in GT 180.,icnt)
-					if icnt gt 0 then begin
-						print,'shape2grid: Bring longitude to [-180,180]'
-						lon_in[ilondum]= 360.-lon_in[ilondum]
-					endif
-					index_lon = fix((lon_in + 180.)*(1./grd))
-					index_lat = fix((lat_in +  90.)*(1./grd))
+					;grd will also be 0 if the grid is regular but not global
+					;e.g., the europe or africa l3u files of CCI
+					grid_res = get_grid_res(claas = claas, lon_in, cci_l3u_eu = cci_l3u_eu, cci_l3u_af = cci_l3u_af)
+					if cci_l3u_eu or cci_l3u_af then begin
+						lo_mima = minmax(lon_in,no_data_value=-999.,/nan)
+						la_mima = minmax(lat_in,no_data_value=-999.,/nan)
+						grd   = rnd(float(lo_mima[1] - lo_mima[0]) / float(si[0]-1),0.01)
+						slon  = (lo_mima[0] - grd/2.)
+						slat  = (la_mima[0] - grd/2.)
+						x_dim = si[0]
+						y_dim = si[1]
+					endif else if keyword_set(claas) then begin
+						grd   =  180./float(si[1])
+						slon  =  -90.
+						slat  =  -90.
+						x_dim =  180./grd
+						y_dim =  180./grd
+					endif else begin
+						;here we prob. have a L2 file or MSG Full disk
+						print,'shape2grid: Reading shape_file onto a non-regular grid! Will now set up a fake regular 0.05° Grid and do bilinear interpolation!'
+						grd   = 1/20.
+						slon  = -180.
+						slat  =  -90.
+						x_dim =  360./grd
+						y_dim =  180./grd
+						;check if lon_in is from-180-+180°
+						ilondum = WHERE(lon_in GT 180.,icnt)
+						if icnt gt 0 then begin
+							print,'shape2grid: Bring longitude to [-180,180]'
+							lon_in[ilondum]= 360.-lon_in[ilondum]
+						endif
+						index_lon = fix((lon_in - slon)*(1./grd))
+						index_lat = fix((lat_in - slat)*(1./grd))
+					endelse
 				endif else begin
 					found = 0
 					return,-1
@@ -1135,10 +1164,12 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 			return,-1
 		endelse
 	endif else begin
+		slon  = -180.
+		slat  =  -90.
 		x_dim = 360./grd
 		y_dim = 180./grd
 	endelse
-	
+
 	;use adm0 file for this, if available
 	sfile = strreplace(shape_file,'_adm1.shp','_adm0.shp')
 
@@ -1160,8 +1191,8 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 					lon = reform((*entity.vertices)[0, cuts[j]:cuts[j+1]-1])
 					lat = reform((*entity.vertices)[1, cuts[j]:cuts[j+1]-1])
 					;convert lon/lat to x/y
-					xxx = fix((lon + 180.)*(1./grd))
-					yyy = fix((lat +  90.)*(1./grd))
+					xxx = fix((lon - slon)*(1./grd))
+					yyy = fix((lat - slat)*(1./grd))
 					subscripts = POLYFILLV( reform(xxx), reform(yyy), long(x_dim), long(y_dim))
 					if subscripts[0] ne -1 then filled[subscripts] += 1
 				endfor
@@ -1517,7 +1548,8 @@ end
 function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
 						antarctic = antarctic, arctic = arctic, shape_file = shape_file, opposite = opposite, $
 						l3u_index = l3u_index, fillv_index = fillv_index, found = found, grid_res = grid_res, $
-						index = index, count = count, complement = complement, ncomplement = ncomplement ; where indizes and counts
+						index = index, count = count, complement = complement, ncomplement = ncomplement	, $
+						msg = msg, l3ue=l3ue ; where indizes and counts
 
 	found = 1
 	count = 0
@@ -3216,13 +3248,11 @@ function read_modis_obj_val, stringname, group, value = value,found=found
 	return,(count eq 0 ? -1 : neu) 
 end
 ;------------------------------------------------------------------------------------------
-pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, msg = msg, $
-		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets,claas=claas
+pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, $
+		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets, claas=claas, $
+		msg = msg, cms_msg = cms_msg ; MSG with DIMS: [3712,3712]; CMS_MSG with DIMS: [3636,3636]
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
-; 	if keyword_set(algo) then begin
-; 		claas = algo2ref(algo) eq 'cla' and ~keyword_set(grid_res) ; algo is claas and grid_res is 0; get_grid_res(arr(3600,3600))=0
-; 	endif else claas = 0
 
 	if keyword_set(file) then begin
 		filen = file[0]
@@ -3230,8 +3260,8 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 	endif
 	fillv = -999.
 
-	if keyword_set(msg) then begin
-		xrange = [0,(keyword_set(claas) ? 3599 : 3711)] & yrange=[0,(keyword_set(claas) ? 3599 : 3711)]
+	if keyword_set(msg) or keyword_set(cms_msg) then begin
+		xrange = [0,keyword_set(cms_msg) ? 3635 : 3711] & yrange=[0,keyword_set(cms_msg) ? 3635 : 3711]
 		msg_x = (indgen((xrange[1]-xrange[0])+1)+xrange[0]) #  (intarr((yrange[1]-yrange[0])+1)+1)
 		msg_y = (indgen((yrange[1]-yrange[0])+1)+yrange[0]) ## (intarr((xrange[1]-xrange[0])+1)+1)
 		dum = msg_to_geo(temporary(msg_x),temporary(msg_y),scale_params=scale_params,sub_sat_lon=sub_sat_lon)
@@ -4609,7 +4639,6 @@ function get_filename, year, month, day, data=data, satellite=satellite, instrum
 								pathdat = lev eq 'l3u' ? get_product_name(dat,algo=alg,level=lev,/path,/upper) : ''
 							endelse
 							filen = dir+yyyy+mm+dd+orbdum+'*ESACCI-'+strupcase(lev)+'_*'+pathdat+'-AVHRR*'+(lev eq 'l3s' ? '':sat)+'-f'+vers+'.nc'
-
 						end
 					'ESACCI': begin
 							if total(sat eq ['NOAA-AM','NOAA-PM']) then begin
@@ -6652,7 +6681,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if ~sil then print, ' Calculating RGB image for '+sat_name(alg,sat)+' ('+string(get_grid_res(rad4),f='(f4.2)')+' degree). Be patient ...'
 			outdata = calc_rgb(rad1*fac,rad2*fac,(refl_nir ? rad3a*fac:rad3b),rad4,sunza,0,/enhance,refl_nir037=refl_nir)
 		endif else begin
-			if ~sil then print, ' At least one of the measurements neeeded for RGB is missing!'
+			darr = strjoin((['VIS006','VIS008','NIR16','NIR37','BT108','SZA'])[where([found,f2,f3,f4,f5,f6] eq 0)],' and ')
+			if ~sil then print, 'Missing measurements neeeded for RGB calculations: ',darr
 			found=0
 			return,-1
 		endelse
@@ -6699,7 +6729,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if ~sil then print, ' Calculating False Color Image for '+sat_name(alg,sat)+' ('+string(get_grid_res(rad4),f='(f4.2)')+' degree). Be patient ...'
 			outdata = false_color_max(filter, rad1*fac, rad2*fac, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
 		endif else begin
-			if ~sil then print, ' At least one of the measurements neeeded for FCI is missing!'
+			darr = strjoin((['VIS006','VIS008','NIR16','NIR37','BT108','BT120','SZA'])[where([found,f2,f3,f4,f5,f6,f7] eq 0)],' and ')
+			if ~sil then print, 'Missing measurements neeeded for FCI calculations: ',darr
 			found=0
 			return,-1
 		endelse
@@ -6729,7 +6760,8 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if ~sil then print, ' Calculating False Color Image for PATMOS-X ('+string(get_grid_res(rad4),f='(f4.2)')+' degree). Be patient ...'
 			outdata = false_color_max(filter, rad1, rad2, ref3b, rad3b, rad4, rad5, sunza, longname=longname)
 		endif else begin
-			if ~sil then print, ' At least one of the measurements neeeded for FCI is missing!'
+			darr = strjoin((['VIS006','VIS008','NIR16','NIR37','BT108','BT120','SZA'])[where([found,f2,f3,f4,f5,f6,f7] eq 0)],' and ')
+			if ~sil then print, 'Missing measurements neeeded for FCI calculations: ',darr
 			found=0
 			return,-1
 		endelse
@@ -6749,6 +6781,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 			if ~sil then print, ' Calculating RGB image for PATMOS-X (0.10 degree). Be patient ...'
 			outdata = calc_rgb(rad1,rad2,(refl_nir ? rad3a:rad3b),rad4,sunza,0,/enhance,refl_nir037=refl_nir,/true)
 		endif else begin
+			darr = strjoin((['VIS006','VIS008','NIR16','NIR37','BT108','SZA'])[where([found,f2,f3,f4,f5,f6] eq 0)],' and ')
+			if ~sil then print, 'Missing measurements neeeded for RGB calculations: ',darr
+			found=0
+			return,-1
 			if ~sil then print, ' At least one of the measurements neeeded for RGB is missing!'
 			found=0
 			return,-1
@@ -6780,85 +6816,112 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		minvalue = 0
 		maxvalue = 5
 		unit = ''
-	endif else if ( strmid(dat,0,4) eq 'cdnc' and total(alg eq ['clara2','esacci','esacciv3','patmos']) and (lev eq 'l3u' or lev eq 'l2') ) then begin
-		if ~keyword_set(node) then begin
-			node   = strmid(lev,0,3) eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
-		endif else node = '_'+node
-		if alg eq 'patmos' then node=''
+	endif else if ( strmid(dat,0,4) eq 'cdnc' and total(alg eq ['clara2','esacci','esacciv3','patmos']) and total(lev eq ['l3u','l3ue','l2']) ) then begin
+		if lev eq 'l2' then begin
+			print, 'get_data:: Creating CDNC on level 2 files is not fully testet yet. We assume now all needed data is in one file!'
+			;We dont have l2 anymore we judst assume that all data is in one file
+			if lev eq 'l2' then dirname = file_dirname(filename[0]) else free, dirname
+			node = ''
+		endif else begin
+			if ~keyword_set(node) then begin
+				node   = strmid(lev,0,3) eq 'l3u' ? '_'+(reverse(strsplit(dat,'_',/ext)))[0] : ''
+			endif else node = '_'+node
+			if alg eq 'patmos' then node=''
+		endelse
 		set_fillvalue = -999.
+
 		; 1) cot
 		dumdat = get_product_name('cot'+node,algo=alg,level=lev)
-		cot_file = get_filename(year,month,day,data=dumdat, satellite=sat,level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		if not found then return,-1
-		if ~sil then print,'cot_file: ',dumdat,'    : ',cot_file
-		read_data, cot_file[0], dumdat, cot, no_data_valuec, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
-		if not found then return,-1
+		cot_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,found=found,instrument=instrument,/silent,dirname=dirname)
+		if found then begin
+			if ~sil then print,'cot_file: ',dumdat,'    : ',cot_file
+			read_data, cot_file[0], dumdat, cot, no_data_valuec, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+					found = found,/silent, count = count, offset = offset, stride = stride
+		endif
 		; 2) cer
 		dumdat = get_product_name('cer'+node,algo=alg,level=lev)
-		cer_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		if not found then return,-1
-		if ~sil then print,'cer_file: ',dumdat,'    : ',cer_file
-		read_data, cer_file, dumdat, cer, no_data_valuer, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
-		verbose = verbose, found = found, silent=silent, count = count, offset = offset, stride = stride
-		if not found then return,-1
-		;e.g. clara cer in m, needs to be in µm
-		ui = strlowcase(strreplace(strcompress(unit,/rem),['\[','\]'],['','']))
-		if ui eq 'm' then cer /= 1.e-06
+		cer_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,found=f1,instrument=instrument,/silent,dirname=dirname)
+		if f1 then begin
+			if ~sil then print,'cer_file: ',dumdat,'    : ',cer_file
+			read_data, cer_file, dumdat, cer, no_data_valuer, minvalue, maxvalue, longname, unit, set_fillvalue = set_fillvalue,$
+					found = f1,/silent, count = count, offset = offset, stride = stride
+			if f1 then begin
+				;e.g. clara cer in m, needs to be in µm
+				ui = strlowcase(strreplace(strcompress(unit,/rem),['\[','\]'],['','']))
+				if ui eq 'm' then cer /= 1.e-06
+			endif
+		endif
 		; 3) ctp
 		dumdat = get_product_name('ctp'+node,algo=alg,level=lev)
-		ctp_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		if not found then return,-1
-		if ~sil then print,'ctp_file: ',dumdat,': ',ctp_file
-		read_data, ctp_file, dumdat, ctp, no_data_valuep, minvalue, maxvalue, longname, unit, verbose = verbose, found = found, $
-		set_fillvalue = set_fillvalue, silent=silent, count = count, offset = offset, stride = stride
-		if not found then return,-1
-		;e.g. clara cer in m, needs to be in µm
-		ui = strlowcase(strreplace(strcompress(unit,/rem),['\[','\]'],['','']))
-		if ui eq 'hpa' then ctp *= 100. else if ui ne 'pa' then begin
-			print,'CTP is not in Pascal not in hPa! Check unit.'
-			stop
+		ctp_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,found=f2,instrument=instrument,/silent,dirname=dirname)
+		if f2 then begin
+			if ~sil then print,'ctp_file: ',dumdat,': ',ctp_file
+			read_data, ctp_file, dumdat, ctp, no_data_valuep, minvalue, maxvalue, longname, unit, found = f2, $
+					set_fillvalue = set_fillvalue, /silent, count = count, offset = offset, stride = stride
+			if f2 then begin
+				;e.g. clara cer in m, needs to be in µm
+				ui = strlowcase(strreplace(strcompress(unit,/rem),['\[','\]'],['','']))
+				if ui eq 'hpa' then ctp *= 100. else if ui ne 'pa' then begin
+					print,'CTP is not in Pascal not in hPa! Check unit.'
+					stop
+				endif
+			endif
 		endif
 		; 4) ctt
 		dumdat = get_product_name('ctt'+node,algo=alg,level=lev)
-		ctt_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		if not found then return,-1
-		if ~sil then print,'ctt_file: ',dumdat,': ',ctt_file
-		read_data, ctt_file, dumdat, ctt, no_data_valuet, verbose = verbose, found = found, set_fillvalue = set_fillvalue,$
-		silent=silent, count = count, offset = offset, stride = stride
-		if not found then return,-1
-		
+		ctt_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,found=f3,instrument=instrument,/silent,dirname=dirname)
+		if f3 then begin
+			if ~sil then print,'ctt_file: ',dumdat,': ',ctt_file
+			read_data, ctt_file, dumdat, ctt, no_data_valuet, found = f3, set_fillvalue = set_fillvalue,$
+					/silent, count = count, offset = offset, stride = stride
+		endif
 		;illum 1, über wasser, nur liquid clouds
 		; 5) cph
 		dumdat = get_product_name('cph'+node,algo=alg,level=lev)
-		cph_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		if not found then return,-1
-		if ~sil then print,'cph_file: ',dumdat,': ',ctt_file
-		;do this for Patmos L3U
-		cph = get_data(year,month,day,file=cph_file,data=dumdat, satellite=sat, level=lev, verbose = verbose,$
-				algo=alg,dirname=dirname,silent=silent,no_data_value=no_data_valueh,found=found,/make_compare)
-		if not found then return,-1
+		cph_file = get_filename(year,month,day,data=dumdat, satellite=sat,level=lev,algo=alg,found=f4,instrument=instrument,/silent,dirname=dirname)
+		if f4 then begin
+			if ~sil then print,'cph_file: ',dumdat,': ',ctt_file
+			;do this for Patmos L3U
+			cph = get_data(	year,month,day,file=cph_file,data=dumdat,satellite=sat,level=lev,$
+							algo=alg,dirname=dirname,/silent,set_fillvalue=set_fillvalue,found=f4,/make_compare)
+		endif
 		; 6) SZA
 		dumdat = get_product_name('solzen'+node,algo=alg,level=lev)
-		sza_file = get_filename(year,month,day,data=dumdat, satellite=sat, level=lev,algo=alg,found=found,instrument=instrument,silent=silent,dirname=dirname)
-		if not found then return,-1
-		if ~sil then print,'sza_file: ',dumdat,': ',sza_file
-		read_data, sza_file, dumdat, sza, no_data_valuez, verbose = verbose, found = found, set_fillvalue = set_fillvalue,$
-		silent=silent, count = count, offset = offset, stride = stride
-		if not found then return,-1
+		sza_file = get_filename(year,month,day,data=dumdat, satellite=sat,level=lev,algo=alg,found=f5,instrument=instrument,/silent,dirname=dirname)
+		if f5 then begin
+			if ~sil then print,'sza_file: ',dumdat,': ',sza_file
+			read_data, sza_file, dumdat, sza, found = f5, set_fillvalue = set_fillvalue,$
+					/silent, count = count, offset = offset, stride = stride
+		endif
 		; 7) Land / Sea
-		ls = get_coverage(grid=get_grid_res(ctt),/land)
-
-		; cdnc = tr2nh_export(cot,cer,ctt,ctp) ; R.Bennartz et.al
-		data_idx = where(cot gt 0. and cer gt 4. and ctp gt 10000. and between(ctt,268,300) and cph eq 1 and between(sza,0.,75.) and ls eq 0,cnt_il)
-		outdata  = cot * 0. -999.
-		if cnt_il gt 0 then outdata[data_idx] = tr2nh_export(cot[data_idx], cer[data_idx], ctt = ctt[data_idx], p = ctp[data_idx])
-		longname = 'Cloud Droplet Number concentration'
-		unit = textoidl(' [cm^{-3}]')
-		no_data_value = -999.
-		minvalue = 0.
-		maxvalue = 300.
-		if ~sil then print,''
+		if ~sil then print,'ls_file: ','lsflag',': ',filename
+		read_data, 	filename, 'lsflag', ls, found = f6, set_fillvalue = set_fillvalue,$
+					/silent, count = count, offset = offset, stride = stride
+		if f6 eq 0 then begin
+			;try lon/lat instead
+			make_geo,lon,lat,file=filename,found=f6
+			if f6 then ls = get_coverage(lon,lat,/land,found=f6)
+		endif
+		if not found then begin
+			ok = dialog_message('get_data:: CDNC: could not find ls flag!')
+			return,-1
+		endif
+		if total([found,f1,f2,f3,f4,f5,f6]) eq 7. then begin
+			; cdnc = tr2nh_export(cot,cer,ctt,ctp) ; R.Bennartz et.al
+			data_idx = where(cot gt 0. and cer gt 4. and ctp gt 10000. and between(ctt,268,300) and cph eq 1 and between(sza,0.,75.) and ls eq 0,cnt_il)
+			outdata  = cot * 0. -999.
+			if cnt_il gt 0 then outdata[data_idx] = tr2nh_export(cot[data_idx], cer[data_idx], ctt = ctt[data_idx], p = ctp[data_idx])
+			longname = 'Cloud Droplet Number concentration'
+			unit = textoidl(' [cm^{-3}]')
+			no_data_value = -999.
+			minvalue = 0.
+			maxvalue = 300.
+		endif else begin
+			darr = strjoin((['COT','CER','CTP','CTT','CPH','SZA','LSF'])[where([found,f1,f2,f3,f4,f5,f6] eq 0)],' and ')
+			if ~sil then print, 'Missing parameter neeeded for CDNC calculations: ',darr
+			found=0
+			return,-1
+		endelse
 	endif else if ( ((total(alg eq ['clara2','clara','claas']) or is_gewex) and (dat eq 'cwp')) or (alg eq 'clara2' and dat eq 'cwp_error') $
 			and (lev eq 'l3c' or lev eq 'l3s')) then begin
 		if ~sil then print,'Calculating '+dat+' for '+alg+' with: cwp = lwp * cph + iwp * (1-cph)'
