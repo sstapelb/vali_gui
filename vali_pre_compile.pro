@@ -11,10 +11,10 @@
 @./coyote/error_message.pro
 @./coyote/cgcolor.pro
 @./coyote/themonths.pro
-@./subtools/centertlb.pro
+@./coyote/centertlb.pro
 @./subtools/trend/give_trend.pro
 @./subtools/get_grid_res.pro
-@./tr2nh_export.pro
+@./subtools/tr2nh_export.pro
 @./subtools/file_name_info.pro
 @./subtools/win.pro
 @./coyote/cgsymcat.pro
