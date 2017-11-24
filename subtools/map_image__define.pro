@@ -1,4 +1,4 @@
-@./df_colorbar.pro
+; @./vali_gui/subtools/df_colorbar.pro
 ;$Id: map_image__define.pro,v 1.9 2005/04/26
 ;
 ;

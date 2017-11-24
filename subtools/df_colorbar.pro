@@ -1,4 +1,3 @@
-@./vector.pro
 ;+
 ; NAME:
 ;   COLORBAR

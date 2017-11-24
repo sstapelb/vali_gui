@@ -1,9 +1,7 @@
-@./bw_to_color.pro
-@./make_color_bar.pro
 ;----------------------------------------------------
 ; View2d by Max Reuter
-;Stefans version 
-;anders ist
+; My version 
+; anders ist
 ;	- vertikale color_bar und cool_color sind hier default
 ;		- keine colorbar erwünscht; color_bar = 0 setzen
 ;		- keine farben erwünscht  ; keyword bw setzen
