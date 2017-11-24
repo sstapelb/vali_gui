@@ -1,1 +1,1 @@
-@./vali_gui/ncdf_data__define.pro
+@ncdf_data__define.pro
