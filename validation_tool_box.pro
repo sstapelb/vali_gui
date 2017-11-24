@@ -1102,11 +1102,11 @@ function ihistogram,data,bin_borders
 end
 ;------------------------------------------------------------------------------------------
 ; maps a filled shapefile (polygons only) onto a regular grid, also orbits via regular grid
-function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,plot_it=plot_it,found=found,germany=germany
+function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,found=found,germany=germany
 
 	found = 1
 	if keyword_set(germany) then shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
-	grd = adv_keyword_set(grid) ? float(grid) : 0.05
+	grd = adv_keyword_set(grid_res) ? float(grid_res) : 0.05
 
 	if grd le 0 or ~file_test(shape_file,/read) then begin
 		if grd le 0. then begin
@@ -1203,11 +1203,6 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid=grid,
 	OBJ_DESTROY, myshape
 
 	if is_defined(index_lon) then filled = bilinear(filled, index_lon, index_lat)
-
-	if keyword_set(plot_it) then begin
-		make_geo,lon_g,lat_g,grid = grd
-		map_image,filled,lat_g,lon_g,/rainbow,min=0,max=1,/countries,limit=limit
-	endif
 
 	return, (filled < 1b)
 
@@ -1635,21 +1630,33 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endif
 
 	if ~keyword_set(lon) or ~keyword_set(lat) then begin
-		if keyword_set(grid_res) then begin
-			make_geo,lon,lat,grid=grid_res
-		endif else if keyword_set(l3u_index) then begin
-			make_geo,lon,lat,grid=0.05
+		if keyword_set(grid_res) or keyword_set(l3u_index) then begin
+			grd = keyword_set(l3u_index) ? 0.05 : float(grid_res)
+			;for regular grids we dont need lon/lat
+			si = [360.,180.] / grd
+			result = bytarr(si)
+			xx  = 0 > fix((lim[[1,3]] +180)*1./grd) < (si[0]-1)
+			yy  = 0 > fix((lim[[0,2]] + 90)*1./grd) < (si[1]-1)
+			result[xx[0]:xx[1],yy[0]:yy[1]] = 1
+			if n_elements(lim) eq 8 then begin
+				xx  = 0 > fix((lim[[5,7]] +180)*1./grd) < (si[0]-1)
+				yy  = 0 > fix((lim[[4,6]] + 90)*1./grd) < (si[1]-1)
+				result[xx[0]:xx[1],yy[0]:yy[1]] = 1
+			endif
+			free, lim
 		endif else begin
 			ok = dialog_message('get_coverage: Need Lon / Lat info:')
 			found = 0.
 			return,-1
 		endelse
-	endif
+	endif else grd = get_grid_res(lon)
 
 	if keyword_set(shape_file) then begin
-		result = shape2grid(shape_file,grid=get_grid_res(lon),lon=lon,lat=lat)
+		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat)
 	endif else begin
-		if n_elements(lim) eq 4 then begin
+		if n_elements(lim) eq 0 then begin
+			; Do nothing result has been defined already
+		endif else if n_elements(lim) eq 4 then begin
 			result = between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3])
 		endif else if n_elements(lim) eq 8 then begin
 			result = ( between(lat,lim[0],lim[2]) and between(lon,lim[1],lim[3]) ) or $
@@ -1663,16 +1670,16 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 
 	if keyword_set(land) then begin
 		if ~keyword_set(mnts) then begin
-			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon),lon=lon,lat=lat)
+			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid_res=grd,lon=lon,lat=lat)
 		endif else begin
-			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)
 		endelse
 		result = keyword_set(mnts) ? (result eq 1) and (ddem gt 1000.) : (result eq 1) and (ddem ne 0)
 	endif else if keyword_set(sea) then begin
 		if ~keyword_set(mnts) then begin
-			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid=get_grid_res(lon),lon=lon,lat=lat)
+			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid_res=grd,lon=lon,lat=lat)
 		endif else begin
-			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=get_grid_res(lon))
+			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)
 		endelse
 		result = (result eq 1) and (ddem eq 0)
 	endif
@@ -2898,19 +2905,21 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 
 			if keyword_set(antarctic) then begin
 				mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
-				limit = limit + [-50, 0,-50, 0,-50, 0,-50, 0]
+				limit = limit + ([-1, 0,-1, 0,-1, 0,-1, 0] * (keyword_set(msg) ? 40:50))
 				no_color_bar = 0
 				if ~adv_keyword_set(magnify) then magnify = 1
 				bar_horizontal=0
 				label=1
+				no_draw_border=0
 			endif
 			if keyword_set(arctic) then begin
 				mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
-				limit = limit + [ 50, 0, 50, 0, 50, 0, 50, 0]
+				limit = limit + ([ 1, 0, 1, 0, 1, 0, 1, 0] * (keyword_set(msg) ? 40:50))
 				no_color_bar = 0
 				if ~adv_keyword_set(magnify) then magnify = 1
 				bar_horizontal=0
 				label=1
+				no_draw_border=0
 			endif
 			lons = vector(-180,180,13)
 			lonnames=strtrim(lons, 2)
@@ -2929,10 +2938,12 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & bar_horizontal = 0 & limit = [-90,((p0lon mod 360) -90),90,((p0lon mod 360) +90)] & end
 		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end
 		if keyword_set(msg) then begin
-			p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
-			p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
-			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
-									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+			if ~keyword_set(antarctic) and ~keyword_set(arctic) then begin
+				p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
+				p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
+				limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
+										[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+			endif
 			no_color_bar = 0
 			bar_horizontal = 0
 			no_draw_border=0

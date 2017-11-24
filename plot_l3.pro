@@ -1783,8 +1783,10 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		print, 'Cutting longname: ',longname
 		longname = strreplace(longname,strmid(longname,br_start,br_end-br_start+1),'') 
 	endif
+
 	if longname eq 'long_name unknown' then longname = ''
-	if strlen(longname) gt 80 then longname = strmid(longname,0,80)+'...'
+	anz_char = 80/!p.multi[1]
+	if strlen(longname) gt anz_char then longname = strmid(longname,0,anz_char)+'...'
 
 	figure_title = keyword_set(notitle) ? '' : prefix + datum+' '+algon+' '+longname
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $

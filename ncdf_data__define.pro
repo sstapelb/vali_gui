@@ -4125,8 +4125,13 @@ l1g = 0
 		'sinusoidal'	: sinusoidal= 1
 		'robinson'		: robinson  = 1
 		'globe (ortho)'	: globe     = 1
-		'satellite'		: msg       = 1
-; 		'msg'			: msg       = 1
+		'satellite'		: begin 
+							msg   = 1
+							if p0lat[0] eq '' then begin
+								if nhm then p0lat='90'
+								if shm then p0lat='-90'
+							endif
+						  end
 		else		: 
 	endcase
 

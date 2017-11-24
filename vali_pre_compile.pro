@@ -7,10 +7,9 @@
 @subtools/doy.pro
 @subtools/great_circle.pro
 @subtools/is_image.pro
-@coyote/error_message.pro
+; @coyote/error_message.pro
 @coyote/cgcolor.pro
-@coyote/themonths.pro
-@coyote/centertlb.pro
+; @coyote/centertlb.pro
 @subtools/trend/give_trend.pro
 @subtools/get_grid_res.pro
 @subtools/tr2nh_export.pro
