@@ -376,8 +376,8 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 					limit = [limit[0] > slat, limit[1] > slon, limit[2] < elat, limit[3] < elon] ; make sure limit bounds are not greater than array
 					if is_valid_idx(no_data_idx) or is_valid_idx(data_idx) then dum = float(reform(a[*,*,0])*0)
 					meridian_interval = keyword_set(meridian_interval) ? meridian_interval : 10
-					xx  = 0 > fix((limit[[1,3]]-slon)*1./grid_res-1) < (si[0]-1)
-					yy  = 0 > fix((limit[[0,2]]-slat)*1./grid_res-1) < (si[1]-1)
+					xx  = 0 > fix((limit[[1,3]]-slon)*1./grid_res) < (si[0]-1)
+					yy  = 0 > fix((limit[[0,2]]-slat)*1./grid_res) < (si[1]-1)
 					a   = a[xx[0]:xx[1],yy[0]:yy[1],*]
 					if found_geo then begin
 						lon = lon[xx[0]:xx[1],yy[0]:yy[1]]
@@ -529,7 +529,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		0:		begin & xscale = 1.	& yscale = 1.							& end
 		1:		begin & xscale = 1. - (keyword_set(bar_size) ? bar_size : 0.25)	 & yscale = 1.		& end
   		2:		begin & xscale = 1.	& yscale = 1. - (keyword_set(bar_size) ? bar_size : 0.15)	& end
-		else:		begin & xscale = 1.	& yscale = 1.							& end
+		else:	begin & xscale = 1.	& yscale = 1.							& end
 	endcase
 	px = (keyword_set(full_screen) ? [0., 1.] : (!x.window)) * !d.x_vsize		; Get size of window in device units
 	py = (keyword_set(full_screen) ? [0., 1.] : (!y.window)) * !d.y_vsize		; Get size of window in device units
@@ -611,8 +611,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 ;		Bildschirmausgabe
 		dum_img = bytarr(swx, swy, 3)
 		for i = 0, 2 do dum_img[*, *, i] = congrid(im[*, *, i], swx, swy)
-		tv, dum_img, $
-			floor(px[0] + swx /  xscale * (1. - xscale)), floor(py[0] + swy/yscale * (1. - yscale)), true = 3
+		tv, dum_img, floor(px[0] + swx /  xscale * (1. - xscale)), floor(py[0] + swy/yscale * (1. - yscale)), true = 3
 	endelse
 
 ;	Colorbar reinmalen
@@ -640,7 +639,6 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		end
 	else:
 	endcase
-
 ;	Achsen reinmalen
 	x_0 = 0.
 	x_1 = six
@@ -658,6 +656,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		py[0] + swy/yscale * (1. - yscale)	, $
 		px[0] + swx/xscale			, $
 		py[0] + swy/yscale			]
+
 	if lnot(keyword_set(no_axes) or keyword_set(boxed)) then begin
 		plot,[x_0, x_1], [y_0, y_1], xrange = [x_0, x_1], yrange = [y_0, y_1], /noerase, /nodata, pos = pos, /dev, $
 			xstyle = 1, ystyle = 1, xticklen = 0.02, yticklen = 0.02, xgridstyle = 0, ygridstyle = 0, _extra = _extra
@@ -666,14 +665,13 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
  			xstyle = keyword_set(boxed) ? 1:5, ystyle = keyword_set(boxed) ? 1:5, xticks = 1, yticks = 1     , $
 			xtickname = [' ',' '], ytickname = [' ',' '], _extra = _extra
 	endelse
-	
+
 	if keyword_set(use_map_set) then begin
 		;We need mapping coordinates to draw coasts or meridians, map_set will do this for us
-		pos = [	(px[0]+swx/xscale * (1. - xscale))/!d.x_vsize, py[0]/!d.y_vsize	 , $
-					(px[0]+swx/xscale)/!d.x_vsize,(py[0]+swy)/!d.y_vsize]
+		pos = floor(pos)/float([!d.x_vsize,!d.y_vsize,!d.x_vsize,!d.y_vsize])
 		rot = 0.
 		limit = keyword_set(limit) ? limit : [-90,p0lon-180.,90,p0lon+180.]
-		map_set,p0lat[0],p0lon[0],rot,pos=pos,/noerase,/noborder,limit=limit
+		map_set,p0lat[0],p0lon[0],rot,pos=pos,/noerase,limit=limit,/noborder
 	endif
 
 	if keyword_set(coast_vec) then begin
