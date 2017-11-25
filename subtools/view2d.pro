@@ -267,6 +267,29 @@ end
 ;for the coast lines etc, map_set will be used (only on known regular grid sizes!)
 ;map_set, keywords can be parsed via _extra keywords
 ;countries = countries,lakes = lakes,coasts = coasts,p0lon = p0lon,p0lat = p0lat, hires = hires, etc
+; 
+; Example 1): Draw Germany Mask with coast lines, countries and federal borders
+;	0) Compile vali_gui 
+; 	1) set vali_gui system paths 
+; 	2) Create Germany Mask (use get_coverage with predefined Germany keyword)
+; 	3) Plot it with View2d
+; 	4) Draw Federal borders of Germany (use cgDrawShapes from the coyote libary)
+; 
+; 	.r call
+;	vali_set_path
+;	de = get_coverage(/germany,offsets=offsets,shape_file = shape_file)
+; 	view2d,de,/aspect,offsets = offsets,/continents,/countries,/box_axes,meridian_interval=2
+; 	cgDrawShapes, shape_file
+; 
+; Example 2): Get CCI L3u cloud mask and draw it on Germany Mask
+; 	.r call
+;	vali_set_path
+; 	read_ncdf, !L3U_DEFAULT_FILE, 'cmask_asc', cmask, no_data_value,minvalue, maxvalue, longname, unit, flag_meanings
+; 	shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
+; 	de = get_coverage(shape_file = shape_file,grid_res = get_grid_res(cmask))
+; 	view2d,	cmask,no_data_idx = where(de eq 0 or cmask eq no_data_value[0]),meridian_interval=2,$limit=[46,5,56,16],$
+; 			no_data_col = cgcolor('Black'),/brewer,col_tab=-5,/bar_discontinous,bar_nlev=2,bar_tickname=flag_meanings
+; 	cgDrawShapes, shape_file,color=cgcolor('ORG7'),thick=2
 ;------------------------------------------------------------------------------------------
 pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_bar, mini = mini, maxi = maxi		, $
 		col_table = col_table, dont_scale = dont_scale, col_center = col_center, position = position				, $
@@ -280,7 +303,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		meridian_style = meridian_style, meridian_nonumber = meridian_nonumber,meridian_interval = meridian_interval, $
 		noerase = noerase, range = range, data_idx = data_idx,coast_psym = coast_psym, bar_position = bar_position	, $
 		bar_tickname = bar_tickname, brewer = brewer,continents = continents, countries=countries,limit = limit		, $
-		box_axes = box_axes, lowres_bounderies = lowres_bounderies
+		box_axes = box_axes, lowres_bounderies = lowres_bounderies, offsets = offsets
 
 	bar_nlev		= keyword_set(bar_nlev)				? bar_nlev		: 4
 	bar_dist		= keyword_set(bar_dist)				? bar_dist		: 0.
@@ -314,7 +337,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		grid_res = get_grid_res(a, claas=claas, cci_l3u_eu=cci_l3u_eu, cci_l3u_af=cci_l3u_af) ; check if "a" is of regular (equal angle) grid size
 		p0lon = is_tag(_extra,'P0lon') ? _extra.p0lon : 0.
 		p0lat = 0.; so far we do nothing if p0lat is set.
-		if grid_res ne 0 or cci_l3u_eu or cci_l3u_af or keyword_set(msg) or keyword_set(claas) then begin
+		if grid_res ne 0 or cci_l3u_eu or cci_l3u_af or keyword_set(msg) or keyword_set(claas) or keyword_set(offsets) then begin
 			si  = size(a,/dim)
 			if keyword_set(msg) and ~keyword_set(claas) then begin
 				xrange = [0,si[0]-1] & yrange=[0,si[1]-1]
@@ -348,7 +371,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 				if keyword_set(cci_l3u_eu) then begin
 					grid_res = 0.02
 					slon     =  -15. & elon = 45.
-					slat     =   35. & elon = 75.
+					slat     =   35. & elat = 75.
 					p0lon    =   15.
 					limit    = keyword_set(limit) ? limit : [slat,slon,elat,elon]
 				endif
@@ -357,6 +380,13 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 					slon     =  -20. & elon = 30.
 					slat     =    0. & elat = 20.
 					p0lon    =    5.
+					limit    = keyword_set(limit) ? limit : [slat,slon,elat,elon]
+				endif
+				if keyword_set(offsets) then begin
+					grid_res = offsets.grid
+					slon     = offsets.slon & elon = offsets.elon 
+					slat     = offsets.slat & elat = offsets.elat
+					p0lon    = total([slon,elon])/2.
 					limit    = keyword_set(limit) ? limit : [slat,slon,elat,elon]
 				endif
 				;we have to shift the array if p0lon is set

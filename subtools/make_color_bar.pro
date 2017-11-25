@@ -46,12 +46,10 @@ pro make_color_bar,mini					$; Minimum
 	tickname = [strcompress(string(n_tickv,format=bar_format), /remove_all)]
 	if keyword_set(bar_tickname) then begin
 		if n_elements(bar_tickname) eq (n_elements(tickname)-1) then begin
-; 			tickname = [bar_tickname,' ']
 			strdum = strarr(n_elements(bar_tickname)*2+1)+' '
 			for i = 0,n_elements(bar_tickname)-1 do strdum[i*2+1] = bar_tickname[i]
 			tickname = strdum
 		endif
-; 		tickv = [float(bar_tickname),100.]
 	endif
 	if keyword_set(l_eq) then begin
 		dum = min(n_tickv, min_idx)
@@ -105,10 +103,10 @@ pro make_color_bar,mini					$; Minimum
 	dum_bar = dum_bar / float(n_elements(dum_bar) - 1.) * (maxi - mini) + mini
 
 	if not keyword_set(continous) then begin
-		for i=0,n_lev-1 do begin & $
-			dum_bar[where((dum_bar ge tickv[i]) and (dum_bar lt tickv[i+1]))]=(keyword_set(bar_tickname) ? bar_tickname[i] : tickv[i]) & $
-		endfor & $
-	endif 
+		for i=0,n_lev-1 do begin
+			dum_bar[where((dum_bar ge tickv[i]) and (dum_bar lt tickv[i+1]))] = tickv[i]
+		endfor
+	endif
 
 	scale=float(max(dum_bar))/255.
 	; SST: dont let scale be zero!!
@@ -126,16 +124,16 @@ pro make_color_bar,mini					$; Minimum
 		keyword_set(red)   : dum_bar=[[[dum_bar]],[[dum_bar*0]],[[dum_bar*0]]]
 		keyword_set(green) : dum_bar=[[[dum_bar*0]],[[dum_bar]],[[dum_bar*0]]]
 		keyword_set(blue)  : dum_bar=[[[dum_bar*0]],[[dum_bar*0]],[[dum_bar]]]
-	else: begin
-		if adv_keyword_set(col_center) then begin
-			dum_c	= vector(float(mini), float(maxi), 1000.)
-			dum_c	= transpose(reform([[[dum_c]],[[dum_c]]]))
-			print, minmax(dum_c)
-			dum_bar	= bw_to_color(dum_c, col_table = col_table, dont_scale = dont_scale, col_center = col_center,brewer = brewer)
-		endif else begin
-		dum_bar	= bw_to_color(float(dum_bar), col_table = col_table, dont_scale = dont_scale, brewer = brewer)
+		else: begin
+			if adv_keyword_set(col_center) then begin
+				dum_c	= vector(float(mini), float(maxi), 1000.)
+				dum_c	= transpose(reform([[[dum_c]],[[dum_c]]]))
+				print, minmax(dum_c)
+				dum_bar	= bw_to_color(dum_c, col_table = col_table, dont_scale = dont_scale, col_center = col_center,brewer = brewer)
+			endif else begin
+				dum_bar	= bw_to_color(float(dum_bar), mini = mini, maxi = maxi, col_table = col_table, dont_scale = dont_scale, brewer = brewer)
+			endelse
 		endelse
-	endelse
 	endcase
 	if (!d.flags and 1) eq 1 then begin 	; device has scalable pixel size
 		bar=dum_bar

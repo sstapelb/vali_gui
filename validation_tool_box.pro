@@ -1102,12 +1102,10 @@ function ihistogram,data,bin_borders
 end
 ;------------------------------------------------------------------------------------------
 ; maps a filled shapefile (polygons only) onto a regular grid, also orbits via regular grid
-function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,found=found,germany=germany
+function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,offsets=offsets,found=found
 
 	found = 1
-	if keyword_set(germany) then shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
 	grd = adv_keyword_set(grid_res) ? float(grid_res) : 0.05
-
 	if grd le 0 or ~file_test(shape_file,/read) then begin
 		if grd le 0. then begin
 			;check if lon/lat are available
@@ -1154,6 +1152,14 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 					found = 0
 					return,-1
 				endelse
+			endif else if keyword_set(offsets) then begin
+				grd   = offsets.GRID
+				slon  = offsets.SLON
+				slat  = offsets.SLAT
+				elon  = offsets.ELON
+				elat  = offsets.ELAT
+				x_dim = (elon-slon)/grd
+				y_dim = (elat-slat)/grd
 			endif else begin
 				found = 0
 				return,-1
@@ -1163,6 +1169,14 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 			found = 0
 			return,-1
 		endelse
+	endif else if keyword_set(offsets) then begin
+		grd   = offsets.GRID
+		slon  = offsets.SLON
+		slat  = offsets.SLAT
+		elon  = offsets.ELON
+		elat  = offsets.ELAT
+		x_dim = (elon-slon)/grd
+		y_dim = (elat-slat)/grd
 	endif else begin
 		slon  = -180.
 		slat  =  -90.
@@ -1540,22 +1554,36 @@ pro set_coverage, cov
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 end
 ;------------------------------------------------------------------------------------------
-function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage	, $
+function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage		, $
 						antarctic = antarctic, arctic = arctic, shape_file = shape_file, opposite = opposite, $
 						l3u_index = l3u_index, fillv_index = fillv_index, found = found, grid_res = grid_res, $
 						index = index, count = count, complement = complement, ncomplement = ncomplement	, $
-						msg = msg, l3ue=l3ue ; where indizes and counts
+						msg = msg, l3ue = l3ue, l3ua = l3ua, claas = claas, germany = germany, offsets = offsets
 
 	found = 1
 	count = 0
 	index =-1
+	
 	lim = keyword_set(limit) ? limit   : [-90.0,-180., 90.0,180.]
+	if n_elements(lim) ne 4 then begin
+		ok = dialog_message('Limit vector has unknown length.')
+		found = 0.
+		return,-1
+	endif
 	if keyword_set(antarctic) then lim = [-90.0,-180.,-60.0,180.]
 	if keyword_set(arctic)    then lim = [ 60.0,-180., 90.0,180.]
+	if keyword_set(germany) then begin
+		shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
+		offsets = {grid:0.01,slon:5,elon:16,slat: 46,elat:56}
+	endif
 
 	if keyword_set(shape_file) then begin
 		if ~file_test(shape_file) then free, shape_file
 	endif
+
+	if keyword_set(l3ue)  then offsets = {grid:0.02,slon:-15,elon:45,slat: 35,elat:75}
+	if keyword_set(l3ua)  then offsets = {grid:0.01,slon:-20,elon:30,slat:  0,elat:20}
+	if keyword_set(claas) then offsets = {grid:0.05,slon:-90,elon:90,slat:-90,elat:90}
 
 	fvi_cnt = n_elements(fillv_index)
 	if fvi_cnt eq 1 then begin
@@ -1571,32 +1599,20 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		cov = strlowcase(coverage)
 		if cov eq 'sea' then begin
 			sea  = 1
-			land = 0
-			mnts = 0
 			cov  = 'full'
 		endif else if cov eq 'land' then begin
-			sea  = 0
 			land = 1
-			mnts = 0
 			cov  = 'full'
 		endif else if cov eq 'mountains' then begin
-			sea  = 0
-			land = 1
 			mnts = 1
 			cov  = 'full'
 		endif else if stregex(cov,'_land',/bool) then begin
-			sea  = 0
 			land = 1
-			mnts = 0
 			cov  = strreplace(cov,'_land','')
 		endif else if stregex(cov,'_sea',/bool) then begin
 			sea  = 1
-			land = 0
-			mnts = 0
 			cov = strreplace(cov,'_sea','')
 		endif else if stregex(cov,'_mountains',/bool) then begin
-			sea  = 0
-			land = 1
 			mnts = 1
 			cov  = strreplace(cov,'_mountains','')
 		endif
@@ -1644,6 +1660,23 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 				result[xx[0]:xx[1],yy[0]:yy[1]] = 1
 			endif
 			free, lim
+		endif else if keyword_set(offsets) then begin
+			grd   = offsets.GRID
+			slon  = offsets.SLON
+			slat  = offsets.SLAT
+			elon  = offsets.ELON
+			elat  = offsets.ELAT
+			si    = [(elon-slon)/grd,(elat-slat)/grd]
+			result = bytarr(si)
+			xx  = 0 > fix((lim[[1,3]] -slon)*1./grd) < (si[0]-1)
+			yy  = 0 > fix((lim[[0,2]] -slat)*1./grd) < (si[1]-1)
+			result[xx[0]:xx[1],yy[0]:yy[1]] = 1
+			if n_elements(lim) eq 8 then begin
+				xx  = 0 > fix((lim[[5,7]] +180)*1./grd) < (si[0]-1)
+				yy  = 0 > fix((lim[[4,6]] + 90)*1./grd) < (si[1]-1)
+				result[xx[0]:xx[1],yy[0]:yy[1]] = 1
+			endif
+			free, lim
 		endif else begin
 			ok = dialog_message('get_coverage: Need Lon / Lat info:')
 			found = 0.
@@ -1652,7 +1685,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endif else grd = get_grid_res(lon)
 
 	if keyword_set(shape_file) then begin
-		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat)
+		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat,offsets=offsets)
 	endif else begin
 		if n_elements(lim) eq 0 then begin
 			; Do nothing result has been defined already
@@ -1667,21 +1700,13 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 			return,-1
 		endelse
 	endelse
-
-	if keyword_set(land) then begin
-		if ~keyword_set(mnts) then begin
-			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid_res=grd,lon=lon,lat=lat)
-		endif else begin
-			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)
-		endelse
-		result = keyword_set(mnts) ? (result eq 1) and (ddem gt 1000.) : (result eq 1) and (ddem ne 0)
-	endif else if keyword_set(sea) then begin
-		if ~keyword_set(mnts) then begin
-			ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',grid_res=grd,lon=lon,lat=lat)
-		endif else begin
-			ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)
-		endelse
-		result = (result eq 1) and (ddem eq 0)
+	
+	if keyword_set(land) or keyword_set(sea) then begin
+		ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',lon=lon,lat=lat,grid_res=grd,offsets=offsets)
+		result = (result eq 1) and (ddem eq (keyword_set(sea) ? 0:1))
+	endif else if keyword_set(mnts) then begin
+		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)
+		result = (result eq 1) and (ddem gt 1000.)
 	endif
 
 	if fvi_cnt gt 0 then result[fillv_index] = 0
