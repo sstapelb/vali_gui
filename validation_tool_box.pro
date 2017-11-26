@@ -1861,6 +1861,7 @@ function ref2algo, reference ,lower_case = lower_case, upper_case = upper_case, 
 		'era-i'		: begin & alg = 'era-i' & sat = '' & end
 		'era2'		: begin & alg = 'era-i2' & sat = '' & end
 		'era-i2'	: begin & alg = 'era-i2' & sat = '' & end
+		'select'	: alg = 'select'
 		else		: alg = 'unknown'
 	endcase
 
@@ -1934,6 +1935,7 @@ function algo2ref, algo ,sat=sat,lower_case = lower_case, upper_case = upper_cas
 		'era2'		: ref = 'era2'
 		'era-i2'	: ref = 'era2'
 		'era-interim2'	: ref = 'era2'
+		'select'	: ref = 'select'
 		else		: ref = 'unknown'
 	endcase
 
@@ -2049,8 +2051,8 @@ function gstddev,data,latitude
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function gcorrelate,data1,data2,latitude
-; 	returns global bias weighted with latitude
+function gcorrelate, data1, data2, latitude, p_value = p_value, t_stat = t_stat, verbose = verbose
+; 	returns Pearson's correlation weighted with latitude
 	if n_params() ne 3 then begin
 		print,'% GCORRELATE: At least one input Variable is undefined: data1, data2, latitude'
 		return,-1
@@ -2074,6 +2076,22 @@ function gcorrelate,data1,data2,latitude
 	var2     = ( (sum2_2 - nnn * avg2^2.) > 0.) 
 	covar    = sum_prod - nnn * avg1 * avg2				; Verschiebungssatz Covarianz
 	corr     = covar / sqrt( var1 * var2)				; Correlation
+
+	;----------------------------------------------------------------------------
+	; T test significance for ro=0 (Null Hypothesis) (Correlation value predicted by theory)
+	; Based on http://davidmlane.com/hyperstat/B62223.html
+	;----------------------------------------------------------------------------
+	r = -0.9999999d > corr < 0.9999999d	; avoid Floating divide by 0
+	df = nnn - 2 ; nnn or n_elements(data1) ???
+	; compute the t statistic
+	t = r/sqrt((1.0-r^2.)/FLOAT(df))
+	; calculate the two-side 'tail area' probability
+	p = 2.0 * (1.0 - T_PDF(ABS(t), df))
+	t_stat  = t
+	p_value = p
+
+	if keyword_set(verbose) then print,	" GCORRELATE: T TEST result (P-Value: "+string(p,format='(F7.5)')+$
+	") The correlation is "+((p LT 0.05)?"":"NOT ")+"significant with respect to significance level 0.05"
 
 	return, float(corr)
 end

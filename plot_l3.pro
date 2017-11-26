@@ -83,6 +83,78 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 
 end
 ;------------------------------------------------------------------------------------------
+pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = save_as, $
+					bar_discontinous = bar_discontinous, $
+					flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
+					title=title, xtitle=xtitle, ytitle=ytitle, $
+					bar_nlev = bar_nlev, col_tab = col_tab, position = position
+
+	bar_format='(i)'
+	bar_title= 'nr of occurrence'
+	if keyword_set(bar_discontinous) then begin
+		h2d_array = h2d_array/total(h2d_array)*100.
+		bar_title= 'nr of occurrence [%]'
+		bar_format='(f5.2)'
+	endif else begin
+		h2d_array = float(h2d_array)/max(float(h2d_array)) *100.
+		bar_title= 'norm. to max. occurrence [%]'
+		bar_format='(f7.3)'
+	endelse
+
+	if (min(h2d_array) eq max(h2d_array)) and (max(h2d_array) eq 0) then h2d_array[0]=1
+	if keyword_set(bar_discontinous) and n_elements(h2d_array) le 9 then begin
+		bar_tickv = h2d_array[sort(h2d_array)]
+		bar_tickname = string(bar_tickv,f=bar_format)
+	endif else begin
+		bar_discontinous = 0
+		no_data_val=0
+	endelse
+; 	xtickv = vector(0,(size(h2d_array,/dim))[0]-1,cc+1)
+; 	ytickv = vector(0,(size(h2d_array,/dim))[1]-1,cc+1)
+	xtickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
+	ytickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
+	xmargin=[7,5]
+	ymargin=[3,2]+(keyword_set(save_as) ? [0,2]:0)
+
+	if keyword_set(flag_meanings1) then begin
+		strdum = strarr(n_elements(flag_meanings1)*2+1)+' '
+		for i = 0,n_elements(flag_meanings1)-1 do strdum[i*2+1] = flag_meanings1[i]
+		xtickname = strdum
+		xticklen=0.00001
+		xoplot_lines = 1
+		bar_nlev = n_elements(h2d_array)< 9.
+	endif
+	if keyword_set(flag_meanings2) then begin
+		strdum = strarr(n_elements(flag_meanings2)*2+1)+' '
+		for i = 0,n_elements(flag_meanings2)-1 do strdum[i*2+1] = flag_meanings2[i]
+		ytickname = strdum
+		yticklen=0.00001
+		yoplot_lines = 1
+		bar_nlev = n_elements(h2d_array)< 9.
+	endif
+
+	
+	view2d,h2d_array,no_data_val=no_data_val,xtitle=xtitle,ytitle=ytitle,bar_title=bar_title,bar_discontinous = bar_discontinous, $
+	xticks = n_elements(xtickname)-1, xtickv = xtickv,yticks = n_elements(ytickname)-1, ytickv = ytickv, $
+	xtickname=xtickname,ytickname=ytickname, bar_format=bar_format, bar_nlev = bar_nlev, $
+	log=~keyword_set(bar_discontinous),col_table=col_tab,orientation=-90,xticklen=xticklen,yticklen=yticklen, $
+	title = title, xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
+	bar_tickname = bar_tickname,bar_tickv=bar_tickv,xmargin=xmargin,ymargin=ymargin, position = position
+	if n_gesamt gt 0 and ~keyword_set(bar_discontinous) then begin
+		oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
+		oplot,!x.crange,!y.crange,thick=thick
+	endif else begin
+		si=size(h2d_array,/dim)
+		if keyword_set(xoplot_lines) then for i=0,si[0] do oplot,[i,i],!y.crange,thick=2
+		if keyword_set(yoplot_lines) then for i=0,si[1] do oplot,!x.crange,[i,i],thick=2
+		for i = 0, si[0]-1 do begin & $
+			for j = 0,si[1]-1 do begin & $
+				xyouts,i+0.5,j+0.5,strcompress(string(h2d_array[i,j],f='(f6.2)'),/rem)+'%',align=0.5 & $
+			endfor & $
+		endfor
+	endelse
+end
+;------------------------------------------------------------------------------------------
 pro plot_2d_rel_hist, bild1, name1, bild2=bild2, name2=name2, col_tab=col_tab, brewer=brewer, mini = mini, maxi = maxi, save_as=save_as, $
 			difference = difference,notitle=notitle, appendix = appendix,nobar=nobar
 ; col_tab=2
@@ -541,6 +613,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			return
 		endif
 		free, join_nodes
+
 		; ref l3u files
 		select = strlowcase(algo2) eq 'select'
 		bild_gac = get_data(file = gac_nc_file, yyyy,mm,dd, data=dat[1],sat=satgac,algo=algo2,no_data_value=fillvalue2,level=level,dirname=dirname2, $
@@ -986,73 +1059,22 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		min_a = histv[1]
 		max_a = histv[2]
 		cc    = 5
-		bar_format='(i)'
-		bar_title= 'nr of occurrence'
 		aa = fltarr(10,10)
 		aa[0] = 1
 		if chk_idx gt 0 then begin
 			regr = linfit(bild_cci[idx],bild_gac[idx], YFIT=yfit)
 			aa = hist_2d(bild_cci[idx],bild_gac[idx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
-			if bar_discontinous then begin
-				aa = aa/total(aa)*100. ; prozente
-				bar_title= 'nr of occurrence [%]'
-				bar_format='(f5.2)'
-			endif else begin
-				aa = float(aa)/max(float(aa)) *100.
-				bar_title= 'norm. to max. occurrence'
-				bar_format='(f7.3)'
-			endelse
 		endif
 
 		start_save, save_as3, thick = thick, size = [32, 20]
-			if (min(aa) eq max(aa)) and (max(aa) eq 0) then aa[0]=1
-			if bar_discontinous and n_elements(aa) le 9 then bar_tickname = string(aa[sort(aa)],f=bar_format)
-; 			xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1)
-; 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1)
-			xtickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
-			ytickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
-			xmargin=[7,5]
-			ymargin=[3,2]+(keyword_set(save_dir) ? [0,2]:0)
-			if keyword_set(flag_meanings1) then begin
-				strdum = strarr(n_elements(flag_meanings1)*2+1)+' '
-				for i = 0,n_elements(flag_meanings1)-1 do strdum[i*2+1] = flag_meanings1[i]
-				xtickname = strdum
-				xticklen=0.00001
-				xoplot_lines = 1
-				bar_nlev = n_elements(aa)< 9.
-			endif
-			if keyword_set(flag_meanings2) then begin
-				strdum = strarr(n_elements(flag_meanings2)*2+1)+' '
-				for i = 0,n_elements(flag_meanings2)-1 do strdum[i*2+1] = flag_meanings2[i]
-				ytickname = strdum
-				yticklen=0.00001
-				yoplot_lines = 1
-				bar_nlev = n_elements(aa)< 9.
-			endif
-
-			view2d,aa,no_data_val=0,$
-			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum )),$
-			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2)),$
-			bar_title=bar_title, bar_discontinous = bar_discontinous, $
-			xticks = n_elements(xtickname)-1, xtickv = xtickv,yticks = n_elements(ytickname)-1, ytickv = ytickv, $
-			xtickname=xtickname,ytickname=ytickname, bar_format=bar_format, bar_nlev = bar_nlev, $
-			log=~bar_discontinous,col_table=col_tab,orientation=-90,xticklen=xticklen,yticklen=yticklen, $
-			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:'')), $;+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
-			bar_tickname = bar_tickname,xmargin=xmargin,ymargin=ymargin
-			if chk_idx gt 0 and bar_discontinous eq 0 then begin
-				oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
-				oplot,!x.crange,!y.crange,thick=thick
-			endif else begin
-				si=size(aa,/dim)
-				if keyword_set(xoplot_lines) then for i=0,si[0] do oplot,[i,i],!y.crange,thick=2
-				if keyword_set(yoplot_lines) then for i=0,si[1] do oplot,!x.crange,[i,i],thick=2
-				for i = 0, si[0]-1 do begin & $
-					for j = 0,si[1]-1 do begin & $
-						xyouts,i+0.5,j+0.5,strcompress(string(aa[i,j],f='(f6.2)'),/rem)+'%',align=0.5 & $
-					endfor & $
-				endfor
-			endelse
+			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:''));+' (Binsize='+string(bin,f='(f6.3)')+')'), $
+			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum ))
+			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2))
+print,'plot_hist_2d eingeführt. Testen!'
+			plot_hist_2d, aa, bin, cc, min_a, max_a, chk_idx, regr, save_as = save_dir, $
+							bar_discontinous = bar_discontinous, bar_nlev = bar_nlev, $
+							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
+							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab;, position = position
 		end_save, save_as3
 	endif
 	; zonal median
@@ -1099,17 +1121,18 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
 		print,'-----------'+data+'-'+cov+'--------------'
 		if stregex(dat[0],'npoints',/fold,/bool) then begin
-			print,'Total         '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_cci[idx]),f='(f15.1)')
-			print,'Total         '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_gac[idx]),f='(f15.1)')
+			print,'Total              '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_cci[idx]),f='(f15.1)')
+			print,'Total              '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_gac[idx]),f='(f15.1)')
 		endif
-		print,'Glob. Mean (F1) '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. Mean (F2) '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_gac[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. BIAS      '+str_pholder        +' : ',string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. RMSE      '+str_pholder        +' : ',string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. BC-RMSE   '+str_pholder        +' : ',string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - $
+		print,'Glob. Mean (F1)    '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. Mean (F2)    '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_gac[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. BIAS         '+str_pholder        +' : ',string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. RMSE         '+str_pholder        +' : ',string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
+		print,'Glob. BC-RMSE      '+str_pholder        +' : ',string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - $
 							           gbias(bild_cci[idx],bild_gac[idx],lat[idx])^2),f='(f11.4)')
-		print,'Correlation(^2) '+str_pholder        +' : ',string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)') +' ('+$
-								   strcompress(string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx])^2.,f='(f11.4)'),/rem)+')'
+		print,'Correlation(^2)[p] '+str_pholder        +' : ',string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx],p_value=p_value),f='(f11.4)') +$
+									' ('+strcompress(string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx])^2.,f='(f11.4)'),/rem)+')' + $
+									' ['+strcompress(string(p_value,f='(f11.4)'),/rem)+']'
 		print,'----------------------------------'
 		thick = savbg ? thick + 2 : thick
 		oplot,lat1dc,medi_c,thick=thick,col=cgcolor(!compare_col1)
@@ -2387,23 +2410,25 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	n_lev1 =6
 	n_lev2 =6
 
-	if ~keyword_set(maps_only) then begin
-		free, flag_meanings1
-		free, flag_meanings2
-	endif
 	if keyword_set(flag_meanings1) then begin
-		bar_tickname1 = [flag_meanings1]
-		discrete1 = findgen(n_elements(flag_meanings1)+1)+min(bild1[where(bild1 ne fillvalue1[0])])
-		n_lev1 = n_elements(flag_meanings1)
-		g_eq = 0
-		l_eq = 0
+		if keyword_set(maps_only) then begin
+			bar_tickname1 = [flag_meanings1]
+			discrete1 = findgen(n_elements(flag_meanings1)+1)+min(bild1[where(bild1 ne fillvalue1[0])])
+			n_lev1 = n_elements(flag_meanings1)
+			g_eq = 0
+			l_eq = 0
+		endif
+		bar_discontinous = 1
 	endif
 	if keyword_set(flag_meanings2) then begin
-		bar_tickname2 = [flag_meanings2]
-		discrete2 = findgen(n_elements(flag_meanings2)+1)+min(bild2[where(bild2 ne fillvalue2[0])])
-		n_lev2 = n_elements(flag_meanings2)
-		g_eq = 0
-		l_eq = 0
+		if keyword_set(maps_only) then begin
+			bar_tickname2 = [flag_meanings2]
+			discrete2 = findgen(n_elements(flag_meanings2)+1)+min(bild2[where(bild2 ne fillvalue2[0])])
+			n_lev2 = n_elements(flag_meanings2)
+			g_eq = 0
+			l_eq = 0
+		endif
+		bar_discontinous = 1
 	endif
 
 	;bereite out struktur vor, für show pixel value
@@ -2479,7 +2504,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	bias = gbias(bild1[idx],bild2[idx],lat[idx])
 ; 	stdd = stddev(bild1[idx]-bild2[idx]) 
 	stdd = sqrt(rmse^2 - bias^2)
-	corr = gcorrelate(bild1[idx],bild2[idx],lat[idx])
+	corr = gcorrelate(bild1[idx],bild2[idx],lat[idx],p_value=p_value,verbose=verbose)
 
 	str_pholder = strjoin(replicate(' ',max([strlen(f1str+satn1),strlen(f2str+satn2)])))
 	print,'-----------'+dat+'--------------'
@@ -2487,12 +2512,14 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		print,'Total           '+string(f1str+satn1,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild1[idx]),f='(f15.1)')
 		print,'Total           '+string(f2str+satn2,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild2[idx]),f='(f15.1)')
 	endif
-	print,'Glob. Mean      '+string(f1str+satn1,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(gmean(bild1[idx],lat[idx]),f='(f11.4)')
-	print,'Glob. Mean      '+string(f2str+satn2,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(gmean(bild2[idx],lat[idx]),f='(f11.4)')
-	print,'Glob. BIAS      '+str_pholder+' :',string(bias,f='(f11.4)')
-	print,'Glob. RMSE      '+str_pholder+' :',string(rmse,f='(f11.4)')
-	print,'Glob. BC-RMSE   '+str_pholder+' :',string(stdd,f='(f11.4)')
-	print,'Correlation(^2) '+str_pholder+' :',string(corr,f='(f11.4)') +' ('+strcompress(string(corr^2.,f='(f11.4)'),/rem)+')'
+	print,'Glob. Mean         '+string(f1str+satn1,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(gmean(bild1[idx],lat[idx]),f='(f11.4)')
+	print,'Glob. Mean         '+string(f2str+satn2,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(gmean(bild2[idx],lat[idx]),f='(f11.4)')
+	print,'Glob. BIAS         '+str_pholder+' :',string(bias,f='(f11.4)')
+	print,'Glob. RMSE         '+str_pholder+' :',string(rmse,f='(f11.4)')
+	print,'Glob. BC-RMSE      '+str_pholder+' :',string(stdd,f='(f11.4)')
+	print,'Correlation(^2)[p] '+str_pholder+' :',string(corr,f='(f11.4)') + $
+					' ('+strcompress(string(corr^2.,f='(f11.4)'),/rem)+')'+ $
+					' ['+strcompress(string(p_value,f='(f11.4)'),/rem)+']'
 	print,'-----------------------------'
 
 	start_save, save_as, thick = thick, size = [40.,24. ];,size = 'A4',/landscape;[32,16];
@@ -2673,41 +2700,22 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			max_a = keyword_set(maxi) ? maxi[0] : (n_gesamt gt 0 ? max([bild1[idx],bild2[idx]]) : 0)
 			min_a = -1e6 > min_a ; ansonsten gibts abbruch oder memory allocation fehler
 			max_a = max_a < 1e6  ; ansonsten gibts abbruch oder memory allocation fehler
-
 			cc = 5
 			if ~keyword_set(hist_only) then position = [0.02,0.0,0.4,0.87]
 
 			dum = hist_2d(bild1[idx],bild2[idx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
-			if stregex(dat,'cc_mask',/bool,/fold) then begin
-				if n_gesamt gt 0 then dum = dum/total(dum)*100.
-				bar_title= 'nr of occurrence [%]'
-				bar_nlev = 3
-				log=1
-				bin_dum = 0
-			endif else begin
-				bar_title= 'nr of occurrence'
-				log=1
-				bin_dum=bin
-			endelse
-
+			bin_dum = keyword_set(bar_discontinous) ? 0.: bin
+			
 			if n_elements(dum) lt 4 then dum=congrid(dum,2,2)
 			if total(dum) eq 0 then dum[0]=1
-			view2d,dum,no_data_val=0,xtitle=f1str+get_product_name(dat,algo=algo1,level=level,/upper,h_types=htypes)+' '+unit1,$
-			ytitle=f2str+get_product_name(dat,algo=algo2,level=level,/upper,h_types=htypes)+' '+unit2,bar_title= bar_title, $
-			xticks = cc, xtickv = vector(0,(size(dum,/dim))[0]-1,cc+1),yticks = cc, ytickv = vector(0,(size(dum,/dim))[1]-1,cc+1), $
-			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), $
-			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem), $
-			title = 'Binsize = '+string(bin,f='(f6.3)')+unit1,log=log,position=position, bar_format='(i)', $
-; 			charthick = 1., xcharsize = 1., ycharsize = 1.,bar_nlev=bar_nlev
-			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
-
-			if ~stregex(dat,'cc_mask',/bool,/fold) then begin
-; 				oplot,!x.crange,[regr[0]/bin,regr[1]*!x.crange[1]+regr[0]/bin],linestyle=2
-				oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2
-				oplot,!x.crange,!y.crange
-				xyouts,.22,.87,'m  :'+string(regr[1],f='(f6.2)'),/normal
-				xyouts,.22,.84,'Y0 :'+string(regr[0],f='(f6.2)'),/normal
-			endif
+			title  = 'Binsize = '+string(bin,f='(f6.3)')+unit1
+			xtitle = f1str+get_product_name(dat,algo=algo1,level=level,/upper,h_types=htypes)+' '+unit1
+			ytitle = f2str+get_product_name(dat,algo=algo2,level=level,/upper,h_types=htypes)+' '+unit2
+print,'plot_hist_2d eingeführt. Testen!'			
+			plot_hist_2d, dum, bin, cc, min_a, max_a, n_gesamt, regr, save_as = save_as, $
+							bar_discontinous = bar_discontinous,bar_nlev = bar_nlev, $
+							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
+							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab, position = position
 
 			max_a = max([bild1[idx]-bild2[idx]])
 bin= ( bin/100.) > 0.01 
@@ -3838,47 +3846,44 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				regr   = h2_cnt gt 0 ? linfit(float(bild1[h2_idx]),float(bild2[h2_idx])) : [-999.,0.]
 			endelse
 
-			bar_format='(i)' & bar_title= 'nr of occurrence'
-			if (1 eq 1) then begin
-				; normalize to maximum of occurrence
-				aa = float(aa)/max(float(aa)) *100. 
-				bar_format='(f7.3)' 
-				bar_title= 'norm. to max. occurrence'
-			endif
+; 			bar_format='(i)' & bar_title= 'nr of occurrence'
+; 			if (1 eq 1) then begin
+; 				; normalize to maximum of occurrence
+; 				aa = float(aa)/max(float(aa)) *100. 
+; 				bar_format='(f7.3)' 
+; 				bar_title= 'norm. to max. occurrence'
+; 			endif
+			xtitle=algon1+(strmatch(varn[0],varn[1]) ? '':' '+longname+dtn[0]+unit)
+			ytitle=algon2+(strmatch(varn[0],varn[1]) ? '':' '+longname2+dtn[1]+unit2)
+			title = (keyword_set(notitle) ? '':(strmatch(varn[0],varn[1]) ? longname+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')')
+			
+			plot_hist_2d, aa, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sav, $
+							bar_discontinous = bar_discontinous,bar_nlev = bar_nlev, $
+							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
+							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab, position = pos1
+print,'plot_hist_2d eingefügt, testen!'
 
-			view2d,aa,xtitle=algon1+(strmatch(varn[0],varn[1]) ? '':' '+longname+dtn[0]+unit) , $
-			ytitle=algon2+(strmatch(varn[0],varn[1]) ? '':' '+longname2+dtn[1]+unit2) ,$
-			title = (keyword_set(notitle) ? '':(strmatch(varn[0],varn[1]) ? longname+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-			bar_format=bar_format,no_data_val=0,/log,position=pos1, xmargin=[8,3],ymargin=[3,2]+(sav ? [0,2]:0),$
-			bar_title= bar_title, xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
-			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
-			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
-			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2, thick=thick
-			oplot,!x.crange,!y.crange, thick=thick
+; 			view2d,aa,xtitle=algon1+(strmatch(varn[0],varn[1]) ? '':' '+longname+dtn[0]+unit) , $
+; 			ytitle=algon2+(strmatch(varn[0],varn[1]) ? '':' '+longname2+dtn[1]+unit2) ,$
+; 			title = (keyword_set(notitle) ? '':(strmatch(varn[0],varn[1]) ? longname+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
+; 			bar_format=bar_format,no_data_val=0,/log,position=pos1, xmargin=[8,3],ymargin=[3,2]+(sav ? [0,2]:0),$
+; 			bar_title= bar_title, xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
+; 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
+; 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
+; 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
+; 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
+; 			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2, thick=thick
+; 			oplot,!x.crange,!y.crange, thick=thick
 		end_save, save_as3
 	endif
 
 	if sav then begin
-		charthick = !p_charthick ;1.5
-		xcharsize = !p_xcharsize ;1.7 
-		ycharsize = !p_ycharsize ;1.7
-		lcharsize = !l_charsize  ;2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg and zoo then begin
-		charthick = !p_charthick ;3.0
-		xcharsize = !p_xcharsize ;2.5
-		ycharsize = !p_ycharsize ;2.5
-		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3] ;+ (keyword_set(notitle) ? 0 : [0,1])
 	endif else begin
-		charthick = 1.2
-		xcharsize = 1.2 
-		ycharsize = 1.2
-		lcharsize = 1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -3914,15 +3919,15 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 		xtitle='latitude [degrees]',ytitle=(trend ? 'linear trend ':'')+longname+' '+unit,yr=yr,position=pos2,$
 		noerase=~zoo,ylog=logarithmic, title= keyword_set(notitle) ? '':'bias: '+string(bias,f='(f7.2)')+' ; rmse: '+$
 		string(rmse,f='(f6.2)')+' ; bc-rmse: '+string(stdd,f='(f6.2)')+unit,$
-		charthick=charthick,xcharsize=xcharsize,ycharsize=ycharsize,xmargin=xmargin,ymargin=ymargin
+		charthick=!p_charthick ,xcharsize=!p_xcharsize ,ycharsize=!p_ycharsize ,xmargin=xmargin,ymargin=ymargin
 		oplot,lat1d_c,medi_c,thick=thick,col=cgColor(!compare_col1)
 		oplot,lat1d_g,medi_g,thick=thick,col=cgColor(!compare_col2)
 		if ~keyword_set(show_values) then begin
 			legend,[date+' '+algon2+dtn[1],date+' '+algon1+dtn[0]],thick=replicate(thick,2),spos='top',$
-			charsize=lcharsize,color=[cgColor(!compare_col2) , cgColor(!compare_col1)] ,charthick=charthick
+			charsize=!l_charsize ,color=[cgColor(!compare_col2) , cgColor(!compare_col1)] ,charthick=!p_charthick
 		endif else begin
-			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor(!compare_col2) ,spos='bl',charsize=lcharsize,charthick=charthick
-			legend,date+' '+algon1+dtn[0],thick=thick,color=cgColor(!compare_col1) ,spos='br',charsize=lcharsize,charthick=charthick
+			legend,date+' '+algon2+dtn[1],thick=thick,color=cgColor(!compare_col2) ,spos='bl',charsize=!l_charsize ,charthick=!p_charthick
+			legend,date+' '+algon1+dtn[0],thick=thick,color=cgColor(!compare_col1) ,spos='br',charsize=!l_charsize ,charthick=!p_charthick
 		endelse
 		;--------------------------------------------
 	end_save,save_as4
@@ -4356,6 +4361,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			; 2d histogram
 			if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_'+algon2+'_2dHist.eps'
 			start_save, save_as, thick = thick;,size=[20,16]
+print,'hist_2d_plot noch einfügen???'
 				dum = h2d_cnt gt 0 ? hist_2d(cci[idx_h2d],gac[idx_h2d],bin1=1,bin2=1,min1=0,max1=100,min2=0,max2=100) : intarr(101,101)
 				if h2d_cnt eq 0 then dum[0]=1
 				view2d,dum,no_data_val=0,/log,xticks=5,xtickname=['0','20','40','60','80','100'],$

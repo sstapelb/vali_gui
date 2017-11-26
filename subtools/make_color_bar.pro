@@ -35,29 +35,28 @@ pro make_color_bar,mini					$; Minimum
 	if keyword_set(tickv) then begin
 		mini=min(tickv)
 		maxi=max(tickv)
-		n_lev=n_elements(tickv)-1
-		n_tickv=tickv
-		tickv=bytscl(tickv)
+		if mini eq maxi then maxi = mini + 1
+		n_lev= 1 > (n_elements(tickv)-1)
+		n_tickv = n_elements(tickv)
+; 		tickv=bytscl(tickv)
 	endif else begin
+		if keyword_set(bar_tickname) then tickv = (vector(float(mini),float(maxi),n_lev)) else $
 		tickv	= keyword_set(logarithmic) ? (10^(vector(alog10(mini),alog10(maxi),n_lev+1))) : (vector(float(mini),float(maxi),n_lev+1))
-		n_tickv = double(tickv)
+		n_tickv = n_elements(tickv)
 	endelse
 
-	tickname = [strcompress(string(n_tickv,format=bar_format), /remove_all)]
+	tickname = [strcompress(string(tickv,format=bar_format), /remove_all)]
 	if keyword_set(bar_tickname) then begin
-		if n_elements(bar_tickname) eq (n_elements(tickname)-1) then begin
-			strdum = strarr(n_elements(bar_tickname)*2+1)+' '
-			for i = 0,n_elements(bar_tickname)-1 do strdum[i*2+1] = bar_tickname[i]
-			tickname = strdum
-		endif
+		strdum = strarr(n_elements(bar_tickname)*2+1)+' '
+		for i = 0,n_elements(bar_tickname)-1 do strdum[i*2+1] = bar_tickname[i]
+		tickname = strdum
 	endif
 	if keyword_set(l_eq) then begin
-		dum = min(n_tickv, min_idx)
+		dum = min(tickv, min_idx)
 		tickname[min_idx] = textoidl('\leq') + ' ' + tickname[min_idx]
 	endif
-
 	if keyword_set(g_eq) then begin
-		dum = max(n_tickv, max_idx)
+		dum = max(tickv, max_idx)
 		tickname[max_idx] = textoidl('\geq') + ' ' + tickname[max_idx]
 	endif
 
@@ -94,7 +93,7 @@ pro make_color_bar,mini					$; Minimum
 		dx = (x[1] - x[0])>1
 		dy = (y[1] - y[0])>1
 		dum_bar=findgen(255)
-	endif else begin              		; pixels are non-scalable
+	endif else begin              			; pixels are non-scalable
 		dx = (ceil(x[1]) - floor(x[0]))>1
 		dy = (ceil(y[1]) - floor(y[0]))>1
 		dum_bar = keyword_set(orientation) ? findgen(dy) : findgen(dx)
@@ -103,15 +102,16 @@ pro make_color_bar,mini					$; Minimum
 	dum_bar = dum_bar / float(n_elements(dum_bar) - 1.) * (maxi - mini) + mini
 
 	if not keyword_set(continous) then begin
-		for i=0,n_lev-1 do begin
-			dum_bar[where((dum_bar ge tickv[i]) and (dum_bar lt tickv[i+1]))] = tickv[i]
-		endfor
+		if n_tickv gt 1 and keyword_set(bar_tickname) then begin
+			dum_bar = congrid(tickv,n_elements(dum_bar),/center)
+		endif else begin
+			for i=0,n_lev-1 do begin
+				dum_bar[where((dum_bar ge tickv[i]) and (dum_bar lt tickv[i+1]))] = tickv[i]
+			endfor
+		endelse
+; 		tickv = ( (maxi - mini) + mini) / (n_elements(tickname)-1) * findgen(n_elements(tickname))
 	endif
-
-	scale=float(max(dum_bar))/255.
-	; SST: dont let scale be zero!!
-	if scale eq 0. then scale = 1.
-	tickv=tickv*scale
+	if keyword_set(bar_tickname) then tickv = ( (maxi - mini) + mini) / (n_elements(tickname)-1) * findgen(n_elements(tickname))
 
 	;dum_bar=mbytscl(dum_bar,bot=mini,top=maxi)
 	dum_bar = byte(0 > ((dum_bar - mini) / (maxi - mini) * 255) < 255)
@@ -131,53 +131,56 @@ pro make_color_bar,mini					$; Minimum
 				print, minmax(dum_c)
 				dum_bar	= bw_to_color(dum_c, col_table = col_table, dont_scale = dont_scale, col_center = col_center,brewer = brewer)
 			endif else begin
-				dum_bar	= bw_to_color(float(dum_bar), mini = mini, maxi = maxi, col_table = col_table, dont_scale = dont_scale, brewer = brewer)
+				dum_bar	= bw_to_color(float(dum_bar), col_table = col_table, dont_scale = dont_scale, brewer = brewer)
 			endelse
 		endelse
 	endcase
 	if (!d.flags and 1) eq 1 then begin 	; device has scalable pixel size
-		bar=dum_bar
-	endif else begin              		; pixels are non-scalable
-		bar= lonarr(dx,dy,3)
-		if   keyword_set(orientation) then begin
-			bar=congrid(dum_bar,dx,dy,3)
+		bar = dum_bar
+	endif else begin              			; pixels are non-scalable
+		bar = lonarr(dx,dy,3)
+		if keyword_set(orientation) then begin
+			bar = congrid(dum_bar,dx,dy,3)
 		endif else begin
-			for i=0,2 do bar(*,*,i)=transpose(congrid(transpose(dum_bar(*,*,i)),dy,dx))
+			for i=0,2 do bar[*,*,i]=transpose(congrid(transpose(dum_bar[*,*,i]),dy,dx))
 		endelse
 	endelse
-
 	tv,bar,x[0] + 1,y[0],true=3,xsize=dx,ysize=dy,/device
-
-	tickv=tickv / scale
 
 	if keyword_set(orientation) then begin
 ; 		axis, 	yaxis = 0, ystyle = 1, yrange = [mini, maxi], yticklen = 0.25	, $
 ; 			ygridstyle = 0, yticks = n_lev, ytickname = tickname		, $
 ; 			ytickv = tickv, ytitle = bar_title, ylog = logarithmic, charsize = charsize,charthick=charthick
-		axis, 	yaxis = 0, ystyle = 1, yrange = [mini, maxi], yticklen = 0.25	, $
+; 		axis, 	yaxis = 1, ystyle = 1, yrange = [mini, maxi], yticklen = 0.25	, $
+; 			ygridstyle = 0, yticks = n_lev, ytickv = tickv	 		, $
+; 			ytickname = strarr(n_lev + 1) + ' ',	 ylog = logarithmic
+		axis, yaxis = 0, ystyle = 1, yrange = [mini, maxi], yticklen = 0.25	, $
 			ygridstyle = 0, yticks = n_elements(tickname) -1, ytickname = tickname		, $
-			ytitle = bar_title, ylog = logarithmic, charsize = charsize,charthick=charthick
-		axis, 	yaxis = 1, ystyle = 1, yrange = [mini, maxi], yticklen = 0.25	, $
-			ygridstyle = 0, yticks = n_lev, ytickv = tickv	 		, $
-			ytickname = strarr(n_lev + 1) + ' ',	 ylog = logarithmic
-		axis, 	xaxis = 0, xstyle = 1, xrange = [0, 1], xticklen = 0.00		, $
-			xgridstyle = 0, xticks = 1, xtickname = [' ', ' ']
-		axis, 	xaxis = 1, xstyle = 1, xrange = [0, 1], xticklen = 0.00		, $
-			xgridstyle = 0, xticks = 1, xtickname = [' ', ' ']
+			ytitle = bar_title, ylog = logarithmic, charsize = charsize, charthick=charthick
+		axis, yaxis = 1, ystyle = 1, yrange = [mini, maxi], yticklen = 0.25	, $
+			ygridstyle = 0, yticks = n_elements(tickname) -1, ytickv = tickv	 		, $
+			ytickformat = "(A1)", ylog = logarithmic
+		axis, xaxis = 0, xstyle = 1, xrange = [0, 1], xticklen = 0.0001	, $
+			xgridstyle = 0, xtickformat = "(A1)", xticks = 1
+		axis, xaxis = 1, xstyle = 1, xrange = [0, 1], xticklen = 0.0001	, $
+			xgridstyle = 0, xtickformat = "(A1)", xticks = 1
 	endif else begin
 ; 		axis, 	xaxis = 0, xstyle = 1, xrange = [mini, maxi], xticklen = 0.25	, $
 ; 			xgridstyle = 0, xticks = n_lev, xtickname = tickname		, $
 ; 			xtickv = tickv, xtitle = bar_title, xlog = logarithmic, charsize = charsize,charthick=charthick
+; 		axis, 	xaxis = 1, xstyle = 1, xrange = [mini, maxi], xticklen = 0.25	, $
+; 			xgridstyle = 0, xticks = n_lev, xtickv = tickv			, $
+; 			xtickname = strarr(n_lev + 1) + ' ', xlog = logarithmic
 		axis, 	xaxis = 0, xstyle = 1, xrange = [mini, maxi], xticklen = 0.25	, $
 			xgridstyle = 0, xticks = n_elements(tickname) -1, xtickname = tickname		, $
 			xtitle = bar_title, xlog = logarithmic, charsize = charsize,charthick=charthick
 		axis, 	xaxis = 1, xstyle = 1, xrange = [mini, maxi], xticklen = 0.25	, $
-			xgridstyle = 0, xticks = n_lev, xtickv = tickv			, $
-			xtickname = strarr(n_lev + 1) + ' ', xlog = logarithmic
-		axis, 	yaxis = 0, ystyle = 1, yrange = [0, 1], yticklen = 0.00		, $
-			ygridstyle = 0, yticks = 1, ytickname = [' ', ' ']
-		axis, 	yaxis = 1, ystyle = 1, yrange = [0, 1], yticklen = 0.00		, $
-			ygridstyle = 0, yticks = 1, ytickname = [' ', ' ']
+			xgridstyle = 0, xticks = n_elements(tickname) -1, xtickv = tickv			, $
+			xtickformat = "(A1)", xlog = logarithmic
+		axis, 	yaxis = 0, ystyle = 1, yrange = [0, 1], yticklen = 0.0001		, $
+			ygridstyle = 0, yticks = 1, ytickformat = "(A1)"
+		axis, 	yaxis = 1, ystyle = 1, yrange = [0, 1], yticklen = 0.0001	, $
+			ygridstyle = 0, yticks = 1, ytickformat = "(A1)"
 	endelse
 
 end

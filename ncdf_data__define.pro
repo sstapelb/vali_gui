@@ -4446,9 +4446,15 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					endif
 				endif
 				ok     = self -> get_file_infos(infile=file)
-				algo   = ok.algoname eq '' ? self.algoname : ok.algoname
-				satn   = ok.satname  eq '' ? '' : ok.satname
-				datum  = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
+				algo   = ok.algoname
+				satn   = ok.satname
+				year   = ok.year
+				month  = ok.month
+				day    = ok.day
+				orbit  = ok.orbit
+				datum  = ok.datum
+				level  = ok.level
+				version= ok.version
 			endif else begin
 				if sel and (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
 				print,'Load button is checked! Search for file in loaded directory!'

@@ -283,17 +283,17 @@ end
 ; 
 ; Example 2): Get CCI L3u cloud mask and draw it on Germany Mask
 ; 	.r call
-;	vali_set_path
+; 	vali_set_path
 ; 	read_ncdf, !L3U_DEFAULT_FILE, 'cmask_asc', cmask, no_data_value,minvalue, maxvalue, longname, unit, flag_meanings
 ; 	shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
 ; 	de = get_coverage(shape_file = shape_file,grid_res = get_grid_res(cmask))
-; 	view2d,	cmask,no_data_idx = where(de eq 0 or cmask eq no_data_value[0]),meridian_interval=2,$limit=[46,5,56,16],$
+; 	view2d,	cmask,no_data_idx = where(de eq 0 or cmask eq no_data_value[0]),meridian_interval=2,limit=[46,5,56,16],$
 ; 			no_data_col = cgcolor('Black'),/brewer,col_tab=-5,/bar_discontinous,bar_nlev=2,bar_tickname=flag_meanings
 ; 	cgDrawShapes, shape_file,color=cgcolor('ORG7'),thick=2
 ;------------------------------------------------------------------------------------------
 pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_bar, mini = mini, maxi = maxi		, $
 		col_table = col_table, dont_scale = dont_scale, col_center = col_center, position = position				, $
-		bar_title = bar_title, bar_format = bar_format, bar_nlev = bar_nlev, bar_size = bar_size					, $
+		bar_title = bar_title, bar_format = bar_format, bar_nlev = bar_nlev, bar_size = bar_size, bar_tickv = bar_tickv, $
 		bar_dist = bar_dist, bar_discontinous = bar_discontinous, bar_g_eq = bar_g_eq, bar_l_eq = bar_l_eq			, $
 		no_data_idx = no_data_idx, no_data_value = no_data_value, no_data_col = no_data_col, no_axes = no_axes		, $
 		full_screen = full_screen, logarithmic = logarithmic, space_value = space_value, space_col = space_col		, $
@@ -305,7 +305,9 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		bar_tickname = bar_tickname, brewer = brewer,continents = continents, countries=countries,limit = limit		, $
 		box_axes = box_axes, lowres_bounderies = lowres_bounderies, offsets = offsets
 
-	bar_nlev		= keyword_set(bar_nlev)				? bar_nlev		: 4
+	if ~keyword_set(bar_nlev) then begin
+		bar_nlev = keyword_set(bar_tickname) ? n_elements(bar_tickname) : 4
+	endif
 	bar_dist		= keyword_set(bar_dist)				? bar_dist		: 0.
 	bar_format  	= keyword_set(bar_format) 			? bar_format	:'(f10.2)'
 	col_table		= adv_keyword_set(col_table)		? col_table 	: 2
@@ -643,7 +645,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		for i = 0, 2 do dum_img[*, *, i] = congrid(im[*, *, i], swx, swy)
 		tv, dum_img, floor(px[0] + swx /  xscale * (1. - xscale)), floor(py[0] + swy/yscale * (1. - yscale)), true = 3
 	endelse
-
+	
 ;	Colorbar reinmalen
 	case bar of
 	1:	begin
@@ -654,7 +656,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 			make_color_bar, mini, maxi, bar_nlev, /noerase, logarithmic = logarithmic, continous = lnot(keyword_set(bar_discontinous)) 	, $
 				pos = bar_pos, orient = 1, bw = bw, bar_title = bar_title, col_table = col_table, dont_scale = dont_scale		, $
 				col_center = col_center, bar_format = bar_format, _extra = _extra, g_eq = bar_g_eq, l_eq = bar_l_eq			, $
-				bar_tickname=bar_tickname, brewer = brewer, charsize = charsize
+				bar_tickname=bar_tickname, brewer = brewer, charsize = charsize, tickv = bar_tickv
 		end
 	2:	begin
 			bar_pos = keyword_set(bar_position) ? bar_position : $
@@ -665,7 +667,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 			make_color_bar, mini, maxi, bar_nlev, /noerase, logarithmic = logarithmic, continous = lnot(keyword_set(bar_discontinous))	, $
 				pos = bar_pos, orient = 0, bw = bw, bar_title = bar_title, col_table = col_table, dont_scale = dont_scale		, $
 				col_center = col_center, bar_format = bar_format, _extra = _extra, g_eq = bar_g_eq, l_eq = bar_l_eq			, $
-				bar_tickname=bar_tickname, brewer = brewer, charsize = charsize, charthick = charthick
+				bar_tickname=bar_tickname, brewer = brewer, charsize = charsize, charthick = charthick, tickv = bar_tickv
 		end
 	else:
 	endcase
