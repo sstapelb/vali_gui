@@ -84,7 +84,7 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 end
 ;------------------------------------------------------------------------------------------
 pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = save_as, $
-					bar_discontinous = bar_discontinous, $
+					bar_discontinous = bar_discontinous, no_color_bar = no_color_bar, $
 					flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
 					title=title, xtitle=xtitle, ytitle=ytitle, $
 					bar_nlev = bar_nlev, col_tab = col_tab, position = position
@@ -105,6 +105,7 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 	if keyword_set(bar_discontinous) and n_elements(h2d_array) le 9 then begin
 		bar_tickv = h2d_array[sort(h2d_array)]
 		bar_tickname = string(bar_tickv,f=bar_format)
+		color = ~keyword_set(no_color_bar)
 	endif else begin
 		bar_discontinous = 0
 		no_data_val=0
@@ -133,13 +134,13 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 		bar_nlev = n_elements(h2d_array)< 9.
 	endif
 
-	
 	view2d,h2d_array,no_data_val=no_data_val,xtitle=xtitle,ytitle=ytitle,bar_title=bar_title,bar_discontinous = bar_discontinous, $
 	xticks = n_elements(xtickname)-1, xtickv = xtickv,yticks = n_elements(ytickname)-1, ytickv = ytickv, $
 	xtickname=xtickname,ytickname=ytickname, bar_format=bar_format, bar_nlev = bar_nlev, $
 	log=~keyword_set(bar_discontinous),col_table=col_tab,orientation=-90,xticklen=xticklen,yticklen=yticklen, $
 	title = title, xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, $
-	bar_tickname = bar_tickname,bar_tickv=bar_tickv,xmargin=xmargin,ymargin=ymargin, position = position
+	bar_tickname = bar_tickname,bar_tickv=bar_tickv,xmargin=xmargin,ymargin=ymargin, position = position,$
+	color = color
 	if n_gesamt gt 0 and ~keyword_set(bar_discontinous) then begin
 		oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
 		oplot,!x.crange,!y.crange,thick=thick
@@ -1070,11 +1071,12 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			title = (keyword_set(notitle) ? '':(strmatch(dat[0],dat[1]) ? vollername1+dtn[0]+unit:''));+' (Binsize='+string(bin,f='(f6.3)')+')'), $
 			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum ))
 			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2))
-print,'plot_hist_2d eingeführt. Testen!'
+
 			plot_hist_2d, aa, bin, cc, min_a, max_a, chk_idx, regr, save_as = save_dir, $
 							bar_discontinous = bar_discontinous, bar_nlev = bar_nlev, $
 							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
-							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab;, position = position
+							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab, $
+							no_color_bar=no_color_bar;, position = position
 		end_save, save_as3
 	endif
 	; zonal median
@@ -2711,11 +2713,12 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			title  = 'Binsize = '+string(bin,f='(f6.3)')+unit1
 			xtitle = f1str+get_product_name(dat,algo=algo1,level=level,/upper,h_types=htypes)+' '+unit1
 			ytitle = f2str+get_product_name(dat,algo=algo2,level=level,/upper,h_types=htypes)+' '+unit2
-print,'plot_hist_2d eingeführt. Testen!'			
+
 			plot_hist_2d, dum, bin, cc, min_a, max_a, n_gesamt, regr, save_as = save_as, $
 							bar_discontinous = bar_discontinous,bar_nlev = bar_nlev, $
 							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
-							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab, position = position
+							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab,$
+							no_color_bar=no_color_bar, position = position
 
 			max_a = max([bild1[idx]-bild2[idx]])
 bin= ( bin/100.) > 0.01 
@@ -3829,6 +3832,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				min_a  = d.HIST_2D.minvalue[0]
 				max_a  = d.HIST_2D.maxvalue[0]
 				bin    = d.HIST_2D.bin
+				h2_cnt = 10; dummy just greater 1 is enough
 			endif else if ~strmatch(varn[0],varn[1]) then begin
 				bin    = d.HISTOGRAM.bin
 				min_a  = min([d.HISTOGRAM.minvalue[0],d1.HISTOGRAM.minvalue[0]])
@@ -3846,34 +3850,15 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				regr   = h2_cnt gt 0 ? linfit(float(bild1[h2_idx]),float(bild2[h2_idx])) : [-999.,0.]
 			endelse
 
-; 			bar_format='(i)' & bar_title= 'nr of occurrence'
-; 			if (1 eq 1) then begin
-; 				; normalize to maximum of occurrence
-; 				aa = float(aa)/max(float(aa)) *100. 
-; 				bar_format='(f7.3)' 
-; 				bar_title= 'norm. to max. occurrence'
-; 			endif
 			xtitle=algon1+(strmatch(varn[0],varn[1]) ? '':' '+longname+dtn[0]+unit)
 			ytitle=algon2+(strmatch(varn[0],varn[1]) ? '':' '+longname2+dtn[1]+unit2)
 			title = (keyword_set(notitle) ? '':(strmatch(varn[0],varn[1]) ? longname+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')')
-			
-			plot_hist_2d, aa, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sav, $
+
+			plot_hist_2d, aa, bin, cc, min_a, max_a, h2_cnt, regr, save_as = sav, $
 							bar_discontinous = bar_discontinous,bar_nlev = bar_nlev, $
 							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
-							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab, position = pos1
-print,'plot_hist_2d eingefügt, testen!'
-
-; 			view2d,aa,xtitle=algon1+(strmatch(varn[0],varn[1]) ? '':' '+longname+dtn[0]+unit) , $
-; 			ytitle=algon2+(strmatch(varn[0],varn[1]) ? '':' '+longname2+dtn[1]+unit2) ,$
-; 			title = (keyword_set(notitle) ? '':(strmatch(varn[0],varn[1]) ? longname+dtn[0]+unit:'')+' (Binsize='+string(bin,f='(f6.3)')+')'), $
-; 			bar_format=bar_format,no_data_val=0,/log,position=pos1, xmargin=[8,3],ymargin=[3,2]+(sav ? [0,2]:0),$
-; 			bar_title= bar_title, xticks = cc, xtickv = vector(0,(size(aa,/dim))[0]-1,cc+1),yticks = cc, $
-; 			ytickv = vector(0,(size(aa,/dim))[1]-1,cc+1), $
-; 			xtickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-; 			ytickname=strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f5.2)':'(i)')),/rem), $
-; 			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
-; 			oplot,!x.crange,[regr[1]*!x.crange+regr[0]/bin],linestyle=2, thick=thick
-; 			oplot,!x.crange,!y.crange, thick=thick
+							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab,$
+							no_color_bar=no_color_bar;, position=position
 		end_save, save_as3
 	endif
 
