@@ -498,6 +498,16 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		endif
 	endif
 
+	if is_tag(_extra,'XTICKNAME') then begin
+		; If at least one line break is included add one character to ymargin xtitle 
+		if total(stregex(_extra.xtickname,'!C',/bool)) then begin
+			ymargin += [1,0]
+			if is_tag(_extra,'XTITLE') then begin
+				_extra.xtitle = '!C'+_extra.xtitle
+			endif
+		endif
+	endif
+
 	;	testen ob bild 2 oder 3 dimensionen hat	=> true_dim & bildgroessen (six, siy) & bar (0: nix, 1:vertikal, 2:horizontal) & mini, maxi
 	s_img = size(a)
 	if (s_img[0] lt 2) or (s_img[0] gt 3) then begin & print, 'Image have to be 2D or 3D' & return & endif
