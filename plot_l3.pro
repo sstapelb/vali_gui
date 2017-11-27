@@ -102,16 +102,16 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 	endelse
 
 	if (min(h2d_array) eq max(h2d_array)) and (max(h2d_array) eq 0) then h2d_array[0]=1
-	if keyword_set(bar_discontinous) and n_elements(h2d_array) le 9 then begin
-		bar_tickv = h2d_array[sort(h2d_array)]
-		bar_tickname = string(bar_tickv,f=bar_format)
-		color = ~keyword_set(no_color_bar)
+	if keyword_set(bar_discontinous) then begin
+		color = ~keyword_set(no_color_bar) and n_elements(h2d_array) lt 100.
+		if n_elements(h2d_array) le 9 or color eq 0 then begin
+			bar_tickv = h2d_array[sort(h2d_array)]
+			bar_tickname = string(bar_tickv,f=bar_format)
+		endif else bar_discontinous = 0
 	endif else begin
 		bar_discontinous = 0
 		no_data_val=0
 	endelse
-; 	xtickv = vector(0,(size(h2d_array,/dim))[0]-1,cc+1)
-; 	ytickv = vector(0,(size(h2d_array,/dim))[1]-1,cc+1)
 	xtickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
 	ytickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
 	xmargin=[7,5]
@@ -2707,7 +2707,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 			dum = hist_2d(bild1[idx],bild2[idx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
 			bin_dum = keyword_set(bar_discontinous) ? 0.: bin
-			
+
 			if n_elements(dum) lt 4 then dum=congrid(dum,2,2)
 			if total(dum) eq 0 then dum[0]=1
 			title  = 'Binsize = '+string(bin,f='(f6.3)')+unit1
