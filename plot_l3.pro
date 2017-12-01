@@ -4858,17 +4858,6 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,save
 		save_as=strjoin(save_as,'_')
 	endif else if win_nr ne -1 then win, win_nr,title=dat
 
-; 	if keyword_set(limit) then begin
-; 		idx = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),complement=nd_idx,ncomp=nd_cnt)
-; 		if nd_cnt gt 0 then lat[nd_idx] = fillvalue
-; 	endif
-; 
-; 	if keyword_set(land) or keyword_set(sea) then begin
-; 		dem = get_coverage(lon, lat, cov = 'land')
-; 		if keyword_set(sea) then lat[where(dem ne 0)] = fillvalue
-; 		if keyword_set(land) then lat[where(dem eq 0)] = fillvalue
-; 	endif
-
 	area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found, shape_file = shape_file, $
 			fillv_index = where(bild eq fillvalue[0]) , index = idx, count = idx_cnt)
 
@@ -4907,14 +4896,14 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,save
 			xtitle='latitude [degrees]',ytitle=full_varname(varname) + unit,yr=yr,title=title,ylog=logarithmic, $
 			charthick = !p_charthick , xcharsize = !p_xcharsize , ycharsize= !p_ycharsize ,xmargin=xmargin,ymargin=ymargin
 			if ts then date = ''
-			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick
+			if idx_cnt gt 0 then oplot,lat1d,medi,thick=thick
 			if ~keyword_set(nobar) then legend,date+satn+dtn+hct,thick=thick,spos='top',charsize=!l_charsize ,color =-1,charthick=!p_charthick
 		endif else begin
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error,timeseries=nobar
 			if yr[0] lt yr[1] then begin
-				if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[0],max_value=yr[1]
+				if idx_cnt gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[0],max_value=yr[1]
 			endif else begin
-				if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[1],max_value=yr[0]
+				if idx_cnt gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[1],max_value=yr[0]
 			endelse
 			if ts then date = ''
 			legend,date+satn+dtn+hct,thick=thick,color=cgcolor(cols), spos=spos,ystretch=ystretch+0.5,charsize=!l_charsize ,$

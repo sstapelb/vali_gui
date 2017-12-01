@@ -4607,7 +4607,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram, year, month, day, file1=file, sat1=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
 				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,$
-				time_series=pcmult,notitle=notitle,sat2=satn,cov=cov
+				time_series=pcmult,notitle=notitle,sat2=satn
 			endif
 			if pcms and pcmult then begin
  				if verbose then print,'Currently Unset'
@@ -4618,7 +4618,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				if verbose then print,'Hovmoeller Time Series'
 				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
-				ctable=ctab, other = oth,reference = ref, out = out, land = land, sea = sea, oplots = opl,found = found, limit = limit,coverage=cov, $
+				ctable=ctab, other = oth,reference = ref, out = out, oplots = opl,found = found, limit = limit,coverage=cov, $
 				notitle=notitle,ts_extras = ts_extra
 				if show_values then begin
 					if nobar ne 1 then begin
@@ -4631,7 +4631,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pchist then begin
 				if verbose then print,'Histograms'
-				plot_histogram,year,month,day,file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,level=level, $
+				plot_histogram,year,month,day,file,varname[0],mini=mini,maxi=maxi,limit=limit,level=level, $
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], cov=cov,addtext = addtext[0], $
 				datum=datum, ref = ref, change_side = show_values,verbose=verbose, shape_file=shape_file, $
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),log=log,notitle=notitle
@@ -4874,8 +4874,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat1=sat,sat2=satn,save_as=save_as, $
 				win_nr=win_nr,reference=algo2,verbose=verbose,varname=varname,mini=mini,maxi=maxi,limit=limit	, $
-				unit=unit,other=oth,algo = algo,level=level,time_series=pcmult,notitle=notitle, $
-				cov = cov
+				unit=unit,other=oth,algo = algo,level=level,time_series=pcmult,notitle=notitle
 			endif else if pcmat then begin
 				if verbose then print,'Matrix'
 				make_2d_overview,year=year,month=month,sat,reference=algo2, cov = cov,sat2=satn, out = out, $
@@ -5063,7 +5062,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,coverage=cov,$
-				oplots = opl, other = oth,land=land,sea=sea, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc,$
+				oplots = opl, other = oth, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc,$
 				notitle=notitle,ts_extras = ts_extra
 				if show_values and is_defined(out) then begin
 					if nobar ne 1 then begin
@@ -5087,7 +5086,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 						if keyword_set(verbose) then goto, print_verbose3
 						return
 				endif
-				plot_histogram,year[0],month[0],day[0],file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,$
+				plot_histogram,year[0],month[0],day[0],file,varname[0],mini=mini,maxi=maxi,limit=limit,$
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], found = found,addtext = addtext[0], $
 				datum=datum, change_side = show_values,verbose=verbose,cov=cov,oplots = opl, shape_file=shape_file,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,logarithmic=log
@@ -5099,7 +5098,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					   if keyword_set(verbose) then goto, print_verbose3
 					   return
 				endif
-				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,$
+				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,save_as=save_as,win_nr=win_nr,$
 				algo=algo,timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0],$
 				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle,nobar=nobar,$
 				logarithmic=log, shape_file=shape_file
