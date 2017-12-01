@@ -51,22 +51,16 @@ function is_valid_idx, index
     
 end
 ;------------------------------------------------------------------------------------------
-; by M. Reuter ; adapted to regular grids by stapel
-function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, msg = msg, found = found, hires = hires
+; by M. Reuter for MSG only
+function coast_line, msg_size, border = border, rivers = rivers, lakes = lakes, msg = msg, found = found, hires = hires
 
 	; at the moment only regular grids
 	proz = 0.8
-	x_0  = 0 & x_1 = (size(lon,/dim)-1)[0]
-	y_0  = 0 & y_1 = (size(lon,/dim)-1)[1]
-	scale   = 1
+	x_0  = msg_size[0] & x_1 = msg_size[1]
+	y_0  = msg_size[2] & y_1 = msg_size[3]
+	scale   = 1 ; only 1 at the momentz
 	found = 1
 	
-	slon  = min(lon[where(lon ne -999.)],max=elon)
-	slat  = min(lat[where(lat ne -999.)],max=elat)
-
-	gridx = float(x_1)/float(abs(slon-elon))
-	gridy = float(y_1)/float(abs(slat-elat))
-
 	;filename bauen
 	res = keyword_set(hires) ? 'high' : 'low'
 	b_ndx_file = FILEPATH('b'+res+'.ndx', SUBDIR=['resource', 'maps',res])
@@ -106,16 +100,9 @@ function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, 
 			point_lun, lun, ndx[j].fptr
 			xy	= fltarr(2, ndx[j].npts)
 			readu, lun, xy
-			if keyword_set(msg) then begin
-				dum     = geo_to_msg(reform(xy[1, *]), reform(xy[0, *]), /unique_projection, /no_round,hrv=hrv)
-				x       = dum.column
-				y       = dum.line
-			endif else begin
-				x= fix((reform(xy[1, *])+(-1.0)*slon)*gridx)
-				idx=where(x lt 0,idxcnt)
-				if idxcnt gt 0 then x[idx] = x_1 - x[idx]
-				y= fix((reform(xy[0, *])+(-1.0)*slat)*gridy)
-			endelse
+			dum     = geo_to_msg(reform(xy[1, *]), reform(xy[0, *]), /unique_projection, /no_round,hrv=hrv)
+			x       = dum.column
+			y       = dum.line
 			ok		= ((x ge x_0) and (y ge y_0) and (x le x_1) and (y le y_1))
 			ok_idx		= where(ok, ok_anz)
 			if ok_anz le 1 then continue
@@ -156,62 +143,36 @@ function coast_line, lon, lat, border = border, rivers = rivers, lakes = lakes, 
 end
 ;------------------------------------------------------------------------------------------
 ; by M. Reuter ; adapted to regular grids by stapel
-function meridians, lon, lat, interval = interval, msg= msg, found = found, grid_res = grid_res
+function meridians, msg_size, interval = interval, msg= msg, found = found, grid_res = grid_res
 
 	scale = 1
 	found = 1
-	; at the moment only regular grids allowed
-	if keyword_set(lon) and keyword_set(lat) then begin
-		x_0   = 0 & x_1 = (size(lon,/dim)-1)[0]
-		y_0   = 0 & y_1 = (size(lon,/dim)-1)[1]
-		slon  = min(lon[where(lon ne -999.)],max=elon)
-		slat  = min(lat[where(lat ne -999.)],max=elat)
-		gridx = float(x_1)/float(abs(slon-elon))
-		gridy = float(y_1)/float(abs(slat-elat))
-	endif else if keyword_set(grid_res) then begin
-		x_0   = 0 & x_1 = 360./float(grid_res) -1.
-		y_0   = 0 & y_1 = 180./float(grid_res) -1.
-		slon  = -180. & elon = 180.
-		slat  = - 90. & elat =  90.
-		gridx = 1./grid_res
-		gridy = 1./grid_res
-	endif else begin
-		print,'Need Lon/lat or regular grid size Info!'
-		found = 0
-		return,-1
-	endelse
+	x_0  = msg_size[0] & x_1 = msg_size[1]
+	y_0  = msg_size[2] & y_1 = msg_size[3]
 
 	dum_vector	= 0b
 	resolution	= 1000
 	interval	= keyword_set(interval) ? interval : 10.
-	anz		= (180.*2) / interval + 1.
-	lo		= findgen(anz) / (anz - 1) * (2*180.) - (2*90.)
-	la		= findgen(anz) / (anz - 1) * (2*180.) - (2*90.)
+	anz		= (180.) / interval + 1.
+	lo		= -80. > ( findgen(anz) / (anz - 1) * (180.) - (90.) ) < 80. ; 80 degrees are the edge pixel, these are used to draw a horizon line 
+	la		= -80. > ( findgen(anz) / (anz - 1) * (180.) - (90.) ) < 80.
+
 	for i = 0l, n_elements(lo) - 1l do begin
 		;erstellen der meridiane
 		m_la		= fltarr(2, resolution)
 		m_la[1, *]	= la[i]
-		m_la[0, *]	= vector(slat,elat,resolution)
+		m_la[0, *]	= vector(-90.,90.,resolution)
+
 		m_lo		= fltarr(2, resolution)
 		m_lo[0, *]	= lo[i]
-		m_lo[1, *]	= vector(slon,elon,resolution)
-		if keyword_set(msg) then begin
-			dum_lo          = geo_to_msg(reform(m_lo[1, *]),reform(m_lo[0, *]),/unique_projection,/no_round,hrv=hrv)
-			x_lo            = dum_lo.column
-			y_lo            = dum_lo.line
-			dum_la          = geo_to_msg(reform(m_la[1, *]),reform(m_la[0, *]),/unique_projection,/no_round,hrv=hrv)
-			x_la            = dum_la.column
-			y_la            = dum_la.line
-		endif else begin
-; 			x_lo= fix((reform(m_lo[1, *])+(-1.0)*slon)*gridx)
-; 			y_lo= fix((reform(m_lo[0, *])+(-1.0)*slat)*gridy)
-; 			x_la= fix((reform(m_la[1, *])+(-1.0)*slon)*gridx)
-; 			y_la= fix((reform(m_la[0, *])+(-1.0)*slat)*gridy)
-			x_lo= fix((reform(m_lo[1, *])+(-1.0)*slon)*gridx)
-			y_lo= fix((reform(m_lo[0, *])+(-1.0)*slon)*gridx)
-			x_la= fix((reform(m_la[1, *])+(-1.0)*slat)*gridy)
-			y_la= fix((reform(m_la[0, *])+(-1.0)*slat)*gridy)
-		endelse
+		m_lo[1, *]	= vector(-90.,90.,resolution)
+
+		dum_lo          = geo_to_msg(reform(m_lo[1, *]),reform(m_lo[0, *]),/unique_projection,/no_round,hrv=hrv)
+		x_lo            = dum_lo.column
+		y_lo            = dum_lo.line
+		dum_la          = geo_to_msg(reform(m_la[1, *]),reform(m_la[0, *]),/unique_projection,/no_round,hrv=hrv)
+		x_la            = dum_la.column
+		y_la            = dum_la.line
 		x		= x_lo
 		y		= y_lo
 		ok		= ((x ge x_0) and (y ge y_0) and (x le x_1) and (y le y_1))
@@ -342,22 +303,17 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		if grid_res ne 0 or cci_l3u_eu or cci_l3u_af or keyword_set(msg) or keyword_set(claas) or keyword_set(offsets) then begin
 			si  = size(a,/dim)
 			if keyword_set(msg) and ~keyword_set(claas) then begin
-				xrange = [0,si[0]-1] & yrange=[0,si[1]-1]
-				msg_x = (indgen((xrange[1]-xrange[0])+1)+xrange[0]) #  (intarr((yrange[1]-yrange[0])+1)+1)
-				msg_y = (indgen((yrange[1]-yrange[0])+1)+yrange[0]) ## (intarr((xrange[1]-xrange[0])+1)+1)
-				dum = msg_to_geo(temporary(msg_x),temporary(msg_y),scale_params=scale_params,sub_sat_lon=sub_sat_lon)
-				lon = dum.lon
-				lat = dum.lat
-				msg = 1
-				free, dum
-				found_geo = 1
-				slon  = min(lon[where(lon ne -999.)],max=elon)
-				slat  = min(lat[where(lat ne -999.)],max=elat)
+				slon      =  -90. & elon = 90.
+				slat      =  -90. & elat = 90.
+				p0lon     =    0.
+				found_msg = 1
 				meridian_interval = keyword_set(meridian_interval) ? meridian_interval : 30
+				msg_size = [[0,si[0]-1],[0,si[1]-1]]
+				box_axes = 0
 			endif else begin
 				slon  =-180. & elon = 180.
 				slat  = -90. & elat =  90.
-				found_geo = 0
+				found_msg = 0
 				coast_vec = keyword_set(continents) or keyword_set(countries)
 				if keyword_set(limit) then box_axes = 1
 				meridian_vec = keyword_set(box_axes)
@@ -408,13 +364,21 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 					limit = [limit[0] > slat, limit[1] > slon, limit[2] < elat, limit[3] < elon] ; make sure limit bounds are not greater than array
 					if is_valid_idx(no_data_idx) or is_valid_idx(data_idx) then dum = float(reform(a[*,*,0])*0)
 					meridian_interval = keyword_set(meridian_interval) ? meridian_interval : 10
-					xx  = 0 > fix((limit[[1,3]]-slon)*1./grid_res) < (si[0]-1)
-					yy  = 0 > fix((limit[[0,2]]-slat)*1./grid_res) < (si[1]-1)
+					if found_msg then begin
+						dum_lo = geo_to_msg(limit[[1,3]],limit[[0,2]],/unique_projection,/no_round,hrv=hrv)
+						xx   = dum_lo.column
+						yy   = dum_lo.line
+						if total([xx,yy] eq -1) then begin
+							print,'MSG Limit: At least one Corner is out of bounds!'
+							print,'X min/max', minmax(xx)
+							print,'Y min/max', minmax(yy)
+							return
+						endif else msg_size = [xx,yy]
+					endif else begin
+						xx  = 0 > fix((limit[[1,3]]-slon)*1./grid_res) < (si[0]-1)
+						yy  = 0 > fix((limit[[0,2]]-slat)*1./grid_res) < (si[1]-1)
+					endelse
 					a   = a[xx[0]:xx[1],yy[0]:yy[1],*]
-					if found_geo then begin
-						lon = lon[xx[0]:xx[1],yy[0]:yy[1]]
-						lat = lat[xx[0]:xx[1],yy[0]:yy[1]]
-					endif
 					if is_valid_idx(no_data_idx) or is_valid_idx(data_idx) then begin
 						if is_valid_idx(no_data_idx) then begin
 							dum[no_data_idx] = 123.
@@ -434,13 +398,13 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 				yy  = [0,si[1]]
 				meridian_interval = keyword_set(meridian_interval) ? meridian_interval : 30
 			endelse
-			if found_geo then begin
-				rivers = is_tag(_extra,'coasts')
-				lakes  = is_tag(_extra,'lakes')
+			if found_msg then begin
+				lakes  = is_tag(_extra,'coasts') or is_tag(_extra,'lakes')
+				rivers = is_tag(_extra,'rivers')
 				hires  = ~keyword_set(lowres_bounderies)
-				coast_vec = coast_line(lon,lat,border=countries,lakes=lakes,rivers=rivers,msg=msg,found=found,hires=hires)
+				coast_vec = coast_line(msg_size,border=countries,lakes=lakes,rivers=rivers,msg=msg,found=found,hires=hires)
 				if found eq 0 then free, coast_vec
-				meridian_vec = meridians(lon,lat,interval=meridian_interval,msg=msg,found=found)
+				meridian_vec = meridians(msg_size,interval=meridian_interval,msg=msg,found=found)
 				if found eq 0 then free, meridian_vec
 			endif
 			if keyword_set(box_axes) then begin
@@ -471,10 +435,10 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		if stregex(strjoin(tag_names(_extra)) , 'XTIT', /fold,/bool) then ymargin += [4,0]
 		if keyword_set(bar_title) then ymargin += [2,0]
 	endif
-	if keyword_set(msg) then begin
-		no_axes	= 1
-		aspect	= 1
-	endif
+; 	if keyword_set(msg) then begin
+; 		no_axes	= 1
+; 		aspect	= 1
+; 	endif
 	if keyword_set(full_screen) then begin
 		no_axes = 1
 		color_bar = 0
@@ -643,7 +607,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 			im[*, *, i] = dum_img
 		endfor
 	endif
-
+	
 ;	bild reinmalen
 	if (strlowcase(!d.name) ne 'win') and (strlowcase(!d.name) ne 'x') and (strlowcase(!d.name) ne 'z') then begin	;Scalable pixels?
 ;		Postscriptausgabe
@@ -751,11 +715,6 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 			for i = 0l, n_elements(meridian_vec) -1l do begin
 				dum_type[i]	= ((*meridian_vec[i]).type eq 'lon')
 				dum_ang[i]	= string((*meridian_vec[i]).ang, format = meridian_format)
-				if (dum_type[i] eq 1) then begin
-					if ( (strcompress(dum_ang[i],/rem) eq '-180') or (strcompress(dum_ang[i],/rem) eq '180' ) ) then dum_ang[i] = ''
-				endif else begin
-					if ( (strcompress(dum_ang[i],/rem) eq '-90' ) or (strcompress(dum_ang[i],/rem) eq '90'  ) ) then dum_ang[i] = ''
-				endelse
 				dum_x		= ((*meridian_vec[i]).data)[0, *]
 				dum_y		= ((*meridian_vec[i]).data)[1, *]
 				if dum_type[i] eq 0 then begin
@@ -771,11 +730,14 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 				dum_crap[i]	= (pos_min eq 0) or (pos_min eq (n_elements(dum_x) - 1l))
 			endfor
 			for i = 0l, n_elements(meridian_vec) -1l do begin
+				linestyle = abs(fix(dum_ang[i])) eq 80 ? 0 : meridian_style ;draw horizon with solid line
 				oplot, ((*meridian_vec[i]).data)[0, *], ((*meridian_vec[i]).data)[1, *], color = meridian_col, $
-				linestyle = meridian_style, thick = meridian_thick
+				linestyle = linestyle, thick = meridian_thick
 				if not keyword_set(meridian_nonumber) then begin
+					if (abs(fix(dum_ang[i])) eq 80) then dum_crap[i] = 1 ; dont draw meridian number at horizon
+					if fix(dum_ang[i]) eq 0 and dum_type[i] eq 0 then dum_crap[i] = 1
 					if not dum_crap[i] then begin
-						if dum_type[i] 	then	xyouts, dum_mx[i], dum_my[i] + 0, dum_ang[i], color = meridian_col, alignment = .5 $
+						if dum_type[i] 	then	xyouts, dum_mx[i], dum_my[i], dum_ang[i], color = meridian_col, alignment = .5 $
 								else	xyouts, dum_mx[i] + 0, dum_my[i], dum_ang[i], color = meridian_col, alignment = .5
 					endif
 				endif

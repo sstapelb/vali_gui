@@ -4363,7 +4363,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
 				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
 				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
-				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov	,found=found,pvir=pvir, $
+				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found,pvir=pvir, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
 				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
 				no_label=no_label,smoothTS = smoothTS,no_box=no_box,show_trend=show_trend
@@ -4478,11 +4478,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if is_jch(varname) then begin
 				vergleiche_ctp_cot_histogram_cci_mit_clara,file,varname = varname, mini = mini, maxi = maxi, limit=limit, zoom=zoom, sat=sat,$
-				win_nr = win_nr, save_as= save_as,land = land, sea = sea,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$
-				globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
+				win_nr = win_nr, save_as= save_as,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$
+				globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
-				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum,magnify=magnify, $
-				countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,shape_file=shape_file
+				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum	,$
+				magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label		,$
+				no_box=no_box,shape_file=shape_file,cov = cov
 				if show_values and pcdts and ~total(strlowcase(hct[0]) eq ['hist2d','hist_2d','max']) then $
 				show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 				if ~(pcdts and ~total(strlowcase(hct[0]) eq ['max','1d'])) then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
@@ -4498,9 +4499,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean Multi Time Step'
 				if ~(histo1d and strlowcase(hct[0]) eq '1d') then !p.multi=[0,2,2]
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, orbit = orbit, $
-				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as,land=land, ztext = ztext,$
-				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
+				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, ztext = ztext,$
+				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,ts_extras=ts_extras,$
@@ -4522,9 +4523,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean'
 				if ~(histo1d and strlowcase(hct[0]) eq '1d') then !p.multi=[0,2,2]
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, orbit = orbit, $
-				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as,land=land, ztext = ztext,$
-				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,$
+				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, ztext = ztext,$
+				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				hist_cloud_type=hct[0],error=error,timeseries=pcmult,dim3=dim3,magnify=magnify,oplots=opl,countries=countries,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,shape_file=shape_file,$
@@ -4539,9 +4540,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					return
 				endif
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, level = level,$
-				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as,land=land, orbit = orbit,$
-				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
+				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, orbit = orbit,$
+				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
 				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle,shape_file=shape_file,$
 				no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
@@ -4549,8 +4550,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmat then begin
 				if verbose then print,'Matrix'
-				make_2d_overview,year=year,month=month,sat,reference=ref, cov = cov,sat2=sat2, out = out, $
-				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,file1 = file
+				make_2d_overview,year=year,month=month,sat,reference=ref, cov = cov,sat2=sat2, out = out, shape_file=shape_file,nobar=nobar, $
+				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,file1 = file, limit = limit
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif
 			if pcmult and pcts then begin
@@ -4564,9 +4565,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pczm and pcsing then begin
 				if verbose then print,'Zonal Average Single Time Step'
 				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, level = level,error=error,$
-				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as,land=land, orbit = orbit,$
-				sea=sea,cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab,/zonal_only, ztext = ztext, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer, msg = msg,log=log,$
+				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, orbit = orbit,$
+				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab,/zonal_only, ztext = ztext, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,log=log,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic, $
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,magnify=magnify,countries=countries,notitle=notitle,$
 				shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
@@ -4585,7 +4586,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
 				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/diff,$
-				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
+				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom, shape_file=shape_file,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
 				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
 				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext,magnify=magnify, $
@@ -4606,7 +4607,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram, year, month, day, file1=file, sat1=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
 				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,$
-				time_series=pcmult,notitle=notitle,sat2=satn
+				time_series=pcmult,notitle=notitle,sat2=satn,cov=cov
 			endif
 			if pcms and pcmult then begin
  				if verbose then print,'Currently Unset'
@@ -4632,14 +4633,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Histograms'
 				plot_histogram,year,month,day,file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,level=level, $
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], cov=cov,addtext = addtext[0], $
-				datum=datum, ref = ref, change_side = show_values,verbose=verbose, $
+				datum=datum, ref = ref, change_side = show_values,verbose=verbose, shape_file=shape_file, $
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),log=log,notitle=notitle
 			endif
 			if pcmts then begin
 				if verbose then print,'BoxPlots'
 				boxplot, year, month, day, data=varname, satellite = sat, timeseries=pcmult,level=level, limit = limit, $
 				filename1 = file, coverage = cov, error = error, mini = mini, maxi = maxi, save_as = save_as, win_nr = win_nr, $
-				datum=datum,algo=algo[0],verbose=verbose,reference = ref,notitle=notitle
+				datum=datum,algo=algo[0],verbose=verbose,reference = ref,notitle=notitle, shape_file=shape_file
 				if pcmult then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif
 
@@ -4796,14 +4797,15 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				!p.multi = 0
 				compare_l2_save_serie,file1,self.file2,data1=varname,data2=varname,mini=mini,maxi=maxi	, $
-				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
+				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
 				bild=bild,unit=unit,sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide	, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide	, $
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,log=log	, $
 				other=oth,ctable=ctab, level=level,nobar=nobar, stereographic = stereographic		, $
 				/all_parameter,dim3=dim3,coverage=cov,rot=rot,magnify=magnify,countries=countries	, $
-				notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box, $
+				shape_file=shape_file
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if is_jch(varname) and total(strlowcase(hct[0]) eq ['1d','1d_cot','1d_ctp','max']) then begin
 				satn1  = sat_name(algo,sat)
@@ -4841,56 +4843,59 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				if strmid(strlowcase(hct[0]),0,2) eq '1d' then begin
 					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat1=sat,prefix=[f1str,f2str], $
-					land=land,sea=sea,limit=limit,save_as=save_as,win_nr=win_nr,antarctic=ant,arctic=arc	 , $
+					limit=limit,save_as=save_as,win_nr=win_nr , $
 					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool)	 , $
 					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0],notitle=notitle,sat2=satn,$
-					no_continents=no_continents,no_grid=no_grid,no_label=no_label
+					cov=cov, shape_file=shape_file
 				endif else begin
 					; file1
 					plot_l2,year[0],month[0],day[0],file=file1,data=varname[0],mini=mini,maxi=maxi,sat=sat	, $
-					algo=algo[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
+					algo=algo[0],hist_cloud_type=hct[0],win_nr=win_nr,save_as=save_as	, $
 					limit=limit,zoom=zoom,globe=globe,p0lon=p0lon,stereographic=stereographic,msg_proj=msg	, $
-					p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,log=log	, $
+					p0lat=p0lat,mollweide=mollweide,hammer=hammer,log=log	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f1str,nobar=nobar	, $
 					cov=cov,magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,$
-					no_grid=no_grid,no_label=no_label,no_box=no_box
+					no_grid=no_grid,no_label=no_label,no_box=no_box, shape_file=shape_file
 					; file2
 					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname2,mini=mini,maxi=maxi,sat=satn, $
-					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,sea = sea,land=land,save_as=save_as	, $
-					limit=limit,zoom=zoom,lon=lon,lat=lat,bild=bild,unit=unit,globe=globe,p0lon=p0lon	, $
-					p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,msg_proj=msg	, $
+					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,save_as=save_as	, $
+					limit=limit,zoom=zoom,out=out,globe=globe,p0lon=p0lon	, $
+					p0lat=p0lat,mollweide=mollweide,hammer=hammer,msg_proj=msg	, $
 					goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0],log=log, $
 					ctable = ctab, other = oth, verbose = verbose,level=level, prefix=f2str,nobar=nobar	, $
 					stereographic = stereographic,cov=cov,magnify=magnify,countries=countries,notitle=notitle,$
-					no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
-					if show_values and ~pchist and ~pczm and ~pcmts then show_pixel_value, bild, lon,lat	, $
-					data = varname2, unit = unit, wtext = self.showpvalID
+					no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box, shape_file=shape_file
+					if show_values and is_defined(out) and ~pchist and ~pczm and ~pcmts then $
+					show_pixel_value, out.bild, out.lon,out.lat, data = varname2, unit = out.unit, wtext = self.showpvalID
 				endelse
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat1=sat,sat2=satn,save_as=save_as, $
 				win_nr=win_nr,reference=algo2,verbose=verbose,varname=varname,mini=mini,maxi=maxi,limit=limit	, $
-				unit=unit,other=oth,antarctic=ant,arctic=arc,algo = algo,level=level,time_series=pcmult,notitle=notitle
+				unit=unit,other=oth,algo = algo,level=level,time_series=pcmult,notitle=notitle, $
+				cov = cov
 			endif else if pcmat then begin
 				if verbose then print,'Matrix'
 				make_2d_overview,year=year,month=month,sat,reference=algo2, cov = cov,sat2=satn, out = out, $
 				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,$
-				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2,notitle=notitle
+				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2, $
+				shape_file=shape_file, limit = limit, notitle=notitle
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif else begin
 				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level, $
-				save_as=save_as, win_nr=win_nr,land=land,sea=sea,limit=limit,zoom=zoom,out=out		, $
+				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,out=out		, $
 				sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, htypes = hct[0],verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide	, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide	, $
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson	,log=log, $
 				diff_only=pcdts,hist_only=pchist,maps_only=pcvar,other=oth,ctable=ctab,zonal_only=pczm	, $
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
 				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify	, $
 				wtext = self.showpvalID,countries=countries,notitle=notitle,no_continents=no_continents,$
-				no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2
+				no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2, $
+				shape_file=shape_file
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
@@ -5040,12 +5045,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					return
 				endif
 				plot_l2_save_serie,year[0],month[0],day[0],sat=sat[0],algo=algo[0],file=file, $
-				sea = sea,land=land,save_as=save_as,limit=limit,timeseries=pcmult,pvir=pvir, $
-				p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
-				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
-				cov=cov, ztext = ztext, stereographic = stereographic,msg_proj=msg,error=error,log=log,$
-				dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],addtext = addtext[0],$
-				magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				save_as=save_as,limit=limit,timeseries=pcmult,pvir=pvir, shape_file=shape_file, $
+				p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
+				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, $
+				verbose = verbose,level=level,nobar=nobar,cov=cov, ztext = ztext, stereographic = stereographic,$
+				msg_proj=msg,error=error,log=log,dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],$
+				addtext = addtext[0],magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,$
+				no_grid=no_grid,no_label=no_label,no_box=no_box
 			endif else if pchov then begin
 				; hovmoeller
 				if hist2d then begin 
@@ -5083,7 +5089,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				plot_histogram,year[0],month[0],day[0],file,varname[0],mini=mini,maxi=maxi,limit=limit,sea=sea,land=land,$
 				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], found = found,addtext = addtext[0], $
-				datum=datum, change_side = show_values,verbose=verbose,cov=cov,oplots = opl,$
+				datum=datum, change_side = show_values,verbose=verbose,cov=cov,oplots = opl, shape_file=shape_file,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),notitle=notitle,logarithmic=log
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pczm then begin
@@ -5096,7 +5102,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				plot_zonal_average,year[0],month[0],day[0],file,varname,limit=limit,sea=sea,land=land,save_as=save_as,win_nr=win_nr,$
 				algo=algo,timeseries=pcmult,sat=sat,oplots = opl,found = found,mini=mini,maxi=maxi,level=level,addtext = addtext[0],$
 				datum=datum,error=error, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),coverage=cov,notitle=notitle,nobar=nobar,$
-				logarithmic=log
+				logarithmic=log, shape_file=shape_file
 				if ~found then opl = 0 > (self.oplotnr -=1 )
 			endif else if pcms and pcmult then begin
 				; Unset change to something new!
@@ -5110,13 +5116,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi=[0,2,1]
 
 				plot_l2,year[0],month[0],day[0],file=file,data=varname[0],mini=mini,maxi=maxi,sat=sat[0],algo=algo[0],hist_cloud_type=hct[0], $
-				win_nr=win_nr,sea = sea,land=land,save_as=save_as,limit=limit,zoom=zoom,lon=lon,lat=lat,bild=bild,unit=unit,timeseries=pcmult, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
+				win_nr=win_nr,save_as=save_as,limit=limit,zoom=zoom,timeseries=pcmult, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,$
 				sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0], ctable = ctab, other = oth, verbose = verbose,level=level,nobar=nobar,$
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],addtext = addtext[0],$
 				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-				no_label=no_label,no_box=no_box,version=version,ts_extras=ts_extras,obj_out=obj_out
+				no_label=no_label,no_box=no_box,version=version,ts_extras=ts_extras,obj_out=obj_out, out = out
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
 					; cleanup wird hier nicht aufgerufen also decompose=1 sonst gibts verrückte farben
@@ -5126,10 +5132,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endelse
 
-			if show_values and is_defined(bild) then begin
-				if is_defined(lon) and is_defined(lat) then begin
-					if ~(hist2d and strlowcase(strmid(hct[0],0,2)) eq '1d') then show_pixel_value, bild, lon, lat, data = varname, unit = unit, wtext = self.showpvalID
-				endif
+			if show_values and is_defined(out) then begin
+					if ~(hist2d and strlowcase(strmid(hct[0],0,2)) eq '1d') then $
+					show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			; reset values
 ; 			Widget_Control, self.pixvalID, Set_Button=0

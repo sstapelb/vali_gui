@@ -115,7 +115,7 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 	xtickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
 	ytickname = strcompress(string(vector(min_a,max_a,cc+1),f=(max_a lt 10 ? '(f3.1)':'(i)')),/rem)
 	xmargin=[7,5]
-	ymargin=[3,2]+(keyword_set(save_as) ? [0,2]:0)
+	ymargin=[3,1]+(keyword_set(save_as) ? [0,2]:0)
 
 	if keyword_set(flag_meanings1) then begin
 		strdum = strarr(n_elements(flag_meanings1)*2+1)+' '
@@ -124,6 +124,7 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 		xticklen=0.00001
 		xoplot_lines = 1
 		bar_nlev = n_elements(h2d_array)< 9.
+		no_regr = 1
 	endif
 	if keyword_set(flag_meanings2) then begin
 		strdum = strarr(n_elements(flag_meanings2)*2+1)+' '
@@ -132,6 +133,7 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 		yticklen=0.00001
 		yoplot_lines = 1
 		bar_nlev = n_elements(h2d_array)< 9.
+		no_regr = 1
 	endif
 
 	view2d,h2d_array,no_data_val=no_data_val,xtitle=xtitle,ytitle=ytitle,bar_title=bar_title,bar_discontinous = bar_discontinous, $
@@ -142,8 +144,10 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 	bar_tickname = bar_tickname,bar_tickv=bar_tickv,xmargin=xmargin,ymargin=ymargin, position = position,$
 	color = color
 	if n_gesamt gt 0 and ~keyword_set(bar_discontinous) then begin
-		oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
-		oplot,!x.crange,!y.crange,thick=thick
+		if not keyword_set(no_regr) then begin
+			oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
+			oplot,!x.crange,!y.crange,thick=thick
+		endif
 	endif else begin
 		si=size(h2d_array,/dim)
 		if keyword_set(xoplot_lines) then for i=0,si[0] do oplot,[i,i],!y.crange,thick=2
@@ -248,7 +252,7 @@ end
 ;------------------------------------------------------------------------------------------
 pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,sat1=sat1,algo=algo,save_as=save_as,win_nr=win_nr,$
 			 reference=reference, verbose = verbose,level=level,mini=mini,maxi=maxi,limit=limit,unit=unit,$
-			 other=other,antarctic=antarctic,arctic=arctic,time_series=time_series,notitle=notitle,sat2=sat2
+			 other=other,time_series=time_series,notitle=notitle,sat2=sat2
 
 	datum = keyword_set(time_series) ? 'time_series' : string(year,f='(i4.4)')+string(month,f='(i2.2)')+string(day,f='(i2.2)')
 	ts    = keyword_set(time_series)
@@ -419,10 +423,10 @@ end
 ;------------------------------------------------------------------------------------------
 pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = mini	, $
 			maxi = maxi, zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_dir, $
-			overwrite_sav = overwrite_sav,verbose = verbose, land = land, sea = sea	, $
+			overwrite_sav = overwrite_sav,verbose = verbose	, $
 			only_clara=only_clara, ccifile=ccifile, reference=reference,orbit=orbit	, $
 			coverage=coverage, show_values=show_values,other = other, ctable=ctable	, $
-			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+			p0lon = p0lon, p0lat = p0lat	, $
 			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg	, $
 			robinson=robinson, hammer = hammer, goode = goode,globe = globe			, $
 			histogramm = histogramm,difference = difference, level=level,error=error, $
@@ -452,7 +456,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	ts         = keyword_set(timeseries)
 	limit_test = keyword_set(limit)
 	if limit_test then limit_bck = limit
-	cov      = keyword_set(coverage)  ? strlowcase(coverage)  : 'full'
+	cov      = keyword_set(coverage)  ? strlowcase(coverage)  : ''
 	ref      = keyword_set(reference) ? strlowcase(reference) : ''
 	dat      = strsplit(strlowcase(data[0]),',',/ext)
 	if n_elements(dat) eq 1 then dat = [dat,dat]
@@ -481,11 +485,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	algo2     = ref2algo(ref,sat=satgac)
 	algon_cci = sat_name(algo1,sat   , year=(ts ? 0:year), month=(ts ? 0:month),version=version1,level=level)
 	algon_gac = sat_name(algo2,satgac, year=(ts ? 0:year), month=(ts ? 0:month),version=version2,level=level)
-
-	if keyword_set(land) and keyword_set(sea) then begin
-		land = 0
-		sea  = 0
-	endif
 
 	if ~keyword_set(level) then level = keyword_set(day) ? 'l3u' : 'l3c'
 	bar_discontinous = 0
@@ -566,7 +565,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		save_dir = save_dir eq '1' ? !SAVE_DIR +(strlowcase(sat) eq 'aatme' ? '/aatme/':'/compare_cci/') : save_dir+'/'
 		save_dum = save_dir+'Compare_CCI__L3'+(keyword_set(dd)?'U':'C')+'_'+yyyy+(mm eq '??' ? '':mm)+dd+ $
 		'_'+(keyword_set(limit) ? '_limit_'+strjoin(strcompress(string(limit,f='(f6.1)'),/rem),'_') : '')+$
-		(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')
+		(keyword_set(cov) ? '_'+cov:'')
 		save_as1 = save_dum + '_' + algon_cci+'_'+strupcase(dat[0]) + '.eps'
 		figure_title1 = keyword_set(notitle) ? '' : algon_cci + ' ' + vollername1 + ' ' + dd + mm + yyyy
 		save_as2 = save_dum + '_' + algon_gac+'_'+strupcase(dat[1]) + '.eps'
@@ -651,13 +650,13 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			fillv_index_cci = where(ndv_cci_array eq 1 or ndv_gac_array_cci eq 1,idxcnt)
 			fillv_index_gac = where(ndv_gac_array eq 1 or ndv_cci_array_gac eq 1,idxcnt)
 			;-------
-			bild_cci = get_1d_rel_hist_from_1d_hist( bild_cci, dat[0], algo = algo1, limit=limit, land=land, sea=sea, arctic=arctic, $
-						antarctic=antarctic,xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found,file=ccifile[0],$
+			bild_cci = get_1d_rel_hist_from_1d_hist( bild_cci, dat[0], algo = algo1, limit=limit, cov = cov, $
+						xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found,file=ccifile[0],$
 						var_dim_names=var_dim_names_cci,bin_val=bin_val,fillv_index=fillv_index_cci,shape_file=shape_file)
 			if ~found then return
 
-			bild_gac = get_1d_rel_hist_from_1d_hist( bild_gac, dat[1], algo = algo2, limit=limit, land=land, sea=sea, arctic=arctic, $
-						antarctic=antarctic,xtickname=xtickname, ytitle=ytitle, hist_name = data_name, found=found, file=gac_nc_file, $
+			bild_gac = get_1d_rel_hist_from_1d_hist( bild_gac, dat[1], algo = algo2, limit=limit, cov = cov, $
+						xtickname=xtickname, ytitle=ytitle, hist_name = data_name, found=found, file=gac_nc_file, $
 						var_dim_names=var_dim_names_gac,fillv_index=fillv_index_gac,shape_file=shape_file)
 			if ~found then return
 			apx  = 'Liq + Ice'
@@ -845,25 +844,24 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		l_eq = 0
 	endif
 
-	ls = ( keyword_set(land) or keyword_set(sea)) ? 1:0
-	if ls then begin
-		dem = get_coverage(lon, lat, /land)
-		if keyword_set(sea)  then begin
-			void_index1 = where(bild_cci eq fillvalue1 or dem ne 0)
-			void_index2 = where(bild_gac eq fillvalue2 or dem ne 0)
-		endif else begin
-			void_index1 = where(bild_cci eq fillvalue1 or dem eq 0)
-			void_index2 = where(bild_gac eq fillvalue2 or dem eq 0)
-		endelse
-	endif else begin
-		void_index1 = where(bild_cci eq fillvalue1)
-		void_index2 = where(bild_gac eq fillvalue2)
-	endelse
+	; get the coverage ; check limit , shape_files , fillvalues and predefined areas----------------------------------
+	; this is used for map plots and zonal means
+	dum = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+						complement = void_index1, ncomplement = vi_cnt1, fillv_index = where(bild_cci eq fillvalue1) )
+	dum = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+						complement = void_index2, ncomplement = vi_cnt2, fillv_index = where(bild_gac eq fillvalue2) )
+	; this is used for difference and hist_2d plots
+	dum = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+						complement = void_index_both, index = cidx, count = cidx_cnt, $
+						fillv_index = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2) )
+	;-----------------------------------------------------------------------------------------------------------------
+
 	if total(strcompress(unit[0],/rem) eq ['[]','[[]]']) then unit = ''
 	if total(strcompress(unit2[0],/rem) eq ['[]','[[]]']) then unit2 = ''
 	;-------------------- plot with map_image ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
-	set_proj  ,globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar,no_label=no_label, $
+
+	set_proj  ,globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,nobar=nobar,no_label=no_label, $
 		   Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson,no_grid=no_grid	, $
 		   ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic		, $
 		   no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,msg=msg, $
@@ -872,22 +870,18 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if use_shape_file then begin
 		print,'Using shape_file, ',shape_file
-		de  = get_coverage(lon,lat,shape_file=shape_file)
-		idx = where(de eq 0,idxcnt)
-		if idxcnt gt 0 then begin
-			bild_cci[idx] = fillvalue1
-			bild_gac[idx] = fillvalue2
-			lon[idx] = !values.f_nan
-			lat[idx] = !values.f_nan
+		if limit_test eq 0 then begin
+; 			void_color = !p.background
+			limit = set_limits(lon[cidx],lat[cidx], p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
+			print,'Set new Limits: , ', limit
 		endif
-		if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
 		rotate_globe = 0
 	endif
 
 	if ~keyword_set(difference) and ~keyword_set(zonal_only) then begin
 		figure_title1 = keyword_set(notitle) ? '' : datum + ' ' + vollername1
 		start_save, save_as1, thick = thick, size = [32, 20]
-			m = obj_new("map_image",bild_cci,lat,lon,void_index=void_index1,box_axes=box_axes,n_lev=n_lev1				, $
+			m = obj_new("map_image",bild_cci,lat,lon,void_index=void_index1,void_color=void_color,box_axes=box_axes,n_lev=n_lev1				, $
 						min=(float(size(mini,/type)) ? mini : minvalue),max=(float(size(maxi,/type)) ? maxi : maxvalue)	, $
 						format=bar_format, title= keyword_set(title)? title : 						  $
 						algon_cci+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername1+dtn[0]+unit)						, $
@@ -908,10 +902,6 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endif
 
 	if keyword_set(difference) then begin
-		if ls then begin
-			if keyword_set(sea)  then void_index2 = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2 or dem ne 0,complement=cidx)
-			if keyword_set(land) then void_index2 = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2 or dem eq 0,complement=cidx)
-		endif else void_index2 = where(bild_cci eq fillvalue1 or bild_gac eq fillvalue2,complement=cidx)
 		bild_gac   = float(bild_cci)-float(bild_gac)
 		if keyword_set(save_dir) then save_as2 = save_as_diff
 		if ~keyword_set(notitle) then begin
@@ -927,16 +917,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			title2 = vollername2+dtn[1]+unit2
 		endelse
 		out = {bild:bild_gac,lon:lon,lat:lat,unit:unit}
-		if cidx[0] ne -1 then begin
-			qw_cnt = n_elements(cidx)
-			qw     = cidx
-			if limit_test or keyword_set(antarctic) or keyword_set(arctic) then begin
-				if keyword_set(antarctic) then qw = where(between(lon[cidx],-180,180) and between(lat[cidx],-90,-60),qw_cnt) else $
-				if keyword_set(arctic)    then qw = where(between(lon[cidx],-180,180) and between(lat[cidx], 60, 90),qw_cnt) else $
-				qw = where(between(lon[cidx],limit[1],limit[3]) and between(lat[cidx],limit[0],limit[2]),qw_cnt)
-			endif
-			if qw_cnt gt 0 then print,'Glob. Mean '+algon_cci+' - '+algon_gac+' : ',string(gmean((bild_gac[cidx])[qw],(lat[cidx])[qw]),f='(f11.4)')
-		endif
+		if cidx_cnt gt 0 then print,'Glob. Mean '+algon_cci+' - '+algon_gac+' : ',string(gmean(bild_gac[cidx],lat[cidx]),f='(f11.4)')
 	endif else begin
 		title2 = keyword_set(title)? title : algon_gac+(strmatch(dat[0],dat[1]) ? '' : ' '+vollername2+dtn[1]+unit2)
 		figure_title2 = keyword_set(notitle) ? '' : datum2 + ' ' + vollername2
@@ -946,10 +927,11 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		start_save, save_as2, thick = thick, size = [32, 20]
 
 			rotate_globe = is_defined(rotate_globe) ? rotate_globe :	keyword_set(globe) and ~keyword_set(save_as) and $
-							~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and ~keyword_set(antarctic) and $
-							~keyword_set(arctic) and opl eq 0 and keyword_set(difference)
+							~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and ~stregex(cov,'arctic',/fold,/bool) and $
+							opl eq 0 and keyword_set(difference)
 
-			m = obj_new("map_image",bild_gac,lat,lon,void_index=void_index2,box_axes=box_axes,n_lev=n_lev2	, $
+			m = obj_new("map_image",bild_gac,lat,lon,void_index = keyword_set(difference) ? void_index_both : void_index2,$
+						void_color=void_color,box_axes=box_axes,n_lev=n_lev2	, $
 						min=(float(size(mini,/type)) ? mini : minvalue)				, $
 						max=(float(size(maxi,/type)) ? maxi : maxvalue)				, $
 						title= title2, format=bar_format,countries=countries,usa=countries	, $
@@ -1025,34 +1007,12 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 	if keyword_set(difference) then goto,ende
 
-; 	if ~keyword_set(save_dir) and ~keyword_set(notitle) then xyouts, 0.4, 0.98, datum+' '+(strmatch(dat[0],dat[1]) ? vollername2+dtn[1]+unit2:''), /norm
-
-	if limit_test or keyword_set(antarctic) or keyword_set(arctic) then begin
-		if keyword_set(antarctic) then qw = where(between(lon,-180,180) and between(lat,-90,-60),qw_cnt) else $
-		if keyword_set(arctic)    then qw = where(between(lon,-180,180) and between(lat, 60, 90),qw_cnt) else $
-		qw = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),qw_cnt)
-		if qw_cnt gt 0 then begin
-			bild_cci =  bild_cci[qw]
-			bild_gac =  bild_gac[qw]
-			lon      =  lon[qw]
-			lat      =  lat[qw]
-			if ls then dem = dem[qw]
-		endif else begin
-			print,'found no points within limits!'
-			return
-		endelse
-	endif
-
 	if get_grid_res(bild_cci) ne get_grid_res(bild_gac) then begin
 		ok = dialog_message('compare_cci: CCI and reference does not have the same grid size!! Skip comparing!')
 		return
 	endif
 
 	; hist_2d plots
-	idx  = where(bild_cci ne fillvalue1 and bild_gac ne fillvalue2, chk_idx)
-	if keyword_set(land) then idx  = where(bild_cci ne fillvalue1 and bild_gac ne fillvalue2 and dem ne 0, chk_idx)
-	if keyword_set(sea)  then idx  = where(bild_cci ne fillvalue1 and bild_gac ne fillvalue2 and dem eq 0, chk_idx)
-
 	ed = strmatch(datum,datum2)
 
 	if ~keyword_set(zonal_only) then begin
@@ -1062,9 +1022,9 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		cc    = 5
 		aa = fltarr(10,10)
 		aa[0] = 1
-		if chk_idx gt 0 then begin
-			regr = linfit(bild_cci[idx],bild_gac[idx], YFIT=yfit)
-			aa = hist_2d(bild_cci[idx],bild_gac[idx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
+		if cidx_cnt gt 0 then begin
+			regr = linfit(bild_cci[cidx],bild_gac[cidx],YFIT=yfit)
+			aa  = hist_2d(bild_cci[cidx],bild_gac[cidx],bin1=bin,bin2=bin,max1=max_a,max2=max_a,min1=min_a,min2=min_a)
 		endif
 
 		start_save, save_as3, thick = thick, size = [32, 20]
@@ -1072,23 +1032,18 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 			xtitle=(ed ? '': datum +' ') + algon_cci+(strmatch(dat[0],dat[1]) ? '':' '+vollername1+dtn[0]+unit +(ed ? '': ' ' +datum ))
 			ytitle=(ed ? '': datum2+' ') + algon_gac+(strmatch(dat[0],dat[1]) ? '':' '+vollername2+dtn[1]+unit2+(ed ? '': ' ' +datum2))
 
-			plot_hist_2d, aa, bin, cc, min_a, max_a, chk_idx, regr, save_as = save_dir, $
+			plot_hist_2d, aa, bin, cc, min_a, max_a, cidx_cnt, regr, save_as = save_dir, $
 							bar_discontinous = bar_discontinous, bar_nlev = bar_nlev, $
 							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
 							title=title,xtitle=xtitle,ytitle=ytitle, col_tab = col_tab, $
 							no_color_bar=no_color_bar;, position = position
 		end_save, save_as3
 	endif
+
 	; zonal median
-	dum_bildc = bild_cci
-	dum_bildg = bild_gac
-	if ls then begin
-		dum_idx  = keyword_set(land) ? where(dem eq 0, chk_idx) : where(dem ne 0, chk_idx)
-		if chk_idx gt 0 then begin
-			dum_bildc[dum_idx] = fillvalue1
-			dum_bildg[dum_idx] = fillvalue2
-		endif
-	endif
+	; set all again all void_index to fillvalue
+	if vi_cnt1 gt 0 then bild_cci[void_index1] = fillvalue1
+	if vi_cnt2 gt 0 then bild_gac[void_index2] = fillvalue2
 
 	if keyword_set(save_dir) then begin
 		xmargin   = [14,6]
@@ -1102,20 +1057,24 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	endelse
 
 	; cci
-	medi_c = zonal_average(dum_bildc,lat,fillvalue=fillvalue1,lat_zon=lat1dc,/mean,/nan,lat_res=lat_res);,/median)
+	medi_c = zonal_average(bild_cci,lat,fillvalue=fillvalue1,lat_zon=lat1dc,/mean,/nan,lat_res=lat_res);,/median)
 	; gac
-	medi_g = zonal_average(dum_bildg,lat,fillvalue=fillvalue2,lat_zon=lat1dg,/mean,/nan,lat_res=lat_res);,/median)
+	medi_g = zonal_average(bild_gac,lat,fillvalue=fillvalue2,lat_zon=lat1dg,/mean,/nan,lat_res=lat_res);,/median)
 
 	savbg = keyword_set(save_dir) or keyword_set(white_bg)
 
 ; 	DEVICE, SET_FONT='-adobe-helvetica-medium-r-normal--10-100-75-75-p-56-iso8859-1'
 
 	start_save, save_as4, thick = thick, size = [32, 20]
+		mean1 = gmean(bild_cci[cidx],lat[cidx])
+		mean2 = gmean(bild_gac[cidx],lat[cidx])
+		bias  = gbias(bild_cci[cidx],bild_gac[cidx],lat[cidx])
+		rmse  = grmse(bild_cci[cidx],bild_gac[cidx],lat[cidx])
+		corr  = gcorrelate(bild_cci[cidx],bild_gac[cidx],lat[cidx],p_value=p_value)
+
 		ytitle= vollername1+(strmatch(dat[0],dat[1]) ? dtn[0]:'')+unit
-		title = keyword_set(notitle) ? '' : $
-		'bias: '+string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f7.2)')+ $
-		' ; rmse: '+string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f6.2)') + $
-		' ; stdd: '+string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - gbias(bild_cci[idx],bild_gac[idx],lat[idx])^2),f='(f6.2)')+unit
+		title = keyword_set(notitle) ? '' : 'bias: '+string(bias,f='(f7.2)')+ $
+				' ; rmse: '+string(rmse,f='(f6.2)') + ' ; stdd: '+string(sqrt(rmse^2 - bias^2),f='(f6.2)')+unit
 		yr = [(adv_keyword_set(mini) ? mini : (unit eq ' [K]' ? 200:0)),(adv_keyword_set(maxi) ? maxi : max([medi_c,medi_g])*1.05)] 
 		plot,[0,0],[1,1],xr=[-90,90],xs=3,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
 		xtitle='latitude [degrees]',ytitle=ytitle,yr=yr,title=title, ylog=logarithmic,$
@@ -1123,18 +1082,17 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 		str_pholder = strjoin(replicate(' ',max([strlen(algon_cci),strlen(algon_gac)])))
 		print,'-----------'+data+'-'+cov+'--------------'
 		if stregex(dat[0],'npoints',/fold,/bool) then begin
-			print,'Total              '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_cci[idx]),f='(f15.1)')
-			print,'Total              '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_gac[idx]),f='(f15.1)')
+			print,'Total              '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_cci[cidx]),f='(f15.1)')
+			print,'Total              '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' :',string(total(bild_gac[cidx]),f='(f15.1)')
 		endif
-		print,'Glob. Mean (F1)    '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_cci[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. Mean (F2)    '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(gmean(bild_gac[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. BIAS         '+str_pholder        +' : ',string(gbias(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. RMSE         '+str_pholder        +' : ',string(grmse(bild_cci[idx],bild_gac[idx],lat[idx]),f='(f11.4)')
-		print,'Glob. BC-RMSE      '+str_pholder        +' : ',string(sqrt(grmse(bild_cci[idx],bild_gac[idx],lat[idx])^2 - $
-							           gbias(bild_cci[idx],bild_gac[idx],lat[idx])^2),f='(f11.4)')
-		print,'Correlation(^2)[p] '+str_pholder        +' : ',string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx],p_value=p_value),f='(f11.4)') +$
-									' ('+strcompress(string(gcorrelate(bild_cci[idx],bild_gac[idx],lat[idx])^2.,f='(f11.4)'),/rem)+')' + $
-									' ['+strcompress(string(p_value,f='(f11.4)'),/rem)+']'
+		print,'Glob. Mean (F1)    '+string(algon_cci,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(mean1,f='(f11.4)')
+		print,'Glob. Mean (F2)    '+string(algon_gac,f='(A'+strcompress(strlen(str_pholder),/rem)+')') +' : ',string(mean2,f='(f11.4)')
+		print,'Glob. BIAS         '+str_pholder        +' : ',string(bias,f='(f11.4)')
+		print,'Glob. RMSE         '+str_pholder        +' : ',string(rmse,f='(f11.4)')
+		print,'Glob. BC-RMSE      '+str_pholder        +' : ',string(sqrt(rmse^2 - bias^2),f='(f11.4)')
+		print,'Correlation(^2)[p] '+str_pholder        +' : ',string(corr,f='(f11.4)') +$
+															' ('+strcompress(string(corr^2.,f='(f11.4)'),/rem)+')' + $
+															' ['+strcompress(string(p_value,f='(f11.4)'),/rem)+']'
 		print,'----------------------------------'
 		thick = savbg ? thick + 2 : thick
 		oplot,lat1dc,medi_c,thick=thick,col=cgcolor(!compare_col1)
@@ -1150,7 +1108,7 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 	if keyword_set(get_new_corners) then begin
 		compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = mini, maxi = maxi , $
 				limit=get_new_corners, win_nr = win_nr, save_dir = save_dir     	   , $
-				overwrite_sav = overwrite_sav,verbose = verbose, land = land, sea = sea    , $
+				overwrite_sav = overwrite_sav,verbose = verbose  , $
 				only_clara=only_clara, ccifile=ccifile, reference=reference,orbit=orbit    , $
 				coverage=coverage, show_values = show_values, other = other, ctable=ctable , $
 				difference = difference
@@ -1160,59 +1118,45 @@ pro compare_cci_with_clara, year, month, day, data = data, sat = sat, mini = min
 
 end
 
-pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi, limit=limit	, $
-			grid_down_to = grid_down_to, browse = browse, zoom=zoom	, $
-			_extra=_extra, win_nr = win_nr, save_as= save_as, g_eq = g_eq		, $
-			l_eq = l_eq, logarithmic=logarithmic, land = land, sea = sea, globe = globe		, $
-			iso = iso, file = file, magnify=magnify, verbose = verbose, out = out	, $
-			hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, algoname = algoname	, $ 
-			show_values = show_values, level = level, orbit = orbit,lon = lon	, $
-			lat = lat, unit = unit, bild = bild, timeseries = timeseries		, $
-			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
-			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal		, $
-			hammer = hammer, goode = goode, robinson = robinson, stereographic = stereographic 			, $
-			ctable = ctable, other = other, discrete = discrete, prefix=prefix	, $
-			nobar=nobar,cov = cov,wtext = wtext,ztext = ztext,msg_proj=msg_proj	, $
-			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum, $
-			obj_out=obj_out,addtext=addtext,countries=countries,notitle=notitle, $
-			shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-			no_label=no_label,no_box=no_box,version=version,ts_extras=ts_extras
+pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi, limit=limit, $
+			zoom=zoom, _extra=_extra, win_nr = win_nr, save_as= save_as, g_eq = g_eq		, $
+			l_eq = l_eq, logarithmic=logarithmic, globe = globe	, timeseries = timeseries	, $
+			file = file, magnify=magnify, verbose = verbose, algoname = algoname			, $
+			hist_cloud_type = hist_cloud_type, show_values = show_values, level = level		, $
+			lon = lon, lat = lat, unit = unit, bild = bild, out = out						, $
+			p0lon = p0lon, p0lat = p0lat, orbit = orbit										, $
+			mollweide = mollweide, aitoff = aitoff, stereographic = stereographic			, $
+			hammer = hammer, goode = goode, robinson = robinson, sinusoidal = sinusoidal	, $
+			ctable = ctable, other = other, discrete = discrete, prefix=prefix				, $
+			nobar=nobar,coverage = coverage,wtext = wtext,ztext = ztext, msg_proj=msg_proj	, $
+			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum		, $
+			obj_out=obj_out, addtext=addtext, countries=countries, notitle=notitle			, $
+			shape_file=shape_file, no_continents=no_continents, no_grid=no_grid				, $
+			no_label=no_label, no_box=no_box, version=version, ts_extras=ts_extras
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
 
 	if keyword_set(save_as) then !p.multi= 0
 	ts = keyword_set(timeseries)
-	opl  = keyword_set(oplots) ? fix(oplots) : 0
 	if keyword_set(shape_file) then begin
 		use_shape_file = file_test(shape_file)
 	endif else use_shape_file = 0
-	; ---defaults-------------------------------------------------------------------------
 	limit_test = keyword_set(limit)
 	if limit_test then limit_bck = limit
-	pref1 =''
- 	win_nr    = adv_keyword_set(win_nr) ? win_nr : 1
-	found_dem = 0
-	if keyword_set(land) and keyword_set(sea) then begin
-		land = 0
-		sea  = 0
-	endif
-	if keyword_set(limit) then begin
-		if size(limit,/n_ele) lt 4 then limit = [32,-30,52,-12]
-	endif
-	prefix = keyword_set(prefix)? strcompress(prefix+' ') : ''
-	hct    = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
-	if keyword_set(addtext) then begin
-		germany = stregex(addtext,'germany',/fold,/bool)
-	endif
-	adt    = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
-
+	; ---defaults-------------------------------------------------------------------------
+	pref1    =''
+	opl      = keyword_set(oplots) ? fix(oplots) : 0
+ 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
+	prefix   = keyword_set(prefix)? strcompress(prefix+' ') : ''
+	hct      = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : ''
+	adt      = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
+	cov      = keyword_set(coverage) ? coverage : ''
 	; next ones only valid if not keyword_set(file)
 ; 	sat      = keyword_set(sat)     ? sat    : 'noaa18'
 	year     = keyword_set(year)    ? year   : '';'2008'
 	month    = keyword_set(month)   ? month  : '';'06'
 	day      = keyword_set(day)     ? day    : ''
-; 	algo     = keyword_set(algo)    ? strlowcase(algo)   : 'esacci'
 	algo     = ref2algo(algoname)
 	level    = keyword_set(level)   ? level  : ''
 	fidx     = keyword_set(orbit)   ? orbit  : 0
@@ -1220,8 +1164,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	histo2d  = is_jch(dat)
 	histo1d  = is_h1d(dat)
 	save_dir = !SAVE_DIR + '/plot_l2/'
-
-	datum    = ts ? '200801-200812' : keyword_set(datum) ? datum : ''
+	datum    = keyword_set(datum) ? datum : ''
 	; ------------------------------------------------------------------------------------
 	set_colors,rainbow,bwr,extended_rainbow,greyscale,elevation,flip_colours,other=other,ctable=ctable,brewer=brewer,col_tab=col_tab, panoply = panoply
 
@@ -1240,11 +1183,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if strlen(fidx) eq 4 then fidx = 0
 		endelse
 	endif else fidx = 0
-
-	if keyword_set(browse) then begin
-		ncdf_browser, file[fidx]
-		return
-	endif
 
 	if ts then begin
 		if histo1d or histo2d then begin
@@ -1342,7 +1280,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			save_dum = save_dir+prefix+datum+'_'+algon+'_'				+ $
 			file_basename(file[fidx],is_hdf(file[fidx]) ? '.hdf':'.nc')+'_'+dat	+ $
 			(keyword_set(hist_cloud_type) ? '_'+strupcase(hct) : '')		+ $
-			(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')		+ $
+			(keyword_set(cov) ? '_'+cov:'')	+ $
 			(keyword_set(limit) and ~keyword_set(globe) ? limit_string:'')		+ $
 			(keyword_set(globe) ? worldview_string:'')				+ $
 			(keyword_set(mollweide) ? '_proj_mollweide':'')				+ $
@@ -1365,9 +1303,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	if histo1d and keyword_set(hct) then begin
 		if strmid(hct,0,2) eq '1d' then begin
-			bild = get_1d_rel_hist_from_1d_hist( bild, dat, algo = algo, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
+			bild = get_1d_rel_hist_from_1d_hist( bild, dat, algo = algo, limit=limit, cov = cov, $
 							     xtickname=xtickname, ytitle=ytitle, hist_name = data_name, file=file[fidx], $
-							     var_dim_names=var_dim_names, bin_val=bin_val, found=found,shape_file=shape_file)
+							     var_dim_names=var_dim_names, bin_val=bin_val, found=found, shape_file=shape_file)
 			if ~found then return
 			apx = 'Liq + Ice'
 			if is_h1d(dat,/ice)    then apx = datum+' Ice ' 
@@ -1468,14 +1406,16 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 	if ndims le 1 then begin
 		if ndims eq 1 then begin
 			print, 'plot_l2: Image needs at least 2 dimensions to run properly!'
-			plot,bild,psym=-8,ytitle=dat,xtitle='X-Value',thick=2,symsize=2
+			plot,  bild,psym=-8,ytitle=dat,xtitle='X-Value',thick=2,symsize=2
 		endif else begin
 			ok = dialog_message('plot_l2: Image needs at least 2 dimensions to run properly!')
 		endelse
 		return
 	endif
 
-	msg = (sat eq 'msg' or algo eq 'claas') and total(size(bild,/dim)) eq total([3712.,3712.])
+	msg     = (sat eq 'msg' or algo eq 'claas') and total(size(bild,/dim)) eq total([3712.,3712.])
+	cms_msg = (sat eq 'msg' or algo eq 'claas') and total(size(bild,/dim)) eq total([3636.,3636.])
+	claas   = (algo eq 'claas' and ~cms_msg)    and total(size(bild,/dim)) eq total([3600.,3600.])
 	if stregex(file[fidx],'secondary',/bool,/fold) then begin
 		datum    = stregex(strreplace(file_basename(file[fidx]),'T',''),'[0-9]{12}',/ext)
 		geo_file = file_search(file_dirname(file[fidx]),datum+'*'+strupcase(algo+'*'+level+'*'+sat)+'*.nc',count = found)
@@ -1484,44 +1424,41 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	; if algo is Unknown then READ LON/LAT FROM FILE ONLY, otherwise
 	; if bild is of known grid size lon,lat will be calculated, this is usually faster than reading from file
-	make_geo, file = geo_file, lon,lat, verbose = verbose, dimension = size(bild,/dim), $
-	found = found_geo, msg=msg,/ pick_file,algo=algo,grid=(algo eq 'unknown' ? 0 : get_grid_res(bild[*,*,0,0,0]))
-
+	make_geo, 	file = geo_file, lon,lat, verbose = verbose, dimension = size(bild,/dim), $
+				found = found_geo, msg = msg, cms_msg = cms_msg, claas = claas, $
+				grid=(algo eq 'unknown' ? 0 : get_grid_res(bild[*,*,0,0,0]))
+	if ~found_geo then begin
+		; if not found (no lon/lat info in file and algo unknonw) try again, this time 
+		; calc lon/lat for regular grid sizes even when algo is unknown (!!might be rotated or shiftet!!)
+		; or use pick file if not regular grid size
+		make_geo, file = geo_file, lon,lat, verbose = verbose, dimension = size(bild,/dim), $
+		found = found_geo, /pick_file,grid = get_grid_res(bild[*,*,0,0,0])
+	endif
 	if keyword_set(rot) then begin
 		if size(reform(bild),/n_dim) eq 2 then begin
 			bild = rotate(bild,fix(rot>0))
 		endif
 	endif
 
-	ls = ( keyword_set(land) or keyword_set(sea) and ndims ne 1)
-	if ls then begin
-		; first check if file includes an land_sea flag, otherwise try to create it
-		if not get_grid_res(bild[*,*,0,0,0]) and level eq 'l2' then begin
-			dem = get_data(year,month,day,file=file[fidx],data='lsflag',algo=algo,level=level,found=found_dem,verbose=verbose)
-		endif
-		if found_dem eq 0 then dem = get_coverage(lon, lat, /land,found = found_dem)
-	endif
-
-	if (~found_geo and ~histo2d) then begin
+; 	if (~found_geo and ~histo2d) then begin
+	if (~found_geo) then begin
 		if ndims gt 3 then return
-		no_data_idx = 	ls and found_dem ? ( keyword_set(land) ? where(dem eq 0 and bild eq fillvalue[0]) : $
-						where(dem ne 0 and bild eq fillvalue[0]) ) : where(bild eq fillvalue[0])
+		bar_title = ((keyword_set(hist_cloud_type) ? strupcase(hct)+' ' : '')+$
+					(dat[0] eq 'PHASE' ? 'CPH':dat[0])+(total(dat[0] eq ['COT','PHASE']) ? '' : unit))+adt
+		title = keyword_set(notitle) ? '' : keyword_set(save_as) ? '' : algon+' '+longname
 		start_save, save_dum, thick = thick
-			view2d,bild,no_data_idx=no_data_idx,n_lev=n_lev,maxi=adv_keyword_set(maxi) ? maxi:max(bild),mini=adv_keyword_set(mini)?mini:min(bild[where(bild ne fillvalue[0])]), $
-			title = keyword_set(notitle) ? '' : keyword_set(save_as) ? '' : algon+' '+longname, $
-			g_eq =g_eq, l_eq =l_eq, color=~keyword_set(nobar),$
-			bar_title = ((keyword_set(hist_cloud_type) ? strupcase(hct)+' ' : '')+(dat[0] eq 'PHASE' ? 'CPH':dat[0])+(total(dat[0] eq ['COT','PHASE']) ? '' : unit))+adt, $
-			bar_format='(f7.1)', brewer=brewer,col_tab=col_tab, meridian_vec = meridian_vec, $
-			coast_vec = coast_vec,boxed=boxed,$
-; 			charthick = keyword_set(save_as) ? 2. : 1.5,charsize = (keyword_set(save_as) ? 2. : 1.2), $
-			xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
+			view2d,bild,no_data_idx=where(bild eq fillvalue[0]),n_lev=n_lev,maxi=adv_keyword_set(maxi) ? maxi:max(bild),$
+						mini=adv_keyword_set(mini)?mini:min(bild[where(bild ne fillvalue[0])]), title = title, $
+						g_eq =g_eq, l_eq =l_eq, color=~keyword_set(nobar), bar_title = bar_title, $
+						bar_format='(f7.1)', brewer=brewer,col_tab=col_tab,boxed=boxed, /continents, /box_axes, $
+						xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize
 		end_save, save_dum
 		print,'No Lon/LAT Info found! -> View2D only!'
 		return
 	endif
+
 	if histo2d then begin
 		apx = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
-		nv_cnt = 0
 		hct = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type) : 'cu'
 		if strmid(hct,0,2) eq '1d' then begin
 			plot_ctp = 0
@@ -1541,18 +1478,15 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			end
 			yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,50]
 			if is_jch(dat,/ratio) then begin
-				liq = get_1d_hist_from_jch(bild[*,*,*,*,0],algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found1,shape_file=shape_file)
-				ice = get_1d_hist_from_jch(bild[*,*,*,*,1],algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,found=found,shape_file=shape_file)
+				liq = get_1d_hist_from_jch(bild[*,*,*,*,0],algo,bin_name=xtickname,limit=limit,found=found1,shape_file=shape_file,cov=cov)
+				ice = get_1d_hist_from_jch(bild[*,*,*,*,1],algo,bin_name=xtickname,limit=limit,found=found ,shape_file=shape_file,cov=cov)
 				if found and found1 then begin
 					histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
 							ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
 					ytitle='Liquid Fraction [%]'
 				endif else found=0
 			endif else begin
-				histos = get_1d_hist_from_jch(bild,algo,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-							lon=lon, lat=lat, dem=dem, land=land, sea=sea,found=found,shape_file=shape_file)
+				histos = get_1d_hist_from_jch(bild,algo,bin_name=xtickname,limit=limit,found=found,shape_file=shape_file,cov=cov)
 				ytitle='Relative Occurrence [%]'
 			endelse
 			if found then begin
@@ -1637,7 +1571,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				ok = dialog_message('plot_l2: '+hct+' not possible with hist2d_ratio!')
 				return
 			endif
-			bild = get_hct_maxtype( bild, algo,fillvalue=fillvalue, htypes=htypes)
+			bild = get_hct_maxtype( bild, algo, fillvalue=fillvalue, htypes=htypes)
 			bar_tickname= [htypes]
 			discrete=findgen(10)
 			ctable = 13
@@ -1650,10 +1584,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			longname ='most frequent Cloud Type'
 			g_eq = 0
 			l_eq = 0
-			if ls and found_dem then begin
-				if keyword_set(land) then void_index = where(bild eq -1 or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
-				if keyword_set(sea)  then void_index = where(bild eq -1 or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
-			endif else void_index = where(bild eq -1,complement = nv_idx,ncomplement=nv_cnt)
 		endif else if hct eq 'hist2d' or hct eq 'hist_2d' then begin
 			if is_jch(dat,/ratio) then begin
 				ok = dialog_message('plot_l2: '+hct+' not possible with hist2d_ratio!')
@@ -1663,12 +1593,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				dum_h = get_hct_data('high',reform(bild[*,*,*,*,0]),algo,found=found) 		; coll5 wird in get_hct_data gedreht 
 				dum_m = get_hct_data('mid' ,reform(bild[*,*,*,*,0]),algo,found=found) 		; coll5 wird in get_hct_data gedreht 
 				dum_l = get_hct_data('low' ,reform(bild[*,*,*,*,0]),algo,sdum=sdum,found=found) ; coll5 wird in get_hct_data gedreht 
-				rat_h = get_hct_ratio(dum_h,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,$
-						land=land,sea=sea,shape_file=shape_file,/tex)
-				rat_m = get_hct_ratio(dum_m,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,$
-						land=land,sea=sea,shape_file=shape_file,/tex)
-				rat_l = get_hct_ratio(dum_l,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,$
-						land=land,sea=sea,shape_file=shape_file,/tex)
+				rat_h = get_hct_ratio(dum_h,sdum,shape_file=shape_file,cov=cov,limit=limit,/tex)
+				rat_m = get_hct_ratio(dum_m,sdum,shape_file=shape_file,cov=cov,limit=limit,/tex)
+				rat_l = get_hct_ratio(dum_l,sdum,shape_file=shape_file,cov=cov,limit=limit,/tex)
 				print, prefix+year+month+' '+algon+' high/mid/low Ratio  : '+string(rat_h,f='(f4.1)')+'\%/' $
 											   +string(rat_m,f='(f4.1)')+'\%/'+string(rat_l,f='(f4.1)')+'\%'
 				free, dum_h
@@ -1677,8 +1604,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				free, sdum
 				if prefix eq 'File3 (ref): ' then prefix = ''
 			endif
-			bild = get_2d_rel_hist_from_jch(bild, algo, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-							lon = lon, lat = lat, fillvalue = fillvalue, found = found, shape_file = shape_file)
+			bild = get_2d_rel_hist_from_jch(bild, algo, limit = limit, fillvalue = fillvalue, found = found, shape_file = shape_file, cov=cov)
 			if not found then return
 			plot_2d_rel_hist, bild, algon, col_tab=col_tab, brewer=brewer, mini=mini, maxi=maxi, save_as=save_dum, appendix = apx,nobar=nobar, notitle = notitle
 			return
@@ -1694,63 +1620,23 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				; relative or not relative sis is se question.
 				relative = 1
 				bild = get_hct_data(hct,reform(bild[*,*,*,*,0]),algo,sdum=sdum,found=found,relative=relative)
+				void_index = where(sdum eq 0,vicnt)
 				minvalue = 0
 				maxvalue = relative ? 100. : max(bild)
-				rat = get_hct_ratio(bild,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,$
-						    lat=lat,dem=dem,land=land,sea=sea,void_index=void_index,relative=relative, shape_file = shape_file)
+				if vicnt gt 0 then bild[void_index] = float(fillvalue)
+				rat = get_hct_ratio(bild,sdum,shape_file=shape_file,cov=cov,limit=limit,void_index=void_index,relative=relative)
 				print,strupcase(hct)+'/all Ratio '+algon+'  : '+rat
 				if relative then title = keyword_set(notitle) ? '' : strupcase(hct)+' Clouds Fraction [%]'
 			endelse
 		endelse
 	endif else begin
-		; this might be obsolete
-		if keyword_set(grid_down_to) then begin
-			dum = sat2global(lon, lat, bild, no_data_value = fillvalue, grid_res = 1./grid_down_to, verbose = verbose,found=found)
-			if found then begin
-				lon  = dum.lon
-				lat  = dum.lat
-				bild = dum.mean
-			endif else begin
-				ok=dialog_message('plot_l2: Cannot plot anything. No valid Points found!')
-				return
-			endelse
-		endif
-
 		good_idx = where(lon ne -999 and lat ne -999 and finite(bild), gidx_cnt, ncomplement = bidx_cnt)
 		if gidx_cnt eq 0 then begin
 			ok=dialog_message('plot_l2: Cannot plot anything. No valid Points found!')
 			return
-		endif else if bidx_cnt ne 0 then begin
-			lon = lon[good_idx]
-			lat = lat[good_idx]
-			bild = bild[good_idx]
-			if ls and found_dem then dem = dem[good_idx]
 		endif
-
-		if stregex(dat,'nobs',/fold,/bool) or stregex(dat,'nretr',/fold,/bool) then begin
-			if ls and found_dem then begin
-				if keyword_set(land) then void_index = where(bild eq fillvalue[0] or bild eq 0 or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
-				if keyword_set(sea)  then void_index = where(bild eq fillvalue[0] or bild eq 0 or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
-			endif else void_index = where(bild eq fillvalue[0] or bild eq 0,complement = nv_idx,ncomplement=nv_cnt)
-			if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
-			if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0]) and bild ne 0]) lt mini[0] then l_eq = 1
-		endif else begin
-			; true_color_images only land / sea
-			if t_c_i then begin
-				if ls and found_dem then begin
-					if keyword_set(land) then void_index = where(dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
-					if keyword_set(sea)  then void_index = where(dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
-				endif else void_index = where(reform(bild[*,*,0]) lt 0,complement = nv_idx,ncomplement=nv_cnt) ; dummy
-			endif else begin
-				if ls and found_dem then begin
-					if keyword_set(land) then void_index = where(bild eq fillvalue[0] or dem eq 0,complement = nv_idx,ncomplement=nv_cnt)
-					if keyword_set(sea)  then void_index = where(bild eq fillvalue[0] or dem ne 0,complement = nv_idx,ncomplement=nv_cnt)
-				endif else void_index = where(bild eq fillvalue[0],complement = nv_idx,ncomplement=nv_cnt)
-				if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
-				if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0])]) lt mini[0] then l_eq = 1
-			endelse
-		endelse
-
+		if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild[where(bild ne fillvalue[0])]*1000.))/1000.) then g_eq = 1
+		if adv_keyword_set(mini) then if min(bild[where(bild ne fillvalue[0])]) lt mini[0] then l_eq = 1
 		n_lev=6
 		if keyword_set(flag_meanings) then begin
 			bar_tickname = [flag_meanings]
@@ -1774,11 +1660,15 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		    keyword_set(aitoff) or keyword_set(sinusoidal) or keyword_set(robinson) ) and ~keyword_set(limit)) or $
 		    keyword_set(notitle) then title = full_varname(dat) + unit
 	endelse
+	
+	area = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+						complement = void_index, ncomplement = vidx_cnt, index = nv_idx, count = nv_cnt, $
+						fillv_index = where(bild eq fillvalue[0]) )
 
-	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
+	set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		  enhanced_robinson = enhanced_robinson, ortho=ortho,iso=iso,stereographic=stereographic, bar_horizontal=bar_horizontal,grid=grid,$
-		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label,no_grid=no_grid, $
+		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label,no_grid=no_grid,sat_p=sat_p, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg_proj,$
 		  lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,no_box=no_box,position = position,horizon=horizon	
@@ -1792,7 +1682,6 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if maxi eq mini then maxi = mini +1
 	endif
 	if total(strcompress(unit[0],/rem) eq ['[]','[[]]']) then unit = ''
-; 	if strupcase(hct) eq 'HCB' or strupcase(hct) eq 'VCB' then begin
 	if between(nobar,4,5) then begin
 		plot_only_color_bar,(adv_keyword_set(mini) ? mini[0]:minvalue),$
 		(adv_keyword_set(maxi) ? maxi[0]:maxvalue), dat, unit, logarithmic=logarithmic, $
@@ -1815,23 +1704,14 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	figure_title = keyword_set(notitle) ? '' : prefix + datum+' '+algon+' '+longname
 	rotate_globe = keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
-			~keyword_set(antarctic) and ~keyword_set(arctic) and opl eq 0 and total(!p.multi) le 2
+					~stregex(cov,'arctic',/fold,/bool) and opl eq 0 and total(!p.multi) le 2
 
 	if use_shape_file then begin
 		print,'Using shape_file, ',shape_file
-		de  = get_coverage(lon,lat,shape_file=shape_file)
-		idx = where(de eq 0,idxcnt,ncomplement=validpix)
-		if validpix eq 0 then begin
-			ok=dialog_message('plot_l2: Image not defined at area of choosen Shape File ! Cannot plot anything.')
-			return
+		if limit_test eq 0 then begin
+			limit = set_limits(lon[nv_idx],lat[nv_idx], p0lon=p0lon, p0lat=p0lat,/four_elements,bounds=2,verbose=verbose)
+			print,'Set new Limits: , ', limit
 		endif
-		if idxcnt gt 0 then begin
-			lon[idx] = !values.f_nan
-			lat[idx] = !values.f_nan
-		endif
-
-		if limit_test eq 0 then limit = set_limits(lon,lat, p0lon=p0lon, p0lat=p0lat,/four_elements,bounds=2,verbose=verbose)
-
 		rotate_globe = 0
 	endif
 
@@ -1846,14 +1726,14 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 				no_grid = no_grid, no_continents = no_continents ,horizon=horizon,$
 				charthick = !m_charthick, charsize  = !m_charsize ,  $
 				title= keyword_set(title) ? title : pref1+((keyword_set(hist_cloud_type) ? strupcase(hct)+' ' : '')+$ 
-				get_product_name(dat[0],algo=algo,/upper)+(total(dat[0] eq ['COT','PHASE']) ? '' : unit))+adt , g_eq =g_eq, l_eq =l_eq, $
+				get_product_name(dat[0],algo=algo,/upper)+unit)+adt , g_eq =g_eq, l_eq =l_eq, $
 				countries=countries,usa=countries,rainbow = rainbow, flip_colours = flip_colours, logarithmic=logarithmic,$
 				bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, brewer = brewer, greyscale = greyscale, $
 				limit = limit, ctable=ctable,discrete=discrete, bar_tickname=bar_tickname ,lambert=lambert,$
 				ortho = ortho,bar_horizontal = bar_horizontal, grid=grid,londel=londel,latdel=latdel,noborder=noborder, panoply=panoply, $
 				lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,position = position, $
 				no_draw_border=no_draw_border, no_color_bar=no_color_bar, p0lon= p0lon, p0lat = p0lat, iso = iso , $
-				lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,$
+				lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,sat_p=sat_p,satellite=keyword_set(sat_p), $
 				goodeshomolosine = goodeshomolosine, mollweide=mollweide,hammer=hammer,aitoff=aitoff,stereographic=stereographic, $
 				label=label, sinusoidal=sinusoidal,robinson=robinson,debug=verbose)
 			if keyword_set(zoom) and not keyword_set(save_as) then begin
@@ -1870,21 +1750,19 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if ~rotate_globe then obj_destroy, m
 		endelse
 	endif else begin
-		if void_index[0] ne -1 then begin
+		if vidx_cnt gt 0 then begin
 			lon[void_index] = !values.f_nan
 			lat[void_index] = !values.f_nan
-; 			if get_product_name(dat,algo='pmx') eq 'cloud_mask' then begin
-				idx = where(bild eq 0,idxcnt)
-				if idxcnt gt 0 then begin
-					lon[idx] = !values.f_nan
-					lat[idx] = !values.f_nan
-				endif
-; 			endif
+			idx = where(bild le 0,idxcnt) ; set all below zero to NAN (assumed clear sky!)
+			if idxcnt gt 0 then begin
+				lon[idx] = !values.f_nan
+				lat[idx] = !values.f_nan
+			endif
 			void_index = -1
 		endif
 		obj_out -> project, image = bild, lon = lon, lat = lat,/no_erase, no_color_bar=1, void_index=void_index,n_lev=n_lev, $
-			max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue,$
-			limit=limit, figure_title = figure_title
+					max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue,$
+					limit=limit, figure_title = figure_title
 		device, decompose = decomp
 	endelse
 
@@ -1942,25 +1820,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			if n_elements(limit) eq 4 then lim = ' - Limit: ['+strjoin(string(limit,f='(f6.1)'),',')+']'
 		endif
 		if keyword_set(cov) then lim = ' - '+strupcase(cov)
-		if keyword_set(limit) then begin
-			dumlimit = limit
-			if keyword_set(antarctic) then dumlimit = [-90.0,-180,-60.0,180]
-			if keyword_set(arctic) then dumlimit = [ 60.0,-180, 90.0,180]
-			if n_elements(dumlimit) eq 4 then begin
-				dumidx=where(between(lon[nv_idx],dumlimit[1],dumlimit[3]) and between(lat[nv_idx],dumlimit[0],dumlimit[2]),dumcnt)
-				print,'-----------'+dat+lim+'--------------'
-				print,'Global Mean '+algon+'  :',string(dumcnt eq 0 ? fillvalue[0] : gmean(bild[nv_idx[dumidx]],lat[nv_idx[dumidx]]),f='(f12.4)')
-				print,'------------------------------------'
-			endif else begin
-				print,'-----------'+dat+lim+'--------------'
-				print,'Global Mean '+algon+'  :',string(gmean(bild[nv_idx],lat[nv_idx]),f='(f12.4)')
-				print,'------------------------------------'
-			endelse
-		endif else begin
-			print,'-----------'+dat+lim+'--------------'
-			print,'Global Mean '+algon+'  :',string(gmean(bild[nv_idx],lat[nv_idx]),f='(f12.4)')
-			print,'------------------------------------'
-		endelse
+		print,'-----------'+dat+lim+'--------------'
+		print,'Global Mean '+algon+'  :',string(gmean(bild[nv_idx],lat[nv_idx]),f='(f12.4)')
+		print,'------------------------------------'
 	endif
 	
 	if keyword_set(verbose) then begin
@@ -1978,11 +1840,11 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 end
 ;------------------------------------------------------------------------------------------
 ;------------------------------------------------------------------------------------------
-pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=logarithmic, land = land, sea = sea	, $
+pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=logarithmic, $
 			iso = iso, file = file, magnify=magnify, verbose = verbose	, $
 			hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, algoname = algoname	, $
 			show_values = show_values, level = level, orbit = orbit, timeseries = timeseries	, $
-			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+			p0lon = p0lon, p0lat = p0lat, $
 			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal		, $
 			hammer = hammer, goode = goode, robinson = robinson, stereographic = stereographic 			, $
 			ctable = ctable, other = other, discrete = discrete, prefix=prefix	, $
@@ -2051,11 +1913,11 @@ pro plot_l2_save_serie, year, month, day ,sat = sat, limit=limit, logarithmic=lo
 		endelse
 
 		plot_l2, year, month, day ,sat = sat, data = varnames[dd], mini = minv[dd], maxi = maxv[dd]	, $
-			limit=limit, save_as=save_as, logarithmic=logarithmic, land = land, sea = sea			, $
+			limit=limit, save_as=save_as, logarithmic=logarithmic			, $
 			iso = iso, file = file, magnify=magnify, verbose = verbose, win_nr =-1					, $
 			hist_cloud_type = hct[dd], hist_phase=hist_phase, algoname = algoname					, $ 
 			show_values = show_values, level = level, orbit = orbit, timeseries = timeseries		, $
-			p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic					, $
+			p0lon = p0lon, p0lat = p0lat					, $
 			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal							, $
 			hammer = hammer, goode = goode, robinson = robinson, stereographic = stereographic 		, $
 			ctable = ctable, other = other, prefix=prefix											, $
@@ -2070,12 +1932,12 @@ end
 ;------------------------------------------------------------------------------------------
 ;------------------------------------------------------------------------------------------
 pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bin=bin	, $
-		save_as=save_as, win_nr=win_nr, check_quality=check_quality, g_eq=g_eq	, $
-		l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom		, $
+		save_as=save_as, win_nr=win_nr, g_eq=g_eq	, $
+		l_eq=l_eq, verbose=verbose, zoom=zoom		, $
 		limit=limit, show_values=show_values, out = out, sat1=sat1, sat2=sat2	, $
 		algo2=algo2, algo1=algo1, year = year	, htypes = htypes		, $
 		month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-		p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+		p0lon = p0lon, p0lat = p0lat	, $
 		mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 		robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
 		diff_only=diff_only,hist_only=hist_only,level=level,maps_only=maps_only	, $
@@ -2084,7 +1946,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3	, $
 		addtext=addtext,rot=rot,magnify=magnify,wtext=wtext,countries=countries,notitle=notitle,$
 		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
-		version1=version1,version2=version2
+		version1=version1,version2=version2,shape_file=shape_file
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -2098,6 +1960,11 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if adv_keyword_set(maxi) then maxi = strsplit(maxi,',',/ext)
 	histo1d  = is_h1d(dat1) or is_h1d(dat2)
 	hct = keyword_set(htypes) ? strlowcase(htypes[0]) : ''
+	cov = keyword_set(coverage) ? coverage : ''
+	if keyword_set(shape_file) then begin
+		use_shape_file = file_test(shape_file)
+	endif else use_shape_file = 0
+	limit_test = keyword_set(limit)
 
 	fg_col = !p.color eq 0 ? 'black' : 'white' ; schwarz oder weiss mehr hintergrund haben wir nicht! Geht!
 
@@ -2143,16 +2010,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	found = 0
 
 	if ~(keyword_set(hist_only) or keyword_set(diff_only) or keyword_set(zonal_only) or keyword_set(box_only) or (histo1d and hct eq '1d')) then begin
-; 		if keyword_set(maps_only)  then !p.multi = [0,2,1] else !p.multi=[0,1,2]
 		!p.multi=keyword_set(globe) ? [0,2,1] : [0,1,2]
 	endif
 	save_dir = !SAVE_DIR + '/diffs/'
-
-	if keyword_set(land) and keyword_set(sea) then begin
-		land = 0
-		sea  = 0
-	endif
-	ls = ( keyword_set(land) or keyword_set(sea))
 
 	if ts then begin
 		if dat1 ne dat2 then begin
@@ -2214,14 +2074,12 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		fillvalue2 = -999.
 		datum=d.actual_date
 	endif else begin
-		if keyword_set(check_quality) then qcflag1 = fix(get_data(file=file1,data='qcflag', verbose = verbose))
 		bild1 = get_data(year, month, day,file=file1,data=dat1,sat=sat1,algo=algo1,no_data_value=fillvalue1,dim3=dim3,unit=unit1,$
 			found=found,verbose=verbose,orbit=orbit,var_dim_names=var_dim_names1,/print_filename, flag_meanings=flag_meanings1)
 		if not found then begin
 			ok=dialog_message('compare_l2: Could not read data! '+file1+' '+dat1)
 			return
 		endif
-		if keyword_set(check_quality) then qcflag2 = fix(get_data(file=file2,data='qcflag',verbose = verbose))
 		bild2 = get_data(year, month, day,file=file2,data=dat2,sat=sat2,algo=algo2,dim3=dim3,no_data_value=fillvalue2,unit=unit2,$
 			found=found,verbose=verbose,orbit=orbit,level=level,print_filename=2, flag_meanings=flag_meanings2)
 		if not found then begin
@@ -2245,11 +2103,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	endif
 
 	if keyword_set(save_as) and ~keyword_set(zoom) then begin
-
 		if save_as eq '1' then begin 
 			save_as = save_dir+'Diff_'+file_basename(file1,is_hdf(file1) ? '.hdf':'.nc')+'_-_'+$
 			file_basename(file2,is_hdf(file1) ? '.hdf':'.nc')+$
-			'_'+dat+(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')+$
+			'_'+dat+(keyword_set(cov) ? '_'+cov:'')+$
 			(keyword_set(limit) ? '_limit_'+strjoin(strcompress(string(limit,f='(f6.1)'),/rem),'_') : '')+$
 			(keyword_set(maps_only) ? '_2D_maps':'')+$
 			(keyword_set(hist_only) ? '_histos_only':'')+$
@@ -2271,10 +2128,10 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 				ok = dialog_message('plot_l2: '+htypes[0]+' not possible with hist2d_ratio!')
 				return
 			endif
-			bild1 = get_2d_rel_hist_from_jch(bild1, algo1, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-							lon = lon, lat = lat, fillvalue = fillvalue1, found = found1)
-			bild2 = get_2d_rel_hist_from_jch(bild2, algo2, dem = dem, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-							lon = lon, lat = lat, fillvalue = fillvalue2, found = found2)
+			bild1 = get_2d_rel_hist_from_jch(bild1, algo1, limit = limit, cov = cov, shape_file=shape_file, fillvalue = fillvalue1, found = found1)
+			if ~found1 then return
+			bild2 = get_2d_rel_hist_from_jch(bild2, algo2, limit = limit, cov = cov, shape_file=shape_file, fillvalue = fillvalue2, found = found2)
+			if ~found2 then return
 			plot_2d_rel_hist, bild1, f1str+satn1, bild2=bild2, name2=f2str+satn2, col_tab=col_tab, brewer=brewer, $
 					mini=mini, maxi=maxi, save_as=save_as, difference = diff_only, appendix = apx,nobar=nobar, notitle = notitle
 			bild=(bild1-bild2)
@@ -2310,11 +2167,8 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 				bild1 = get_hct_data(htypes[0],bild1,algo1,found=found1,/relative,sdum=sdum1,grid = grid_res_out)
 				bild2 = get_hct_data(htypes[0],bild2,algo2,found=found2,/relative,sdum=sdum2,grid = grid_res_out)
 				if found1 and found2 then begin
-					grid_res_out = get_grid_res(bild2)
-					make_geo,lon,lat,grid=grid_res_out
-					ratio1 = get_hct_ratio(bild1,sdum1,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,land=land,sea=sea,/relative)
-					ratio2 = get_hct_ratio(bild2,sdum2,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon,lat=lat,dem=dem,land=land,sea=sea,/relative)
-
+					ratio1 = get_hct_ratio(bild1,sdum1,limit=limit,cov=cov,shape_file=shape_file,/relative)
+					ratio2 = get_hct_ratio(bild2,sdum2,limit=limit,cov=cov,shape_file=shape_file,/relative)
 					print, f1str+satn1+' Ratio '+htypes[0]+'/all: '+ratio1
 					print, f2str+satn2+' Ratio '+htypes[0]+'/all: '+ratio2
 					idx = where(sdum1 eq 0,idxcnt)
@@ -2339,11 +2193,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 	if histo1d then begin
 		if strmid(hct,0,2) eq '1d' then begin
-			bild1 = get_1d_rel_hist_from_1d_hist( bild1, dat1, algo=algo1, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
-					xtickname=xtickname,ytitle=ytitle,hist_name=data_name,found=found1,file=file1,var_dim_names=var_dim_names1, $
-					bin_val=bin_val,shape_file=shape_file)
-			bild2 = get_1d_rel_hist_from_1d_hist( bild2, dat2, algo=algo2, limit=limit, land=land, sea=sea, arctic=arctic, antarctic=antarctic,$
-					found=found2,shape_file=shape_file)
+			bild1 = get_1d_rel_hist_from_1d_hist( bild1, dat1, algo=algo1, limit=limit, xtickname=xtickname,ytitle=ytitle,$
+					hist_name=data_name,found=found1,file=file1,var_dim_names=var_dim_names1,bin_val=bin_val,shape_file=shape_file,cov=cov)
+			bild2 = get_1d_rel_hist_from_1d_hist( bild2, dat2, algo=algo2, limit=limit,found=found2,shape_file=shape_file,cov=cov)
 			if found1 and found2 and (n_elements(bild1) eq n_elements(bild2)) then begin
 				start_save, save_as, thick = thick
 					yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,50]
@@ -2354,12 +2206,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 					xtitle=apx+data_name,ytitle=ytitle,xminor=2,charsize = (keyword_set(save_as) ? 2.5 : 1.5),$
 					charthick = (keyword_set(save_as) ? 2. : 1)
 					didx = where(bild1 ge 0,didx_cnt)
-; 					if didx_cnt gt 0 then oplot,didx,bild1[didx],thick=thick,psym=-8
 					if didx_cnt gt 0 then oplot,didx,bild1[didx],thick=thick,col=cgcolor(!compare_col1) ,psym=-8
 					didx = where(bild2 ge 0,didx_cnt)
-; 					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor('Red')
 					if didx_cnt gt 0 then oplot,didx,bild2[didx],thick=thick,psym=-8,col=cgcolor(!compare_col2)
-; 					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[-1,cgcolor('Red')],thick=[thick,thick],$
 					legend,[f1str+satn1+zwi1,f2str+satn2+zwi2],psym=[8,8],numsym=1,color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],thick=[thick,thick],$
 					spos=keyword_set(show_value) ? 'bot':'top', charsize=(keyword_set(save_as) ? 2.:1.5)
 				end_save,save_as
@@ -2435,7 +2284,7 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 	;bereite out struktur vor, für show pixel value
 	bild=(bild1-bild2)
-	idx = where(bild1 eq fillvalue1 or bild eq fillvalue2,idxcnt)
+	idx = where(bild1 eq fillvalue1 or bild2 eq fillvalue2,idxcnt)
 	if idxcnt gt 0 then bild[idx]=fillvalue2
 	out  = {lon:lon, lat:lat, bild:bild,unit:unit1}
 
@@ -2445,62 +2294,22 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if stregex(dat,'cmask',/bool,/fold) then bin = 1
 	if is_jch(dat) then bin = 1
 
-	if ls then dem = get_coverage(lon, lat, /land)
-
-	lat_res = 1. > get_grid_res(lon)
-
 	good_idx = where(lon ne -999 and lat ne -999, gidx_cnt)
 	if gidx_cnt eq 0 then begin
 		print,'no valid Lon Lat points!'
 		return
 	endif
-	lon   = lon[good_idx]
-	lat   = lat[good_idx]
-	bild1 = bild1[good_idx]
-	bild2 = bild2[good_idx]
-	if ls then dem = dem[good_idx]
 
-	if keyword_set(check_quality) then begin
-		; alles okay
-		chk_cnt = 0
-		if strlowcase(check_quality) eq 'all' then begin 
-			chk_idx = where(qcflag1[good_idx] eq 0 and qcflag2[good_idx] eq 0, chk_cnt)
-		endif else if strlowcase(check_quality) eq 'convergence' then begin
-			chk_idx = where(((qcflag1[good_idx] and 2^6) eq 2^6) eq 0 and ((qcflag2[good_idx] and 2^6) eq 2^6) eq 0, chk_cnt)
-		endif else if strlowcase(check_quality) eq 'cost' then begin
-			chk_idx = where(((qcflag1[good_idx] and 2^7) eq 2^7) eq 0 and ((qcflag2[good_idx] and 2^7) eq 2^7) eq 0, chk_cnt)
-		endif else begin
-			; cot state variable error not! out of bounds
-			if dat eq 'cot'   then chk_idx = where(((qcflag1[good_idx] and 2^1) eq 2^1) eq 0 and ((qcflag2[good_idx] and 2^1) eq 2^1) eq 0, chk_cnt)
-			; ref state variable error not! out of bounds
-			if dat eq 'ref'   then chk_idx = where(((qcflag1[good_idx] and 2^2) eq 2^2) eq 0 and ((qcflag2[good_idx] and 2^2) eq 2^2) eq 0, chk_cnt)
-			; ctp state variable error not! out of bounds
-			if dat eq 'ctp'   then chk_idx = where(((qcflag1[good_idx] and 2^3) eq 2^3) eq 0 and ((qcflag2[good_idx] and 2^3) eq 2^3) eq 0, chk_cnt)
-			; ctt state variable error not! out of bounds
-			if dat eq 'ctt'   then chk_idx = where(((qcflag1[good_idx] and 2^4) eq 2^4) eq 0 and ((qcflag2[good_idx] and 2^4) eq 2^4) eq 0, chk_cnt)
-			; stemp state variable error not! out of bounds
-			if dat eq 'stemp' then chk_idx = where(((qcflag1[good_idx] and 2^5) eq 2^5) eq 0 and ((qcflag2[good_idx] and 2^5) eq 2^5) eq 0, chk_cnt)
-		endelse
-		if chk_cnt gt 0 then begin
-			lon   = lon[chk_idx]
-			lat   = lat[chk_idx]
-			bild1 = bild1[chk_idx]
-			bild2 = bild2[chk_idx]
-		endif
+	dum = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+						complement = void_index, index = idx, count = n_gesamt, $
+						fillv_index = where(bild1 eq fillvalue1 or bild2 eq fillvalue2) )
+
+	if n_gesamt eq 0 then begin
+		print,'No valid points found!'
+		return
 	endif
 
-	if keyword_set(limit) then begin
-		qw = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]))
-		bild1 = bild1[qw]
-		bild2 = bild2[qw]
-		lon   = lon[qw]
-		lat   = lat[qw]
-		if ls then dem = dem[qw]
-	endif
-
-	void_index = where(bild1 eq fillvalue1[0] or bild2 eq fillvalue2[0],complement=idx,ncomplement=n_gesamt)
-	if keyword_set(land) then void_index = where(bild1 eq fillvalue1[0] or bild2 eq fillvalue2[0] or dem eq 0,complement=idx,ncomplement=n_gesamt)
-	if keyword_set(sea)  then void_index = where(bild1 eq fillvalue1[0] or bild2 eq fillvalue2[0] or dem ne 0,complement=idx,ncomplement=n_gesamt)
+	lat_res = 1. > get_grid_res(lon)
 
 	rmse = grmse(bild1[idx],bild2[idx],lat[idx])
 	bias = gbias(bild1[idx],bild2[idx],lat[idx])
@@ -2529,12 +2338,12 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 	if keyword_set(box_only) then begin
 		boxplot,year,month,day,data=dat,sat=sat1,limit=limit,mini = mini, maxi = maxi	, $
 			coverage = coverage,algo=algo1,reference=algo2,error=error,win_nr=win_nr	, $
-			datum = datum1,filename1=file1,filename2=file2,level=level
+			datum = datum1,filename1=file1,filename2=file2,level=level,shape_file=shape_file
 		end_save, save_as
 		return
 	endif
 
-	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat, nobar = nobar	, $
+	set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat, nobar = nobar	, $
 		    Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		    ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,msg=msg	, $
 		    no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,no_label=no_label,  $
@@ -2542,47 +2351,19 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 		    lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = map_position,no_grid=no_grid,horizon=horizon	
 
 	if keyword_set(zonal_only) then begin
-		; cci und cci2 limit schon drin nur nicht land, sea
-		cci = bild1
-		idx_neu1 = where(cci ne fillvalue1,chk_idx1)
-		if keyword_set(sea)  then idx_neu1 = where(cci ne fillvalue1 and dem eq 0,chk_idx1)
-		if keyword_set(land) then idx_neu1 = where(cci ne fillvalue1 and dem ne 0,chk_idx1)
-		if chk_idx1 gt 0 then medi1 = zonal_average(cci[idx_neu1],lat[idx_neu1],fillvalue=fillvalue1,lat_zon=lat1d1,/mean,/nan,lat_res=lat_res)
-
-		; neu
-		cci2= bild2
-		idx_neu2 = where(cci2 ne fillvalue2,chk_idx2)
-		if keyword_set(sea) then idx_neu2 = where(cci2 ne fillvalue2 and dem eq 0,chk_idx2)
-		if keyword_set(land)  then idx_neu2 = where(cci2 ne fillvalue2 and dem ne 0,chk_idx2)
-		if chk_idx2 gt 0 then medi2 = zonal_average(cci2[idx_neu2],lat[idx_neu2],fillvalue=fillvalue2,lat_zon=lat1d2,/mean,/nan,lat_res=lat_res)
-
-		if chk_idx1 gt 0 and chk_idx2 gt 0 then begin
-			lat1d   = [[lat1d1],[lat1d2]]
-			array   = [[medi1],[medi2]]
-			name    = [f1str+satn1,f2str+satn2]
-			colors  = [(is_new eq 1 ? 'red':fg_col),(is_new ne 1 ? 'red':fg_col)]
-			lstyle  = [0,0]
-		endif else if chk_idx1 gt 0 and chk_idx2 eq 0 then begin
-			lat1d   = [[lat1d1]]
-			array   = [[medi1]]
-			name    = [f1str+satn1]
-			colors  = fg_col
-			lstyle  = 0
-		endif else if chk_idx1 eq 0 and chk_idx2 gt 0 then begin
-			lat1d   = [[lat1d2]]
-			array   = [[medi2]]
-			name    = [f2str+satn2]
-			colors  = fg_col
-			lstyle  = 0
-		endif else begin
-			stop
-		endelse
+		medi1  = zonal_average(bild1[idx],lat[idx],fillvalue=fillvalue1,lat_zon=lat1d1,/mean,/nan,lat_res=lat_res)
+		medi2  = zonal_average(cci2[idx],lat[idx],fillvalue=fillvalue2,lat_zon=lat1d2,/mean,/nan,lat_res=lat_res)
+		lat1d  = [[lat1d1],[lat1d2]]
+		array  = [[medi1],[medi2]]
+		name   = [f1str+satn1,f2str+satn2]
+		colors = [(is_new eq 1 ? 'red':fg_col),(is_new ne 1 ? 'red':fg_col)]
+		lstyle = [0,0]
 
 		if is_new and level eq 'l3c' then begin
 			annex = (sat1 eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
 			set_algolist, algo_list, sat = sat, data = dat, exclude = [algo1,algo2],/default
 			struc = get_all_avail_data(year,month,day,data=dat+annex,sat=sat1,level=level,algo_list=algo_list,$
-			/make_compare,verbose=verbose,coverage = coverage,land=land,sea=sea,limit=limit,antarctic = antarctic, arctic = arctic,/zonal_mean)
+					/make_compare,verbose=verbose,coverage = coverage, limit=limit, shape_file=shape_file,/zonal_mean)
 			if is_struct(struc) then begin
 				name    = [name,struc.algo_names]
 				lat1d   = [[lat1d],[struc.zonal_lats]]
@@ -2614,25 +2395,6 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 
 	if ~keyword_set(diff_only) and ~keyword_set(maps_only) then begin
 		if keyword_set(hist_only) then begin
-			; cci und cci2 limit schon drin nur nicht land, sea
-			cci = bild1
-			idx1 = where(cci  ne fillvalue1,chk_idx1)
-			if keyword_set(sea) then idx1 = where(cci ne fillvalue1 and dem eq 0,chk_idx1)
-			if keyword_set(land)  then idx1 = where(cci ne fillvalue1 and dem ne 0,chk_idx1)
-			; neu
-			cci2= bild2
-			idx2 = where(cci2 ne fillvalue2,chk_idx2)
-			if keyword_set(sea) then idx2 = where(cci2 ne fillvalue2 and dem eq 0,chk_idx2)
-			if keyword_set(land)  then idx2 = where(cci2 ne fillvalue2 and dem ne 0,chk_idx2)
-			maximum = adv_keyword_set(maxi) ? maxi[0] : max([cci[idx1],cci2[idx2]])
-			minimum = adv_keyword_set(mini) ? mini[0] : min([cci[idx1],cci2[idx2]])
-
-			chk1= where([chk_idx1,chk_idx2] ne 0,chknr1)
-			if chknr1 ne 2 then begin
-				ok = dialog_message('compare_l2: No valid data found! ')
-				return ; die sollten da sein sonst machts kein sinn
-			endif
-
 			name   = [f1str+satn1,f2str+satn2]
 			colors = [(is_new eq 1 ? 'red':fg_col),(is_new ne 1 ? 'red':fg_col)]
 			lspos  = ['top','top']
@@ -2643,22 +2405,20 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 				annex = (sat1 eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
 				set_algolist, algo_list, sat = sat, data = dat, exclude = [algo1,algo2],/default
 				struc = get_all_avail_data(year,month,day,data=dat+annex,sat=sat1,level=level,algo_list=algo_list,$
-					/make_compare,verbose=verbose,coverage=coverage,land=land,sea=sea,limit=limit,antarctic = antarctic, arctic = arctic,histograms=bin)
+					/make_compare,verbose=verbose,coverage=coverage,limit=limit,histograms=bin,shape_file=shape_file)
 
 					if is_struct(struc) then begin
-; 						maximum = max([maximum,struc.MAXIMUM])
-; 						minimum = min([minimum,struc.MINIMUM])
 						maximum = struc.MAXIMUM
 						minimum = struc.MINIMUM
-						min = (-1e6 > minimum)
-						max = (maximum < 1e6)
-						dum   = histogram(cci[idx1],bin=bin,min=min,max=max)
-						hist1 = dum/total(dum)*100.
-						dum   = histogram(cci2[idx2],bin=bin,min=min,max=max)
-						hist2 = dum/total(dum)*100.
-						array = [[hist1],[hist2]]
-						name  = [name,struc.algo_names]
-						array = [[array],[struc.HISTOGRAMS]]
+						minv    = (-1e6 > minimum)
+						maxv    = (maximum < 1e6)
+						dum     = histogram(bild1[idx],bin=bin,min=minv,max=maxv)
+						hist1   = dum/total(dum)*100.
+						dum     = histogram(bild2[idx],bin=bin,min=minv,max=maxv)
+						hist2   = dum/total(dum)*100.
+						array   = [[hist1],[hist2]]
+						name    = [name,struc.algo_names]
+						array   = [[array],[struc.HISTOGRAMS]]
 						lspos   = [lspos,struc.LEGEND_SPOS]
 						lystr   = [lystr,struc.LEGEND_YSTRETCH]
 						lstyle  = [lstyle,struc.LINESTYLE]
@@ -2666,21 +2426,24 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 						free, struc
 					endif
 			endif else begin
-				min = (-1e6 > minimum) ; ansonsten gibts abbruch oder memory allocation fehler
-				max = (maximum < 1e6)  ; ansonsten gibts abbruch oder memory allocation fehler
-				dum   = histogram(cci[idx1],bin=bin,min=min,max=max)
+				minv  = (-1e6 > minimum) ; ansonsten gibts abbruch oder memory allocation fehler
+				maxv  = (maximum < 1e6)  ; ansonsten gibts abbruch oder memory allocation fehler
+				dum   = histogram(bild1[idx],bin=bin,min=minv,max=maxv)
 				hist1 = dum/total(dum)*100.
-				dum   = histogram(cci2[idx2],bin=bin,min=min,max=max)
+				dum   = histogram(bild2[idx],bin=bin,min=minv,max=maxv)
 				hist2 = dum/total(dum)*100.
 				array = [[hist1],[hist2]]
 			endelse
 			hmax  = max(array,/nan)
 			dumm1 = total(array,2,/nan)
 
-			xx = findgen(n_elements(hist1)) * bin + rnd(min,bin)
+			xx = findgen(n_elements(hist1)) * bin + rnd(minv,bin)
 			xx_idx = where(dumm1 gt 0.1,xx_cnt)
-			if xx_cnt eq 0 then stop
-			xr=[adv_keyword_set(mini) ? mini[0] : min[0],adv_keyword_set(maxi) ? maxi[0] : max(xx[xx_idx])]
+			if xx_cnt eq 0 then begin
+				print,'Compare_l2: not enough values!'
+				stop
+			endif
+			xr=[adv_keyword_set(mini) ? mini[0] : minv[0],adv_keyword_set(maxi) ? maxi[0] : max(xx[xx_idx])]
 			if n_elements(mini) eq 2 then yr = [0,mini[1]] else $
 			if n_elements(maxi) eq 2 then yr = [0,maxi[1]] else $
 			yr = [0,hmax*1.05]
@@ -2695,11 +2458,9 @@ pro compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bi
 			legend,name[0:1],color=cgcolor(colors[0:1]),thick=replicate(thick,2),spos='top',charsize=(keyword_set(save_as) and ~keyword_set(zoom) ? 2.5:1.5)
 
 		endif else begin
-			if dat eq 'cc_total' then dat = 'cfc'
 			; hist_2d plots
 			regr  = linfit(bild1[idx],bild2[idx],yfit=yfit,CHISQR=CHISQR,/double)
-			min_a = keyword_set(mini) ? mini[0] : (n_gesamt gt 0 ? min([bild1[idx],bild2[idx]]) : 0)
-			max_a = keyword_set(maxi) ? maxi[0] : (n_gesamt gt 0 ? max([bild1[idx],bild2[idx]]) : 0)
+			min_a = min([bild1[idx],bild2[idx]],max=max_a)
 			min_a = -1e6 > min_a ; ansonsten gibts abbruch oder memory allocation fehler
 			max_a = max_a < 1e6  ; ansonsten gibts abbruch oder memory allocation fehler
 			cc = 5
@@ -2750,16 +2511,25 @@ bin= ( bin/100.) > 0.01
 			xyouts,0.57,.84,'RMSE :'+string(rmse,f='(f6.2)')+(strlowcase(dat) eq 'ctp'?' hPa':''),/normal
 			xyouts,0.57,.81,'STDD :'+string(stdd,f='(f6.2)')+(strlowcase(dat) eq 'ctp'?' hPa':''),/normal
 			xyouts,0.57,.78,'gt +-'+strcompress(string(bin_dum,f='(f5.2)'),/rem)+' :'+prozent,/normal
-
 		endelse
 	endif
 
 	if ~keyword_set(hist_only) then begin
+
+		if use_shape_file then begin
+			print,'Using shape_file, ',shape_file
+			if limit_test eq 0 then begin
+				limit = set_limits(lon[idx],lat[idx], p0lon=p0lon, p0lat=p0lat,/four_elements,bounds=2,verbose=verbose)
+				print,'Set new Limits: , ', limit
+			endif
+			rotate_globe = 0
+		endif
+
 		if keyword_set(maps_only) then begin
 			figure_title = keyword_set(notitle) ? '' : f1str+satn1+' '+datum1
-			void_index  = where(bild1 eq fillvalue1[0],complement=idix)
-			if keyword_set(land) then void_index = where(bild1 eq fillvalue1[0] or dem eq 0,complement=idx)
-			if keyword_set(sea)  then void_index = where(bild1 eq fillvalue1[0] or dem ne 0,complement=idx)
+			dum = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+								complement = void_index, index = idx, count = n_gesamt, $
+								fillv_index = where(bild1 eq fillvalue1) )
 			if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild1[where(bild1 ne fillvalue1[0])]*1000.))/1000.) then g_eq = 1
 			if adv_keyword_set(mini) then begin
 				mindum = min(bild1[where(bild1 ne fillvalue1[0],mincount)])
@@ -2785,9 +2555,11 @@ bin= ( bin/100.) > 0.01
 				bwr=bwr,rainbow=rainbow,extended_rainbow=extended_rainbow,elevation=elevation,greyscale=greyscale,$
 				brewer=brewer,ctable=ctable,debug=verbose)
 			obj_destroy,m
-			void_index = where(bild2 eq fillvalue2[0],complement=idx)
-			if keyword_set(land) then void_index = where(bild2 eq fillvalue2[0] or dem eq 0,complement=idx)
-			if keyword_set(sea)  then void_index = where(bild2 eq fillvalue2[0] or dem ne 0,complement=idx)
+			if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
+
+			dum = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
+								complement = void_index, index = idx, count = n_gesamt, $
+								fillv_index = where(bild2 eq fillvalue2) )
 			title= 	keyword_set(cbar_title) ? cbar_title :(strupcase(dat) eq 'PHASE' ? 'CPH':$
 				get_product_name(dat,algo=algo2,level=level,/upper,h_types=htypes))+$
 			' '+(total(strupcase(dat) eq ['COT','PHASE']) ? '' : unit1)
@@ -2807,13 +2579,12 @@ bin= ( bin/100.) > 0.01
 		if adv_keyword_set(maxi) then if float(maxi[0]) lt (max(floor(bild2[where(bild2 ne fillvalue2[0])]*1000.))/1000.) then g_eq = 1
 		if adv_keyword_set(mini) then if min(bild2[where(bild2 ne fillvalue2[0])]) lt float(mini[0]) then l_eq = 1
 
-		rotate_globe = 	keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and !p.multi[0] le 0 and keyword_set(wtext) and $
-				~keyword_set(antarctic) and ~keyword_set(arctic) and keyword_set(diff_only)
+		rotate_globe = 	keyword_set(rotate_globe) ? rotate_globe : keyword_set(globe) and ~keyword_set(save_as) and ~keyword_set(zoom) and $
+						!p.multi[0] le 0 and keyword_set(wtext) and ~stregex(cov,'arctic',/fold,/bool) and keyword_set(diff_only)
 
 		m = obj_new("map_image",bild2,lat,lon,void_index=void_index, $
 			box_axes=box_axes,n_lev=n_lev2, max=adv_keyword_set(maxi) ? maxi[0] : max(bild2[idx]),min=adv_keyword_set(mini) ? mini[0]: min(bild2[idx]), $
 			countries=countries,usa=countries,magnify = magnify,figure_title=figure_title,title=title, $
-; 			charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 			charthick = !m_charthick, charsize  = !m_charsize ,  $
 			format=bar_format,  limit = limit, flip_colours = flip_colours, bar_tickname=bar_tickname2,discrete =discrete2 , $
 			ortho = ortho,bar_horizontal = bar_horizontal, grid=grid,londel=londel,latdel=latdel,g_eq=g_eq, l_eq=l_eq	, $
@@ -2824,6 +2595,7 @@ bin= ( bin/100.) > 0.01
 			robinson=robinson,stereographic=stereographic,label=label,position = map_position, $
 			bwr=bwr,rainbow=rainbow,extended_rainbow=extended_rainbow,elevation=elevation,greyscale=greyscale,$
 			brewer=brewer,ctable=ctable,debug=verbose)
+		if use_shape_file and keyword_set(countries) then cgDrawShapes, shape_file
 		if keyword_set(zoom) then begin
 			get_new_corners = 1
 			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
@@ -2858,12 +2630,12 @@ bin= ( bin/100.) > 0.01
 
 		if keyword_set(zoom) then begin
 			compare_l2, file1, file2, data1=data1, data2=data2, mini=mini, maxi=maxi, bin=bin	, $
-					save_as=save_as, win_nr=win_nr, check_quality=check_quality, g_eq=g_eq	, $
-					l_eq=l_eq, verbose=verbose, land=land,sea=sea, sat2=sat2		, $
+					save_as=save_as, win_nr=win_nr, g_eq=g_eq	, $
+					l_eq=l_eq, verbose=verbose, sat2=sat2		, $
 					limit=get_new_corners, show_values=show_values, out = out, sat1=sat1	, $
 					algo2=algo2, algo1=algo1, year = year	, htypes = htypes		, $
 					month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-					p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+					p0lon = p0lon, p0lat = p0lat, $
 					mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 					robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
 					diff_only=diff_only,hist_only=hist_only,level=level,maps_only=maps_only	, $
@@ -2871,7 +2643,7 @@ bin= ( bin/100.) > 0.01
 					box_only = box_only, coverage = coverage, nobar = nobar, ztext = ztext	, $
 					msg=msg, logarithmic=logarithmic,timeseries=timeseries,dim3=dim3	, $
 					addtext=addtext,rot=rot,magnify=magnify, stereographic = stereographic	, $
-					countries=countries
+					countries=countries,shape_file=shape_file
 		endif
 
 		if rotate_globe then begin
@@ -2932,13 +2704,13 @@ end
 ;------------------------------------------------------------------------------------------
 ;------------------------------------------------------------------------------------------
 pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=maxi,save_as=save_as,win_nr=win_nr	, $
-		land=land,sea=sea,limit=limit,zoom=zoom,lon=lon,lat=lat,bild=bild,unit=unit,sat1=sat1,sat2=sat2	, $
+		limit=limit,zoom=zoom,lon=lon,lat=lat,bild=bild,unit=unit,sat1=sat1,sat2=sat2	, $
 		algo2=algo2,algo1=algo1,verbose=verbose,year=year,month=month,day=day,orbit=orbit,datum1=datum1	, $
-		datum2=datum2,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=antarctic,arctic=arctic,level=level	, $
+		datum2=datum2,globe=globe,p0lon=p0lon,p0lat=p0lat,level=level	, $
 		mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,ctable=ctable	, $
 		other=other,robinson=robinson,nobar=nobar, stereographic = stereographic, dim3=dim3		, $
 		all_parameter = all_parameter, logarithmic=logarithmic,coverage=coverage,countries=countries,notitle=notitle,$
-		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version=version
+		no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version=version,shape_file=shape_file
 
 	jetzt      = strjoin((unix2ymdhms(systime(1),/arr))[0:2],'_')
 	mtime1     = strjoin(unix2ymdhms((file_info(file1)).mtime,/arr))
@@ -3000,136 +2772,144 @@ pro compare_l2_save_serie,file1,file2,data1=data1,data2=data2,mini=mini,maxi=max
 			; file1
 			save_file1 = dir+satn1+'_'+lev+strupcase(dat)+'_max_type_fig1.pdf'
 			plot_l2,year[0],month[0],day[0],file=file1,data=dat,mini=0,maxi=8,sat=sat1		, $
-			algo=algo1,hist_cloud_type='max',win_nr=win_nr,sea = sea,land=land			, $
+			algo=algo1,hist_cloud_type='max',win_nr=win_nr			, $
 			limit=limit,zoom=zoom,globe=globe,p0lon=p0lon						, $
-			p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer		, $
+			p0lat=p0lat, mollweide=mollweide,hammer=hammer		, $
 			goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
 			ctable = ctable, other = oth, verbose = verbose,level=level, prefix=f1str		, $
-			save_as = save_file1,countries=countries
+			save_as = save_file1,countries=countries, coverage=coverage,shape_file=shape_file
 			; file2
 			save_file2 = dir+satn2+'_'+lev+strupcase(dat)+'_max_type_fig2.pdf'
 			plot_l2,year[0],month[0],day[0],file=file2,data=dat,mini=0,maxi=8,sat=sat2		, $
-			algo=algo2,hist_cloud_type='max',win_nr=win_nr,sea = sea,land=land			, $
+			algo=algo2,hist_cloud_type='max',win_nr=win_nr			, $
 			limit=limit,zoom=zoom,globe=globe,p0lon=p0lon						, $
-			p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer		, $
+			p0lat=p0lat, mollweide=mollweide,hammer=hammer		, $
 			goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
 			ctable = ctable, other = oth, verbose = verbose,level=level, prefix=f2str			, $
-			save_as = save_file2,countries=countries
+			save_as = save_file2,countries=countries, coverage=coverage,shape_file=shape_file
 			; file3
 			save_file3 = dir+satn3+'_'+lev+strupcase(dat)+'_max_type_fig3.pdf'
 			plot_l2,year[0],month[0],day[0],file=file3,data=dat,mini=0,maxi=8,sat=sat3		, $
-			algo=algo3,hist_cloud_type='max',win_nr=win_nr,sea = sea,land=land			, $
+			algo=algo3,hist_cloud_type='max',win_nr=win_nr			, $
 			limit=limit,zoom=zoom,globe=globe,p0lon=p0lon						, $
-			p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer		, $
+			p0lat=p0lat, mollweide=mollweide,hammer=hammer		, $
 			goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
 			ctable = ctable, other = oth, verbose = verbose,level=level				, $
-			save_as = save_file3,countries=countries
+			save_as = save_file3,countries=countries, coverage=coverage,shape_file=shape_file
 			; 6) hist2d - hist2d
 			; file1
 			save_file4 = dir+satn1+'_'+lev+strupcase(dat)+'_hist2d_fig1.pdf'
 			plot_l2,year[0],month[0],day[0],file=file1,data=dat,mini=0,maxi=8,sat=sat1		, $
-			algo=algo1,hist_cloud_type='hist2d',win_nr=win_nr,sea = sea,land=land			, $
+			algo=algo1,hist_cloud_type='hist2d',win_nr=win_nr,$
 			limit=limit,zoom=zoom,globe=globe,p0lon=p0lon, other = oth				, $
-			p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer		, $
+			p0lat=p0lat, mollweide=mollweide,hammer=hammer		, $
 			goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
-			verbose = verbose,level=level,prefix=f1str,save_as=save_file4,countries=countries
+			verbose = verbose,level=level,prefix=f1str,save_as=save_file4,countries=countries	, $
+			coverage=coverage,shape_file=shape_file
 			; file2
 			save_file5 = dir+satn2+'_'+lev+strupcase(dat)+'_hist2d_fig2.pdf'
 			plot_l2,year[0],month[0],day[0],file=file2,data=dat,mini=0,maxi=8,sat=sat2		, $
-			algo=algo2,hist_cloud_type='hist2d',win_nr=win_nr,sea = sea,land=land			, $
+			algo=algo2,hist_cloud_type='hist2d',win_nr=win_nr	, $
 			limit=limit,zoom=zoom,globe=globe,p0lon=p0lon, other = oth				, $
-			p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer		, $
+			p0lat=p0lat, mollweide=mollweide,hammer=hammer		, $
 			goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
-			verbose = verbose,level=level,prefix=f2str,save_as=save_file5,countries=countries
+			verbose = verbose,level=level,prefix=f2str,save_as=save_file5,countries=countries	, $
+			coverage=coverage,shape_file=shape_file
 			; file3
 			save_file6 = dir+satn3+'_'+lev+strupcase(dat)+'_hist2d_fig3.pdf'
 			plot_l2,year[0],month[0],day[0],file=file3,data=dat,mini=0,maxi=8,sat=sat3		, $
-			algo=algo3,hist_cloud_type='hist2d',win_nr=win_nr,sea = sea,land=land			, $
+			algo=algo3,hist_cloud_type='hist2d',win_nr=win_nr			, $
 			limit=limit,zoom=zoom,globe=globe,p0lon=p0lon, other = oth,countries=countries		, $
-			p0lat=p0lat, antarctic = ant, arctic = arc, mollweide=mollweide,hammer=hammer		, $
+			p0lat=p0lat, mollweide=mollweide,hammer=hammer		, $
 			goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,orbit=orbit[0]	, $
-			verbose = verbose,level=level,prefix='File3 (ref): ',save_as=save_file6
+			verbose = verbose,level=level,prefix='File3 (ref): ',save_as=save_file6				, $
+			coverage=coverage,shape_file=shape_file
 			; 7) hist2d - 1d
 			save_file7 = dir+satn1+'_'+lev+strupcase(dat)+'_1d_fig1.pdf'
 			plot_1d_from_jch_4all,file1,file2,year=year[0],month=month[0],sat=sat1			, $
-			prefix=[f1str,f2str],land=land,sea=sea,limit=limit,save_as=save_file7			, $
-			algo2=algo2,algo1=algo1,mini=0,maxi=50
+			prefix=[f1str,f2str],limit=limit,save_as=save_file7,level=level								, $
+			algo2=algo2,algo1=algo1,mini=0,maxi=50,coverage=coverage,shape_file=shape_file
 			; 7) hist2d - 1d ice
 			save_file8 = dir+satn1+'_'+lev+strupcase(dat)+'_ICE_1d_fig1.pdf'
 			plot_1d_from_jch_4all,file1,file2,year=year[0],month=month[0],sat=sat1			, $
-			prefix=[f1str,f2str],land=land,sea=sea,limit=limit,save_as=save_file8,/ice		, $
-			algo2=algo2,algo1=algo1,mini=0,maxi=50
+			prefix=[f1str,f2str],limit=limit,save_as=save_file8,/ice,level=level		, $
+			algo2=algo2,algo1=algo1,mini=0,maxi=50,coverage=coverage,shape_file=shape_file
 			; 7) hist2d - 1d liq
 			save_file9 = dir+satn1+'_'+lev+strupcase(dat)+'_LIQUID_1d_fig1.pdf'
 			plot_1d_from_jch_4all,file1,file2,year=year[0],month=month[0],sat=sat1			, $
-			prefix=[f1str,f2str],land=land,sea=sea,limit=limit,save_as=save_file9,/liquid		, $
-			algo2=algo2,algo1=algo1,mini=0,maxi=50
+			prefix=[f1str,f2str],limit=limit,save_as=save_file9,/liquid,level=level		, $
+			algo2=algo2,algo1=algo1,mini=0,maxi=50,coverage=coverage,shape_file=shape_file
 		endif else begin
 			; 1) maps only
 			save_file1 = dir+satn1+'_'+lev+strupcase(dat)+'_fig4.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
-				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
+				win_nr=win_nr,  g_eq=g_eq, ctable = ctable	, $
+				l_eq=l_eq, verbose=verbose, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3,countries=countries	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-				p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+				p0lon = p0lon, p0lat = p0lat	, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 				robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
-				level=level, other = other, /maps_only, save_as = save_file1
+				level=level, other = other, /maps_only, save_as = save_file1,$
+				coverage=coverage,shape_file=shape_file
 
 			; 2) Zonal
 			!p.multi=0
 			save_file2 = dir+satn1+'_'+lev+strupcase(dat)+'_fig3.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
-				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
+				win_nr=win_nr, g_eq=g_eq, ctable = ctable	, $
+				l_eq=l_eq, verbose=verbose, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3,countries=countries	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-				p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+				p0lon = p0lon, p0lat = p0lat	, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 				robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
-				level=level, other = other, /zonal_only, save_as = save_file2
+				level=level, other = other, /zonal_only, save_as = save_file2,$
+				coverage=coverage,shape_file=shape_file
 			
 			; 3) Boxplots
 			save_file3 = dir+satn1+'_'+lev+strupcase(dat)+'_fig1.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
-				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
+				win_nr=win_nr, g_eq=g_eq, ctable = ctable	, $
+				l_eq=l_eq, verbose=verbose, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year,countries=countries	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-				p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+				p0lon = p0lon, p0lat = p0lat	, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 				robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
-				level=level, other = other, /box_only, save_as = save_file3
+				level=level, other = other, /box_only, save_as = save_file3,$
+				coverage=coverage,shape_file=shape_file
 
 			; 4) Histos
 			save_file4 = dir+satn1+'_'+lev+strupcase(dat)+'_fig2.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
-				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
+				win_nr=win_nr,  g_eq=g_eq, ctable = ctable	, $
+				l_eq=l_eq, verbose=verbose, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3,countries=countries	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-				p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+				p0lon = p0lon, p0lat = p0lat	, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 				robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
-				level=level, other = other, /hist_only, save_as = save_file4
+				level=level, other = other, /hist_only, save_as = save_file4,$
+				coverage=coverage,shape_file=shape_file
 
 			; 5) Overview zum Schluss MIni und MAxi wird hier verändert
 			save_file5 = dir+satn1+'_'+lev+strupcase(dat)+'_fig5.pdf'
 			compare_l2, file1, file2, data1=dat, data2=data2,mini=mini,maxi=maxi, bin=bin	, $
-				win_nr=win_nr, check_quality=check_quality, g_eq=g_eq, ctable = ctable	, $
-				l_eq=l_eq, verbose=verbose, land=land,sea=sea, zoom=zoom	, $
+				win_nr=win_nr, g_eq=g_eq, ctable = ctable	, $
+				l_eq=l_eq, verbose=verbose, zoom=zoom	, $
 				limit=limit, show_values=show_values, sat1=sat1, sat2=sat2, algo2=algo2	, $
 				algo1=algo1, year = year, dim3=dim3,countries=countries	, $
 				month = month, day = day, orbit = orbit, datum1 = datum1, datum2=datum2	, $
-				p0lon = p0lon, p0lat = p0lat, antarctic = antarctic, arctic = arctic	, $
+				p0lon = p0lon, p0lat = p0lat, $
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal 	, $
 				robinson=robinson, hammer = hammer, goode = goode, globe = globe	, $
-				level=level,other = 'bwr', save_as = save_file5
+				level=level,other = 'bwr', save_as = save_file5,$
+				coverage=coverage,shape_file=shape_file
 		endelse
 	endfor
 end
@@ -3583,26 +3363,27 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr	, $
-				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=limit,land=land,sea=sea		, $
+				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=limit		, $
 				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values,zoom=zoom,error=error,verbose=verbose	, $
-				other=other,ctable=ctable, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon		, $
+				other=other,ctable=ctable, globe = globe, p0lon = p0lon		, $
 				p0lat = p0lat, Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, ztext = ztext	, $
 				sinusoidal = sinusoidal,robinson=robinson,zonal_only=zonal_only,nobar=nobar, stereographic = stereographic,$
 				msg=msg, logarithmic=logarithmic,white_bg=white_bg,oplots=oplots,rot=rot,magnify=magnify,countries=countries,$
 				symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
-				version1=version1,version2=version2,ts_extras=ts_extras
+				version1=version1,version2=version2,ts_extras=ts_extras,shape_file = shape_file
 
 	sat = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
 	ref = keyword_set(reference) ? strlowcase(reference) : 'gac'
 	alg = keyword_set(algo) ? algo2ref(algo) : 'cci'
 	win_nr = keyword_set(win_nr) ? win_nr : 1
 	if stregex(sat,'noaa',/bool,/fold) then sat = strlowcase(strjoin(strsplit(sat,/ext,'-')))
-	if keyword_set(land) then coverage = 'land'
-	if keyword_set(sea) then coverage = 'sea'
 	datum = !DEFAULT_TS_PERIOD ; start dummy
 	no_trends_etc = 0
 	!p.multi=0
-
+	limit_test = keyword_set(limit)
+	if keyword_set(shape_file) then begin
+		if ~file_test(shape_file) then free, shape_file
+	endif
 	if adv_keyword_set(mini) and adv_keyword_set(maxi) then yrange = [mini,maxi] 
 
 	sav     = keyword_set(save_as)
@@ -3735,7 +3516,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 	make_geo,lon,lat,grid = get_grid_res(bild1)
 
 	if ~zoo then begin
-		set_proj, globe = globe, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,no_label=no_label				, $
+		set_proj, globe = globe, coverage = coverage, p0lon = p0lon, p0lat = p0lat,no_label=no_label				, $
 			Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, $
 			limit = limit, ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,$
 			stereographic=stereographic, no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,$
@@ -3747,7 +3528,13 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				dumdata = bild1 - bild2 & minv = -20. & maxv = 20.
 				ititle = keyword_set(notitle) ? '' : datum+' '+strupcase(single)
 				btitle = 'Diff '+algon1+' '+strupcase(varn[0])+' - '+algon2+' '+strupcase(varn[1])+unit
-				m = obj_new("map_image",dumdata,lat,lon,void_index=where(bild1 eq -999.),n_lev=4	, $
+				dum    = get_coverage( lon, lat, limit = limit, coverage = coverage, shape_file = shape_file, $
+						complement = void_index, index = idx, fillv_index = where(bild1 eq -999. or bild2 eq -999.)) ; TS have always fillvalue = -999.
+				
+				if keyword_set(shape_file) and limit_test eq 0 then limit = set_limits(lon[idx],lat[idx], p0lon=p0lon, p0lat=p0lat,$
+																			/four_elements,bounds=2,verbose=verbose)
+
+				m = obj_new("map_image",dumdata,lat,lon,void_index=void_index,n_lev=4	, $
 					max=(adv_keyword_set(maxi) ? maxi : maxv),min=(adv_keyword_set(mini) ? mini: minv), $
 					countries=countries,usa=countries,magnify = magnify, figure_title = ititle, title= btitle, g_eq=g_eq, l_eq=l_eq	, $
 					charthick = !m_charthick, charsize  = !m_charsize , $
@@ -3770,9 +3557,12 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 				if win_nr ne -1 then win, win_nr
 				plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
-				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
+				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners, $
 				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
 			endif
+			
+			if keyword_set(shape_file) and keyword_set(countries) then cgdrawshape, shape_file
+			
 			return
 		endif
 		start_save, save_as1, thick = thick, size = [32,20]
@@ -3818,7 +3608,7 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 			if win_nr ne -1 then win, win_nr
 			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
-			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,land=land,sea=sea, $
+			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners, $
 			lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
 		endif
 
@@ -3919,37 +3709,34 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini = mini, maxi = maxi, limit=limit, zoom=zoom,algo1 = algo1, sat=sat,$
-			win_nr = win_nr,save_as= save_as,land = land, sea = sea,hist_cloud_type = hist_cloud_type, ztext = ztext, $
+pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini = mini, maxi = maxi, limit=limit, $
+			zoom=zoom,algo1 = algo1, sat=sat, win_nr = win_nr,save_as= save_as,hist_cloud_type = hist_cloud_type, ztext = ztext, $
 			hist_phase=hist_phase, reference = reference,timeseries=timeseries,ctable=ctable,other=other, $
 			difference = difference, show_values = show_values, out = out, p0lon = p0lon, p0lat = p0lat, $
-			antarctic = antarctic, arctic = arctic, mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg,$
+			mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,msg=msg, coverage = coverage, $
 			robinson=robinson, hammer = hammer, goode = goode, globe = globe, verbose = verbose,nobar=nobar, $
 			stereographic = stereographic, logarithmic=logarithmic,datum=datum,magnify=magnify,countries=countries,notitle=notitle,$
-			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2,shape_file=shape_file
+			no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2,$
+			shape_file=shape_file
 
 	datum = keyword_set(datum) ? datum : stregex(file_basename(ccifile),'[0-9]+',/ext)
 	year  = strmid(datum,0,4)
 	month = strmid(datum,4,2)
 	ts    = keyword_set(timeseries)
 	data  = keyword_set(varname) ? strlowcase(varname) : 'hist2d_cot_ctp'
-	; the limits needs later to be freed otherwise map_image will have an error
-	if keyword_set(antarctic) then limit = [-90.0,-180,-60.,180]
-	if keyword_set(arctic) then limit = [ 60.,-180, 90.0,180]
 	limit_test = keyword_set(limit)
+	if keyword_set(shape_file) then begin
+		if ~file_test(shape_file) then free, shape_file
+	endif
 
-	ls    = ( keyword_set(land) or keyword_set(sea) ) ? 1:0
 	hct   = keyword_set(hist_cloud_type) ? hist_cloud_type : 'cu'
 	algo2 = keyword_set(reference) ? algo2ref(reference) : ''
 	apx   = stregex(data,'ice',/fold,/bool) ? 'Ice ' : (stregex(data,'liq',/fold,/bool) ? 'Liquid ' : '')
+	cov   = keyword_set(coverage) ? coverage : ''
 
 	if (hct eq 'hist2d' or hct eq 'hist_2d' or hct eq 'max') and is_jch(varname,/rat) then begin
 		ok = dialog_message('vergleiche_ctp_cot_histogram_cci_mit_clara: '+hct+' not possible with hist2d_ratio!')
 		return
-	endif
-
-	if keyword_set(shape_file) then begin
-		if ~file_test(shape_file) then free, shape_file
 	endif
 
 	algon1 = sat_name(algo1,sat,year=(ts ? 0:year),month=(ts ? 0:month),level='l3c',version=version1)
@@ -4025,13 +3812,15 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	if not found then begin print,'Stop! this should not happen, except an unknown regular grid resolution is used ' & stop & end
 	out_grid = max([cci_grid,gac_grid],grid_index)
 
-	;this is a poor mans solution
+	;this is a poor mans solution but necassary! this should be possible to do more simple, but I dont know how!
 	;make sure both algos see the same and mark areas where one of both is not seeing anything
 	;e.g compare to claas
 	si_cci = size(cci,/dim)
-	ndv_cci_array = total(total((cci eq fillvalue1),3),3) eq product(si_cci[2:3]) ; no observations on cci grid
+	ndv_cci_array = n_elements(si_cci) eq 4 ? total(total((cci eq fillvalue1),3),3) : total(total(total((cci eq fillvalue1),3),3),3)
+	ndv_cci_array = ndv_cci_array eq product(si_cci[2:3]) ; no observations on cci grid
 	si_gac = size(gac,/dim)
-	ndv_gac_array = total(total((gac eq fillvalue2),3),3) eq product(si_gac[2:3])
+	ndv_gac_array = n_elements(si_gac) eq 4 ? total(total((gac eq fillvalue2),3),3) : total(total(total((gac eq fillvalue2),3),3),3)
+	ndv_gac_array = ndv_gac_array eq product(si_gac[2:3])
 	;make it available for each other
 	ndv_cci_array_gac = congrid(ndv_cci_array,si_gac[0],si_gac[1]) ; no observations on cci grid brought to gac grid
 	ndv_gac_array_cci = congrid(ndv_gac_array,si_cci[0],si_cci[1]) ; no observations on gac grid brought to cci grid
@@ -4040,13 +3829,6 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	fillv_index_out = grid_index eq 0 ? fillv_index_cci : fillv_index_gac
 	;-------
 
-	make_geo,file=ccifile,lon_cci,lat_cci,grid=cci_grid ; cci
-	make_geo,file=gacfile,lon_gac,lat_gac,grid=gac_grid ; ref
-	if ls then begin
-		dem_cci = get_coverage(lon_cci,lat_cci,/land)
-		dem_gac = get_coverage(lon_gac,lat_gac,/land)
-	endif
-
 	if hct eq '1d' or hct eq '1d_cot' or hct eq '1d_ctp' then begin
 
 		if keyword_set(limit)     then dumlimit = limit
@@ -4054,7 +3836,7 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 			!p.multi=0
 			save_dum = save_dir+strcompress(data+'_'+datum+'_'+$
 			(keyword_set(hct) ? '_'+strupcase(hct) : '')+(keyword_set(dumlimit) ? '_limit_'+strjoin(strcompress(string(dumlimit,f='(i)'),/rem),'_'):'')+$
-			(keyword_set(land) ? '_land':'')+ (keyword_set(sea) ? '_sea':''),/rem)
+			(keyword_set(cov) ? '_'+cov:''),/rem)
 		endif else begin
 			if win_nr ne -1 then win, win_nr,title=data
 			if hct eq '1d' then !p.multi=[0,1,2]
@@ -4062,28 +3844,28 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		yrange = adv_keyword_set(mini) and adv_keyword_set(maxi) ? [mini,maxi] : [0,50]
 
 		if is_jch(varname,/rat) then begin
-			liq = get_1d_hist_from_jch(cci[*,*,*,*,0],algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,lon=lon_cci,lat=lat_cci,dem=dem_cci)
-			ice = get_1d_hist_from_jch(cci[*,*,*,*,1],algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,lon=lon_cci,lat=lat_cci,dem=dem_cci)
+			liq = get_1d_hist_from_jch(cci[*,*,*,*,0],algo1,bin_name=xtickname,limit=limit, $
+						fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,coverage=coverage)
+			ice = get_1d_hist_from_jch(cci[*,*,*,*,1],algo1,bin_name=xtickname,limit=limit, $
+						fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,coverage=coverage)
 			cci_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
-					ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
-			liq = get_1d_hist_from_jch(gac[*,*,*,*,0],algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,lon=lon_gac,lat=lat_gac,dem=dem_gac)
-			ice = get_1d_hist_from_jch(gac[*,*,*,*,1],algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,lon=lon_gac,lat=lat_gac,dem=dem_gac)
-			gac_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.),$
-					ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
+						ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
+			liq = get_1d_hist_from_jch(gac[*,*,*,*,0],algo2,bin_name=xtickname,limit=limit, $
+						fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,coverage=coverage)
+			ice = get_1d_hist_from_jch(gac[*,*,*,*,1],algo2,bin_name=xtickname,limit=limit, $
+						fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,coverage=coverage)
+			gac_histos = {	cot:(reform(float(liq.cot)/float((liq.cot>0)+(ice.cot>0)>1)) *100.), $
+						ctp:(reform(float(liq.ctp)/float((liq.ctp>0)+(ice.ctp>0)>1)) *100.)}
 			ytitle = 'Liquid Fraction [%]'
 		endif else begin
-			cci_histos = get_1d_hist_from_jch(cci,algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,lon=lon_cci,lat=lat_cci,dem=dem_cci)
-			gac_histos = get_1d_hist_from_jch(gac,algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic, $
-						land=land, sea=sea,fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,lon=lon_gac,lat=lat_gac,dem=dem_gac)
+			cci_histos = get_1d_hist_from_jch(cci,algo1,bin_name=xtickname,limit=limit, $
+						fillv_index=fillv_index_cci,found=found1,shape_file=shape_file,coverage=coverage)
+			gac_histos = get_1d_hist_from_jch(gac,algo2,bin_name=xtickname,limit=limit, $
+						fillv_index=fillv_index_gac,found=found2,shape_file=shape_file,coverage=coverage)
 			cci_histos = {	cot:cci_histos.cot/total(cci_histos.cot)*100.,$
-					ctp:cci_histos.ctp/total(cci_histos.ctp)*100.}
+						ctp:cci_histos.ctp/total(cci_histos.ctp)*100.}
 			gac_histos = {	cot:gac_histos.cot/total(gac_histos.cot)*100.,$
-					ctp:gac_histos.ctp/total(gac_histos.ctp)*100.}
+						ctp:gac_histos.ctp/total(gac_histos.ctp)*100.}
 			ytitle = 'Relative Occurrence [%]'
 		endelse
 		if found1 and found2 then begin
@@ -4123,55 +3905,45 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		return
 	endif
 
-	make_geo, lon_c, lat_c, grid_res = out_grid
-	if ls then dem_c = get_coverage(lon_c,lat_c,/land)
-
-	if keyword_set(shape_file) then begin
-		print,'Using shape_file, ',shape_file
-		shp = get_coverage(lon_c,lat_c,shape_file=shape_file)
-	endif else shp = byte(lon_c * 0) +1b
-
 	; CCI
-	make_geo,file=ccifile,lon_cci,lat_cci,grid=cci_grid
 	if hct eq 'max' then begin
 		; -------maxtype
-		cci = get_hct_maxtype( cci, algo1, grid_res = out_grid,lon=lon_cci,lat=lat_cci,fillvalue=fillvalue1,htypes=htypes)
+		cci = get_hct_maxtype( cci, algo1, grid_res = out_grid, fillvalue = fillvalue1, htypes = htypes)
 		; -------
 	endif else if hct eq 'hist2d' or hct eq 'hist_2d' then begin
 		; cci
-		cci = get_2d_rel_hist_from_jch( cci, algo1, dem = dem_cci, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-						lon = lon_cci, lat = lat_cci, fillvalue = fillvalue1, fillv_index = fillv_index_cci, found = found,shape_file=shape_file)
+		cci = get_2d_rel_hist_from_jch( cci, algo1, limit = limit, fillvalue = fillvalue1, fillv_index = fillv_index_cci, found = found,$
+						shape_file=shape_file, coverage = coverage)
 		if not found then return
 	endif else begin
 		if is_jch(varname,/rat) then begin
-			liq = get_hct_data(hct,cci[*,*,*,*,0],algo1,sdum=sdum,found=found,grid=out_grid)
-			ice = get_hct_data(hct,cci[*,*,*,*,1],algo1,sdum=sdum,found=found,grid=out_grid)
-			cci = reform(float(liq)/float((liq>0)+(ice>0)>1)) *100.
+			liq  = get_hct_data(hct,cci[*,*,*,*,0],algo1,sdum=sdum,found=found,grid=out_grid)
+			ice  = get_hct_data(hct,cci[*,*,*,*,1],algo1,sdum=sdum,found=found,grid=out_grid)
+			vidx = where(liq le 0 and ice le 0,vicnt)
+			cci  = reform(float(liq)/float((liq>0)+(ice>0)>1)) *100.
+			if vicnt gt 0 then cci[vidx] = float(fillvalue1)
 			bar_title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 		endif else begin
-			cci = get_hct_data(hct,cci,algo1,sdum=sdum,found=found,grid=out_grid,/relative)
-			ratio_cci = get_hct_ratio(cci,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon_c,lat=lat_c, $
-						dem=dem_c,land=land,sea=sea,fillv_index=fillv_index_out,shape_file=shape_file,/relative)
+			cci  = get_hct_data(hct,cci,algo1,sdum=sdum,found=found,grid=out_grid,/relative)
+			vidx = where(sdum eq 0,vicnt)
+			if vicnt gt 0 then cci[vidx] = float(fillvalue1)
+			ratio_cci = get_hct_ratio(cci,sdum,limit=limit,fillv_index=fillv_index_out,shape_file=shape_file,coverage=coverage,/relative)
 		endelse
 	endelse
 
-	lon_g=lon_c
-	lat_g=lat_c
-	if ls then dem_g = dem_c
-
 	if hct eq 'max' then begin
 		; -------maxtype
-		gac = get_hct_maxtype( gac, algo2, grid_res = out_grid,lon=lon_gac,lat=lat_gac,fillvalue=fillvalue2, htypes=htypes)
+		gac = get_hct_maxtype( gac, algo2, grid_res = out_grid,fillvalue = fillvalue2, htypes = htypes)
 		; -------
 	endif else if hct eq 'hist2d' or hct eq 'hist_2d' then begin
-		gac = get_2d_rel_hist_from_jch( gac, algo2, dem = dem_gac, land = land, sea = sea, limit = limit, antarctic = antarctic, arctic = arctic, $
-						lon = lon_gac, lat = lat_gac, fillvalue = fillvalue2, fillv_index = fillv_index_gac, found = found, shape_file=shape_file)
+		gac = get_2d_rel_hist_from_jch( gac, algo2, limit = limit, fillvalue = fillvalue2,fillv_index = fillv_index_gac, $
+										found = found, shape_file = shape_file, coverage = coverage)
 		if not found then return
 		if keyword_set(save_as) then begin
 			!p.multi=0
 			save_dum = save_dir+strcompress(data+'_'+datum+'_'+$
 			(keyword_set(hct) ? '_'+strupcase(hct) : '')+(keyword_set(limit) ? '_limit_'+strjoin(strcompress(string(limit,f='(i)'),/rem),'_'):'')+$
-			(keyword_set(land) ? '_land':'')+ (keyword_set(sea) ? '_sea':''),/rem)
+			(keyword_set(cov) ? '_'+cov:''),/rem)
 		endif else begin
 			if win_nr ne -1 then win, win_nr,title=data
 		endelse
@@ -4182,38 +3954,36 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 		if is_jch(varname,/rat) then begin
 			liq = get_hct_data(hct,gac[*,*,*,*,0],algo2,sdum=sdum,found=found,grid=out_grid)
 			ice = get_hct_data(hct,gac[*,*,*,*,1],algo2,sdum=sdum,found=found,grid=out_grid)
+			vidx = where(liq le 0 and ice le 0,vicnt)
 			gac = reform(float(liq)/float((liq>0)+(ice>0)>1)) *100.
+			if vicnt gt 0 then gac[vidx] = float(fillvalue2)
 			bar_title = 'Liquid Fraction '+(keyword_set(hct) ? 'of '+strupcase(hct)+' Clouds [%]':'')
 		endif else begin
-			gac = get_hct_data(hct,gac,algo2,/relative,found=found,sdum=sdum,grid=out_grid)
-			ratio_gac = get_hct_ratio(gac,sdum,limit=limit,antarctic=antarctic,arctic=arctic,lon=lon_g,lat=lat_g, $
-						dem=dem_g,land=land,sea=sea,fillv_index=fillv_index_out,shape_file=shape_file,/relative)
+			gac  = get_hct_data(hct,gac,algo2,/relative,found=found,sdum=sdum,grid=out_grid)
+			vidx = where(sdum eq 0,vicnt)
+			if vicnt gt 0 then gac[vidx] = float(fillvalue2)
+			ratio_gac = get_hct_ratio(gac,sdum,limit=limit,fillv_index=fillv_index_out,shape_file=shape_file,coverage=coverage,/relative)
 		endelse
 	endelse
 
-	good_idx_g = where(lon_g ne -999 and lat_g ne -999 and finite(gac) and gac ne fillvalue2 and shp eq 1, gidx_cnt_g, ncomplement = bidx_cnt_g)
-	good_idx_c = where(lon_c ne -999 and lat_c ne -999 and finite(cci) and cci ne fillvalue1 and shp eq 1, gidx_cnt_c, ncomplement = bidx_cnt_c)
+	make_geo, lon, lat, grid_res = out_grid
 
-	if gidx_cnt_c eq 0 or gidx_cnt_g eq 0 then begin
-		print,'no valid Lon Lat points!'
+	; get the coverage ; check limit , shape_files , fillvalues and predefined areas----------------------------------
+	; this is used for map plots
+	dum = get_coverage( lon, lat, limit = limit, coverage = coverage, shape_file = shape_file, $
+						complement = void_index1, ncomplement = vd1_cnt, fillv_index = where(cci eq fillvalue1) )
+	dum = get_coverage( lon, lat, limit = limit, coverage = coverage, shape_file = shape_file, $
+						complement = void_index2, ncomplement = vd2_cnt, fillv_index = where(gac eq fillvalue2) )
+	; this is used for difference and hist_2d plots
+	dum = get_coverage( lon, lat, limit = limit, coverage = coverage, shape_file = shape_file, $
+						complement = void_index, index = idx_h2d, count = h2d_cnt, $
+						fillv_index = where(cci eq fillvalue1 or gac eq fillvalue2) )
+	;------------------------------------------------------------------------------------------------------------------
+	if h2d_cnt eq 0 then begin
+		print,'no valid points found!'
 		return
 	endif
 
-	if bidx_cnt_g gt 0 then begin
-		lon_g = lon_g[good_idx_g]
-		lat_g = lat_g[good_idx_g]
-		gac = gac[good_idx_g]
-		if ls then dem_g = dem_g[good_idx_g]
-	endif
-	if bidx_cnt_c gt 0 then begin
-		lon_c = lon_c[good_idx_c]
-		lat_c = lat_c[good_idx_c]
-		cci = cci[good_idx_c]
-		if ls then dem_c = dem_c[good_idx_c]
-	endif
-
-	max_cci = max(cci)
-	max_gac = max(gac)
 	if hct ne 'max' and ~is_jch(varname,/rat) then begin
 		str_pholder = strjoin(replicate(' ',max([strlen(algon1),strlen(algon2)])))
 		print,strupcase(hct)+'/all Ratio '+string(algon1,f='(A'+strcompress(strlen(str_pholder),/rem)+')')+' : '+ratio_cci
@@ -4221,61 +3991,31 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 	endif
 	minvalue = 0
 	maxvalue = 1
-	if ls then begin
-		if keyword_set(land) then begin
-			void_index1 = where(cci eq (hct eq 'max'?-1:0) or dem_c eq 0,vd1_cnt)
-			void_index2 = where(gac eq (hct eq 'max'?-1:0) or dem_g eq 0,vd2_cnt)
-			if keyword_set(limit) then begin
-				idx_h2d = where(cci ne 0 and gac ne 0 and between(lon_g,limit[1],limit[3]) and between(lat_g,limit[0],limit[2]) $
-				        and dem_c ne 0 and dem_g ne 0,h2d_cnt)
-			endif else idx_h2d = where(cci ne 0 and gac ne 0 and dem_c ne 0 and dem_g ne 0,h2d_cnt)
-		endif
-		if keyword_set(sea)  then begin
-			void_index1 = where(cci eq (hct eq 'max'?-1:0) or dem_c ne 0,vd1_cnt)
-			void_index2 = where(gac eq (hct eq 'max'?-1:0) or dem_g ne 0,vd2_cnt)
-			if keyword_set(limit) then begin
-				idx_h2d = where(cci ne 0 and gac ne 0 and between(lon_g,limit[1],limit[3]) and between(lat_g,limit[0],limit[2]) $
-					        and dem_c eq 0 and dem_g eq 0,h2d_cnt)
-			endif else idx_h2d = where(cci ne 0 and gac ne 0 and dem_c eq 0 and dem_g eq 0,h2d_cnt)
-		endif
-	endif else begin
-		void_index1 = where(cci eq (hct eq 'max'?-1:0),vd1_cnt)
-		void_index2 = where(gac eq (hct eq 'max'?-1:0),vd2_cnt)
-		if keyword_set(limit) then begin
-			idx_h2d = where(cci ne 0 and gac ne 0 and between(lon_g,limit[1],limit[3]) and between(lat_g,limit[0],limit[2]),h2d_cnt)
-		endif else idx_h2d = where(cci ne 0 and gac ne 0,h2d_cnt)
-	endelse
-
 	if keyword_set(save_as) then begin
 		!p.multi=0
-		save_dum = save_dir+strcompress(data+'_'+datum+'_'+$
-		(keyword_set(hct) ? '_'+strupcase(hct) : '')+(keyword_set(limit) ? '_ausschnitt':'')+(keyword_set(land) ? '_land':'')+ $
-		(keyword_set(sea) ? '_sea':''),/rem)
+		save_dum = save_dir+strcompress(data+'_'+datum+'_'+(keyword_set(hct) ? '_'+strupcase(hct) : '')+$
+							(keyword_set(limit) ? '_ausschnitt':'')+(keyword_set(cov) ? '_'+cov:''),/rem)
 	endif else begin
 		if win_nr ne -1 then win, win_nr,title=data
 		if ~keyword_set(difference) then !p.multi=[0,2,2]
  		if hct eq 'max' then !p.multi=[0,1,2]
 	endelse
 
-	; free limit for plotting only, no harm, all the void_indices are set properly,already
-	if keyword_Set(antarctic) or keyword_Set(arctic) then free, limit
-
-	set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,no_label=no_label		, $
+	set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,no_label=no_label		, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson			, $
 		  ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder,stereographic=stereographic	, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg	, $
 		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,lambert=lambert, $
   		  lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,no_box=no_box,position = position	,no_grid=no_grid,horizon=horizon
 
-  	if keyword_set(shape_file) and limit_test eq 0 then limit = set_limits(lon_c,lat_c, p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
+  	if keyword_set(shape_file) and limit_test eq 0 then limit = set_limits(lon[idx_h2d],lat[idx_h2d], p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
 
 	if hct eq 'max' then begin
 		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_max_type.eps'
 		start_save, save_as, thick = thick,size=[32,20]
-			m = obj_new("map_image",cci,lat_c,lon_c,void_index=void_index1,box_axes=box_axes,n_lev=9, $
+			m = obj_new("map_image",cci,lat,lon,void_index=void_index1,box_axes=box_axes,n_lev=9, $
 				magnify=magnify,  min=0,max=9,ctable = 13,discrete=findgen(10),$
 				figure_title = keyword_set(notitle) ? '' : adc+' '+algon1+' most frequent '+apx+'Cloud Type'	, $
-; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,bar_horizontal=bar_horizontal, $
@@ -4285,13 +4025,14 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 				globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 			obj_destroy,m
+			if keyword_set(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
+
 		end_save, save_as
 		if keyword_set(save_as) then save_as = save_dum+'_'+algon2+'_max_type.eps'
 		start_save, save_as, thick = thick,size=[32,20]
-			m = obj_new("map_image",gac,lat_g,lon_g,void_index=void_index2,box_axes=box_axes,n_lev=9, $
+			m = obj_new("map_image",gac,lat,lon,void_index=void_index2,box_axes=box_axes,n_lev=9, $
 				magnify=magnify, min=0,max=9,ctable = 13,discrete=findgen(10),$
 				figure_title = keyword_set(notitle) ? '' : adg+' '+algon2+' most frequent '+apx+'Cloud Type'	, $
-; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize,$
 				title= 'Cloud type',$
 				bar_tickname= [htypes], logarithmic=logarithmic,label=label,bar_horizontal=bar_horizontal, $
@@ -4304,15 +4045,15 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 				m -> zoom,get_new_corners = zoom,/print_new, ztext = ztext,magnify=magnify
 			endif
 			obj_destroy, m
+			if keyword_set(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
 		end_save, save_as
 	endif else begin
 		if ~keyword_set(difference) then begin
 			if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_Ratio_'+strcompress(ratio_cci,/rem)+'.eps'
 			start_save, save_as, thick = thick
-				m = obj_new("map_image",cci,lat_c,lon_c,void_index=void_index1,box_axes=box_axes,n_lev=5, $
+				m = obj_new("map_image",cci,lat,lon,void_index=void_index1,box_axes=box_axes,n_lev=5, $
 					max=adv_keyword_set(maxi) ? maxi:maxvalue, min=adv_keyword_set(mini) ? mini:minvalue, magnify=magnify, $
 					figure_title = keyword_set(notitle) ? '' : adc+' '+algon1+' '+lname, $
-; 					charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 					charthick = !m_charthick, charsize  = !m_charsize,$
 					title= keyword_set(bar_title) ? bar_title : 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
 					limit = limit,countries=countries,usa=countries,no_continents=no_continents,no_grid=no_grid, $
@@ -4323,14 +4064,14 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 					globe = globe,brewer = brewer, greyscale = greyscale,ctable=ctable,rainbow = rainbow,debug=verbose)
 				obj_destroy,m
+				if keyword_set(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
 			end_save, save_as
 
 			if keyword_set(save_as) then save_as = save_dum+'_'+algon2+'_Ratio_'+strcompress(ratio_gac,/rem)+'.eps'
 			start_save, save_as, thick = thick
-				m = obj_new("map_image",gac,lat_g,lon_g,void_index=void_index2,box_axes=box_axes,n_lev=5, $
+				m = obj_new("map_image",gac,lat,lon,void_index=void_index2,box_axes=box_axes,n_lev=5, $
 					max=adv_keyword_set(maxi) ? maxi:maxvalue, min=adv_keyword_set(mini) ? mini:minvalue, magnify=magnify, $
 					figure_title = keyword_set(notitle) ? '' : adg+' '+algon2+' '+lname,  $
-; 					charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 					charthick = !m_charthick, charsize  = !m_charsize,$
 					title= keyword_set(bar_title) ? bar_title :'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
 					format=bar_format,  logarithmic=logarithmic, no_color_bar=no_color_bar, $
@@ -4341,34 +4082,28 @@ pro vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile, varname = varname, mini
 					mollweide = mollweide, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, hammer = hammer, goode = goode  , $
 					globe = globe, limit = limit,countries=countries,usa=countries,debug=verbose)
 				obj_destroy,m
+				if keyword_set(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
 			end_save, save_as
 
 			; 2d histogram
 			if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'_'+algon2+'_2dHist.eps'
 			start_save, save_as, thick = thick;,size=[20,16]
-print,'hist_2d_plot noch einfügen???'
-				dum = h2d_cnt gt 0 ? hist_2d(cci[idx_h2d],gac[idx_h2d],bin1=1,bin2=1,min1=0,max1=100,min2=0,max2=100) : intarr(101,101)
-				if h2d_cnt eq 0 then dum[0]=1
-				view2d,dum,no_data_val=0,/log,xticks=5,xtickname=['0','20','40','60','80','100'],$
-				yticks=5,ytickname=['0','20','40','60','80','100'],bar_format='(i)',bar_title='# of occur.',$
-				xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
-				xtitle=algon1,ytitle=algon2,color= ~keyword_set(no_color_bar)
+				dum = hist_2d(cci[idx_h2d],gac[idx_h2d],bin1=1,bin2=1,min1=0,max1=100,min2=0,max2=100)
 				regr = linfit(cci[idx_h2d],gac[idx_h2d], YFIT=yfit)
-				oplot,!x.crange,[regr[1]*!x.crange+regr[0]],linestyle=2
-				oplot,!x.crange,!y.crange
+				title = 'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : '')
+				plot_hist_2d, dum, 1, 5, 0, 100, h2d_cnt, regr, save_as = save_as, $
+							bar_discontinous = bar_discontinous, bar_nlev = bar_nlev, $
+							flag_meanings1 = flag_meanings1, flag_meanings2 = flag_meanings2,$
+							title=title,xtitle=algon1,ytitle=algon2, col_tab = col_tab, $
+							no_color_bar=no_color_bar;, position = position
 			end_save, save_as
 		endif
 		;difference
 		if keyword_set(save_as) then save_as = save_dum+'_'+algon1+'-'+algon2+'_Diff.eps'
 		start_save, save_as, thick = thick
-			if vd1_cnt gt 0 and vd2_cnt gt 0 then void_index=[void_index1,void_index2]
-			if vd1_cnt gt 0 and vd2_cnt eq 0 then void_index=[void_index1]
-			if vd1_cnt eq 0 and vd2_cnt gt 0 then void_index=[void_index2]
-			if vd1_cnt eq 0 and vd2_cnt eq 0 then void_index=-1
-			m = obj_new("map_image",(cci-gac),lat_g,lon_g,void_index=void_index,box_axes=box_axes,n_lev=5, $
+			m = obj_new("map_image",(cci-gac),lat,lon,void_index=void_index,box_axes=box_axes,n_lev=5, $
 				max=(keyword_set(difference) ? maxi : 50), min=(keyword_set(difference) ? mini : -50), magnify=magnify, $
 				figure_title = keyword_set(notitle) ? '' : 'Diff. '+algon1+' - '+algon2+' '+lname, $
-; 				charthick = keyword_set(save_as) ? 2. : 1.5, charsize = (keyword_set(save_as) ? 3. : 1.5), $
 				charthick = !m_charthick, charsize  = !m_charsize , $
 				title= keyword_set(bar_title) ? bar_title:'Rel. Occ. '+(keyword_set(hct) ? 'of '+strupcase(hct)+' '+apx+'Clouds [%]' : ''),$
 				format='(f6.2)',  logarithmic=logarithmic, no_color_bar=no_color_bar,  $
@@ -4382,17 +4117,18 @@ print,'hist_2d_plot noch einfügen???'
 				m -> zoom,get_new_corners = zoom,/print_new, ztext = ztext,magnify=magnify
 			endif
 			obj_destroy,m
+			if keyword_set(shape_file) and keyword_set(countries) then cgDrawShapes, shape_file
 		end_save, save_as
 	endelse
 
 	if keyword_set(zoom) then begin
 		vergleiche_ctp_cot_histogram_cci_mit_clara, ccifile,  mini = mini, maxi = maxi, limit=zoom,algo1 = algo1, sat=sat,$
-			win_nr = win_nr,save_as= save_as,land = land, sea = sea,hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, $
+			win_nr = win_nr,save_as= save_as,hist_cloud_type = hist_cloud_type, hist_phase=hist_phase, $
 			reference = reference,timeseries=timeseries,ctable=ctable,other=other, difference = difference,varname=varname
 	endif
 
 	if keyword_set(show_values) and keyword_set(difference) and ~total(hct eq ['hist2d','hist_2d','max']) then $
-	out = {bild:(cci-gac),lon:lon_g,lat:lat_g,unit:'[%]',fillvalue:fillvalue1,longname:lname}
+	out = {bild:(cci-gac),lon:lon,lat:lat,unit:'[%]',fillvalue:fillvalue1,longname:lname}
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
@@ -4435,7 +4171,7 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro make_2d_overview,year=year,month=month,satellite,reference=reference, coverage = coverage, algo = algo, out = out,addtext=addtext, $
 		time_series = time_series,sat2=sat2, save_as = save_as,mini=mini,maxi=maxi,verbose=verbose,file1=file1,file2=file2,$
-		datum1=datum1,datum2=datum2,notitle=notitle,version1=version1,version2=version2
+		datum1=datum1,datum2=datum2,notitle=notitle,version1=version1,version2=version2,limit=limit,shape_file=shape_file,nobar=nobar
 
 	sat1 = keyword_set(satellite) ? strlowcase(satellite) : ''
 	ref  = keyword_set(reference) ? strlowcase(reference) : ''
@@ -4445,9 +4181,18 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		ok=dialog_message('Choose reference data!')
 		return
 	endif
+
+	;everthing at 1 degree
 	make_geo, lon,lat, grid=1
-	dem  = get_coverage(lon,lat,coverage = coverage)
-	dem = [[dem,dem,dem],[dem,dem,dem],[dem,dem,dem]]
+	dem   = get_coverage(lon,lat,coverage = coverage,limit=limit,shape_file=shape_file,index=idx)
+	dem   = [[dem,dem,dem],[dem,dem,dem],[dem,dem,dem]]
+
+	limit = keyword_set(limit) ? limit : set_limits(lon[idx],lat[idx], p0lon=p0lon, p0lat=p0lat, /four_elements,bounds=2,verbose=verbose)
+	xyl   = get_coverage(lon,lat,limit=limit)  
+	xyl   = [[xyl,xyl,xyl],[xyl,xyl,xyl],[xyl,xyl,xyl]]
+	idx   = where(xyl eq 1,cnt)
+	idx2d = array_indices(xyl,idx)
+	dims  = [n_elements(ree(idx2d[0,*])),n_elements(ree(idx2d[1,*]))]
 
 	if keyword_set(file2) then begin
 		if keyword_set(addtext) then begin
@@ -4568,37 +4313,52 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		min_cfc = (minmax([cfc,cfc_ref],no=-999))[0]
 
 		gesamt_cci = [  [temporary(lwp)    - min_lwp,temporary(iwp)    - min_iwp,temporary(cwp)    - min_cwp],$
-				[temporary(cot)    - min_cot,temporary(ref)    - min_ref,temporary(cph)    - min_cph],$
-				[temporary(ctt)    - min_ctt,temporary(ctp)    - min_ctp,temporary(cfc)    - min_cfc] ]
+						[temporary(cot)    - min_cot,temporary(ref)    - min_ref,temporary(cph)    - min_cph],$
+						[temporary(ctt)    - min_ctt,temporary(ctp)    - min_ctp,temporary(cfc)    - min_cfc] ]
 		gesamt_ref = [  [temporary(lwp_ref)- min_lwp,temporary(iwp_ref)- min_iwp,temporary(cwp_ref)- min_cwp],$
-				[temporary(cot_ref)- min_cot,temporary(ref_ref)- min_ref,temporary(cph_ref)- min_cph],$
-				[temporary(ctt_ref)- min_ctt,temporary(ctp_ref)- min_ctp,temporary(cfc_ref)- min_cfc] ]
+						[temporary(cot_ref)- min_cot,temporary(ref_ref)- min_ref,temporary(cph_ref)- min_cph],$
+						[temporary(ctt_ref)- min_ctt,temporary(ctp_ref)- min_ctp,temporary(cfc_ref)- min_cfc] ]
 
 	endelse
 	; was ist wenn einer von beiden null ist (auch raus!!)
 	gesamt_ref[where(gesamt_ref le 0)] = -999
 	gesamt_cci[where(gesamt_cci le 0)] = -999
 	if keyword_set(save_as) then save_as = !SAVE_DIR + '2d_overview/2d_overview_'+(keyword_set(datum1)?datum1+'_':'')+algon1+'-'+(keyword_set(datum2)?datum2+'_':'')+algon2+'.eps'
-	start_save,save_as,size=size
+	start_save,save_as,size=size,thick=thick
+		if keyword_set(nobar) then begin
+			if nobar eq 1 then color_bar = 0
+			if nobar eq 2 then color_bar = 2
+			if nobar eq 3 then color_bar = 1
+		endif else color_bar = 1
+
 ; 		out = gesamt_cci/gesamt_ref
 ; 		out = (gesamt_cci-gesamt_ref)/(gesamt_cci+gesamt_ref) 	; werte maximal 1 : Ref = 0 und CCI != 0, minimal -1 : CCI = 0 und Ref !=0, 0 ist perfekt.
 		out = 100*((gesamt_cci-gesamt_ref)/(gesamt_ref))		; relative differenz in %
+		out = reform(out[idx],dims)
+		dem = reform(dem[idx],dims)
+		gesamt_cci = reform(gesamt_cci[idx],dims)
+		gesamt_ref = reform(gesamt_ref[idx],dims)
+
 		view2d, out,min=adv_keyword_set(mini) ? float(mini[0]):-100.,max=adv_keyword_set(maxi)? float(maxi[0]) : 100.,$
 		col_tab=4,no_data_idx=where(gesamt_ref le 0. or gesamt_cci le 0. or dem ne 1),xmargin=[8,9],ymargin=[3,3],$;xmargin=[8,8]$
 		xticks=6,xtickname=[' ','LWP',' ','IWP', ' ','CWP',' '],yticks=6,ytickname=[' ','LWP',' ','COT', ' ','CTT',' '],$
 		xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
-		bar_title='Rel. Difference [%] '+f1str+algon1+' - '+f2str+algon2,bar_nlev=6;,charsize=1.5
-		axis,xaxis=1,xticks=6,xtickname=[' ','CTT',' ','CTP', ' ','CFC',' '],charsize=1.5
-		axis,yaxis=1,yticks=6,ytickname=[' ','CWP',' ','CPH', ' ','CFC',' '],charsize=1.5
+		bar_title='Rel. Difference [%] '+f1str+algon1+' - '+f2str+algon2,bar_nlev=6,color_bar = color_bar
+		axis,xaxis=1,xticks=6,xtickname=[' ','CTT',' ','CTP', ' ','CFC',' '],xcharsize=!v_xcharsize, ycharsize=!v_ycharsize , $
+				charthick = !v_charthick, charsize = !v_charsize , xticklen = 0.0001
+		axis,yaxis=1,yticks=6,ytickname=[' ','CWP',' ','CPH', ' ','CFC',' '],xcharsize=!v_xcharsize, ycharsize=!v_ycharsize , $
+				charthick = !v_charthick, charsize = !v_charsize, yticklen = 0.0001
+		for i = 0,3 do oplot, !x.crange, replicate(dims[1] * 1./3. * i, 2),thick=thick
+		for i = 0,3 do oplot, replicate(dims[0] * 1./3. * i,2) ,!y.crange,thick=thick
 	end_save,save_as
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro moviemaker, year, month, day, sat = sat, data = data, mini = mini, maxi = maxi, $
-		land = land, sea = sea,	hist_cloud_type = hist_cloud_type, algo = algo, $
-		level = level, timeseries = timeseries
+		coverage = coverage,hist_cloud_type = hist_cloud_type, algo = algo, $
+		level = level, timeseries = timeseries, shape_file = shape_file
 
-	tmp_dir = '/cmsaf/cmsaf-cld1/sstapelb/bilder/neu/movies/tmp/'
+	tmp_dir = !SAVE_DIR + '/neu/movies/tmp/'
 	datum   = (keyword_set(year) ? string(year,f='(i4.4)') : '200701-200912') + $
 		  (keyword_set(month) ? string(month,f='(i2.2)') : '')+ $
 		  (keyword_set(day) ? string(day,f='(i2.2)') : '')
@@ -4609,7 +4369,7 @@ pro moviemaker, year, month, day, sat = sat, data = data, mini = mini, maxi = ma
 
 	for ii = 0, n_elements(p0lon) -1 do begin
 		plot_l2, year, 	month, day ,sat = sat, data = data, mini = mini, maxi = maxi, $
-				land = land, sea = sea,/globe, algo = algo, $
+				/globe, algo = algo, coverage = coverage, shape_file = shape_file, $
 				hist_cloud_type = hist_cloud_type, level = level, $
 				timeseries = timeseries, p0lon=p0lon[ii],p0lat=p0lat[ii], $
 				save_as = tmp_dir+datum+'_'+dat+'_'+string(ii,f='(i2.2)')+'.png'
@@ -4625,16 +4385,18 @@ pro moviemaker, year, month, day, sat = sat, data = data, mini = mini, maxi = ma
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi = maxi, win_nr = win_nr,notitle=notitle,$
-		     ctable = ctable, other = other, reference = reference, out = out, land = land, sea = sea,$
-		     oplots = oplots, found = found, nobar = nobar, limit = limit, antarctic=antarctic, arctic=arctic, $
+		     ctable = ctable, other = other, reference = reference, out = out,$
+		     oplots = oplots, found = found, nobar = nobar, limit = limit, shape_file = shape_file, $
 		     coverage=coverage,version=version,version2=version2,ts_extras = ts_extras
 
 ; 	vali_set_path
 	opl   = keyword_set(oplots)
 	datum = !DEFAULT_TS_PERIOD
 	dat   = strlowcase(data[0])
-	if keyword_set(antarctic) then limit = [-90.,-180.,-60.,180.] 
-	if keyword_set(arctic)    then limit = [ 60.,-180., 90.,180.] 
+	cov   = keyword_set(coverage) ? coverage : ''
+	
+	if stregex(cov,'antarctic',/fold,/bool) then limit = [-90.,-180.,-60.,180.] else $
+	if stregex(cov,'arctic',/fold,/bool) then limit = [ 60.,-180., 90.,180.] 
 
 	algo  = keyword_set(algo) ? strlowcase(algo) : ''
 	sat   = keyword_set(satellite) ? strlowcase(strjoin(strsplit(satellite,'-',/ext))) : ''
@@ -4644,6 +4406,8 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	no_data_val = -999.
 
 	struc_idx = 0
+	land = stregex(cov,'land',/fold,/bool)
+	sea  = stregex(cov,'sea',/fold,/bool)
 	if keyword_set(land) then struc_idx = 1
 	if keyword_set(sea)  then struc_idx = 2
 	if keyword_set(land) and keyword_set(sea) then begin
@@ -4863,10 +4627,11 @@ pro plot_hovmoeller, data, algo, satellite, save_as = save_as, mini = mini, maxi
 	end_save, save_as
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,sea=sea,land=land, save_as=save_as,$
+pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit, save_as=save_as,$
 		win_nr = win_nr,timeseries=timeseries, algo=algo, sat = sat, datum=datum, level=level,$
 		reference=reference,change_side = change_side,verbose=verbose,coverage=coverage,oplots=oplots	,$
-		addtext = addtext, found=found, white_bg = white_bg,logarithmic=logarithmic,notitle=notitle
+		addtext = addtext, found=found, white_bg = white_bg,logarithmic=logarithmic,notitle=notitle,$
+		shape_file = shape_file
 
 	opl   = keyword_set(oplots)    ? fix(oplots)           : 0
 	ref   = keyword_set(reference) ? strlowcase(reference) : '' 
@@ -4877,7 +4642,8 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	sav   = keyword_set(save_as)
 	wbg   = keyword_set(white_bg)
 	ts    = keyword_set(timeseries)
-
+	cov   = keyword_set(coverage) ? coverage : ''
+	
 	varn  = strsplit(varname,',',/ext)
 	if n_elements(varn) eq 1 then varn = [varn,varn]
 	vollername = full_varname(varn[0],/universal)
@@ -4934,33 +4700,27 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 		date1 = d.actual_date
 		date2 = d.actual_date
 	endif else begin
-		if lev eq 'l3u' and ( ref eq 'gac' and (alg eq 'esacci' or alg eq 'patmos')) then join_nodes = 1
 		bild = 	get_data(year,month,day,file=file,data=varn[0],sat=sat,found=found,algo=alg,verbose=verbose,/print_filename,$
-			longname=longname,unit=unit,no_data_value=fillvalue1, level=lev,join_nodes=join_nodes,dim3=dim3,/make_compareable)
-		free,join_nodes
+			longname=longname,unit=unit,no_data_value=fillvalue1, level=lev,dim3=dim3,/make_compareable)
 		if ~found then begin
 			ok= dialog_message('plot_histogramm: '+(file_test(file) ? 'Data '+varn[0]+' not found!': 'File not found!'))
 			return
 		endif
 		if keyword_set(reference) then begin
-			if lev eq 'l3u' and ( alg eq 'clara' and (ref eq 'cci' or ref eq 'pmx')) then join_nodes = 1
 			bild2 = get_data(strmid(date1,0,4),strmid(date1,4,2),strmid(date1,6,2),algo=ref,data=varn[1],found=found,print_filename=2,$
-				sat=sat,verbose=verbose,level=lev,join_nodes=join_nodes,/make_compareable,dim3=dim3,no_data_value=fillvalue2)
-			free,join_nodes
+				sat=sat,verbose=verbose,level=lev,/make_compareable,dim3=dim3,no_data_value=fillvalue2,file=file2)
 			if ~found then begin
 				ok= dialog_message('plot_histogramm: Data '+varn[1]+' not found in Reference '+reference+' File! ')
 				return
 			endif
 		endif
-		if keyword_set(limit) or keyword_set(land) or keyword_set(sea) then begin
-			make_geo,grid_res = get_grid_res(bild),lon,lat
-			area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found)
-			bild  = (area * bild + (area eq 0) * fillvalue1)
-			if keyword_set(bild2) then begin
-				make_geo,grid_res = get_grid_res(bild2),lon,lat
-				area2 = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found)
-				bild2 = (area2 * bild2 + (area2 eq 0) * fillvalue2)
-			endif
+		make_geo,grid_res = get_grid_res(bild),lon,lat, file = file
+		area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found, shape_file = shape_file)
+		bild  = (area * bild + (area eq 0) * fillvalue1)
+		if keyword_set(bild2) then begin
+			make_geo,grid_res = get_grid_res(bild2),lon,lat,file = file2
+			area2 = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found, shape_file = shape_file)
+			bild2 = (area2 * bild2 + (area2 eq 0) * fillvalue2)
 		endif
 		date2 = date1
 	endelse
@@ -4968,7 +4728,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
 	if keyword_set(save_as) then begin
 		save_as = !save_dir +(ts ? 'TS_'+strcompress(date1,/rem) : file_basename(file[0],is_hdf(file[0]) ? '.hdf':'.nc'))+'_histogram_'+varname+ $
-			(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')+ $
+			(keyword_set(cov) ? '_'+cov:'')+ $
 			(keyword_set(limit) ? '_limit_'+strjoin(strcompress(limit,/rem),'_'):'')+$
 			(keyword_set(oplots) ? '_oplots':'')+'.eps'
 	endif else if win_nr ne -1 then win, win_nr,title=dat
@@ -5004,26 +4764,14 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 		endelse
 
 		if sav then begin
-			charthick = !p_charthick ;1.5
-			xcharsize = !p_xcharsize ;1.7 
-			ycharsize = !p_ycharsize ;1.7
-			lcharsize = !l_charsize  ;2.5
 			xmargin   = [14,6]
 			ymargin   = [ 7,3]
 		endif else if wbg then begin
-			charthick = !p_charthick ;3.0
-			xcharsize = !p_xcharsize ;2.5
-			ycharsize = !p_ycharsize ;2.5
-			lcharsize = !l_charsize  ;3.0
 			xmargin   = [20,6]
 			ymargin   =  [8,3]
 			thick     = 4
 			symsize   = 1.5
 		endif else begin
-			charthick = !p_charthick ;1.2
-			xcharsize = !p_xcharsize ;1.2 
-			ycharsize = !p_ycharsize ;1.2
-			lcharsize = !l_charsize  ;1.5
 			xmargin   =[10,3]
 			ymargin   = [5,2]
 		endelse
@@ -5034,37 +4782,31 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit,s
 		if opl eq 0 then begin
 			plot,xx,hh/total(hh)*100.,xtitle=vollername+' '+unit,title=keyword_set(notitle) ? '' : (ts ? date1:''),$
 			xr=[minv[0],maxv[0]],thick=thick,yrange=yrange,ytitle='% of occur.',xlog=logarithmic,$
-			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
-; 			if ts then date=''
+			charthick = !p_charthick , xcharsize = !p_xcharsize , ycharsize= !p_ycharsize ,xmargin=xmargin,ymargin=ymargin
 			if is_defined(hh2) then begin
 				oplot,xx,hh/total(hh)*100.,color = cgcolor(!compare_col1) ,thick=thick
-; phere
-; 				oplot,xx,hh2/total(hh2)*100.,color = cgcolor('Red'),thick=thick
-; 				legend,[date1+algon1+dtn[0]+hct,date2+algon2+dtn[1]+hct],thick=[thick,thick],$
-; 				color=[-1,cgcolor('Red')],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
 				oplot,xx,hh2/total(hh2)*100.,color = cgcolor(!compare_col2) ,thick=thick
 				legend,[date1+algon1+dtn[0]+hct,date2+algon2+dtn[1]+hct],thick=[thick,thick],$
-				color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],spos=(keyword_set(change_side) ? 'bot':'top'),charsize=lcharsize,charthick = charthick
+				color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],spos=(keyword_set(change_side) ? 'bot':'top'),$
+				charsize=!l_charsize ,charthick = !p_charthick
 			endif else begin
 				legend,date2+algon1+dtn[0]+hct,thick=thick,spos=(keyword_set(change_side) ? 'bot':'top'),$
-; 				charsize=lcharsize,charthick = charthick,color =-1
-				charsize=lcharsize,charthick = charthick,color =cgcolor(!compare_col1)
+				charsize=!l_charsize ,charthick = !p_charthick ,color =cgcolor(!compare_col1)
 			endelse
 		endif else begin
-; 			if ts then date1=''
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error
 			oplot,xx,hh/total(hh)*100.,thick=thick,col=cgcolor(cols),linestyle=linestyle,psym=psym,symsize=symsize
 			legend,date1+algon1+dtn[0]+hct,thick=thick,color=cgcolor(cols), $
-			spos=spos,ystretch=ystretch+0.5,charsize=lcharsize,charthick = charthick,linestyle = linestyle,psym=psym
+			spos=spos,ystretch=ystretch+0.5,charsize=!l_charsize ,charthick = !p_charthick ,linestyle = linestyle,psym=psym
 		endelse
 	end_save,save_as
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=sea,land=land, save_as=save_as,mini=mini,maxi=maxi, $
+pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,save_as=save_as,mini=mini,maxi=maxi, $
 			win_nr = win_nr,timeseries=timeseries,satellite=satellite,oplots=oplots,found=found,level=level, coverage = coverage		,$
 			addtext = addtext,datum=datum,error=error, white_bg = white_bg,old_ts=old_ts,simulator=simulator,dirname=dirname,$
-			notitle=notitle,nobar=nobar,logarithmic=logarithmic
+			notitle=notitle,nobar=nobar,logarithmic=logarithmic,shape_file=shape_file
 
 	opl   = keyword_set(oplots) ? fix(oplots) : 0
 	hct   = keyword_set(addtext) ? ' - '+strupcase(addtext[0]) : ''
@@ -5074,6 +4816,7 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	sim   = keyword_set(simulator)
 	ts    = keyword_set(timeseries)
 	satn  = sat_name(algo,satellite, year=(ts ? 0:year), month=(ts ? 0:month),level=level)
+	cov   = keyword_set(coverage) ? coverage : ''
 
 ; 	datum = string(year[0],f='(i4.4)')+string(month[0],f='(i2.2)')
 
@@ -5109,48 +4852,46 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
 	if keyword_set(save_as) then begin
 		save_as = !save_dir +file_basename(file[0],is_hdf(file[0]) ? '.hdf':'.nc')+'_zonal_median_'+varname+ $
-			(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')+ $
+			(keyword_set(cov) ? '_'+cov:'')+ $
 			(keyword_set(limit) ? '_limit_'+strjoin(strcompress(limit,/rem),'_'):'')+$
 			(keyword_set(oplots) ? '_oplots':'')+'.eps'
 		save_as=strjoin(save_as,'_')
 	endif else if win_nr ne -1 then win, win_nr,title=dat
 
-	if keyword_set(limit) then begin
-		idx = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),complement=nd_idx,ncomp=nd_cnt)
-		if nd_cnt gt 0 then lat[nd_idx] = fillvalue
-	endif
+; 	if keyword_set(limit) then begin
+; 		idx = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),complement=nd_idx,ncomp=nd_cnt)
+; 		if nd_cnt gt 0 then lat[nd_idx] = fillvalue
+; 	endif
+; 
+; 	if keyword_set(land) or keyword_set(sea) then begin
+; 		dem = get_coverage(lon, lat, cov = 'land')
+; 		if keyword_set(sea) then lat[where(dem ne 0)] = fillvalue
+; 		if keyword_set(land) then lat[where(dem eq 0)] = fillvalue
+; 	endif
 
-	if keyword_set(land) or keyword_set(sea) then begin
-		dem = get_coverage(lon, lat, /land)
-		if keyword_set(sea) then lat[where(dem ne 0)] = fillvalue
-		if keyword_set(land) then lat[where(dem eq 0)] = fillvalue
-	endif
+	area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found, shape_file = shape_file, $
+			fillv_index = where(bild eq fillvalue[0]) , index = idx, count = idx_cnt)
 
-; 	if strlowcase(algo) eq 'calipso' then lat_res =2.
+	if idx_cnt eq 0 then begin
+		print,'No valid points found!'
+		return
+	endif
 	lat_res = 1. > get_grid_res(bild)
-	medi = zonal_average(bild[where(lat ne fillvalue)],lat[where(lat ne fillvalue)],fillvalue=fillvalue,lat_zon=lat1d,/mean,/nan,lat_res = lat_res);,/median)
-	idx  = where(finite(medi),chk_idx)
+	medi = zonal_average(bild[idx],lat[idx],fillvalue=fillvalue,lat_zon=lat1d,/mean,/nan,lat_res = lat_res);,/median)
+	idx  = where(finite(medi),idx_cnt)
+	if idx_cnt eq 0 then begin
+		print,'No valid points found!'
+		return
+	endif
 	yr = [(adv_keyword_set(mini)? mini : (varname eq 'ctt' ? 200:0)),(adv_keyword_set(maxi)? maxi : max(medi[idx])*1.05)] 
 
 	if sav or sim then begin
-		charthick = !p_charthick ;1.5
-		xcharsize = !p_xcharsize ;1.7 
-		ycharsize = !p_ycharsize ;1.7
-		lcharsize = sim ? 2.0 : !l_charsize  ;sim ? 2.0 : 2.5
 		xmargin   = [14,6]
 		ymargin   = [ 7,3]
 	endif else if wbg then begin
-		charthick = !p_charthick ;3.0
-		xcharsize = !p_xcharsize ;2.5
-		ycharsize = !p_ycharsize ;2.5
-		lcharsize = !l_charsize  ;3.0
 		xmargin   = [20,6]
 		ymargin   =  [8,3]
 	endif else begin
-		charthick = !p_charthick ;1.2
-		xcharsize = !p_xcharsize ;1.2 
-		ycharsize = !p_ycharsize ;1.2
-		lcharsize = !l_charsize  ;1.5
 		xmargin   =[10,3]
 		ymargin   = [5,2]
 	endelse
@@ -5164,10 +4905,10 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 		if opl eq 0 then begin
 			plot,[0,0],[1,1],xr=[-90,90],xs=3,/ys,xticks=6,xtickname=['-90','-60','-30','0','30','60','90'], $
 			xtitle='latitude [degrees]',ytitle=full_varname(varname) + unit,yr=yr,title=title,ylog=logarithmic, $
-			charthick = charthick, xcharsize = xcharsize, ycharsize= ycharsize,xmargin=xmargin,ymargin=ymargin
+			charthick = !p_charthick , xcharsize = !p_xcharsize , ycharsize= !p_ycharsize ,xmargin=xmargin,ymargin=ymargin
 			if ts then date = ''
 			if chk_idx gt 0 then oplot,lat1d,medi,thick=thick
-			if ~keyword_set(nobar) then legend,date+satn+dtn+hct,thick=thick,spos='top',charsize=lcharsize,color =-1,charthick=charthick
+			if ~keyword_set(nobar) then legend,date+satn+dtn+hct,thick=thick,spos='top',charsize=!l_charsize ,color =-1,charthick=!p_charthick
 		endif else begin
 			define_oplots, opl, cols, spos, linestyle, psym, ystretch, error=error,timeseries=nobar
 			if yr[0] lt yr[1] then begin
@@ -5176,8 +4917,8 @@ pro plot_zonal_average,year ,month ,day, file,varname,algo=algo,limit=limit,sea=
 				if chk_idx gt 0 then oplot,lat1d,medi,thick=thick,col=cgcolor(cols),linestyle=linestyle,min_value=yr[1],max_value=yr[0]
 			endelse
 			if ts then date = ''
-			legend,date+satn+dtn+hct,thick=thick,color=cgcolor(cols), spos=spos,ystretch=ystretch+0.5,charsize=lcharsize,$
-			linestyle=linestyle,charthick=charthick
+			legend,date+satn+dtn+hct,thick=thick,color=cgcolor(cols), spos=spos,ystretch=ystretch+0.5,charsize=!l_charsize ,$
+			linestyle=linestyle,charthick=!p_charthick
 		endelse
 	end_save,save_as
 
@@ -5454,7 +5195,8 @@ end
 ;-------------------------------------------------------------------------------------------------------------------------
 pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = timeseries, limit = limit, coverage = coverage	, $
 		error = error, mini = mini, maxi = maxi, save_as = save_as, win_nr = win_nr, datum = datum, verbose=verbose	, $
-		level = level, algo = algo, reference=reference, filename1 = filename1, filename2=filename2,notitle=notitle
+		level = level, algo = algo, reference=reference, filename1 = filename1, filename2=filename2,notitle=notitle, $
+		shape_file = shape_file
 
 	; Die Box gibt an, in welchem Bereich 50 % der Daten liegen, und die Box inklusive Whisker gibt an, in welchem Bereich der Großteil der Daten liegt. 
 	; An der Lage des Medians innerhalb dieser Box kann man erkennen, ob eine Verteilung symmetrisch oder schief ist.
@@ -5542,7 +5284,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		endif
 
 		make_geo,lon,lat,grid=1
-		dem = get_coverage( lon, lat, coverage = cov,limit = limit, found = found)
+		dem = get_coverage( lon, lat, coverage = cov,limit = limit, found = found, shape_file = shape_file)
 		if ~found then begin & ok = dialog_message('box_plot: coverage '+cov+' not defined!') & return & end
 
 		ref  =  percentile(ref[where(ref ne ndv_ref and dem eq 1)],[.5,.75,.25,.975,.025])
@@ -5565,7 +5307,7 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 		annex = (sat eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
 		set_algolist, algo_list, sat = sat, data = dat[0], exclude = [algo,reference],/default
 		struc = get_all_avail_data(year,month,day,data=dat[0]+annex,sat=sat,level=level,algo_list=algo_list,coverage=coverage, $
-			glob=1,/make_compare,mean=mean,median=median,verbose=verbose,percentile=[.5,.75,.25,.975,.025],limit=limit)
+			glob=1,/make_compare,mean=mean,median=median,verbose=verbose,percentile=[.5,.75,.25,.975,.025],limit=limit, shape_file = shape_file)
 		if is_struct(struc) then begin
 			name  = [name,struc.algo_names]
 			array = [[array],[struc.PERCENTILE]]
@@ -5631,29 +5373,28 @@ pro boxplot, year, month, day, data=data, satellite = satellite, timeseries = ti
 ; 	!p.multi=0
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=prefix,land=land,sea=sea,limit=limit,$
-			save_as=save_as,verbose=verbose,win_nr=win_nr,antarctic=antarctic,arctic=arctic,liquid=liquid,ice=ice, $
-			algo1=algo1,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hist_cloud_type,notitle=notitle,sat2=sat2
+pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=prefix,limit=limit,$
+			save_as=save_as,verbose=verbose,win_nr=win_nr,liquid=liquid,ice=ice, $
+			algo1=algo1,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hist_cloud_type,notitle=notitle,sat2=sat2,$
+			coverage=coverage,shape_file=shape_file,level=level
 
 	pref   = keyword_set(prefix[0]) ? prefix[0]  : ''
 	pref2  = keyword_set(prefix[1]) ? prefix[1] : ''
 	hct    = keyword_set(hist_cloud_type) ? strlowcase(hist_cloud_type[0]) : '1d'
 	is_new = stregex(pref,'new',/fold,/bool) ? 1 : (stregex(pref2,'new',/fold,/bool) ? 2 : 0)
-	ls     = keyword_set(land) or keyword_set(sea)
 	win_nr = adv_keyword_set(win_nr) ? win_nr : 1
-; 	dat    = 'cot_ctp_hist2d'+(keyword_set(liquid) ? '_liq' : '')+(keyword_set(ice) ? '_ice' : '')
 	dat    = 'hist2d_cot_ctp'+(keyword_set(liquid) ? '_liq' : '')+(keyword_set(ice) ? '_ice' : '')
 	apx    = keyword_set(liquid) ? 'Liquid ': (keyword_set(ice) ? 'Ice ' : '')
-	level  = 'l3c' ; this needs to be changed once l3s has histos too
+	lev	= keyword_set(level) ? level : 'l3c'
 
-	algon1 = sat_name(algo1,sat1,year=year,month=month,level=level)
-	algon2 = sat_name(algo2,sat2,year=year,month=month,level=level)
+	algon1 = sat_name(algo1,sat1,year=year,month=month,level=lev)
+	algon2 = sat_name(algo2,sat2,year=year,month=month,level=lev)
 
 	if keyword_set(save_as) then begin
 		if save_as eq '1' then begin 
 			save_dum = !SAVE_DIR +'diffs/Diff_'+file_basename(file,is_hdf(file) ? '.hdf':'.nc')+'_-_'+$
 			file_basename(file2,is_hdf(file2) ? '.hdf':'.nc')+$
-			(keyword_set(land) ? '_land':'')+(keyword_set(sea) ? '_sea':'')+$
+			(keyword_set(cov) ? '_'+cov:'')+$
 			(keyword_set(limit) ? '_limit_'+strjoin(strcompress(string(limit,f='(f6.1)'),/rem),'_') : '')+$
 			'_cot_ctp_hist2d_'+(keyword_set(liquid) ? 'liq_' : '_')+(keyword_set(ice) ? 'ice_' : '_')+$
 			'1D_HIST.eps'
@@ -5668,9 +5409,9 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 
 	; get the input_data
 	if keyword_set(file) then begin
-		cci1       = get_data(year,month,day,file = file[0],algo=algo1,data=dat,sat=sat1,level=level,verbose=verbose,found=found,dim3=dim3,/print_filename)
+		cci1       = get_data(year,month,day,file = file[0],algo=algo1,data=dat,sat=sat1,level=lev,verbose=verbose,found=found,dim3=dim3,/print_filename)
 		if found then begin
-			dum = get_1d_hist_from_jch(cci1,algo1,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic,land=land,sea=sea,found=found)
+			dum = get_1d_hist_from_jch(cci1,algo1,bin_name=xtickname,limit=limit,coverage=coverage,shape_file=shape_file,found=found)
 			if found then begin
 				cot_array  = dum.cot
 				ctp_array  = dum.ctp
@@ -5687,9 +5428,9 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 		return
 	endelse
 	if keyword_set(file2) then begin
-		cci2       = get_data(year,month,day,file = file2,algo=algo2,data=dat,sat=sat2,level=level,verbose=verbose,found=found,dim3=dim3,print_filename=2)
+		cci2       = get_data(year,month,day,file = file2,algo=algo2,data=dat,sat=sat2,level=lev,verbose=verbose,found=found,dim3=dim3,print_filename=2)
 		if found then begin
-			dum = get_1d_hist_from_jch(cci2,algo2,bin_name=xtickname,limit=limit,antarctic=antarctic,arctic=arctic,land=land,sea=sea,found=found)
+			dum = get_1d_hist_from_jch(cci2,algo2,bin_name=xtickname,limit=limit,coverage=coverage,shape_file=shape_file,found=found)
 			if found then begin
 				cot_array  = is_defined(cot_array) ? [[cot_array],[dum.cot]] : dum.cot
 				ctp_array  = is_defined(ctp_array) ? [[ctp_array],[dum.ctp]] : dum.ctp
@@ -5710,14 +5451,14 @@ pro plot_1d_from_jch_4all,year=year,month=month,file,file2,sat1=sat1, prefix=pre
 	dumsat = (sat1 eq '' ? sat2 : sat1)
 	annex = (dumsat eq 'aatme' and total(dat[0] eq ['ctt','ctp','cph','cfc','cc_total','cth'])?'_day':'')
 	set_algolist, algo_list, sat = dumsat, data = dat, exclude = [algo1,algo2],/default
-	struc = get_all_avail_data(year,month,day,data=dat+annex,sat=dumsat,level=level,algo_list=algo_list,verbose=verbose)
+	struc = get_all_avail_data(	year,month,day,data=dat+annex,sat=dumsat,level=lev,algo_list=algo_list,verbose=verbose)
 	if is_struct(struc) then begin
 		for i = 0,n_elements(struc.ref_names)-1 do begin
 			tag = struc.ref_names[i]
 			num = (tag_name2num(struc,tag))
 			if tag eq 'modi' then tag = 'mod'
 			dum = struc.(num).data
-			dum = get_1d_hist_from_jch(dum,tag,limit=limit,antarctic=antarctic,arctic=arctic,land=land,sea=sea,found=found)
+			dum = get_1d_hist_from_jch(dum,tag,limit=limit,coverage=coverage,shape_file=shape_file,found=found)
 			if found then begin
 				cot_array = is_defined(cot_array) ? [[cot_array],[dum.cot]] 		: dum.cot
 				ctp_array = is_defined(ctp_array) ? [[ctp_array],[dum.ctp]] 		: dum.ctp

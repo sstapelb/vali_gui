@@ -1664,7 +1664,8 @@ endif
   win,  self.var.internal.window, _extra = _extra
   ss = size(*self.var.draw.draw_image) / self.var.draw.scalef
 
-  
+  _extra = keyword_set(_extra) ? _extra : {dummy:'EXTRA'}
+ 
   dum = strpos(strlowcase(tag_names(_extra)), 'xmargin')
   xmargin = max(dum, index) eq 0 ? (_extra).(index) : [0,0]
   dum = strpos(strlowcase(tag_names(_extra)), 'ymargin')

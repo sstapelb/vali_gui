@@ -496,6 +496,8 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 				'ctp_mean_th_ice'	: dat = 'ctp'
 				'ctp_mean_sc_liq'	: dat = 'ctp'
 				;------------------------------------------
+				'cot_37'			: dat = 'cot'
+				'cot_16'			: dat = 'cot'
 				'refl1_asc'			: dat = 'refl_vis006_asc'
 				'refl2_asc'			: dat = 'refl_vis008_asc'
 				'refl3a_asc'		: dat = 'refl_vis016_asc'
@@ -1102,7 +1104,7 @@ function ihistogram,data,bin_borders
 end
 ;------------------------------------------------------------------------------------------
 ; maps a filled shapefile (polygons only) onto a regular grid, also orbits via regular grid
-function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,offsets=offsets,found=found
+function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,offsets=offsets,found=found,no_data_idx=no_data_idx
 
 	found = 1
 	grd = adv_keyword_set(grid_res) ? float(grid_res) : 0.05
@@ -1147,6 +1149,7 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 						endif
 						index_lon = fix((lon_in - slon)*(1./grd))
 						index_lat = fix((lat_in - slat)*(1./grd))
+						no_data_idx = where(lon_in eq -999. or lat_in eq -999.,ndx_cnt) ; search for -999 as fillvalue
 					endelse
 				endif else begin
 					found = 0
@@ -1216,7 +1219,9 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 	!quiet=0
 	OBJ_DESTROY, myshape
 
-	if is_defined(index_lon) then filled = bilinear(filled, index_lon, index_lat)
+	if is_defined(index_lon) then begin
+		filled = bilinear(filled, index_lon, index_lat)
+	endif
 
 	return, (filled < 1b)
 
@@ -1554,24 +1559,23 @@ pro set_coverage, cov
 	cov      = [coverage,coverage+'_land',coverage+'_sea']
 end
 ;------------------------------------------------------------------------------------------
-function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage		, $
-						antarctic = antarctic, arctic = arctic, shape_file = shape_file, opposite = opposite, $
-						l3u_index = l3u_index, fillv_index = fillv_index, found = found, grid_res = grid_res, $
-						index = index, count = count, complement = complement, ncomplement = ncomplement	, $
-						msg = msg, l3ue = l3ue, l3ua = l3ua, claas = claas, germany = germany, offsets = offsets
+function get_coverage, 	lon, lat, dem = dem, limit = limit, coverage = coverage		, $
+						shape_file = shape_file, opposite = opposite, $
+						found = found, grid_res = grid_res, msg = msg, l3ue = l3ue, l3ua = l3ua, claas = claas, $
+						germany = germany, offsets = offsets, $
+						; now dont get confused! with all the indizes
+						; these four vars are the result of the where() function when looking for the value 1
+						index = index, count = count, complement = complement, ncomplement = ncomplement, $
+						fillv_index = fillv_index, $ 	; input variable : result will be set to 0 for this indices
+						no_data_idx = no_data_idx		; output variable: these indizes are set lon/lat is fillvalue,e.g, MSG out of bounds 
 
 	found = 1
 	count = 0
 	index =-1
-	
-	lim = keyword_set(limit) ? limit   : [-90.0,-180., 90.0,180.]
-	if n_elements(lim) ne 4 then begin
-		ok = dialog_message('Limit vector has unknown length.')
-		found = 0.
-		return,-1
-	endif
-	if keyword_set(antarctic) then lim = [-90.0,-180.,-60.0,180.]
-	if keyword_set(arctic)    then lim = [ 60.0,-180., 90.0,180.]
+	vali_set_path
+
+	cov = keyword_set(coverage) ? strlowcase(coverage) : 'full'
+
 	if keyword_set(germany) then begin
 		shape_file = !SHAPE_DIR + 'Germany/DEU_adm1.shp'
 		offsets = {grid:0.01,slon:5,elon:16,slat: 46,elat:56}
@@ -1590,65 +1594,60 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 		if fillv_index[0] eq -1 then fvi_cnt = 0
 	endif
 
-	l3ui_cnt = n_elements(l3u_index)
-	if l3ui_cnt eq 1 then begin
-		if l3u_index[0] eq -1 then l3ui_cnt = 0
+	if cov eq 'sea' then begin
+		sea  = 1
+		cov  = 'full'
+	endif else if cov eq 'land' then begin
+		land = 1
+		cov  = 'full'
+	endif else if cov eq 'mountains' then begin
+		mnts = 1
+		cov  = 'full'
+	endif else if stregex(cov,'_land',/bool) then begin
+		land = 1
+		cov  = strreplace(cov,'_land','')
+	endif else if stregex(cov,'_sea',/bool) then begin
+		sea  = 1
+		cov = strreplace(cov,'_sea','')
+	endif else if stregex(cov,'_mountains',/bool) then begin
+		mnts = 1
+		cov  = strreplace(cov,'_mountains','')
 	endif
+	if keyword_set(limit) then cov = 'limit' ; overwrites given coverage
 
-	if keyword_set(coverage) then begin
-		cov = strlowcase(coverage)
-		if cov eq 'sea' then begin
-			sea  = 1
-			cov  = 'full'
-		endif else if cov eq 'land' then begin
-			land = 1
-			cov  = 'full'
-		endif else if cov eq 'mountains' then begin
-			mnts = 1
-			cov  = 'full'
-		endif else if stregex(cov,'_land',/bool) then begin
-			land = 1
-			cov  = strreplace(cov,'_land','')
-		endif else if stregex(cov,'_sea',/bool) then begin
-			sea  = 1
-			cov = strreplace(cov,'_sea','')
-		endif else if stregex(cov,'_mountains',/bool) then begin
-			mnts = 1
-			cov  = strreplace(cov,'_mountains','')
-		endif
-		case cov of
-			''						: lim = [-90.0,-180.0, 90.0, 180.0]
-			'full'					: lim = [-90.0,-180.0, 90.0, 180.0]
-			'global'				: lim = [-90.0,-180.0, 90.0, 180.0]
-			'antarctica'			: lim = [-90.0,-180.0,-60.0, 180.0]
-			'antarctica_kgk'		: lim = [-90.0,-180.0,-75.0, 180.0]
-			'midlat_south'			: lim = [-60.0,-180.0,-30.0, 180.0]
-			'midlat_south_kgk'		: lim = [-75.0,-180.0,-45.0, 180.0]
-			'tropic'				: lim = [-30.0,-180.0, 30.0, 180.0]
-			'tropic_kgk'			: lim = [-10.0,-180.0, 10.0, 180.0]
-			'subtropic'				: lim = [-45.0,-180.0,-10.0, 180.0, 10.0,-180.0, 45.0, 180.0]
-			'midlat_north'			: lim = [ 30.0,-180.0, 60.0, 180.0]
-			'midlat_north_kgk'		: lim = [ 45.0,-180.0, 75.0, 180.0]
-			'midlats'				: lim = [-60.0,-180.0,-30.0, 180.0, 30.0,-180.0, 60.0, 180.0]
-			'midlats_kgk'			: lim = [-75.0,-180.0,-45.0, 180.0, 45.0,-180.0, 75.0, 180.0]
-			'polar'					: lim = [-90.0,-180.0,-60.0, 180.0, 60.0,-180.0, 90.0, 180.0]
-			'polar_kgk'				: lim = [-90.0,-180.0,-75.0, 180.0, 75.0,-180.0, 90.0, 180.0]
-			'europe'				: lim = [ 40.0,   0.0, 51.0,  20.0]
-			'australia'				: lim = [-10.0, 110.0,-40.0, 155.0]
-			'arctic'				: lim = [ 60.0,-180.0, 90.0, 180.0]
-			'arctic_kgk'			: lim = [ 75.0,-180.0, 90.0, 180.0]
-			'midlat_trop'			: lim = [-60.0,-180.0, 60.0, 180.0]
-			'pm60'					: lim = [-60.0,-180.0, 60.0, 180.0]
-			'northern_hemisphere'	: lim = [  0.0,-180.0, 90.0, 180.0]
-			'southern_hemisphere'	: lim = [-90.0,-180.0,  0.0, 180.0]
-			else					: begin & print,'coverage not defined!' & return,-1 & found = 0 & end
-		endcase
-	endif
+	case cov of
+		'limit'					: lim = limit
+		''						: lim = [-90.0,-180.0, 90.0, 180.0]
+		'full'					: lim = [-90.0,-180.0, 90.0, 180.0]
+		'global'				: lim = [-90.0,-180.0, 90.0, 180.0]
+		'antarctica'			: lim = [-90.0,-180.0,-60.0, 180.0]
+		'antarctica_kgk'		: lim = [-90.0,-180.0,-75.0, 180.0]
+		'midlat_south'			: lim = [-60.0,-180.0,-30.0, 180.0]
+		'midlat_south_kgk'		: lim = [-75.0,-180.0,-45.0, 180.0]
+		'tropic'				: lim = [-30.0,-180.0, 30.0, 180.0]
+		'tropic_kgk'			: lim = [-10.0,-180.0, 10.0, 180.0]
+		'subtropic'				: lim = [-45.0,-180.0,-10.0, 180.0, 10.0,-180.0, 45.0, 180.0]
+		'midlat_north'			: lim = [ 30.0,-180.0, 60.0, 180.0]
+		'midlat_north_kgk'		: lim = [ 45.0,-180.0, 75.0, 180.0]
+		'midlats'				: lim = [-60.0,-180.0,-30.0, 180.0, 30.0,-180.0, 60.0, 180.0]
+		'midlats_kgk'			: lim = [-75.0,-180.0,-45.0, 180.0, 45.0,-180.0, 75.0, 180.0]
+		'polar'					: lim = [-90.0,-180.0,-60.0, 180.0, 60.0,-180.0, 90.0, 180.0]
+		'polar_kgk'				: lim = [-90.0,-180.0,-75.0, 180.0, 75.0,-180.0, 90.0, 180.0]
+		'europe'				: lim = [ 40.0,   0.0, 51.0,  20.0]
+		'australia'				: lim = [-10.0, 110.0,-40.0, 155.0]
+		'arctic'				: lim = [ 60.0,-180.0, 90.0, 180.0]
+		'arctic_kgk'			: lim = [ 75.0,-180.0, 90.0, 180.0]
+		'midlat_trop'			: lim = [-60.0,-180.0, 60.0, 180.0]
+		'pm60'					: lim = [-60.0,-180.0, 60.0, 180.0]
+		'northern_hemisphere'	: lim = [  0.0,-180.0, 90.0, 180.0]
+		'southern_hemisphere'	: lim = [-90.0,-180.0,  0.0, 180.0]
+		else					: begin & print,'coverage not defined! ',cov & return,-1 & found = 0 & end
+	endcase
 
 	if ~keyword_set(lon) or ~keyword_set(lat) then begin
-		if keyword_set(grid_res) or keyword_set(l3u_index) then begin
-			grd = keyword_set(l3u_index) ? 0.05 : float(grid_res)
+		if keyword_set(grid_res) then begin
 			;for regular grids we dont need lon/lat
+			grd = float(grid_res)
 			si = [360.,180.] / grd
 			result = bytarr(si)
 			xx  = 0 > fix((lim[[1,3]] +180)*1./grd) < (si[0]-1)
@@ -1685,7 +1684,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	endif else grd = get_grid_res(lon)
 
 	if keyword_set(shape_file) then begin
-		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat,offsets=offsets)
+		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat,offsets=offsets,no_data_idx=no_data_idx)
 	endif else begin
 		if n_elements(lim) eq 0 then begin
 			; Do nothing result has been defined already
@@ -1700,9 +1699,9 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 			return,-1
 		endelse
 	endelse
-	
+
 	if keyword_set(land) or keyword_set(sea) then begin
-		ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',lon=lon,lat=lat,grid_res=grd,offsets=offsets)
+		ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',lon=lon,lat=lat,grid_res=grd,offsets=offsets,no_data_idx=no_data_idx)
 		result = (result eq 1) and (ddem eq (keyword_set(sea) ? 0:1))
 	endif else if keyword_set(mnts) then begin
 		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)
@@ -1712,8 +1711,6 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, land = land, sea = s
 	if fvi_cnt gt 0 then result[fillv_index] = 0
 
 	if keyword_set(opposite) then result = (result eq 0)
-
-	if l3ui_cnt gt 0 then result = result[l3u_index]
 
 	index = where(result eq 1,count,complement=complement,ncomplement=ncomplement)
 
@@ -2909,19 +2906,22 @@ function set_limits, longitude, latitude, four_elements = four_elements, bounds 
 end
 ;------------------------------------------------------------------------------------------
 ; sets predefined projections to use with map_image__define
-pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arctic, p0lon = p0lon, p0lat = p0lat,nobar=nobar, 	$ ; input 
-		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson, 		$ ; input 
-		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,no_grid=no_grid,				$ ; input 
-		ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder		, 	$ ; output
-		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify		, 						$
-		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
-		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format,position = position,horizon=horizon		  ; output
+pro set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,nobar=nobar	, $ ; input 
+		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson		, $ ; input 
+		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,no_grid=no_grid				, $ ; input 
+		ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder	, $ ; output
+		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify								, $
+		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats	, $
+		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format,position = position,horizon=horizon		, $	  ; output
+		Sat_P = Sat_P
 
 	box_axes = 1
 	ksl = keyword_set(limit)
+	cov = keyword_set(coverage) ? coverage : ''
+	ant = stregex(cov,'antarctic',/fold,/bool) 
+	arc = stregex(cov,'arctic',/fold,/bool) and ~ant
 
-	if ((keyword_set(globe) or keyword_set(antarctic) or keyword_set(arctic)   or $
-		keyword_set(goode) or keyword_set(hammer)    or keyword_set(aitoff)   or $
+	if ((keyword_set(globe) or ant or arc or keyword_set(goode) or keyword_set(hammer) or keyword_set(aitoff)   or $
 		keyword_set(mollweide) or keyword_set(sinusoidal) or keyword_set(robinson) or $
 		keyword_set(stereographic) or keyword_set(msg) or keyword_set(lambert) or keyword_set(enhanced_robinson))) then begin
 		; set map_image defaults
@@ -2938,15 +2938,15 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if ~adv_keyword_set(magnify) then magnify = 2
 
 		; create limit vector
-		if keyword_set(antarctic) then p0lat = -90
-		if keyword_set(arctic)    then p0lat =  90
+		if ant then p0lat = -90
+		if arc then p0lat =  90
 		p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
 		p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
-		if keyword_set(antarctic) or keyword_set(arctic) or keyword_set(globe) then begin
+		if ant or arc or keyword_set(globe) then begin
 			limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
 									[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
 
-			if keyword_set(antarctic) then begin
+			if ant then begin
 				mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
 				limit = limit + ([-1, 0,-1, 0,-1, 0,-1, 0] * (keyword_set(msg) ? 40:50))
 				no_color_bar = 0
@@ -2955,7 +2955,7 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 				label=1
 				no_draw_border=0
 			endif
-			if keyword_set(arctic) then begin
+			if arc then begin
 				mollweide = 0 & goode = 0 & hammer = 0 & aitoff = 0 & robinson = 0 & sinusoidal = 0
 				limit = limit + ([ 1, 0, 1, 0, 1, 0, 1, 0] * (keyword_set(msg) ? 40:50))
 				no_color_bar = 0
@@ -2981,12 +2981,26 @@ pro set_proj, globe = globe, limit = limit, antarctic = antarctic, arctic = arct
 		if keyword_set(stereographic) then begin & stereographic = 1 & no_color_bar = 0 & ortho = 0 & bar_horizontal = 0 & limit = [-90,((p0lon mod 360) -90),90,((p0lon mod 360) +90)] & end
 		if keyword_set(lambert) then begin & print,'lambert' & ortho = 0 & stereographic = 1 & end
 		if keyword_set(msg) then begin
-			if ~keyword_set(antarctic) and ~keyword_set(arctic) then begin
-				p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
-				p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
-				limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
-										[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
-			endif
+			if keyword_set(only_real_msg) then begin
+				er_km  = 6371. 	; earth radius
+				geo_km = 35786.	; geo stational orbit height
+				SAT_P = [geo_km/er_km +1,0.0,0.0]
+				limit=([0.,-1.,1., 0., 0., 1., -1.,0.]*81.2)
+				p0lon=0.
+				p0lat=0.
+				ortho   = 0
+				iso     = 0
+			endif else begin
+				if ~ant and ~arc then begin
+					p0lat = ( -90) > ( keyword_set(p0lat) ? p0lat[0] : 0 ) <  90
+					p0lon = (-360) > ( keyword_set(p0lon) ? p0lon[0] : 0 ) < 360
+; 					limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon+180.,0.,p0lon+90.,p0lat-90.,p0lon] : $
+; 											[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+					limit = p0lat ge 0 ? 	[0.,p0lon-90.,90.-p0lat,p0lon,0.,p0lon+90.,p0lat-90.,p0lon] : $
+											[0.,p0lon-90.,p0lat+90.,p0lon,0.,p0lon+90.,-90.-p0lat,p0lon+180.]
+											print,limit
+				endif
+			endelse
 			no_color_bar = 0
 			bar_horizontal = 0
 			no_draw_border=0
@@ -3303,7 +3317,7 @@ function read_modis_obj_val, stringname, group, value = value,found=found
 end
 ;------------------------------------------------------------------------------------------
 pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dimension = dimension, found = found, $
-		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, algo=algo, offsets = offsets, claas=claas, $
+		nise = nise,nsidc=nsidc,pick_file=pick_file, osisaf=osisaf, offsets = offsets, claas=claas, $
 		msg = msg, cms_msg = cms_msg ; MSG: MSG with DIMS: [3712,3712]; CMS_MSG: MSG with DIMS: [3636,3636]
 
 	ndim  = keyword_set(dimension) ? (n_elements(dimension) < 2) : 2
@@ -3450,12 +3464,6 @@ pro make_geo, file = file, lon, lat, grid_res = grid_res, verbose = verbose, dim
 			lat = congrid(lat,dimension[0],dimension[1],/interp)
 		endif
 	endif
-
-; 	; reset lon to [-180,180]
-; 	idx = where(lon gt 180.,idxcnt)
-; 	if idxcnt gt 0 then begin
-; 		lon[idx] = lon[idx] - 360.
-; 	endif
 	
 end
 ;---------------------------------------------------------------------------------------------
@@ -8271,13 +8279,12 @@ pro set_algolist, algo_list, sat = sat, data = data, default = default, exclude 
 	endif
 end
 ;------------------------------------------------------------------------------------------
-function get_all_avail_data, year, month, day, orbit = orbit, data = data, level = level	, $
-			     timeseries = timeseries, satellite=satellite, algo_list = algo_list, $
-			     global_grid=global_grid, make_compareable = make_compareable	, $
-			     mean=mean, median=median, verbose=verbose,land=land,sea=sea	, $
-			     limit=limit,zonal_mean=zonal_mean,percentile=percentile		, $
-			     histograms=histograms,found=found,coverage=coverage		, $
-			     antarctic = antarctic, arctic = arctic
+function get_all_avail_data, year, month, day, orbit = orbit, data = data, level = level, $
+			     timeseries = timeseries, satellite=satellite, algo_list = algo_list	, $
+			     global_grid=global_grid, make_compareable = make_compareable			, $
+			     mean=mean, median=median, verbose=verbose, shape_file=shape_file		, $
+			     limit=limit,zonal_mean=zonal_mean,percentile=percentile				, $
+			     histograms=histograms,found=found,coverage=coverage
 
 	if keyword_set(algo_list) then begin
 		alle = algo_list 
@@ -8301,7 +8308,7 @@ function get_all_avail_data, year, month, day, orbit = orbit, data = data, level
 			if found then begin
 				make_geo,lon,lat,grid=get_grid_res(dum[*,*,0,0,0,0]),found=found, algo=alle[i]
 				area = 	get_coverage( lon, lat, coverage = coverage,limit = limit, found = found, $
-					antarctic=antarctic,arctic=arctic,land=land,sea=sea,index=ndidx,count=ndidx_cnt,/opposite)
+										index=ndidx,count=ndidx_cnt, shape_file=shape_file,/opposite)
 				if ndidx_cnt gt 0 then dum[ndidx] = ndv
 				algoname = sat_name(alle[i],strmid(alle[i],0,3) eq 'gac' and (strlowcase(satellite) eq 'aatme' or $
 					   strlowcase(satellite) eq 'aatsr')?'noaa17':satellite,year=year,month=month,level=level)
@@ -8367,7 +8374,6 @@ pro read_all_avail_struc, struc, tagname, lat = lat, lon = lon, limit = limit, l
 	arr = struc.(num).data
 	if get_grid_res(lat) ne get_grid_res(arr) then make_geo,lon,lat,grid=get_grid_res(arr)
 	if ls then begin
-; 		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_dem(grid=get_grid_res(arr))
 		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_coverage(lon, lat, /land)
 	endif
 	if keyword_set(limit) then begin
@@ -9013,15 +9019,18 @@ function get_hct_data, hist_cloud_type, array, algoname, relative = relative, sd
 		return, arr
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_hct_ratio, array, sdum, limit=limit, antarctic = antarctic, arctic=arctic,lon=lon,lat=lat,dem=dem, land=land,sea=sea, $
-			void_index = void_index, shape_file = shape_file, fillv_index = fillv_index, relative = relative, texstyle = texstyle
+function get_hct_ratio, array, sdum, limit=limit, coverage = coverage, shape_file = shape_file,  $
+			void_index = void_index, fillv_index = fillv_index, relative = relative, texstyle = texstyle, $
+			area = area
 
 	bild = array
 
 	if keyword_set(relative) then bild = bild/100. * sdum
 
-	area = get_coverage( lon, lat, dem = dem, limit = limit, land = land, sea = sea, shape_file = shape_file, $
-						antarctic = antarctic, arctic = arctic, coverage = coverage, fillv_index = fillv_index)
+	;we dont need lon/lat info JCH should alway be on a regular grid size
+	area = 	keyword_set(area) ? area : $
+			get_coverage( grid = get_grid_res(array[*,*,0,0,0]), limit = limit, coverage = coverage, shape_file = shape_file, $
+						  fillv_index = fillv_index)
 
 	void_index = where((sdum*area) eq 0,complement=nvoid,ncomp=nvoid_cnt)
 
@@ -9100,14 +9109,14 @@ function get_hct_maxtype, array, algo, grid_res = grid_res, lon=lon, lat=lat, fi
 	dum = max(dum_maxtype,dim=3,max_index)
 	max_type = fix(max_index / product(si))
 	idx = where(max_count eq 0,idxcnt)
-	if idxcnt gt 0 then max_type[idx] = -1
+	if idxcnt gt 0 then max_type[idx] = fillvalue
 
 	return, max_type
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found = found	, $
-				limit = limit, antarctic=antarctic, arctic=arctic	, $
-				lon=lon, lat=lat, dem=dem, land=land, sea=sea, fillv_index=fillv_index,shape_file=shape_file
+function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found = found, $
+				limit = limit, fillv_index = fillv_index, shape_file = shape_file, $
+				coverage = coverage
 
 	found = 1.
 	if n_params() ne 2 then begin
@@ -9121,23 +9130,22 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 
 	si = size(bild,/dim)
 	if n_elements(si) ne 4 then begin
-		print, 'array must have 4 dimensions (x,y,cotbin,ctpbin)'
+		print, 'get_1d_hist_from_jch: array must have 4 dimensions (x,y,cotbin,ctpbin)'
 		found = 0.
 		return, -1.
 	endif
 	alg = ref2algo(algo)
 	is_gewex = total(alg eq ['gewex','gac2-gewex','patmos','patmos_old','isccp'])
 
-	if ~keyword_set(lon) or ~keyword_set(lat) then begin
-		make_geo,lon,lat,grid=get_grid_res(bild[*,*,0,0,0]),found=found
-		if not found then begin
-			print,'Could not find Lon/lat info!'
-			return,-1
-		endif
-	endif
+	;we dont need lon/lat info JCH should alway be on a regular grid size
+	area = get_coverage( grid = get_grid_res(bild), limit = limit, coverage = coverage, shape_file = shape_file, $
+						 complement = lidx, ncomplement = lidx_cnt, fillv_index = fillv_index, count = valid_cnt)
 
-	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage,shape_file=shape_file, $
-			antarctic = antarctic, arctic = arctic, /opposite, index = lidx, count = lidx_cnt, fillv_index=fillv_index)
+	if valid_cnt lt 20 then begin
+		ok = dialog_message('get_1d_hist_from_jch: Not enough data points found! Choose another Area!')
+		found = 0.
+		return, -1.
+	endif
 
 	if lidx_cnt gt 0 then begin & $
 		for i = 0,si[2] -1 do begin & $
@@ -9212,9 +9220,8 @@ function get_1d_hist_from_jch, bild, algo, data=data, bin_name = bin_name, found
 
 end
 ;-------------------------------------------------------------------------------------------------------------------------
-function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea = sea, limit = limit	, $
-				   longitude = longitude, latitude = latitude, fillvalue = fillvalue, found = found		, $
-				   antarctic = antarctic, arctic = arctic, fillv_index = fillv_index,shape_file=shape_file
+function get_2d_rel_hist_from_jch, array, algoname, limit = limit, fillvalue = fillvalue, found = found		, $
+				   fillv_index = fillv_index, shape_file = shape_file, coverage = coverage 
 
 	found = 1.
 	if n_params() ne 2 then begin
@@ -9236,15 +9243,22 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 		return, -1.
 	endif
 
-	if ~keyword_set(latitude) or ~keyword_set(longitude) then begin
-		make_geo ,lon,lat,grid=get_grid_res(array[*,*,0,0])
-	endif else begin
-		lon = longitude
-		lat = latitude
-	endelse
+; 	if ~keyword_set(latitude) or ~keyword_set(longitude) then begin
+; 		make_geo ,lon,lat,grid=get_grid_res(array[*,*,0,0])
+; 	endif else begin
+; 		lon = longitude
+; 		lat = latitude
+; 	endelse
 
-	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, fillv_index = fillv_index, $
-				antarctic = antarctic, arctic = arctic, /opposite, index = lidx, count = lidx_cnt,shape_file=shape_file)
+	;we dont need lon/lat info JCH should alway be on a regular grid size
+	area = 	get_coverage( grid = get_grid_res(array[*,*,0,0,0]), limit = limit, coverage = coverage, shape_file = shape_file, $
+						  complement = lidx, ncomplement = lidx_cnt, fillv_index = fillv_index, count = valid_cnt)
+
+	if valid_cnt lt 50 then begin
+		ok = dialog_message('Get_2d_rel_hist_from_jch: Not enough data points found! Choose another Area!')
+		found = 0.
+		return, -1.
+	endif
 
 	bild = fltarr(si[2:3])
 	for i = 0,si[2] -1 do begin & $
@@ -9298,7 +9312,7 @@ function get_2d_rel_hist_from_jch, array, algoname, dem = dem, land = land, sea 
 
 end	
 ;---------------------------------------------------------------------------------------------------------------------------------------------
-function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit=limit, land=land,sea=sea,arctic=arctic,antarctic=antarctic, $
+function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit=limit, coverage = coverage, $
 					xtickname=xtickname, bin_val=bin_val, ytitle = ytitle, hist_name=hist_name, found=found, $
 					var_dim_names=var_dim_names, file=file, fillv_index = fillv_index,shape_file=shape_file
 
@@ -9313,11 +9327,9 @@ function get_1d_rel_hist_from_1d_hist, array, dataname, algoname=algoname, limit
 			return,-1l
 		endif
 	endif
-; 
-	make_geo,lon,lat,grid=get_grid_res(array[*,*,0,0]),file = file
 
-	area = 	get_coverage( 	lon, lat, dem = dem, limit = limit, land = land, sea = sea, coverage = coverage, $
-				antarctic = antarctic, arctic = arctic, fillv_index = fillv_index,shape_file = shape_file, index = lidx, count = lidx_cnt)
+	area = 	get_coverage( grid=get_grid_res(array[*,*,0,0]), limit = limit, coverage = coverage, $
+				fillv_index = fillv_index, shape_file = shape_file)
 
 	dum    = array * 0
 	si     = [si,1]
@@ -10558,7 +10570,6 @@ pro create_time_series,data,algon,coverage,period=period
 		return
 	endif
 	make_geo,lon,lat,grid=grid,algo=cli
-; 	dem = get_dem(lon,lat,grid=grid)
 	dem = get_coverage(lon, lat, /land)
 
 	case strmid(dat,0,3) of

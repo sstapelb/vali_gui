@@ -6,12 +6,17 @@ function get_grid_res, data, found = found, cci_l3u_eu = cci_l3u_eu, cci_l3u_af 
 	if n_elements(data) gt 0 then begin
 		found=1.
 		dumdata = data
-		if size(dumdata,/n_dim) eq 3 then begin
-			si  = size(dumdata,/dim)
-			dum = where(si eq 3,scnt,complement=sidx)
-			if scnt eq 1 then dumdata = indgen(si[sidx])
+		dims  = size(dumdata,/dim)
+		ndims = size(dumdata,/n_dim)
+		if ndims eq 3 then begin
+			dum = where(dims eq 3,scnt,complement=sidx)
+			dumdata = scnt eq 1 ? indgen(dims[sidx]) : indgen(dims[0:1])
+		endif else if ndims gt 3 then begin
+			dumdata = indgen(dims[0:1])
 		endif
-		if size(dumdata,/n_dim) eq 2 then begin
+		dims  = size(dumdata,/dim)
+		ndims = size(dumdata,/n_dim)
+		if ndims eq 2 then begin
 			dum = [360.,180.]/float(size(dumdata,/dim))
 			if dum[0] eq dum[1] then begin ; regular grid?
 				if total(dum[0] eq [0.01,0.02,0.05,0.10,0.25,0.50,0.75,1.00,2.00,2.50,5.00]) then return,dum[0] ; CCI vali standards
