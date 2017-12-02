@@ -1104,7 +1104,7 @@ function ihistogram,data,bin_borders
 end
 ;------------------------------------------------------------------------------------------
 ; maps a filled shapefile (polygons only) onto a regular grid, also orbits via regular grid
-function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,offsets=offsets,found=found,no_data_idx=no_data_idx
+function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=grid_res,offsets=offsets,found=found,no_shape_idx=no_shape_idx
 
 	found = 1
 	grd = adv_keyword_set(grid_res) ? float(grid_res) : 0.05
@@ -1147,9 +1147,9 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 							print,'shape2grid: Bring longitude to [-180,180]'
 							lon_in[ilondum]= 360.-lon_in[ilondum]
 						endif
-						index_lon = fix((lon_in - slon)*(1./grd))
-						index_lat = fix((lat_in - slat)*(1./grd))
-						no_data_idx = where(lon_in eq -999. or lat_in eq -999.,ndx_cnt) ; search for -999 as fillvalue
+						index_lon  = fix((lon_in - slon)*(1./grd))
+						index_lat  = fix((lat_in - slat)*(1./grd))
+						no_shape_idx = where(lon_in eq -999. or lat_in eq -999.,ndx_cnt) ; search for -999 as fillvalue
 					endelse
 				endif else begin
 					found = 0
@@ -1193,7 +1193,8 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 	myshape = OBJ_NEW('IDLffShape', file_test(sfile) ? sfile : shape_file)
 	myshape -> GetProperty, N_ENTITIES=num_ent
 
-	filled = BYTARR(x_dim,y_dim)
+; 	filled = BYTARR(x_dim,y_dim)
+	filled = INTARR(x_dim,y_dim)
 	!quiet=1 ; suppress "No points in polygon" warnings by polyfillv
 
 	FOR x=0l,num_ent-1 DO BEGIN
@@ -1221,9 +1222,12 @@ function shape2grid, shape_file,longitude=longitude,latitude=latitude,grid_res=g
 
 	if is_defined(index_lon) then begin
 		filled = bilinear(filled, index_lon, index_lat)
+		if ndx_cnt gt 0 then filled[no_shape_idx] = -1
 	endif
 
-	return, (filled < 1b)
+	no_shape_idx = where(filled le 0)
+
+	return, (0 > filled < 1)
 
 end
 ;------------------------------------------------------------------------------------------
@@ -1567,7 +1571,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, coverage = coverage	
 						; these four vars are the result of the where() function when looking for the value 1
 						index = index, count = count, complement = complement, ncomplement = ncomplement, $
 						fillv_index = fillv_index, $ 	; input variable : result will be set to 0 for this indices
-						no_data_idx = no_data_idx		; output variable: these indizes are set lon/lat is fillvalue,e.g, MSG out of bounds 
+						no_shape_idx = no_shape_idx		; output variable: where shape file has no coverage 
 
 	found = 1
 	count = 0
@@ -1684,7 +1688,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, coverage = coverage	
 	endif else grd = get_grid_res(lon)
 
 	if keyword_set(shape_file) then begin
-		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat,offsets=offsets,no_data_idx=no_data_idx)
+		result = shape2grid(shape_file,grid_res=grd,lon=lon,lat=lat,offsets=offsets,no_shape_idx=no_shape_idx)
 	endif else begin
 		if n_elements(lim) eq 0 then begin
 			; Do nothing result has been defined already
@@ -1701,7 +1705,7 @@ function get_coverage, 	lon, lat, dem = dem, limit = limit, coverage = coverage	
 	endelse
 
 	if keyword_set(land) or keyword_set(sea) then begin
-		ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',lon=lon,lat=lat,grid_res=grd,offsets=offsets,no_data_idx=no_data_idx)
+		ddem = keyword_set(dem) ? dem : shape2grid(!SHAPE_DIR + 'Land_Mask/ne_10m_land.shp',lon=lon,lat=lat,grid_res=grd,offsets=offsets);,no_shape_idx=no_shape_idx)
 		result = (result eq 1) and (ddem eq (keyword_set(sea) ? 0:1))
 	endif else if keyword_set(mnts) then begin
 		ddem = keyword_set(dem) ? dem : get_dem(lon,lat,grid_res=grd)

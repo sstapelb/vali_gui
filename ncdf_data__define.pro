@@ -4884,17 +4884,16 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
 			endif else begin
 				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level, $
-				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,out=out		, $
-				sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, htypes = hct[0],verbose = verbose	, $
-				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
-				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide	, $
-				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson	,log=log, $
+				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,out=out,sat1=sat,sat2=satn			, $
+				algo2=algo2,algo1=algo,htypes=hct[0],verbose=verbose,year=year,month=month,day=day		, $
+				orbit = orbit, datum1 = datum1, datum2 = datum2,log=log,shape_file=shape_file			, $
+				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide, hammer=hammer,goode=goode		, $
+				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson									, $
 				diff_only=pcdts,hist_only=pchist,maps_only=pcvar,other=oth,ctable=ctab,zonal_only=pczm	, $
 				box_only = pcmts,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg	, $
-				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify	, $
-				wtext = self.showpvalID,countries=countries,notitle=notitle,no_continents=no_continents,$
-				no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2, $
-				shape_file=shape_file
+				timeseries=pcmult,dim3=dim3,coverage=cov,addtext=addtext[0],rot=rot,magnify=magnify		, $
+				wtext = self.showpvalID,countries=countries,notitle=notitle,no_continents=no_continents	, $
+				no_grid=no_grid,no_label=no_label,no_box=no_box,version1=version1,version2=version2
 				if show_values and ~pchist and ~pczm and ~pcmts and ~pcvar then show_pixel_value, out.bild, out.lon,out.lat, $
 				data = varname, unit = out.unit, wtext = self.showpvalID
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)

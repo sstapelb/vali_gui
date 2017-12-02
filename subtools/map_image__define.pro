@@ -1364,10 +1364,10 @@ end
 ;----------------------------------------------------------------------------------------
 
 function map_image::set_limit
-  d1=min(*self.var.data.longitude, i1)
-  d2=max(*self.var.data.longitude, i2)
-  d3=min(*self.var.data.latitude,  i3)
-  d4=max(*self.var.data.latitude,  i4)
+  d1=min(*self.var.data.longitude, i1,/nan)
+  d2=max(*self.var.data.longitude, i2,/nan)
+  d3=min(*self.var.data.latitude,  i3,/nan)
+  d4=max(*self.var.data.latitude,  i4,/nan)
 
   i1 = where(*self.var.data.longitude eq d1)
   if n_elements(i1) gt 1 then i1 = i1[n_elements(i1)/2]
@@ -1588,7 +1588,7 @@ end
 ;----------------------------------------------------------------------------------------
 
 function map_image::init, $
-                  img, lat, lon, $
+                  image, latitude, longitude, $
                   no_copy = no_copy, $
                   no_project = no_project, $
                   no_color_bar = no_color_bar, $
@@ -1596,15 +1596,24 @@ function map_image::init, $
                   no_continents = no_continents, $
                   debug = debug, $
                   logarithmic = logarithmic, $
+                  no_shape_idx = no_shape_idx, $
                   _extra = _extra
 
-         
-   if size(img, /type) * size(lat, /type) * size(lon, /type) eq 0 then begin
+  if size(image, /type) * size(latitude, /type) * size(longitude, /type) eq 0 then begin
       print, "Image or lon or lat are not defined:"
-      help, img, lat, lon
+      help, image, latitude, longitude
       return, 0
   endif
-  image = img
+  img = image
+  lat = latitude
+  lon = longitude
+  if n_elements(no_shape_idx) gt 1 then begin
+      ; Special keyword introduced by sstapelb
+      ; nans will not be plotted and appear in 
+      ; background color; used together with shape_files
+      lon[no_shape_idx] = !values.f_nan
+      lat[no_shape_idx] = !values.f_nan
+  endif
 
   self.var.internal.debug = keyword_set(debug)
   self.var.internal.time = systime(1)
@@ -1612,7 +1621,7 @@ function map_image::init, $
 
  if size(_extra,/type) eq 8 then begin
    if keyword_set(logarithmic) then begin
-	image = alog10(image)
+	img = alog10(img)
 	if is_tag(_extra,'max') then _extra.max = alog10(_extra.max>0.0001)
 	if is_tag(_extra,'min') then _extra.min = alog10(_extra.min>0.00001)
 ; 	if is_tagname(_extra,'min') then _extra.min = alog10(_extra.min)
@@ -1620,15 +1629,10 @@ function map_image::init, $
    if is_tag(_extra,'N_LEV') then self.var.draw.n_lev = _extra.n_lev
 endif
 
-; !EXCEPT= (keyword_set(debug) ? 2 : 0)
-
   if n_params() eq 3 then begin
-;       print,'Init: set_one_var, image'
-      self -> set_one_var, 'image', image, no_copy = no_copy, error = error
+      self -> set_one_var, 'image', img, no_copy = no_copy, error = error
       if error eq 1 then return, 0
-;       print,'Init: set_one_var, lon'
       self -> set_one_var, 'longitude', lon, no_copy = no_copy
-;       print,'Init: set_one_var, lat'
       self -> set_one_var, 'latitude', lat, no_copy = no_copy
   endif else no_project = 1
 
