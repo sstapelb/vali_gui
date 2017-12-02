@@ -127,7 +127,7 @@ pro plot_hist_2d, h2d_array, bin, cc, min_a, max_a, n_gesamt, regr, save_as = sa
 	log=~keyword_set(bar_discontinous),col_table=col_tab,orientation=-90,xticklen=xticklen		, $
 	title = title, xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick	, $
 	bar_tickname=bar_tickname,bar_tickv=bar_tickv,xmargin=xmargin,ymargin=ymargin,ytickv=ytickv	, $
-	position=position,bar_discontinous=bar_discontinous,color=color,yticklen=yticklen,ytickv=ytickv
+	position=position,bar_discontinous=bar_discontinous,color=color,yticklen=yticklen
 	if n_gesamt gt 0 and ~keyword_set(bar_discontinous) then begin
 		if not keyword_set(no_regr) then begin
 			oplot,!x.crange,regr[1]*!x.crange+regr[0]/bin,linestyle=2,thick=thick
