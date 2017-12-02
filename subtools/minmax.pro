@@ -5,7 +5,11 @@ function minmax, werte, pos, nan = nan, absolute = absolute, no_data_value = no_
 		return,-1
 	endif
 
-	dummy = n_elements(no_data_value) gt 0 ? werte[where(werte ne no_data_value)] : werte
+	dummy = werte
+	if n_elements(no_data_value) gt 0 then begin
+		idx = where(werte ne no_data_value,idxcnt)
+		if idxcnt gt 0 then dummy = werte[idx]
+	endif
 
 	mi = min(dummy, p1, nan = nan, absolute = absolute)
 	ma = max(dummy, p2, nan = nan, absolute = absolute)

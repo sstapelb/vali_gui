@@ -264,11 +264,12 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 		meridian_style = meridian_style, meridian_nonumber = meridian_nonumber,meridian_interval = meridian_interval, $
 		noerase = noerase, range = range, data_idx = data_idx,coast_psym = coast_psym, bar_position = bar_position	, $
 		bar_tickname = bar_tickname, brewer = brewer,continents = continents, countries=countries,limit = limit		, $
-		box_axes = box_axes, lowres_bounderies = lowres_bounderies, offsets = offsets
+		box_axes = box_axes, lowres_bounderies = lowres_bounderies, offsets = offsets, found = found
 
 	if ~keyword_set(bar_nlev) then begin
 		bar_nlev = keyword_set(bar_tickname) ? n_elements(bar_tickname) : 4
 	endif
+	found =1
 	bar_dist		= keyword_set(bar_dist)				? bar_dist		: 0.
 	bar_format  	= keyword_set(bar_format) 			? bar_format	:'(f10.2)'
 	col_table		= adv_keyword_set(col_table)		? col_table 	: 2
@@ -280,17 +281,19 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 	; we want high resolution coasts and bounderies
 	if ~keyword_set(lowres_bounderies) and ~is_tag(_extra,'hires') then _extra = create_struct(_extra,{hires:1})
 
-	if adv_keyword_set(bild) then a = reform(bild) else begin & print, 'nothing to view2d -> return' & return & endelse
+	if adv_keyword_set(bild) then a = reform(bild) else begin & print, 'nothing to view2d -> return' & found = 0 & return & endelse
 	;check dimensions, switch [3,x,y] -> [x,y,3]
 	s_img = size(a)
 	true  = 0
 	if (s_img[0] lt 2) or (s_img[0] gt 3) then begin 
 		print, 'Image have to be 2D or 3D'
+		found = 0
 		return
 	endif else if s_img[0] eq 3 then begin
 		true = 1
 		if (s_img[1] ne 3) and (s_img[3] ne 3) then begin
 			print, 'at least one dim has to be of size 3'
+			found =0 
 			return
 		endif
 		if s_img[1] eq 3 then a = transpose(a, [1, 2, 0])
@@ -372,6 +375,7 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 							print,'MSG Limit: At least one Corner is out of bounds!'
 							print,'X min/max', minmax(xx)
 							print,'Y min/max', minmax(yy)
+							found = 0
 							return
 						endif else msg_size = [xx,yy]
 					endif else begin
@@ -474,12 +478,12 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 
 	;	testen ob bild 2 oder 3 dimensionen hat	=> true_dim & bildgroessen (six, siy) & bar (0: nix, 1:vertikal, 2:horizontal) & mini, maxi
 	s_img = size(a)
-	if (s_img[0] lt 2) or (s_img[0] gt 3) then begin & print, 'Image have to be 2D or 3D' & return & endif
+	if (s_img[0] lt 2) or (s_img[0] gt 3) then begin & print, 'Image have to be 2D or 3D' & found = 0 & return & endif
 	if s_img[0] eq 2 then true = 0 else true = 1
 	if true then begin
 		true_dim = where(s_img[1:3] eq 3, dum)
 		true_dim = true_dim[0] + 1
-		if dum lt 1 then begin & print, 'at least one dim have to got size of 3' & return & endif
+		if dum lt 1 then begin & print, 'at least one dim have to got size of 3' & found = 0 & return & endif
 		case true_dim of
 			1:begin & six = float(s_img[2]) & siy = float(s_img[3]) & end
 			2:begin & six = float(s_img[1]) & siy = float(s_img[3]) & end
@@ -504,14 +508,14 @@ pro view2d, bild, aspect = aspect, _extra = _extra, bw = bw, color_bar = color_b
 			data_idx = bytarr(six, siy)
 			if no_data_idx[0] ne -1 then data_idx[no_data_idx] = 1
 			data_idx = where(data_idx ne 1)
-			if data_idx[0] eq -1 then begin & print, 'nothing to view2d -> return' & return & endif
+			if data_idx[0] eq -1 then begin & print, 'nothing to view2d -> return' & found = 0 & return & endif
 			fin_idx = where(finite(a[data_idx]), fin_cou, complement = nan_idx, ncomplement = nan_cou)
-			if fin_cou le 0 then begin & print, 'nothing to view2d -> return' & return & endif
+			if fin_cou le 0 then begin & print, 'nothing to view2d -> return' & found = 0 & return & endif
 			data_idx = data_idx[fin_idx]
 			if nan_cou gt 0 then no_data_idx = [no_data_idx, data_idx[nan_idx]]
 		endif else begin
 			fin_idx = where(finite(a), fin_cou, complement = nan_idx, ncomplement = nan_cou)
-			if fin_cou le 0 then begin & print, 'nothing to view2d -> return' & return & endif
+			if fin_cou le 0 then begin & print, 'nothing to view2d -> return' & found = 0 & return & endif
 			if nan_cou gt 0 then begin
 				no_data_idx	= nan_idx
 				data_idx	= fin_idx

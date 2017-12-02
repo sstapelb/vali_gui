@@ -330,34 +330,34 @@ function get_product_name, data, algo=algo, upper_case = upper_case, lower_case 
 	endif
 	if total(alg eq ['coll6','coll5','mod','myd','mod2','myd2']) then begin
 		case dat of
-			'ctp_corrected'		: dat = 'ctp'
-			'cth_corrected'		: dat = 'cth'
-			'ctt_corrected'		: dat = 'ctt'
-			'cfc_cloudsgt03'	: dat = 'cfc'
-			'cfc_cloudsgt02'	: dat = 'cfc'
-			'cfc_cloudsgt01'	: dat = 'cfc'
-			'cfc_allclouds'		: dat = 'cfc'
-			'cfc_allclouds_day'	: dat = 'cfc_day'
+			'ctp_corrected'			: dat = 'ctp'
+			'cth_corrected'			: dat = 'cth'
+			'ctt_corrected'			: dat = 'ctt'
+			'cfc_cloudsgt03'		: dat = 'cfc'
+			'cfc_cloudsgt02'		: dat = 'cfc'
+			'cfc_cloudsgt01'		: dat = 'cfc'
+			'cfc_allclouds'			: dat = 'cfc'
+			'cfc_allclouds_day'		: dat = 'cfc_day'
 			'cfc_allclouds_night'	: dat = 'cfc_night'
-			'cc_total'		: dat = 'cfc'
-			'cc_total_day'		: dat = 'cfc_day'
-			'cc_total_night'	: dat = 'cfc_night'
-			'cwp_ice'		: dat = 'iwp'
-			'cwp_liq'		: dat = 'lwp'
-			'hist2d_cot_ctp'	: dat = 'cot_ctp_hist2d'
+			'cc_total'				: dat = 'cfc'
+			'cc_total_day'			: dat = 'cfc_day'
+			'cc_total_night'		: dat = 'cfc_night'
+			'cwp_ice'				: dat = 'iwp'
+			'cwp_liq'				: dat = 'lwp'
+			'hist2d_cot_ctp'		: dat = 'cot_ctp_hist2d'
 			'hist2d_cot_ctp_liq'	: dat = 'cot_ctp_hist2d_liq'
 			'hist2d_cot_ctp_ice'	: dat = 'cot_ctp_hist2d_ice'
-			'h_cod_cp'		: dat = 'cot_ctp_hist2d'
-			'jch'			: dat = 'cot_ctp_hist2d'
-			'jch_liq'		: dat = 'cot_ctp_hist2d_liq'
-			'jch_ice'		: dat = 'cot_ctp_hist2d_ice'
-; 			'cer_liq'		: dat = 'cer_37_liq'
-; 			'cer_ice'		: dat = 'cer_37_ice'
-; 			'ref_liq'		: dat = 'cer_37_liq'
-; 			'ref_ice'		: dat = 'cer_37_ice'
-			'ref_liq'		: dat = 'cer_liq'
-			'ref_ice'		: dat = 'cer_ice'
-			else	:
+			'h_cod_cp'				: dat = 'cot_ctp_hist2d'
+			'jch'					: dat = 'cot_ctp_hist2d'
+			'jch_liq'				: dat = 'cot_ctp_hist2d_liq'
+			'jch_ice'				: dat = 'cot_ctp_hist2d_ice'
+; 			'cer_liq'				: dat = 'cer_37_liq'
+; 			'cer_ice'				: dat = 'cer_37_ice'
+; 			'ref_liq'				: dat = 'cer_37_liq'
+; 			'ref_ice'				: dat = 'cer_37_ice'
+			'ref_liq'				: dat = 'cer_liq'
+			'ref_ice'				: dat = 'cer_ice'
+			else					:
 		endcase
 	endif
 
@@ -2781,7 +2781,7 @@ pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 
 	if ~keyword_set(bild) then return
 	dat = keyword_set(data) ? strupcase(data[0]) : ''
-	uni = keyword_set(unit) ? strupcase(unit) : ''
+	uni = keyword_set(unit) ? strreplace(unit,['\[','\]'],['','']) : ''
 
 	if keyword_set(lon_in) and keyword_set(lat) then begin 
 		lon = lon_in
@@ -2816,8 +2816,8 @@ pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 				if between(lo,0,si[0]) and between(la,0,si[1]) then begin
 					dum_string = '['+strjoin(string([lo,la],f='(i5)'),',')+'] '
 					werte      = bitset ? '['+strjoin(strcompress( where( (fix(bild_dum[lo,la]>0) and 2^(indgen(11))) ne 0),/rem ),',')+']' : $
-							strcompress(bild_dum[lo,la],/rem)
-					widget_control,wtext,set_value='[x,y] '+dum_string+' '+werte
+							strcompress(string(bild_dum[lo,la],f='(f12.2)'),/rem)
+					widget_control,wtext,set_value='[x,y] '+dum_string+' '+werte+uni
 				endif else widget_control,wtext,set_value=value
 			endif else begin
 				qw = where(between(lon,lo-1.,lo+1.) and between(lat,la-1.,la+1.),count)
@@ -2825,8 +2825,8 @@ pro show_pixel_value, bild, lon_in,lat, data = data, unit = unit, wtext = wtext
 					idx=qw[where((abs(lon[qw]-lo)+abs(lat[qw] -la)) eq min(abs(lon[qw]-lo)+abs(lat[qw] -la))) ]
 					dum_string = '['+strjoin(string([lo,la],f='(f6.1)'),',')+'] '
 					werte      = bitset ? '['+strjoin(strcompress( where( (fix(bild_dum[idx[0]]>0) and 2^(indgen(11))) ne 0),/rem ),',')+']' : $
-					strcompress(bild_dum[idx[0]],/rem)
-					widget_control,wtext,set_value=(bitset ? '' : '[lon,lat] ')+dum_string+' '+werte
+					strcompress(string(bild_dum[idx[0]],f='(f12.2)'),/rem)
+					widget_control,wtext,set_value=(bitset ? '' : '[lon,lat] ')+dum_string+' '+werte+uni
 				endif else widget_control,wtext,set_value=value
 			endelse
 		endif else widget_control,wtext,set_value=value
@@ -3819,14 +3819,14 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 		h1d_ctt = c5_l3 ? 'Cloud_Top_Temperature_Histogram_Counts' : 'Cloud_Phase_Optical_Properties_JHisto_vs_Temperature'
 		case strUpCase(data) OF
 ; 			;coll5/6 1d_histogramme ctp und ctt nicht! getrennt für ice+liquid
-			'HIST1D_CTT'		: hdf_var = h1d_ctt
-			'HIST1D_CTP'		: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
-			'HIST1D_COT_LIQ'	: hdf_var = 'Cloud_Optical_Thickness_Liquid_Histogram_Counts'
-			'HIST1D_COT_ICE'	: hdf_var = 'Cloud_Optical_Thickness_Ice_Histogram_Counts'
-			'HIST1D_CER_LIQ'	: hdf_var = 'Cloud_Effective_Radius_Liquid_Histogram_Counts'
-			'HIST1D_CER_ICE'	: hdf_var = 'Cloud_Effective_Radius_Ice_Histogram_Counts'
-			'HIST1D_CWP_LIQ'	: hdf_var = 'Cloud_Water_Path_Liquid_Histogram_Counts'
-			'HIST1D_CWP_ICE'	: hdf_var = 'Cloud_Water_Path_Ice_Histogram_Counts'
+			'HIST1D_CTT'			: hdf_var = h1d_ctt
+			'HIST1D_CTP'			: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
+			'HIST1D_COT_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_Liquid_Histogram_Counts'
+			'HIST1D_COT_ICE'		: hdf_var = 'Cloud_Optical_Thickness_Ice_Histogram_Counts'
+			'HIST1D_CER_LIQ'		: hdf_var = 'Cloud_Effective_Radius_Liquid_Histogram_Counts'
+			'HIST1D_CER_ICE'		: hdf_var = 'Cloud_Effective_Radius_Ice_Histogram_Counts'
+			'HIST1D_CWP_LIQ'		: hdf_var = 'Cloud_Water_Path_Liquid_Histogram_Counts'
+			'HIST1D_CWP_ICE'		: hdf_var = 'Cloud_Water_Path_Ice_Histogram_Counts'
 			;coll5 only
 			'HIST2D_CTT_CPH_DAY'	: hdf_var = 'Cloud_Phase_Infrared_Day_Joint_Histogram_vs_Temperature'
 			'HIST2D_CTT_CPH_NIGHT'	: hdf_var = 'Cloud_Phase_Infrared_Night_Joint_Histogram_vs_Temperature'
@@ -3834,114 +3834,115 @@ pro read_hdf4, 	hdf_file, data, verbose = verbose,find_tagnames=find_tagnames,	a
 			'HIST2D_CTP_CPH_DAY'	: hdf_var = 'Cloud_Phase_Infrared_Day_JHisto_vs_Pressure'
 			'HIST2D_CTP_CPH_NIGHT'	: hdf_var = 'Cloud_Phase_Infrared_Night_JHisto_vs_Pressure'
 
-			'CTP'			: hdf_var = 'Cloud_Top_Pressure_Mean_Mean'      
-			'CTP_DAY'		: hdf_var = 'Cloud_Top_Pressure_Day_Mean_Mean'  
-			'CTP_NIGHT'		: hdf_var = 'Cloud_Top_Pressure_Night_Mean_Mean'
-			'CTP_COUNTS'		: hdf_var = 'Cloud_Top_Pressure_Pixel_Counts'   
-			'CTP_HIST'		: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
-			'CTP_STD' 		: hdf_var = 'Cloud_Top_Pressure_Std_Deviation_Mean'
-			'CTP_DAY_HIST'		: hdf_var = 'Cloud_Top_Pressure_Day_Histogram_Counts'
-			'CTP_DAY_COUNTS'	: hdf_var = 'Cloud_Top_Pressure_Day_Pixel_Counts'
-			'CTP_NIGHT_HIST'	: hdf_var = 'Cloud_Top_Pressure_Night_Histogram_Counts'
-			'CTP_NIGHT_COUNTS'	: hdf_var = 'Cloud_Top_Pressure_Night_Pixel_Counts'
+			'CTP'					: hdf_var = 'Cloud_Top_Pressure_Mean_Mean'      
+			'CTP_DAY'				: hdf_var = 'Cloud_Top_Pressure_Day_Mean_Mean'  
+			'CTP_NIGHT'				: hdf_var = 'Cloud_Top_Pressure_Night_Mean_Mean'
+			'CTP_COUNTS'			: hdf_var = 'Cloud_Top_Pressure_Pixel_Counts'   
+			'CTP_HIST'				: hdf_var = 'Cloud_Top_Pressure_Histogram_Counts'
+			'CTP_STD' 				: hdf_var = 'Cloud_Top_Pressure_Std_Deviation_Mean'
+			'CTP_DAY_HIST'			: hdf_var = 'Cloud_Top_Pressure_Day_Histogram_Counts'
+			'CTP_DAY_COUNTS'		: hdf_var = 'Cloud_Top_Pressure_Day_Pixel_Counts'
+			'CTP_NIGHT_HIST'		: hdf_var = 'Cloud_Top_Pressure_Night_Histogram_Counts'
+			'CTP_NIGHT_COUNTS'		: hdf_var = 'Cloud_Top_Pressure_Night_Pixel_Counts'
 
-			'COT_COM'		: hdf_var = 'Cloud_Optical_Thickness_Combined_Mean_Mean'    
-			'COT_LOG'		: hdf_var = 'Cloud_Optical_Thickness_Combined_Log_Mean_Mean'
-			'COT_STD'		: hdf_var = 'Cloud_Optical_Thickness_Combined_Std_Deviation_Mean'     
-			'COT_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_Liquid_Mean_Mean'
-			'COT_LOG_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_Liquid_Log_Mean_Mean'
-			'COT_ICE'		: hdf_var = 'Cloud_Optical_Thickness_Ice_Mean_Mean'
-			'COT_LOG_ICE'		: hdf_var = 'Cloud_Optical_Thickness_Ice_Log_Mean_Mean'
+			'COT'					: hdf_var = 'Cloud_Optical_Thickness_Combined_Mean_Mean'    
+			'COT_COM'				: hdf_var = 'Cloud_Optical_Thickness_Combined_Mean_Mean'    
+			'COT_LOG'				: hdf_var = 'Cloud_Optical_Thickness_Combined_Log_Mean_Mean'
+			'COT_STD'				: hdf_var = 'Cloud_Optical_Thickness_Combined_Std_Deviation_Mean'     
+			'COT_LIQ'				: hdf_var = 'Cloud_Optical_Thickness_Liquid_Mean_Mean'
+			'COT_LOG_LIQ'			: hdf_var = 'Cloud_Optical_Thickness_Liquid_Log_Mean_Mean'
+			'COT_ICE'				: hdf_var = 'Cloud_Optical_Thickness_Ice_Mean_Mean'
+			'COT_LOG_ICE'			: hdf_var = 'Cloud_Optical_Thickness_Ice_Log_Mean_Mean'
 			
-			'COT_16_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_16_Liquid_Mean_Mean'
-			'COT_16_LIQ_STD'	: hdf_var = 'Cloud_Optical_Thickness_16_Liquid_Std_Deviation_Mean'
-			'COT_16_LIQ_UNC'	: hdf_var = 'Cloud_Optical_Thickness_16_Liquid_Mean_Uncertainty'
-			'COT_16_ICE'		: hdf_var = 'Cloud_Optical_Thickness_16_Ice_Mean_Mean'
-			'COT_16_ICE_STD'	: hdf_var = 'Cloud_Optical_Thickness_16_Ice_Std_Deviation_Mean'
-			'COT_16_ICE_UNC'	: hdf_var = 'Cloud_Optical_Thickness_16_Ice_Mean_Uncertainty'
-			'COT_37_LIQ'		: hdf_var = 'Cloud_Optical_Thickness_37_Liquid_Mean_Mean'
-			'COT_37_LIQ_STD'	: hdf_var = 'Cloud_Optical_Thickness_37_Liquid_Std_Deviation_Mean'
-			'COT_37_LIQ_UNC'	: hdf_var = 'Cloud_Optical_Thickness_37_Liquid_Mean_Uncertainty'
-			'COT_37_ICE'		: hdf_var = 'Cloud_Optical_Thickness_37_Ice_Mean_Mean'
-			'COT_37_ICE_STD'	: hdf_var = 'Cloud_Optical_Thickness_37_Ice_Std_Deviation_Mean'
-			'COT_37_ICE_UNC'	: hdf_var = 'Cloud_Optical_Thickness_37_Ice_Mean_Uncertainty'
+			'COT_16_LIQ'			: hdf_var = 'Cloud_Optical_Thickness_16_Liquid_Mean_Mean'
+			'COT_16_LIQ_STD'		: hdf_var = 'Cloud_Optical_Thickness_16_Liquid_Std_Deviation_Mean'
+			'COT_16_LIQ_UNC'		: hdf_var = 'Cloud_Optical_Thickness_16_Liquid_Mean_Uncertainty'
+			'COT_16_ICE'			: hdf_var = 'Cloud_Optical_Thickness_16_Ice_Mean_Mean'
+			'COT_16_ICE_STD'		: hdf_var = 'Cloud_Optical_Thickness_16_Ice_Std_Deviation_Mean'
+			'COT_16_ICE_UNC'		: hdf_var = 'Cloud_Optical_Thickness_16_Ice_Mean_Uncertainty'
+			'COT_37_LIQ'			: hdf_var = 'Cloud_Optical_Thickness_37_Liquid_Mean_Mean'
+			'COT_37_LIQ_STD'		: hdf_var = 'Cloud_Optical_Thickness_37_Liquid_Std_Deviation_Mean'
+			'COT_37_LIQ_UNC'		: hdf_var = 'Cloud_Optical_Thickness_37_Liquid_Mean_Uncertainty'
+			'COT_37_ICE'			: hdf_var = 'Cloud_Optical_Thickness_37_Ice_Mean_Mean'
+			'COT_37_ICE_STD'		: hdf_var = 'Cloud_Optical_Thickness_37_Ice_Std_Deviation_Mean'
+			'COT_37_ICE_UNC'		: hdf_var = 'Cloud_Optical_Thickness_37_Ice_Mean_Uncertainty'
 
 			'COT_CTP_HIST2D_LIQ'	: hdf_var = jch_liq ; andere bins keine ISCCP standard bins -> nicht vergleichbar
 			'COT_CTP_HIST2D_ICE'	: hdf_var = jch_ice ; andere bins keine ISCCP standard bins -> nicht vergleichbar
-			'COT_CTP_HIST2D'	: hdf_var = jch
+			'COT_CTP_HIST2D'		: hdf_var = jch
 
 			;nur c5_l3
-			'CER'			: hdf_var = 'Cloud_Effective_Radius_Combined_Mean_Mean'
-			'CER_STD'		: hdf_var = 'Cloud_Effective_Radius_Combined_Std_Deviation_Mean'
+			'CER'					: hdf_var = 'Cloud_Effective_Radius_Combined_Mean_Mean'
+			'CER_STD'				: hdf_var = 'Cloud_Effective_Radius_Combined_Std_Deviation_Mean'
 			; only COLL5
-			'CWP'			: hdf_var = 'Cloud_Water_Path_Combined_Mean_Mean'
-			'CWP_STD'		: hdf_var = 'Cloud_Water_Path_Combined_Std_Deviation_Mean'
+			'CWP'					: hdf_var = 'Cloud_Water_Path_Combined_Mean_Mean'
+			'CWP_STD'				: hdf_var = 'Cloud_Water_Path_Combined_Std_Deviation_Mean'
 
-			'CER_LIQ'		: hdf_var = 'Cloud_Effective_Radius_Liquid_Mean_Mean'
-			'CER_LIQ_STD'		: hdf_var = 'Cloud_Effective_Radius_Liquid_Std_Deviation_Mean'
-			'CER_LIQ_UNC'		: hdf_var = 'Cloud_Effective_Radius_Liquid_Mean_Uncertainty'
-			'CER_ICE_STD'		: hdf_var = 'Cloud_Effective_Radius_Ice_Std_Deviation_Mean''
-			'CER_ICE'		: hdf_var = 'Cloud_Effective_Radius_Ice_Mean_Mean'
-			'CER_ICE_UNC'		: hdf_var = 'Cloud_Effective_Radius_Ice_Mean_Uncertainty'
-			'CER_16_LIQ'		: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Mean'
-			'CER_16_LIQ_STD'	: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Std_Deviation_Mean'
-			'CER_16_LIQ_UNC'	: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Uncertainty'
-			'CER_16_ICE'		: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Mean'
-			'CER_16_ICE_STD'	: hdf_var = 'Cloud_Effective_Radius_16_Ice_Std_Deviation_Mean'
-			'CER_16_ICE_UNC'	: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Uncertainty'
-			'CER_37_LIQ'		: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Mean'
-			'CER_37_LIQ_STD'	: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Std_Deviation_Mean'
-			'CER_37_LIQ_UNC'	: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Uncertainty'
-			'CER_37_ICE'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Mean'
-			'CER_37_ICE_STD'	: hdf_var = 'Cloud_Effective_Radius_37_Ice_Std_Deviation_Mean'
-			'CER_37_ICE_UNC'	: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Uncertainty'
+			'CER_LIQ'				: hdf_var = 'Cloud_Effective_Radius_Liquid_Mean_Mean'
+			'CER_LIQ_STD'			: hdf_var = 'Cloud_Effective_Radius_Liquid_Std_Deviation_Mean'
+			'CER_LIQ_UNC'			: hdf_var = 'Cloud_Effective_Radius_Liquid_Mean_Uncertainty'
+			'CER_ICE_STD'			: hdf_var = 'Cloud_Effective_Radius_Ice_Std_Deviation_Mean''
+			'CER_ICE'				: hdf_var = 'Cloud_Effective_Radius_Ice_Mean_Mean'
+			'CER_ICE_UNC'			: hdf_var = 'Cloud_Effective_Radius_Ice_Mean_Uncertainty'
+			'CER_16_LIQ'			: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Mean'
+			'CER_16_LIQ_STD'		: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Std_Deviation_Mean'
+			'CER_16_LIQ_UNC'		: hdf_var = 'Cloud_Effective_Radius_16_Liquid_Mean_Uncertainty'
+			'CER_16_ICE'			: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Mean'
+			'CER_16_ICE_STD'		: hdf_var = 'Cloud_Effective_Radius_16_Ice_Std_Deviation_Mean'
+			'CER_16_ICE_UNC'		: hdf_var = 'Cloud_Effective_Radius_16_Ice_Mean_Uncertainty'
+			'CER_37_LIQ'			: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Mean'
+			'CER_37_LIQ_STD'		: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Std_Deviation_Mean'
+			'CER_37_LIQ_UNC'		: hdf_var = 'Cloud_Effective_Radius_37_Liquid_Mean_Uncertainty'
+			'CER_37_ICE'			: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Mean'
+			'CER_37_ICE_STD'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Std_Deviation_Mean'
+			'CER_37_ICE_UNC'		: hdf_var = 'Cloud_Effective_Radius_37_Ice_Mean_Uncertainty'
 
-			'CFC'			: hdf_var = 'Cloud_Fraction_Mean_Mean'    
-			'CFC_STD'		: hdf_var = 'Cloud_Fraction_Std_Deviation_Mean'     
-			'CFC_COUNTS'		: hdf_var = 'Cloud_Fraction_Pixel_Counts' 
-			'CFC_DAY'		: hdf_var = 'Cloud_Fraction_Day_Mean_Mean'
-			'CFC_DAY_MICRO'		: hdf_var = 'Cloud_Retrieval_Fraction_Combined_FMean' ; diese muss für die optischen produkte benutzt werden
-			'CFC_NIGHT'		: hdf_var = 'Cloud_Fraction_Night_Mean_Mean'
-			'CFC_HIGH'		: hdf_var = 'High_Cloud_Fraction_Infrared_FMean'
-			'CFC_CIRRUS'		: hdf_var = 'Cirrus_Fraction_Infrared_FMean'
+			'CFC'					: hdf_var = 'Cloud_Fraction_Mean_Mean'    
+			'CFC_STD'				: hdf_var = 'Cloud_Fraction_Std_Deviation_Mean'     
+			'CFC_COUNTS'			: hdf_var = 'Cloud_Fraction_Pixel_Counts' 
+			'CFC_DAY'				: hdf_var = 'Cloud_Fraction_Day_Mean_Mean'
+			'CFC_DAY_MICRO'			: hdf_var = 'Cloud_Retrieval_Fraction_Combined_FMean' ; diese muss für die optischen produkte benutzt werden
+			'CFC_NIGHT'				: hdf_var = 'Cloud_Fraction_Night_Mean_Mean'
+			'CFC_HIGH'				: hdf_var = 'High_Cloud_Fraction_Infrared_FMean'
+			'CFC_CIRRUS'			: hdf_var = 'Cirrus_Fraction_Infrared_FMean'
 
-			'SUNGLINT'		: hdf_var = 'Sunglint_Fraction_Day_FMean'
+			'SUNGLINT'				: hdf_var = 'Sunglint_Fraction_Day_FMean'
 
 			; coll6 cph: "Cloud_Retrieval_Fraction_Liquid_FMean(FSTD,Pixel_Counts)"
-			'CPH'			: hdf_var = 'Cloud_Phase_Infrared_Histogram_Counts'
-			'CTT'			: hdf_var = 'Cloud_Top_Temperature_Mean_Mean'
-			'CTT_DAY'		: hdf_var = 'Cloud_Top_Temperature_Day_Mean_Mean'
-			'CTT_NIGHT'		: hdf_var = 'Cloud_Top_Temperature_Night_Mean_Mean'
-			'CTT_STD'		: hdf_var = 'Cloud_Top_Temperature_Std_Deviation_Mean'
-			'CTT_COUNTS'		: hdf_var = 'Cloud_Top_Temperature_Pixel_Counts'
+			'CPH'					: hdf_var = 'Cloud_Phase_Infrared_Histogram_Counts'
+			'CTT'					: hdf_var = 'Cloud_Top_Temperature_Mean_Mean'
+			'CTT_DAY'				: hdf_var = 'Cloud_Top_Temperature_Day_Mean_Mean'
+			'CTT_NIGHT'				: hdf_var = 'Cloud_Top_Temperature_Night_Mean_Mean'
+			'CTT_STD'				: hdf_var = 'Cloud_Top_Temperature_Std_Deviation_Mean'
+			'CTT_COUNTS'			: hdf_var = 'Cloud_Top_Temperature_Pixel_Counts'
 
-			'LWP'			: hdf_var = 'Cloud_Water_Path_Liquid_Mean_Mean'
-			'LWP_UNC'		: hdf_var = 'Cloud_Water_Path_Liquid_Mean_Uncertainty'
-			'LWP_STD'		: hdf_var = 'Cloud_Water_Path_Liquid_Std_Deviation_Mean'
+			'LWP'					: hdf_var = 'Cloud_Water_Path_Liquid_Mean_Mean'
+			'LWP_UNC'				: hdf_var = 'Cloud_Water_Path_Liquid_Mean_Uncertainty'
+			'LWP_STD'				: hdf_var = 'Cloud_Water_Path_Liquid_Std_Deviation_Mean'
 			; nur coll6
-			'LWP_16'		: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Mean'
-			'LWP_16_UNC'		: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Uncertainty'
-			'LWP_16_STD'		: hdf_var = 'Cloud_Water_Path_16_Liquid_Std_Deviation_Mean'
-			'LWP_37'		: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Mean'
-			'LWP_37_UNC'		: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Uncertainty'
-			'LWP_37_STD'		: hdf_var = 'Cloud_Water_Path_37_Liquid_Std_Deviation_Mean'
+			'LWP_16'				: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Mean'
+			'LWP_16_UNC'			: hdf_var = 'Cloud_Water_Path_16_Liquid_Mean_Uncertainty'
+			'LWP_16_STD'			: hdf_var = 'Cloud_Water_Path_16_Liquid_Std_Deviation_Mean'
+			'LWP_37'				: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Mean'
+			'LWP_37_UNC'			: hdf_var = 'Cloud_Water_Path_37_Liquid_Mean_Uncertainty'
+			'LWP_37_STD'			: hdf_var = 'Cloud_Water_Path_37_Liquid_Std_Deviation_Mean'
 	
-			'IWP'			: hdf_var = 'Cloud_Water_Path_Ice_Mean_Mean'
-			'IWP_UNC'		: hdf_var = 'Cloud_Water_Path_Ice_Mean_Uncertainty'
-			'IWP_STD'		: hdf_var = 'Cloud_Water_Path_Ice_Std_Deviation_Mean'
+			'IWP'					: hdf_var = 'Cloud_Water_Path_Ice_Mean_Mean'
+			'IWP_UNC'				: hdf_var = 'Cloud_Water_Path_Ice_Mean_Uncertainty'
+			'IWP_STD'				: hdf_var = 'Cloud_Water_Path_Ice_Std_Deviation_Mean'
 			; nur coll6
-			'IWP_16'		: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Mean'
-			'IWP_16_UNC'		: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Uncertainty'
-			'IWP_16_STD'		: hdf_var = 'Cloud_Water_Path_16_Ice_Std_Deviation_Mean'
-			'IWP_37'		: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Mean'
-			'IWP_37_UNC'		: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Uncertainty'
-			'IWP_37_STD'		: hdf_var = 'Cloud_Water_Path_37_Ice_Std_Deviation_Mean'
+			'IWP_16'				: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Mean'
+			'IWP_16_UNC'			: hdf_var = 'Cloud_Water_Path_16_Ice_Mean_Uncertainty'
+			'IWP_16_STD'			: hdf_var = 'Cloud_Water_Path_16_Ice_Std_Deviation_Mean'
+			'IWP_37'				: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Mean'
+			'IWP_37_UNC'			: hdf_var = 'Cloud_Water_Path_37_Ice_Mean_Uncertainty'
+			'IWP_37_STD'			: hdf_var = 'Cloud_Water_Path_37_Ice_Std_Deviation_Mean'
 
-			'ZENITH_ANGLE'		: hdf_var = 'Sensor_Zenith_Mean_Mean'
-			'AZIMUTH_ANGLE'		: hdf_var = 'Sensor_Azimuth_Mean_Mean'
-			'LON'			: hdf_var = 'XDim'
-			'LAT'			: hdf_var = 'YDim'
-			else 			:
+			'ZENITH_ANGLE'			: hdf_var = 'Sensor_Zenith_Mean_Mean'
+			'AZIMUTH_ANGLE'			: hdf_var = 'Sensor_Azimuth_Mean_Mean'
+			'LON'					: hdf_var = 'XDim'
+			'LAT'					: hdf_var = 'YDim'
+			else 					:
 		endcase
 	endif
 

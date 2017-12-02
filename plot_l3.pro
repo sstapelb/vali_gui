@@ -294,6 +294,8 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 			print,'plot_taylor_diagram: No reference data found!'
 			return
 		endif
+		algon2 = sat_name(reference,sat2,year=year, month = month ,level=level)
+
 ;  		if is_the_same(algo,reference,sat=sat) then begin
  		if strmatch(algon1,algon2) then begin
 			if ref_info.mtime gt cci_info.mtime then apx = ' (new)'
@@ -4141,7 +4143,8 @@ end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
 pro make_2d_overview,year=year,month=month,satellite,reference=reference, coverage = coverage, algo = algo, out = out,addtext=addtext, $
 		time_series = time_series,sat2=sat2, save_as = save_as,mini=mini,maxi=maxi,verbose=verbose,file1=file1,file2=file2,$
-		datum1=datum1,datum2=datum2,notitle=notitle,version1=version1,version2=version2,limit=limit,shape_file=shape_file,nobar=nobar
+		datum1=datum1,datum2=datum2,notitle=notitle,version1=version1,version2=version2,limit=limit,shape_file=shape_file,nobar=nobar,$
+		only_given_files = only_given_files
 
 	sat1 = keyword_set(satellite) ? strlowcase(satellite) : ''
 	ref  = keyword_set(reference) ? strlowcase(reference) : ''
@@ -4151,7 +4154,22 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		ok=dialog_message('Choose reference data!')
 		return
 	endif
-
+	if keyword_set(only_given_files) then begin
+		if keyword_set(file1) and keyword_set(file2) then begin
+			if ~file_test(file1) or ~file_test(file2) then begin
+				ok = dialog_message('Choose Files!')
+				return
+			endif
+		endif else begin
+			ok = dialog_message('Choose Files!')
+			return
+		endelse
+	endif else if ref eq 'select' then begin
+		ok = dialog_message('Select file is not possible! Choose Plot Difference!')
+		return
+	endif else begin
+		free, file1, file2
+	endelse
 	;everthing at 1 degree
 	make_geo, lon,lat, grid=1
 	dem   = get_coverage(lon,lat,coverage = coverage,limit=limit,shape_file=shape_file,index=idx, no_shape_idx = no_shape_idx)
@@ -4234,53 +4252,53 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 			return
 		endelse
 	endif else begin
-		; read in cci parameter
-		ctt     = get_data(year,month,data='ctt',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then ctt = dummy
-		ctp     = get_data(year,month,data='ctp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then ctp = dummy
-		cfc     = get_data(year,month,data='cfc',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then cfc = dummy
-		cot     = get_data(year,month,data='cot',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then cot = dummy
-		cph     = get_data(year,month,data='cph',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then cph = dummy
-		ref     = get_data(year,month,data='cer',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then ref = dummy
-		lwp     = get_data(year,month,data='lwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then lwp = dummy
-		iwp     = get_data(year,month,data='iwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then iwp = dummy
-		cwp     = get_data(year,month,data='cwp',algo=algo1,sat=sat1,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found = found)
-		if ~found then cwp = dummy
-		ctt_ref = get_data(year,month,data='ctt',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then ctt_ref = dummy
-		ctp_ref = get_data(year,month,data='ctp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then ctp_ref = dummy
-		cfc_ref = get_data(year,month,data='cfc',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then cfc_ref = dummy
-		cot_ref = get_data(year,month,data='cot',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then cot_ref = dummy
-		cph_ref = get_data(year,month,data='cph',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then cph_ref = dummy
-		ref_ref = get_data(year,month,data='cer',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then ref_ref = dummy
-		lwp_ref = get_data(year,month,data='lwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then lwp_ref = dummy
-		iwp_ref = get_data(year,month,data='iwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then iwp_ref = dummy
-		cwp_ref = get_data(year,month,data='cwp',algo=algo2,sat=sat2,level='l3c',/glob,no_data_value=no_data_value,/mean,/make_comp,/sil,found=found)
-		if ~found then cwp_ref = dummy
+		; read cci parameter
+		ctt     = get_data(file=file1,year,month,data='ctt',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' CTT not found!' & ctt = dummy & end
+		ctp     = get_data(file=file1,year,month,data='ctp',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' CTP not found!' & ctp = dummy & end
+		cfc     = get_data(file=file1,year,month,data='cfc',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' CFC not found!' & cfc = dummy & end
+		cot     = get_data(file=file1,year,month,data='cot',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' COT not found!' & cot = dummy & end
+		cph     = get_data(file=file1,year,month,data='cph',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' CPH not found!' & cph = dummy & end
+		ref     = get_data(file=file1,year,month,data='cer',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' CER not found!' & ref = dummy & end
+		lwp     = get_data(file=file1,year,month,data='lwp',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' LWP not found!' & lwp = dummy & end
+		iwp     = get_data(file=file1,year,month,data='iwp',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' IWP not found!' & iwp = dummy & end
+		cwp     = get_data(file=file1,year,month,data='cwp',algo=algo1,sat=sat1,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found = found)
+		if ~found then begin & print, algo1+' CWP not found!' & cwp = dummy & end
+		ctt_ref = get_data(file=file2,year,month,data='ctt',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' CTT not found!' & ctt_ref = dummy & end
+		ctp_ref = get_data(file=file2,year,month,data='ctp',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' CTP not found!' & ctp_ref = dummy & end
+		cfc_ref = get_data(file=file2,year,month,data='cfc',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' CFC not found!' & cfc_ref = dummy & end
+		cot_ref = get_data(file=file2,year,month,data='cot',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' COT not found!' & cot_ref = dummy & end
+		cph_ref = get_data(file=file2,year,month,data='cph',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' CPH not found!' & cph_ref = dummy & end
+		ref_ref = get_data(file=file2,year,month,data='cer',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' CER not found!' & ref_ref = dummy & end
+		lwp_ref = get_data(file=file2,year,month,data='lwp',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' LWP not found!' & lwp_ref = dummy & end
+		iwp_ref = get_data(file=file2,year,month,data='iwp',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' IWP not found!' & iwp_ref = dummy & end
+		cwp_ref = get_data(file=file2,year,month,data='cwp',algo=algo2,sat=sat2,level='l3c',/glob,set_fillvalue = -999.,/mean,/make_comp,/sil,found=found)
+		if ~found then begin & print, algo2+' CWP not found!' & cwp_ref = dummy & end
 
-		min_ctt = (minmax([ctt,ctt_ref],no=-999))[0]
-		min_cot = (minmax([cot,cot_ref],no=-999))[0]
-		min_lwp = (minmax([lwp,lwp_ref],no=-999))[0]
-		min_iwp = (minmax([iwp,iwp_ref],no=-999))[0]
-		min_ref = (minmax([ref,ref_ref],no=-999))[0]
-		min_ctp = (minmax([ctp,ctp_ref],no=-999))[0]
-		min_cwp = (minmax([cwp,cwp_ref],no=-999))[0]
-		min_cph = (minmax([cph,cph_ref],no=-999))[0]
-		min_cfc = (minmax([cfc,cfc_ref],no=-999))[0]
+		min_ctt = (minmax([ctt,ctt_ref],no=-999.))[0]
+		min_cot = (minmax([cot,cot_ref],no=-999.))[0]
+		min_lwp = (minmax([lwp,lwp_ref],no=-999.))[0]
+		min_iwp = (minmax([iwp,iwp_ref],no=-999.))[0]
+		min_ref = (minmax([ref,ref_ref],no=-999.))[0]
+		min_ctp = (minmax([ctp,ctp_ref],no=-999.))[0]
+		min_cwp = (minmax([cwp,cwp_ref],no=-999.))[0]
+		min_cph = (minmax([cph,cph_ref],no=-999.))[0]
+		min_cfc = (minmax([cfc,cfc_ref],no=-999.))[0]
 
 		gesamt_cci = [  [temporary(lwp)    - min_lwp,temporary(iwp)    - min_iwp,temporary(cwp)    - min_cwp],$
 						[temporary(cot)    - min_cot,temporary(ref)    - min_ref,temporary(cph)    - min_cph],$
@@ -4291,8 +4309,8 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 
 	endelse
 	; was ist wenn einer von beiden null ist (auch raus!!)
-	gesamt_ref[where(gesamt_ref le 0)] = -999
-	gesamt_cci[where(gesamt_cci le 0)] = -999
+	gesamt_ref[where(gesamt_ref le 0)] = -999.
+	gesamt_cci[where(gesamt_cci le 0)] = -999.
 	if keyword_set(save_as) then save_as = !SAVE_DIR + '2d_overview/2d_overview_'+(keyword_set(datum1)?datum1+'_':'')+algon1+'-'+(keyword_set(datum2)?datum2+'_':'')+algon2+'.eps'
 	start_save,save_as,size=size,thick=thick
 		if keyword_set(nobar) then begin
@@ -4308,18 +4326,23 @@ pro make_2d_overview,year=year,month=month,satellite,reference=reference, covera
 		dem = reform(dem[idx],dims)
 		gesamt_cci = reform(gesamt_cci[idx],dims)
 		gesamt_ref = reform(gesamt_ref[idx],dims)
-
+		no_data_idx = where(gesamt_ref le 0. or gesamt_cci le 0. or dem ne 1,ndx_cnt)
+		if ndx_cnt gt 0 then out[no_data_idx] = -999.
 		view2d, out,min=adv_keyword_set(mini) ? float(mini[0]):-100.,max=adv_keyword_set(maxi)? float(maxi[0]) : 100.,$
-		col_tab=4,no_data_idx=where(gesamt_ref le 0. or gesamt_cci le 0. or dem ne 1),xmargin=[8,9],ymargin=[3,3],$;xmargin=[8,8]$
+		col_tab=4,no_data_idx=no_data_idx,xmargin=[8,9],ymargin=[3,3],$;xmargin=[8,8]$
 		xticks=6,xtickname=[' ','LWP',' ','IWP', ' ','CWP',' '],yticks=6,ytickname=[' ','LWP',' ','COT', ' ','CTT',' '],$
 		xcharsize = !v_xcharsize, ycharsize = !v_ycharsize, charthick = !v_charthick, charsize = !v_charsize, $
-		bar_title='Rel. Difference [%] '+f1str+algon1+' - '+f2str+algon2,bar_nlev=6,color_bar = color_bar
-		axis,xaxis=1,xticks=6,xtickname=[' ','CTT',' ','CTP', ' ','CFC',' '],xcharsize=!v_xcharsize, ycharsize=!v_ycharsize , $
-				charthick = !v_charthick, charsize = !v_charsize , xticklen = 0.0001
-		axis,yaxis=1,yticks=6,ytickname=[' ','CWP',' ','CPH', ' ','CFC',' '],xcharsize=!v_xcharsize, ycharsize=!v_ycharsize , $
-				charthick = !v_charthick, charsize = !v_charsize, yticklen = 0.0001
-		for i = 0,3 do oplot, !x.crange, replicate(dims[1] * 1./3. * i, 2),thick=thick
-		for i = 0,3 do oplot, replicate(dims[0] * 1./3. * i,2) ,!y.crange,thick=thick
+		bar_title='Rel. Difference [%] '+f1str+algon1+' - '+f2str+algon2,bar_nlev=6,color_bar = color_bar, found=found
+		if found eq 1 then begin
+			axis,xaxis=1,xticks=6,xtickname=[' ','CTT',' ','CTP', ' ','CFC',' '],xcharsize=!v_xcharsize, ycharsize=!v_ycharsize , $
+					charthick = !v_charthick, charsize = !v_charsize , xticklen = 0.0001
+			axis,yaxis=1,yticks=6,ytickname=[' ','CWP',' ','CPH', ' ','CFC',' '],xcharsize=!v_xcharsize, ycharsize=!v_ycharsize , $
+					charthick = !v_charthick, charsize = !v_charsize, yticklen = 0.0001
+			for i = 0,3 do oplot, !x.crange, replicate(dims[1] * 1./3. * i, 2),thick=thick
+			for i = 0,3 do oplot, replicate(dims[0] * 1./3. * i,2) ,!y.crange,thick=thick
+		endif else begin
+			ok = dialog_message('make_2d_overview: No Valid data found!')
+		endelse
 	end_save,save_as
 
 end
@@ -4601,11 +4624,11 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit, 
 		win_nr = win_nr,timeseries=timeseries, algo=algo, sat = sat, datum=datum, level=level,$
 		reference=reference,change_side = change_side,verbose=verbose,coverage=coverage,oplots=oplots	,$
 		addtext = addtext, found=found, white_bg = white_bg,logarithmic=logarithmic,notitle=notitle,$
-		shape_file = shape_file
+		shape_file = shape_file,orbit=orbit
 
 	opl   = keyword_set(oplots)    ? fix(oplots)           : 0
 	ref   = keyword_set(reference) ? strlowcase(reference) : '' 
-	alg   = keyword_set(algo)      ? strlowcase(algo)      : 'esacci' 
+	alg   = keyword_set(algo)      ? strlowcase(algo)      : '' 
 	lev   = keyword_set(level)     ? strlowcase(level)     : 'l3c' 
 	hct   = keyword_set(addtext)   ? ' - '+strupcase(addtext[0]) : ''
 	date1 = keyword_set(datum)     ? datum+' ' : ''
@@ -4671,18 +4694,21 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit, 
 		date2 = d.actual_date
 	endif else begin
 		bild = 	get_data(year,month,day,file=file,data=varn[0],sat=sat,found=found,algo=alg,verbose=verbose,/print_filename,$
-			longname=longname,unit=unit,no_data_value=fillvalue1, level=lev,dim3=dim3,/make_compareable)
+			longname=longname,unit=unit,no_data_value=fillvalue1, level=lev,dim3=dim3,/make_compareable,orbit=orbit)
 		if ~found then begin
 			ok= dialog_message('plot_histogramm: '+(file_test(file) ? 'Data '+varn[0]+' not found!': 'File not found!'))
 			return
 		endif
 		if keyword_set(reference) then begin
-			bild2 = get_data(strmid(date1,0,4),strmid(date1,4,2),strmid(date1,6,2),algo=ref,data=varn[1],found=found,print_filename=2,$
+			bild2 = get_data(year,month,day,algo=ref,data=varn[1],found=found,print_filename=2,orbit=orbit,$
 				sat=sat,verbose=verbose,level=lev,/make_compareable,dim3=dim3,no_data_value=fillvalue2,file=file2)
 			if ~found then begin
 				ok= dialog_message('plot_histogramm: Data '+varn[1]+' not found in Reference '+reference+' File! ')
 				return
 			endif
+			algon2 = sat_name(ref,sat,year=year,month=month,level=lev)
+			date2  = string(year,f='(i4.4)')+string(month,f='(i2.2)')+(keyword_set(day) ? string(day,f='(i2.2)') : '')+$
+					(keyword_set(orbit) ? string(orbit,f='(i4.4)') : '')+' '
 		endif
 		make_geo,grid_res = get_grid_res(bild),lon,lat, file = file
 		area  = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found, shape_file = shape_file)
@@ -4692,7 +4718,6 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit, 
 			area2 = get_coverage( lon, lat, coverage = coverage, limit = limit, found = found, shape_file = shape_file)
 			bild2 = (area2 * bild2 + (area2 eq 0) * fillvalue2)
 		endif
-		date2 = date1
 	endelse
 
 	win_nr   = adv_keyword_set(win_nr) ? win_nr : 1
@@ -4760,7 +4785,7 @@ pro plot_histogram,year,month,day,file,varname,mini=mini,maxi=maxi,limit=limit, 
 				color=[cgcolor(!compare_col1) ,cgcolor(!compare_col2) ],spos=(keyword_set(change_side) ? 'bot':'top'),$
 				charsize=!l_charsize ,charthick = !p_charthick
 			endif else begin
-				legend,date2+algon1+dtn[0]+hct,thick=thick,spos=(keyword_set(change_side) ? 'bot':'top'),$
+				legend,date1+algon1+dtn[0]+hct,thick=thick,spos=(keyword_set(change_side) ? 'bot':'top'),$
 				charsize=!l_charsize ,charthick = !p_charthick ,color =cgcolor(!compare_col1)
 			endelse
 		endif else begin

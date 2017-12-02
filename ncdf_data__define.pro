@@ -4552,7 +4552,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Matrix'
 				make_2d_overview,year=year,month=month,sat,reference=ref, cov = cov,sat2=sat2, out = out, shape_file=shape_file,nobar=nobar, $
 				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,file1 = file, limit = limit
-				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
+				if show_values then show_pixel_value, out, data = 'Diff', unit=' [%]', wtext = self.showpvalID
 			endif
 			if pcmult and pcts then begin
 				if verbose then print,'Time Series'
@@ -4606,7 +4606,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
 				plot_taylor_diagram, year, month, day, file1=file, sat1=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
-				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,antarctic=ant,arctic=arc,algo = algo,level=level,$
+				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,algo = algo,level=level,$
 				time_series=pcmult,notitle=notitle,sat2=satn
 			endif
 			if pcms and pcmult then begin
@@ -4740,6 +4740,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					satn   = ok.satname
 					datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 					version2 = ok.version
+					only_given_files = 1
 				endelse
 			endif else begin
 				if modi   then begin & algo2 = 'coll5'      & satn = 'terra' & end
@@ -4880,8 +4881,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				make_2d_overview,year=year,month=month,sat,reference=algo2, cov = cov,sat2=satn, out = out, $
 				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,$
 				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2, $
-				shape_file=shape_file, limit = limit, notitle=notitle
-				if show_values then show_pixel_value, out, data = 'Diff', unit='%', wtext = self.showpvalID
+				shape_file=shape_file, limit = limit, notitle=notitle, only_given_files = only_given_files
+				if show_values then show_pixel_value, out, data = 'Diff', unit=' [%]', wtext = self.showpvalID
 			endif else begin
 				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level, $
 				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,out=out,sat1=sat,sat2=satn			, $
