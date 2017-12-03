@@ -1107,7 +1107,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 			oplots=oplots,error=error,white_bg=white_bg,dim3=dim3,rot=rot,datum=datum		, $
 			obj_out=obj_out, addtext=addtext, countries=countries, notitle=notitle			, $
 			shape_file=shape_file, no_continents=no_continents, no_grid=no_grid				, $
-			no_label=no_label, no_box=no_box, version=version, ts_extras=ts_extras
+			no_label=no_label, no_box=no_box, version=version, ts_extras=ts_extras			, $
+			map_extras = map_extras
 
 	mem_cur   = memory(/current)
 	starttime = systime(1)
@@ -1640,7 +1641,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 						complement = void_index, ncomplement = vidx_cnt, index = nv_idx, count = nv_cnt, $
 						fillv_index = where(bild eq fillvalue[0]) , no_shape_idx = no_shape_idx)
 
-	set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
+	set_proj, map_extras = map_extras, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
 		  enhanced_robinson = enhanced_robinson, ortho=ortho,iso=iso,stereographic=stereographic, bar_horizontal=bar_horizontal,grid=grid,$
 		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label,no_grid=no_grid,sat_p=sat_p, $
@@ -3334,15 +3335,19 @@ pro gac_ts_plots,struc,ts_data,dat,algon1,yrange,lines,anz,xtickname,qu,ref,anom
 
 end
 ; ----------------------------------------------------------------------------------------------------------------------------------------------
-pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr	, $
-				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=limit		, $
-				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values,zoom=zoom,error=error,verbose=verbose	, $
-				other=other,ctable=ctable, globe = globe, p0lon = p0lon		, $
+pro plot_cci_gac_time_series, diff = diff,algo=algo, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr	, $
+				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=limit,show_values = show_values	, $
+				zoom=zoom,error=error,verbose=verbose,other=other,ctable=ctable, globe = globe, p0lon = p0lon, out=out	, $
 				p0lat = p0lat, Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, ztext = ztext	, $
-				sinusoidal = sinusoidal,robinson=robinson,zonal_only=zonal_only,nobar=nobar, stereographic = stereographic,$
-				msg=msg, logarithmic=logarithmic,white_bg=white_bg,oplots=oplots,rot=rot,magnify=magnify,countries=countries,$
-				symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
-				version1=version1,version2=version2,ts_extras=ts_extras,shape_file = shape_file
+				sinusoidal=sinusoidal,robinson=robinson,zonal_only=zonal_only,nobar=nobar,stereographic=stereographic	, $
+				msg=msg,logarithmic=logarithmic,white_bg=white_bg,oplots=oplots,rot=rot,magnify=magnify,no_box=no_box	, $
+				countries=countries,symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid			, $
+				no_label=no_label,version1=version1,version2=version2,ts_extras=ts_extras,shape_file = shape_file
+
+; map_extras = {	ctable:ctable,globe:globe, p0lon : p0lon,p0lat : p0lat, Goode : Goode, $
+; 				mollweide : mollweide, hammer : hammer, aitoff : aitoff,sinusoidal:sinusoidal,robinson:robinson,$
+; 				stereographic:stereographic	,msg:msg,rot:rot,magnify:magnify,no_box:no_box,countries:countries,$
+; 				no_continents:no_continents,no_grid:no_grid,no_label:no_label}				
 
 	sat = keyword_set(sat) ? strlowcase(sat) : 'noaa18'
 	ref = keyword_set(reference) ? strlowcase(reference) : 'gac'
@@ -3521,16 +3526,15 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 					limit = limit,format=bar_format,debug=verbose)
 				obj_destroy,m
 			end_save,save_as
-			bild = dumdata
+			out = {bild:dumdata,lon:lon,lat:lat,unit:unit}
 			if keyword_set(show_values) then show_pixel_value, dumdata, lon,lat, data=single, unit=unit
 
 			if keyword_set(zoom) then begin
 				get_new_corners = 1
 				m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 				if win_nr ne -1 then win, win_nr
-				plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
-				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners, $
-				lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
+				plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr, shape_file = shape_file,$
+				coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,show_values=show_values
 			endif
 			
 			if keyword_set(shape_file) and keyword_set(countries) then cgdrawshape, shape_file
@@ -3579,9 +3583,8 @@ pro plot_cci_gac_time_series, 	diff = diff,algo=algo, sat = sat, reference = ref
 			get_new_corners = 1
 			m -> zoom,get_new_corners = get_new_corners,/print_new, ztext = ztext,magnify=magnify
 			if win_nr ne -1 then win, win_nr
-			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr,$
-			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners, $
-			lon=lon,lat=lat,unit=unit,bild=bild,show_values = show_values
+			plot_cci_gac_time_series, diff = diff, sat = sat, reference = reference, save_as=save_as,win_nr=win_nr, shape_file = shape_file,$
+			coverage=coverage, single_var = single_var, mini=mini,maxi=maxi,limit=get_new_corners,show_values=show_values
 		endif
 
 		cc = 5

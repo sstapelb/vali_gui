@@ -3867,7 +3867,7 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
 		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
 		shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,smoothTS = smoothTS,$
-		pvir=pvir,show_trend=show_trend
+		pvir=pvir,show_trend=show_trend, map_extras = map_extras
 
 	found=1
 ; 	varName=self.varname_plotID
@@ -4142,6 +4142,14 @@ l1g = 0
 ; 			p0lat=['0']
 		endif
 	endif
+
+	map_extras = {	ctable:ctab, p0lon : p0lon, p0lat : p0lat, magnify:magnify,no_box:no_box,countries:countries,$
+					globe: keyword_set(globe), goode : keyword_set(goode), mollweide : keyword_set(mollweide), $
+					hammer : keyword_set(hammer), aitoff : keyword_set(aitoff), $
+					sinusoidal:keyword_set(sinusoidal),robinson:keyword_set(robinson),$
+					stereographic:keyword_set(stereographic),msg_proj:keyword_set(msg), $
+					no_continents:no_continents,no_grid:no_grid,no_label:no_label,nobar:nobar,log:log}				
+
 	setlist = Widget_Info([	self.noaa7,	$
 ; 				self.tirosn,	$
 ; 				self.noaa5,	$
@@ -4477,9 +4485,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			varname = strjoin(names,',')
 
 			if is_jch(varname) then begin
-				vergleiche_ctp_cot_histogram_cci_mit_clara,file,varname = varname, mini = mini, maxi = maxi, limit=limit, zoom=zoom, sat=sat,$
-				win_nr = win_nr, save_as= save_as,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult	,$
-				globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,log=log		,$
+				vergleiche_ctp_cot_histogram_cci_mit_clara,file,varname = varname, mini = mini, maxi = maxi, limit=limit,$
+				win_nr = win_nr, save_as= save_as,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult, zoom=zoom,$
+				globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,log=log, sat=sat	,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
 				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum	,$
 				magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label		,$
@@ -4544,8 +4552,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
 				goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,algo1=algo,nobar=nobar, stereographic = stereographic,$
-				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle,shape_file=shape_file,$
-				no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
+				error=error,log=log,dim3=dim3,magnify=magnify,wtext = self.showpvalID,countries=countries,notitle=notitle,$
+				shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
 				if show_values then show_pixel_value, out.bild, out.lon, out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcmat then begin
@@ -4577,8 +4585,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if verbose then print,'Zonal Average Multi Time Step'
 				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/zonal_only,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
-				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant, $
-				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
+				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, $
+				mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
 				robinson=robinson,show_values = show_values,nobar=nobar, stereographic = stereographic, ztext = ztext,log=log, $
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
 				no_continents=no_continents,no_grid=no_grid,no_label=no_label,ts_extras=ts_extras
@@ -4586,18 +4594,18 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
 				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/diff,$
-				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom, shape_file=shape_file,$
-				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, antarctic = ant,log=log, $
-				arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
+				single_var=varname,mini=mini,maxi=maxi,limit=limit,out=out,zoom=zoom, shape_file=shape_file,ts_extras=ts_extras,$
+				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat,log=log,no_box=no_box, $
+				mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
 				robinson=robinson, verbose = verbose,nobar=nobar, stereographic = stereographic, ztext = ztext,magnify=magnify, $
-				countries=countries,symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box
-				if show_values then show_pixel_value, bild, lon,lat, data = varname, unit = unit, wtext = self.showpvalID,ts_extras=ts_extras
+				countries=countries,symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label
+				if show_values then show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
 			endif
 			if pcvar and pcmult then begin
 				if verbose then print,'Map2d Multi Time Step'
 				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, verbose = verbose,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
-				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,antarctic=ant,arctic=arc,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
+				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log,$
 				show_values = show_values,countries=countries,symsize=symsize,notitle=notitle,no_continents=no_continents,no_grid=no_grid,$
 				no_label=no_label,no_box=no_box,ts_extras=ts_extras
@@ -4617,7 +4625,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				if verbose then print,'Hovmoeller Time Series'
-				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar,antarctic=ant,arctic=arc, $
+				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar, $
 				ctable=ctab, other = oth,reference = ref, out = out, oplots = opl,found = found, limit = limit,coverage=cov, $
 				notitle=notitle,ts_extras = ts_extra
 				if show_values then begin
@@ -4924,7 +4932,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	,pvir=pvir, $
 				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
 				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-				no_label=no_label,smoothTS = smoothTS,no_box=no_box,show_trend=show_trend
+				no_label=no_label,smoothTS = smoothTS,no_box=no_box,show_trend=show_trend,map_extras = map_extras
 
 			if ~found then return
 
@@ -5062,7 +5070,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				plot_hovmoeller, varname, algo, sat, save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,ctable=ctab,coverage=cov,$
-				oplots = opl, other = oth, out = out,found = found,nobar=nobar, limit = limit,antarctic=ant,arctic=arc,$
+				oplots = opl, other = oth, out = out,found = found,nobar=nobar, limit = limit,$
 				notitle=notitle,ts_extras = ts_extra
 				if show_values and is_defined(out) then begin
 					if nobar ne 1 then begin
@@ -5121,7 +5129,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				cov=cov, wtext = self.showpvalID, ztext = ztext, stereographic = stereographic,msg_proj=msg,oplots = opl,error=error,log=log,$
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),dim3=dim3,rot=rot,datum=datum, prefix=addtext[0],addtext = addtext[0],$
 				magnify=magnify,countries=countries,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-				no_label=no_label,no_box=no_box,version=version,ts_extras=ts_extras,obj_out=obj_out, out = out
+				no_label=no_label,no_box=no_box,version=version,ts_extras=ts_extras,obj_out=obj_out, out = out, map_extras = map_extras
 				if obj_valid(obj_out) then self.map_objout = obj_out else begin
 					; in map_image wird intern decompose auf 0 gesetzt für nicht rgb bilder, im cleanup dann wieder auf vorherigen wert,
 					; cleanup wird hier nicht aufgerufen also decompose=1 sonst gibts verrückte farben

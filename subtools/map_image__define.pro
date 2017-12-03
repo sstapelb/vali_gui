@@ -1586,7 +1586,6 @@ end
 
 
 ;----------------------------------------------------------------------------------------
-
 function map_image::init, $
                   image, latitude, longitude, $
                   no_copy = no_copy, $
@@ -1599,132 +1598,131 @@ function map_image::init, $
                   no_shape_idx = no_shape_idx, $
                   _extra = _extra
 
-  if size(image, /type) * size(latitude, /type) * size(longitude, /type) eq 0 then begin
-      print, "Image or lon or lat are not defined:"
-      help, image, latitude, longitude
-      return, 0
-  endif
-  img = image
-  lat = latitude
-  lon = longitude
-  if n_elements(no_shape_idx) gt 1 then begin
-      ; Special keyword introduced by sstapelb
-      ; nans will not be plotted and appear in 
-      ; background color; used together with shape_files
-      lon[no_shape_idx] = !values.f_nan
-      lat[no_shape_idx] = !values.f_nan
-  endif
+	if size(image, /type) * size(latitude, /type) * size(longitude, /type) eq 0 then begin
+		print, "Image or lon or lat are not defined:"
+		help, image, latitude, longitude
+		return, 0
+	endif
 
-  self.var.internal.debug = keyword_set(debug)
-  self.var.internal.time = systime(1)
-  self.var.draw.log = keyword_set(logarithmic)
+	img = image
+	lat = latitude
+	lon = longitude
 
- if size(_extra,/type) eq 8 then begin
-   if keyword_set(logarithmic) then begin
-	img = alog10(img)
-	if is_tag(_extra,'max') then _extra.max = alog10(_extra.max>0.0001)
-	if is_tag(_extra,'min') then _extra.min = alog10(_extra.min>0.00001)
-; 	if is_tagname(_extra,'min') then _extra.min = alog10(_extra.min)
-   endif
-   if is_tag(_extra,'N_LEV') then self.var.draw.n_lev = _extra.n_lev
-endif
+	if n_elements(no_shape_idx) gt 1 then begin
+		; Special keyword introduced by sstapelb
+		; nans will not be plotted and appear in 
+		; background color; used together with shape_files
+		lon[no_shape_idx] = !values.f_nan
+		lat[no_shape_idx] = !values.f_nan
+	endif
 
-  if n_params() eq 3 then begin
-      self -> set_one_var, 'image', img, no_copy = no_copy, error = error
-      if error eq 1 then return, 0
-      self -> set_one_var, 'longitude', lon, no_copy = no_copy
-      self -> set_one_var, 'latitude', lat, no_copy = no_copy
-  endif else no_project = 1
+	self.var.internal.debug = keyword_set(debug)
+	self.var.internal.time = systime(1)
+	self.var.draw.log = keyword_set(logarithmic)
 
-; First, fill all pointer variables with a default value just in case
-  for i = 0, n_tags(self.var) -1 do $
-      for j = 0, n_tags(self.var.(i)) -1 do $
-      if size(self.var.(i).(j), /type) eq 10 then $
-      if not ptr_valid(self.var.(i).(j)) then begin
+	if size(_extra,/type) eq 8 then begin
+		if keyword_set(logarithmic) then begin
+			img = alog10(img)
+			if is_tag(_extra,'max') then _extra.max = alog10(_extra.max>0.0001)
+			if is_tag(_extra,'min') then _extra.min = alog10(_extra.min>0.0001)
+		endif
+		if is_tag(_extra,'N_LEV') then self.var.draw.n_lev = _extra.n_lev
+	endif
 
-      self.var.(i).(j) = ptr_new(i*10+j)
-  endif
+	if n_params() eq 3 then begin
+		self -> set_one_var, 'image', img, no_copy = no_copy, error = error
+		if error eq 1 then return, 0
+		self -> set_one_var, 'longitude', lon, no_copy = no_copy
+		self -> set_one_var, 'latitude' , lat, no_copy = no_copy
+	endif else no_project = 1
 
-;   print,'Init: set_one_var, defaults for void_index,void_color,bottom,ncolors,magnify,rold,gold,bold,color,background'
-  self -> set_one_var, 'void_index', -1
-  self -> set_one_var, 'void_color', 150
-; Reserve colour 0 for background and colour 1 for void-color
-  self -> set_one_var, 'bottom', 2
-  self -> set_one_var, 'ncolors', 252;253 -minus 1 wegen fillvalues ; stapel 2016
-  self.var.internal.window = !d.window ge 0 ? !d.window : 1
-  self.var.draw.scalef = strupcase(!d.name) eq 'PS' ? 0.03 : 1.
+	; First, fill all pointer variables with a default value just in case
+	for i = 0, n_tags(self.var) -1 do $
+		for j = 0, n_tags(self.var.(i)) -1 do $
+		if size(self.var.(i).(j), /type) eq 10 then $
+		if not ptr_valid(self.var.(i).(j)) then begin
+		self.var.(i).(j) = ptr_new(i*10+j)
+	endif
 
-; Default bahaviour is to automatically scale the pixel size
-  self -> set_one_var, "magnify", [-1, -1]
+	self -> set_one_var, 'void_index', -1
+	self -> set_one_var, 'void_color', 150
+	; Reserve colour 0 for background and colour 1 for void-color
+	self -> set_one_var, 'bottom', 2
+	self -> set_one_var, 'ncolors', 252;253 -minus 1 wegen fillvalues ; stapel 2016
+	self.var.internal.window = !d.window ge 0 ? !d.window : 1
+	self.var.draw.scalef = strupcase(!d.name) eq 'PS' ? 0.03 : 1.
 
-; Save latest color settinngs:
-  tvlct, rold, gold, bold, /get
-  self -> set_one_var, 'rold', rold
-  self -> set_one_var, 'gold', gold
-  self -> set_one_var, 'bold', bold
-  self -> set_one_var, 'color', !p.color
-  self -> set_one_var, 'background', !p.background
+	; Default bahaviour is to automatically scale the pixel size
+	self -> set_one_var, "magnify", [-1, -1]
 
-  win,  self.var.internal.window, _extra = _extra
-  ss = size(*self.var.draw.draw_image) / self.var.draw.scalef
+	; Save latest color settinngs:
+	tvlct, rold, gold, bold, /get
+	self -> set_one_var, 'rold', rold
+	self -> set_one_var, 'gold', gold
+	self -> set_one_var, 'bold', bold
+	self -> set_one_var, 'color', !p.color
+	self -> set_one_var, 'background', !p.background
 
-  _extra = keyword_set(_extra) ? _extra : {dummy:'EXTRA'}
- 
-  dum = strpos(strlowcase(tag_names(_extra)), 'xmargin')
-  xmargin = max(dum, index) eq 0 ? (_extra).(index) : [0,0]
-  dum = strpos(strlowcase(tag_names(_extra)), 'ymargin')
-  ymargin = max(dum, index) eq 0 ? (_extra).(index) : [0,0]
-  ;this is the image position
-  dum = strpos(strlowcase(tag_names(_extra)), 'position')
-  if max(dum, index) eq 0 then begin
-		img_pos = (_extra).(index)
-		_extra = remove_tag(_extra, ['position'])
-  endif
-  ;this is the bar position
-  dum = strpos(strlowcase(tag_names(_extra)), 'bar_position')
-  if max(dum, index) eq 0 then begin
-		bar_pos = (_extra).(index)
-		_extra = remove_tag(_extra, ['bar_position'])
-  endif
+	win,  self.var.internal.window, _extra = _extra
+	ss = size(*self.var.draw.draw_image) / self.var.draw.scalef
 
-  plot,[0,0],[1,1], $
-      /nodata, $
-      /noerase, $
-      xstyle=4, $
-      ystyle = 4, $
-      xmargin = xmargin, $
-      ymargin = ymargin
+	_extra = keyword_set(_extra) ? _extra : {dummy:'EXTRA'}
+	
+	dum = strpos(strlowcase(tag_names(_extra)), 'xmargin')
+	xmargin = max(dum, index) eq 0 ? (_extra).(index) : [0,0]
+	dum = strpos(strlowcase(tag_names(_extra)), 'ymargin')
+	ymargin = max(dum, index) eq 0 ? (_extra).(index) : [0,0]
+	;this is the image position
+	dum = strpos(strlowcase(tag_names(_extra)), 'position')
+	if max(dum, index) eq 0 then begin
+			img_pos = (_extra).(index)
+			_extra = remove_tag(_extra, ['position'])
+	endif
+	;this is the bar position
+	dum = strpos(strlowcase(tag_names(_extra)), 'bar_position')
+	if max(dum, index) eq 0 then begin
+			bar_pos = (_extra).(index)
+			_extra = remove_tag(_extra, ['bar_position'])
+	endif
 
-  if keyword_set(no_color_bar) then self.var.draw.no_color_bar = 1
-  if keyword_set(no_draw_border) then self.var.draw.no_draw_border = 1
-  if keyword_set(no_continents) then self.var.draw.no_continents = 1
+	plot,[0,0],[1,1], $
+		/nodata, $
+		/noerase, $
+		xstyle=4, $
+		ystyle = 4, $
+		xmargin = xmargin, $
+		ymargin = ymargin
 
-  if self.var.draw.no_color_bar then begin
-      self.var.draw.draw_image_position = self -> calc_position(keyword_set(img_pos) ? img_pos : [0.1,0.1,0.93,0.9])
-  endif else begin
-      vertical = 1
-      if size(_extra, /type) eq 8 then begin
-          dum = strpos(strlowcase(tag_names(_extra)), 'bar_horizontal')
-          if max(dum, index) eq 0 then vertical = (_extra).(index) eq 0 else vertical = 1
-      endif
-      if vertical then begin
-          ; Vertical colorbar
-          self.var.draw.draw_image_position = self -> calc_position(keyword_set(img_pos) ? img_pos : [0.24, 0.10, 0.93, 0.9])
-          self.var.draw.cb_position         = self -> calc_position(keyword_set(bar_pos) ? bar_pos : [0.13, 0.09, 0.16, 0.91])
-      endif else begin
-          ; Horizontal colorbar
-          self.var.draw.draw_image_position = self -> calc_position(keyword_set(img_pos) ? img_pos : [0.07, 0.3, 0.93, 0.9])
-          self.var.draw.cb_position         = self -> calc_position(keyword_set(bar_pos) ? bar_pos : [0.1, 0.08, 0.9, 0.14])
-      endelse
-  endelse
+	if keyword_set(no_color_bar) then self.var.draw.no_color_bar = 1
+	if keyword_set(no_draw_border) then self.var.draw.no_draw_border = 1
+	if keyword_set(no_continents) then self.var.draw.no_continents = 1
 
-  self -> set_one_var, 'limit', self -> set_limit()
-  if not keyword_set(no_project) then $
-      self -> project, _extra = _extra $
-  else $
-      self -> set_var, _extra = _extra
+	if self.var.draw.no_color_bar then begin
+		self.var.draw.draw_image_position = self -> calc_position(keyword_set(img_pos) ? img_pos : [0.1,0.1,0.93,0.9])
+	endif else begin
+		vertical = 1
+		if size(_extra, /type) eq 8 then begin
+			dum = strpos(strlowcase(tag_names(_extra)), 'bar_horizontal')
+			if max(dum, index) eq 0 then vertical = (_extra).(index) eq 0 else vertical = 1
+		endif
+		if vertical then begin
+			; Vertical colorbar
+			self.var.draw.draw_image_position = self -> calc_position(keyword_set(img_pos) ? img_pos : [0.24, 0.10, 0.93, 0.9])
+			self.var.draw.cb_position         = self -> calc_position(keyword_set(bar_pos) ? bar_pos : [0.13, 0.09, 0.16, 0.91])
+		endif else begin
+			; Horizontal colorbar
+			self.var.draw.draw_image_position = self -> calc_position(keyword_set(img_pos) ? img_pos : [0.07, 0.3, 0.93, 0.9])
+			self.var.draw.cb_position         = self -> calc_position(keyword_set(bar_pos) ? bar_pos : [0.1, 0.08, 0.9, 0.14])
+		endelse
+	endelse
 
-  return, 1
+	self -> set_one_var, 'limit', self -> set_limit()
+	if not keyword_set(no_project) then $
+		self -> project, _extra = _extra $
+	else $
+		self -> set_var, _extra = _extra
+
+	return, 1
 end
 
 ;----------------------------------------------------------------------------------------

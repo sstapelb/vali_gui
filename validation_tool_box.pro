@@ -2910,14 +2910,14 @@ function set_limits, longitude, latitude, four_elements = four_elements, bounds 
 end
 ;------------------------------------------------------------------------------------------
 ; sets predefined projections to use with map_image__define
-pro set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,nobar=nobar	, $ ; input 
+pro set_proj, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,nobar=nobar						, $ ; input 
 		Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson		, $ ; input 
 		lambert = lambert, enhanced_robinson = enhanced_robinson, no_label=no_label,no_box =no_box,no_grid=no_grid				, $ ; input 
 		ortho=ortho,iso=iso,bar_horizontal=bar_horizontal,grid=grid,londel=londel,latdel=latdel,label=label,noborder=noborder	, $ ; output
 		no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify								, $
 		lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats	, $
 		stereographic=stereographic,msg=msg,maxvalue = maxvalue, bar_format=bar_format,position = position,horizon=horizon		, $	  ; output
-		Sat_P = Sat_P
+		Sat_P = Sat_P, map_extras = map_extras
 
 	box_axes = 1
 	ksl = keyword_set(limit)
