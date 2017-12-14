@@ -2302,7 +2302,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		if (theglobattr).geospatial_lat_min eq  35.0100 and (theglobattr).geospatial_lat_max eq 74.9900 and $
 		   (theglobattr).geospatial_lon_min eq -14.9900 and (theglobattr).geospatial_lon_max eq 44.9900 then level = 'l3ue'
 	endif
-	
+
 	if stregex(satname[0],'meteosat',/bool,/fold) then satname = 'msg'
 
 	; workaround for l2 aatsr files , hopefully not necassary in future
@@ -2317,7 +2317,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 	; für den Übergang 
 	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V1.?',/bool) then algoname = 'ESACCI_OLD'
 	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V2.?',/bool) then algoname = 'ESACCI'
-	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V3.?',/bool) then algoname = 'ESACCIV3'
+	if strupcase(algoname) eq 'ESACCI' and stregex(version,'V3.?',/bool) then algoname = 'ESACCI3'
 
 	case strlowcase(algoname) of 
 		'coll5'			: reference = (satname[0] eq 'terra' ? 'mod' : 'myd')
@@ -2333,7 +2333,7 @@ function NCDF_DATA::get_file_infos, verbose=verbose, infile = infile
 		'hector'		: reference = 'hec'
 		'esacci_old'	: reference = 'cci_old'
 		'esacci'		: reference = 'cci'
-		'esacciv3'		: reference = 'cciv3'
+		'esacci3'		: reference = 'cci3'
 		else :
 	endcase
 
@@ -3400,7 +3400,7 @@ PRO NCDF_DATA::PlotVariableFromGUI, event
 	      bla2 = Widget_Base(bla, Column=1, Scr_XSize=208)
 	         loaded_algo_list = [self.datum+' '+sat_name(self.algoname,self.satname)+' '+strupcase(self.level),'CLARA-A1','Coll5-AQUA','Coll5-TERRA',$
 			  'CLARA-A2','Coll6-AQUA','Coll6-TERRA','CLAAS','ISCCP','ERA-INTERIM','ERA-INTERIM2','PATMOS-X',$
-			  'CALIPSO','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','CCIV3','SELECT FILE'];'ESACCI-PT','PATMOS_OLD'
+			  'CALIPSO','ESACCI','CCI-GEWEX','GAC2-GEWEX','HECTOR','CCI3','SELECT FILE'];'ESACCI-PT','PATMOS_OLD'
 	         self.lalgID   = Widget_combobox(bla2,VALUE=loaded_algo_list,UVALUE=loaded_algo_list,Scr_XSize=205,Scr_YSize=28,UNAME='PLOTS_LOAD_ALGO_LIST')
 	    bla = Widget_Base(leftrow, ROW=1,Frame=0)
 	      label = Widget_Label(bla, Value='Plot/Compare? - Choose Dataset: ',SCR_YSIZE=label_size)
@@ -3858,22 +3858,20 @@ PRO NCDF_DATA::ReadVariableFromGUI_Events, event
    ENDCASE
 END ;---------------------------------------------------------------------------------------------
 
-; test
 PRO NCDF_DATA::	get_info_from_plot_interface											, $
 		varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,tro,mln,arc,pm7,glo,nhm,shm, $
 		save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,$
-		win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat, $
+		win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none, $
 		limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode	, $
 		sinusoidal=sinusoidal,robinson=robinson,cov=cov,nobar=nobar,stereographic=stereographic,msg=msg,log=log		, $
 		dim3=dim3,rot=rot,addtext=addtext,found=found,magnify=magnify,countries=countries,symsize=symsize,notitle=notitle,$
 		shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,smoothTS = smoothTS,$
-		pvir=pvir,show_trend=show_trend, map_extras = map_extras
+		pvir=pvir,show_trend=show_trend,map_extras=map_extras,algo2=algo2,ref=ref,sat1=sat1,sat2=sat2
 
 	found=1
 ; 	varName=self.varname_plotID
 	varName = Widget_Info(self.variableListID, /combobox_gettext)
 ; self.varname_plotID=varName
-
 
 	IF varName EQ "" THEN begin
 		ok = dialog_message( 'Must have a non-null variable name to create a variable.')
@@ -4011,20 +4009,42 @@ PRO NCDF_DATA::	get_info_from_plot_interface											, $
 	isp         = Widget_Info(self.refisp, /BUTTON_SET)
 	cci3        = Widget_Info(self.refcci3, /BUTTON_SET)
 	cci2        = Widget_Info(self.refcci2, /BUTTON_SET)
-; 	cci         = Widget_Info(self.refcci, /BUTTON_SET) ; prototype
-cci = 0
+	cci = 0; 	= Widget_Info(self.refcci, /BUTTON_SET) ; CCI prototype v1.0
 	era         = Widget_Info(self.refera, /BUTTON_SET)
 	era2        = Widget_Info(self.refera2, /BUTTON_SET)
 	g2gwx		= Widget_Info(self.refg2gwx, /BUTTON_SET)
-; 	pmx         = Widget_Info(self.refpmx, /BUTTON_SET)
+	pmx=0 ; 	= Widget_Info(self.refpmx, /BUTTON_SET)
 	pmx2        = Widget_Info(self.refpmx2, /BUTTON_SET)
-; 	l1g         = Widget_Info(self.refl1gac, /BUTTON_SET)
-l1g = 0
+	l1g = 0;    = Widget_Info(self.refl1gac, /BUTTON_SET)
 	cla         = Widget_Info(self.refcla, /BUTTON_SET)
 	hec         = Widget_Info(self.refhec, /BUTTON_SET)
 	sel         = Widget_Info(self.refself, /BUTTON_SET)
 	select      = Widget_Info(self.refselect, /BUTTON_SET)
 	none        = widget_Info(self.refnone,/BUTTON_SET)
+
+	;set algo2 and reference. Means Check which button is set.
+	if none   then begin & algo2 = self.algoname & ref = self.reference & end
+	if modi   then begin & algo2 = 'coll5'       & ref = 'mod'     & end
+	if modi2  then begin & algo2 = 'coll6'       & ref = 'mod2'    & end
+	if myd    then begin & algo2 = 'coll5'       & ref = 'myd'     & end
+	if myd2   then begin & algo2 = 'coll6'       & ref = 'myd2'    & end
+	if era    then begin & algo2 = 'era-i'       & ref = 'era'     & end
+	if era2   then begin & algo2 = 'era-i2'      & ref = 'era2'    & end
+	if gac    then begin & algo2 = 'clara'       & ref = 'gac'     & end
+	if gac2   then begin & algo2 = 'clara2'      & ref = 'gac2'    & end
+	if g2gwx  then begin & algo2 = 'gac2-gewex'  & ref = 'g2_gwx'  & end
+	if ccigwx then begin & algo2 = 'gewex'       & ref = 'gwx'     & end
+	if syn    then begin & algo2 = 'calipso'     & ref = 'cal'     & end
+	if isp    then begin & algo2 = 'isccp'       & ref = 'isp'     & end
+	if cci    then begin & algo2 = 'esacci_old'  & ref = 'cci_old' & end
+	if cci2   then begin & algo2 = 'esacci'      & ref = 'cci'     & end
+	if cci3   then begin & algo2 = 'esacci3'     & ref = 'cci3'    & end
+	if pmx    then begin & algo2 = 'patmos_old'  & ref = 'pmx_old' & end
+	if pmx2   then begin & algo2 = 'patmos'      & ref = 'pmx'     & end
+	if l1g    then begin & algo2 = 'l1gac'       & ref = 'l1gac'   & end
+	if cla    then begin & algo2 = 'claas'       & ref = 'cla'     & end
+	if hec    then begin & algo2 = 'hector'      & ref = 'hec'     & end
+	if select then begin & algo2 = 'select'      & ref = 'select'  & end
 
 	;set background color
 	if Widget_Info(self.wbgrID, /BUTTON_SET) then begin
@@ -4062,28 +4082,9 @@ l1g = 0
 		if n_elements(dum) eq 4 then limit = dum
 	endif
 
-	; limit, if set, will be overwritten by defaults
-	if ant then begin
-		if pczm or pchist then limit = [-90.0,-180,-60.0,180] else begin
-			globe = 1
-			p0lat = -90
-		endelse
-	end
-	if mls then limit = [-60.0,-180,-30.0,180]
-	if tro then limit = [-30.0,-180, 30.0,180]
-	if mln then limit = [ 30.0,-180, 60.0,180]
-	if arc then begin
- 		if pczm or pchist then limit = [ 60.0,-180, 90.0,180] else begin
-			globe = 1 
-			p0lat = 90
-		endelse
-	end
-	if pm7 then limit = [-60.0,-180, 60.0,180]
-	if nhm then limit = [  0.0,-180, 90.0,180]
-	if shm then limit = [-90.0,-180,  0.0,180]
-
 	; if preset areas are set always disable shape_file 
-	if keyword_set(limit) and ~limit_enabled then begin
+	if total([ant,mls,tro,mln,arc,pm7,shm,nhm]) then begin
+; 	if keyword_set(limit) and ~limit_enabled then begin
 		shape_file = ''
 	endif else begin
 		case strlowcase(strcompress(self.handleshape,/rem)) of
@@ -4186,7 +4187,11 @@ l1g = 0
 	satlist = ['noaa'+strcompress([7,9,10,11,12,14,15,16,17,18,19],/rem),'metopa','metopb','aqua','terra','avhrrs',$
 		   'modises','allsat','ers2','envisat','aatme','atsrs','noaaam','noaapm']
 	blabal = where(setlist eq 1,bla_cnt)
-	sat = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
+	sat1 = bla_cnt gt 0 ? (satlist[blabal])[0] : self.satname
+	sat2 = sat1
+	if total(ref eq ['mod','mod2']) then sat2 = 'terra'
+	if total(ref eq ['myd','myd2']) then sat2 = 'aqua'
+	if ref eq 'cla' then sat2 = 'msg'
 
 	if total([ant,mls,tro,mln,arc,pm7,shm,nhm]) then begin
 		cov = ['antarctica','midlat_south','tropic','midlat_north','arctic','midlat_trop','southern_hemisphere','northern_hemisphere']
@@ -4280,7 +4285,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 	CASE buttonValue OF
 
 		'HELP'	: begin
-			xhelp,'/cmsaf/nfshome/sstapelb/idl/xless.pro',/unmanaged
+			help_file = programrootdir()+'vali_gui_help.pro'
+			xhelp,help_file,/unmanaged
 		end
 		'SET_PLOT_DEFAULTS'	: begin
 			sel    = Widget_Info(self.refself,/BUTTON_SET)
@@ -4356,7 +4362,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if filename ne '' then begin
 				if file_name_info(filename,/ext) eq 'kml' then begin
 					image = cgSnapshot_extended(/nodialog)
-					cgImage2KML, image,Filename=filename, latlonbox = [90.,-90.,179.999,-180.] ; 179.999 because of marble bug
+					cgImage2KML, image,Filename=filename, latlonbox = [90.,-90.,180.,-180.] ; 179.999 because of marble bug
 					print,'KML file saved as: ',filename
 				endif else begin
 					image = cgSnapshot_extended(Filename=filename,/nodialog)
@@ -4368,13 +4374,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,magnify=magnify, $
-				mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
-				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit, $
-				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found,pvir=pvir, $
-				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-				no_label=no_label,smoothTS = smoothTS,no_box=no_box,show_trend=show_trend
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,$
+				magnify=magnify,mls,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,$
+				cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,$
+				pcmts,pcmatts,pchov,pmulti,load,select,none,sat1=sat1,limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,$
+				aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found,pvir=pvir,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,$
+				stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,countries=countries,symsize=symsize,$
+				notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,smoothTS=smoothTS,$
+				no_box=no_box,show_trend=show_trend,algo2=algo2,ref=ref,sat2=sat2
 
 			if ~found then return
 
@@ -4387,7 +4394,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				return
 			endif
 
-			if select then ref = 'select'
+; 			if select then ref = 'select'
 
 			if pcmat and (total(self.leveltype eq ['L2','L3U','L1','L3DH','L2B_SUM'])) then begin 
 				ok = dialog_message('This works with Monthly Means only!')
@@ -4403,27 +4410,6 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				varname  = names[0]
 				varname2 = names[1]
 			endif else varname2 = varname
-
-			if modi   then ref = 'mod'
-			if modi2  then ref = 'mod2'
-			if myd    then ref = 'myd'
-			if myd2   then ref = 'myd2'
-			if era    then ref = 'era'
-			if era2   then ref = 'era2'
-			if gac    then ref = 'gac'
-			if gac2   then ref = 'gac2'
-; 			if pmx    then ref = 'pmx_old'
-			if pmx2   then ref = 'pmx'
-			if l1g    then ref = 'l1gac'
-			if cla    then ref = 'cla'
-			if cci    then ref = 'cci_old'
-			if cci2   then ref = 'cci'
-			if cci3   then ref = 'cciv3'
-			if ccigwx then ref = 'gwx'
-			if g2gwx  then ref = 'g2_gwx'
-			if syn    then ref = 'cal'
-			if isp    then ref = 'isp'
-			if hec    then ref = 'hec'
 
 			;set System Variables
 			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),reference = ref
@@ -4455,7 +4441,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endif
 				ok     = self -> get_file_infos(infile=file)
 				algo   = ok.algoname
-				satn   = ok.satname
+				sat1    = ok.satname
 				year   = ok.year
 				month  = ok.month
 				day    = ok.day
@@ -4464,9 +4450,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				level  = ok.level
 				version= ok.version
 			endif else begin
-				if sel and (sat ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
+				if sel and (sat1 ne self.satname or year ne self.year or month ne self.month or day ne self.day or orbit ne self.orbit) then $
 				print,'Load button is checked! Search for file in loaded directory!'
-				file = self -> get_new_filename( sat, year, month, day, orbit, algo, varname2, level = level, found = found,$
+				file = self -> get_new_filename( sat1, year, month, day, orbit, algo, varname2, level = level, found = found,$
 								 dirname = (sel ? self.directory:0))
 				datum=strjoin([year,month,day,orbit])
 			endelse
@@ -4487,7 +4473,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if is_jch(varname) then begin
 				vergleiche_ctp_cot_histogram_cci_mit_clara,file,varname = varname, mini = mini, maxi = maxi, limit=limit,$
 				win_nr = win_nr, save_as= save_as,hist_cloud_type = hct[0], reference = ref,timeseries=pcmult, zoom=zoom,$
-				globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,log=log, sat=sat	,$
+				globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,log=log, sat=sat1	,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,ctable=ctab,other=oth,difference=pcdts,show_values=show_values	,$
 				out=out, verbose = verbose,nobar=nobar,algo1=algo, stereographic = stereographic, ztext = ztext, msg = msg,datum=datum	,$
 				magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,no_grid=no_grid,no_label=no_label		,$
@@ -4506,7 +4492,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if histo1d and pcmult and ~pchov then begin
 				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean Multi Time Step'
 				if ~(histo1d and strlowcase(hct[0]) eq '1d') then !p.multi=[0,2,2]
-				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, orbit = orbit, $
+				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat1, orbit = orbit, $
 				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, ztext = ztext,$
 				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,$
@@ -4530,7 +4516,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pcvar and pcsing then begin
 				if verbose then print,'Map2d + 2D-Histogram + Zonal Mean'
 				if ~(histo1d and strlowcase(hct[0]) eq '1d') then !p.multi=[0,2,2]
-				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, orbit = orbit, $
+				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat1, orbit = orbit, $
 				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, ztext = ztext,$
 				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, level = level,log=log, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,$
@@ -4547,7 +4533,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if keyword_set(verbose) then goto, print_verbose1
 					return
 				endif
-				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, level = level,$
+				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat1, level = level,$
 				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, orbit = orbit,$
 				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab, /difference, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,out=out,$
@@ -4558,13 +4544,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmat then begin
 				if verbose then print,'Matrix'
-				make_2d_overview,year=year,month=month,sat,reference=ref, cov = cov,sat2=sat2, out = out, shape_file=shape_file,nobar=nobar, $
+				make_2d_overview,year=year,month=month,sat1,reference=ref, cov = cov,sat2=sat2, out = out, shape_file=shape_file,nobar=nobar, $
 				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,file1 = file, limit = limit
 				if show_values then show_pixel_value, out, data = 'Diff', unit=' [%]', wtext = self.showpvalID
 			endif
 			if pcmult and pcts then begin
 				if verbose then print,'Time Series'
-				plot_simple_timeseries, varname, sat, algo, cov, reference = ref,mini=mini, maxi=maxi,verbose=verbose,  $
+				plot_simple_timeseries, varname, sat1, algo, cov, reference = ref,mini=mini, maxi=maxi,verbose=verbose,  $
 				oplots=opl,win_nr=win_nr,logarithmic=log,white_bg=Widget_Info(self.wbgrID, /BUTTON_SET),$
 				rot=rot,error=error,save_as=save_as,symsize=symsize,notitle=notitle,show_trend=show_trend,$
 				nobar=nobar, addtext = addtext,smoothTS = smoothTS, ts_extras = ts_extras
@@ -4572,7 +4558,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pczm and pcsing then begin
 				if verbose then print,'Zonal Average Single Time Step'
-				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat, level = level,error=error,$
+				compare_cci_with_clara, year, month, day, data = varname, ccifile = file, reference=ref, sat=sat1, level = level,error=error,$
 				mini = mini, maxi = maxi , zoom=zoom, limit=limit, win_nr = win_nr, save_dir = save_as, orbit = orbit,$
 				cov=cov, show_values = show_values, verbose = verbose, other = oth, ctable=ctab,/zonal_only, ztext = ztext, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide,hammer=hammer, msg = msg,log=log,$
@@ -4583,7 +4569,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pczm and pcmult then begin
 				if verbose then print,'Zonal Average Multi Time Step'
-				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/zonal_only,$
+				plot_cci_gac_time_series, algo = algo, sat = sat1, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/zonal_only,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat, $
 				mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,	$
@@ -4593,7 +4579,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcdts and pcmult then begin
 				if verbose then print,'2D Difference Plot Multi Time Step'
-				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/diff,$
+				plot_cci_gac_time_series, algo = algo, sat = sat1, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref,/diff,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,out=out,zoom=zoom, shape_file=shape_file,ts_extras=ts_extras,$
 				error=error, other = oth, ctable=ctab, globe=globe,p0lon=p0lon,p0lat=p0lat,log=log,no_box=no_box, $
 				mollweide=mollweide,hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal, msg = msg,$
@@ -4603,7 +4589,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcvar and pcmult then begin
 				if verbose then print,'Map2d Multi Time Step'
-				plot_cci_gac_time_series, algo = algo, sat = sat, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, verbose = verbose,$
+				plot_cci_gac_time_series, algo = algo, sat = sat1, save_as = save_as,win_nr=win_nr,cov=cov,reference=ref, verbose = verbose,$
 				single_var=varname,mini=mini,maxi=maxi,limit=limit,bild=bild,lon=lon,lat=lat,unit=unit,zoom=zoom,error=error, other = oth,$
 				ctable=ctab,globe=globe,p0lon=p0lon,p0lat=p0lat,mollweide=mollweide,hammer=hammer,goode=goode,magnify=magnify,$
 				aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic, ztext = ztext, msg = msg,log=log,$
@@ -4613,9 +4599,9 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			endif
 			if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
-				plot_taylor_diagram, year, month, day, file1=file, sat1=sat, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
+				plot_taylor_diagram, year, month, day, file1=file, sat1=sat1, save_as = save_as, win_nr=win_nr,reference=ref, verbose =verbose,$
 				varname=varname,mini=mini,maxi=maxi,limit=limit,unit=unit, other =oth,algo = algo,level=level,$
-				time_series=pcmult,notitle=notitle,sat2=satn
+				time_series=pcmult,notitle=notitle,sat2=sat2
 			endif
 			if pcms and pcmult then begin
  				if verbose then print,'Currently Unset'
@@ -4625,7 +4611,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if opl eq 0 then ptr_free,self.out_hovmoeller else out = *self.out_hovmoeller
 				endif
 				if verbose then print,'Hovmoeller Time Series'
-				plot_hovmoeller, varname, algo[0], sat[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar, $
+				plot_hovmoeller, varname, algo[0], sat1[0], save_as = save_as,mini=mini,maxi=maxi, win_nr=win_nr,nobar=nobar, $
 				ctable=ctab, other = oth,reference = ref, out = out, oplots = opl,found = found, limit = limit,coverage=cov, $
 				notitle=notitle,ts_extras = ts_extra
 				if show_values then begin
@@ -4640,13 +4626,13 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if pchist then begin
 				if verbose then print,'Histograms'
 				plot_histogram,year,month,day,file,varname[0],mini=mini,maxi=maxi,limit=limit,level=level, $
-				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat[0], cov=cov,addtext = addtext[0], $
+				algo=algo[0],save_as=save_as,win_nr=win_nr,timeseries=pcmult, sat = sat1[0], cov=cov,addtext = addtext[0], $
 				datum=datum, ref = ref, change_side = show_values,verbose=verbose, shape_file=shape_file, $
 				white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),log=log,notitle=notitle
 			endif
 			if pcmts then begin
 				if verbose then print,'BoxPlots'
-				boxplot, year, month, day, data=varname, satellite = sat, timeseries=pcmult,level=level, limit = limit, $
+				boxplot, year, month, day, data=varname, satellite = sat1, timeseries=pcmult,level=level, limit = limit, $
 				filename1 = file, coverage = cov, error = error, mini = mini, maxi = maxi, save_as = save_as, win_nr = win_nr, $
 				datum=datum,algo=algo[0],verbose=verbose,reference = ref,notitle=notitle, shape_file=shape_file
 				if pcmult then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
@@ -4673,13 +4659,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year, $
-				month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,limit=limit	, $
-				globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	,smoothTS = smoothTS	, $
-				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,pvir=pvir,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-				no_label=no_label,no_box=no_box,show_trend=show_trend
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,$
+				magnify=magnify,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,$
+				era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,$
+				pcmatts,pchov,pmulti,load,select,none,limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,$
+				hammer=hammer,goode=goode,cov=cov,found=found,smoothTS=smoothTS,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,$
+				stereographic=stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,pvir=pvir,countries=countries,symsize=symsize,$
+				notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,no_box=no_box,$
+				show_trend=show_trend,algo2=algo2,ref=ref,sat1=sat1,sat2=sat2
 
 			if ~found then return
 
@@ -4711,7 +4698,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			if sel then file1  = self.directory+'/'+self.filename else begin
 				datum1 = strjoin([year,month,day,orbit])
-				file1  = self -> get_new_filename( sat, year, month, day, orbit, algo, varname, level = level, found = found,dirname = self.directory)
+				file1  = self -> get_new_filename( sat1, year, month, day, orbit, algo, varname, level = level, found = found,dirname = self.directory)
 				if keyword_set(verbose) then goto, print_verbose2
 				if ~found then return
 			endelse
@@ -4723,7 +4710,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 			if select or none then begin
 				if none and n_elements(names) gt 1 then begin
 					algo2      = algo
-					satn       = self.satname
+					sat2       = self.satname
 					datum2     = datum1
 					self.file2 = file1
 				endif else begin
@@ -4745,32 +4732,12 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					endif
 					ok     = self -> get_file_infos(infile=self.file2)
 					algo2  = ok.algoname
-					satn   = ok.satname
+					sat2   = ok.satname
 					datum2 = ok.datum eq '' ? strjoin([year,month,day,orbit]) : ok.datum
 					version2 = ok.version
 					only_given_files = 1
 				endelse
 			endif else begin
-				if modi   then begin & algo2 = 'coll5'      & satn = 'terra' & end
-				if modi2  then begin & algo2 = 'coll6'      & satn = 'terra' & end
-				if myd    then begin & algo2 = 'coll5'      & satn = 'aqua' & end
-				if myd2   then begin & algo2 = 'coll6'      & satn = 'aqua' & end
-				if era    then begin & algo2 = 'era-i'      & satn = '' & end
-				if era2   then begin & algo2 = 'era-i2'     & satn = '' & end
-				if gac    then begin & algo2 = 'clara'      & satn = sat & end
-				if gac2   then begin & algo2 = 'clara2'     & satn = sat & end
-				if ccigwx then begin & algo2 = 'gewex'      & satn = sat & end
-				if syn    then begin & algo2 = 'calipso'    & satn = 'calipso' & end
-				if isp    then begin & algo2 = 'isccp'      & satn = sat & end
-				if cci    then begin & algo2 = 'esacci_old' & satn = sat & end
-				if cci2   then begin & algo2 = 'esacci'     & satn = sat & end
-				if cci3   then begin & algo2 = 'esacciv3'   & satn = sat & end
-				if g2gwx  then begin & algo2 = 'gac2-gewex' & satn = sat & end
-; 				if pmx    then begin & algo2 = 'patmos_old' & satn = sat & end
-				if pmx2   then begin & algo2 = 'patmos'     & satn = sat & end
-				if l1g    then begin & algo2 = 'l1gac'      & satn = sat & end
-				if cla    then begin & algo2 = 'claas'      & satn = 'msg' & end
-				if hec    then begin & algo2 = 'hector'     & satn = sat & end
 				if pcmult then begin
 					self.file2 = ''
 					found = 1
@@ -4779,11 +4746,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					if pvir then varName += '_pvir'
 				endif else begin
 					if strlowcase(algo) eq 'gewex' then gewex_style = (reverse((strsplit(file_basename(file1),'_',/ext))))[1]
-					self.file2 = (get_filename(year, month, day, data=varname2, sat=satn, algo=algo2, level=level, $
+					self.file2 = (get_filename(year, month, day, data=varname2, sat=sat2, algo=algo2, level=level, $
 								  found=found, orbit=orbit,gewex_style=gewex_style))[0]
 					if not found then begin
 						self.file2 = self.directory+'/'+self.filename
-						sat  = self.satname
+						sat1  = self.satname
 						if keyword_set(verbose) then goto, print_verbose2
 						return
 					endif
@@ -4791,7 +4758,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				endelse
 			endelse
 
-			if sel then sat  = self.satname
+			if sel then sat1  = self.satname
 			if self-> filematch(file1,self.file2) and strmatch(varname,varname2) then begin
 				ok = dialog_message('File1 and File2 are the same!',/cancel,/default_cancel)
 				if keyword_set(verbose) then goto, print_verbose2
@@ -4807,7 +4774,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				!p.multi = 0
 				compare_l2_save_serie,file1,self.file2,data1=varname,data2=varname,mini=mini,maxi=maxi	, $
 				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,lon=lon,lat=lat	, $
-				bild=bild,unit=unit,sat1 = sat, sat2 = satn,algo2=algo2,algo1=algo, verbose = verbose	, $
+				bild=bild,unit=unit,sat1 = sat1, sat2 = sat2,algo2=algo2,algo1=algo, verbose = verbose	, $
 				year = year, month = month, day = day, orbit = orbit, datum1 = datum1, datum2 = datum2	, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide	, $
 				hammer=hammer,goode=goode,aitoff=aitoff,sinusoidal=sinusoidal,robinson=robinson,log=log	, $
@@ -4817,8 +4784,8 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				shape_file=shape_file
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if is_jch(varname) and total(strlowcase(hct[0]) eq ['1d','1d_cot','1d_ctp','max']) then begin
-				satn1  = sat_name(algo,sat)
-				satn2  = sat_name(algo2,satn)
+				satn1  = sat_name(algo,sat1)
+				satn2  = sat_name(algo2,sat2)
 				if keyword_set(addtext) then begin
 					at = strsplit(addtext,',',/ext)
 					if n_elements(at) eq 2 then begin
@@ -4851,14 +4818,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					endif
 				endif
 				if strmid(strlowcase(hct[0]),0,2) eq '1d' then begin
-					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat1=sat,prefix=[f1str,f2str], $
+					plot_1d_from_jch_4all,file1,self.file2,year=year,month=month,sat1=sat1,prefix=[f1str,f2str], $
 					limit=limit,save_as=save_as,win_nr=win_nr , $
 					liquid = stregex(varname,'ice',/fold,/bool),ice = stregex(varname,'liq',/fold,/bool)	 , $
-					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0],notitle=notitle,sat2=satn,$
+					algo1=algo,algo2=algo2,mini=mini,maxi=maxi,hist_cloud_type=hct[0],notitle=notitle,sat2=sat2,$
 					cov=cov, shape_file=shape_file
 				endif else begin
 					; file1
-					plot_l2,year[0],month[0],day[0],file=file1,data=varname[0],mini=mini,maxi=maxi,sat=sat	, $
+					plot_l2,year[0],month[0],day[0],file=file1,data=varname[0],mini=mini,maxi=maxi,sat=sat1	, $
 					algo=algo[0],hist_cloud_type=hct[0],win_nr=win_nr,save_as=save_as	, $
 					limit=limit,zoom=zoom,globe=globe,p0lon=p0lon,stereographic=stereographic,msg_proj=msg	, $
 					p0lat=p0lat,mollweide=mollweide,hammer=hammer,log=log	, $
@@ -4867,7 +4834,7 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 					cov=cov,magnify=magnify,countries=countries,notitle=notitle,no_continents=no_continents,$
 					no_grid=no_grid,no_label=no_label,no_box=no_box, shape_file=shape_file
 					; file2
-					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname2,mini=mini,maxi=maxi,sat=satn, $
+					plot_l2,year[0],month[0],day[0],file=self.file2,data=varname2,mini=mini,maxi=maxi,sat=sat2, $
 					algo=algo2[0],hist_cloud_type=hct[0],win_nr=win_nr,save_as=save_as	, $
 					limit=limit,zoom=zoom,out=out,globe=globe,p0lon=p0lon	, $
 					p0lat=p0lat,mollweide=mollweide,hammer=hammer,msg_proj=msg	, $
@@ -4881,19 +4848,19 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				!p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endif else if pcmatts then begin
 				if verbose then print,'Taylor Diagram'
-				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat1=sat,sat2=satn,save_as=save_as, $
+				plot_taylor_diagram,year,month,day,file1=file1,file2=self.file2,sat1=sat1,sat2=sat2,save_as=save_as, $
 				win_nr=win_nr,reference=algo2,verbose=verbose,varname=varname,mini=mini,maxi=maxi,limit=limit	, $
 				unit=unit,other=oth,algo = algo,level=level,time_series=pcmult,notitle=notitle
 			endif else if pcmat then begin
 				if verbose then print,'Matrix'
-				make_2d_overview,year=year,month=month,sat,reference=algo2, cov = cov,sat2=satn, out = out, $
+				make_2d_overview,year=year,month=month,sat1,reference=algo2, cov = cov,sat2=sat2, out = out, $
 				save_as = save_as,mini=mini,maxi=maxi, verbose = verbose, time_series = pcmult,algo = algo,$
 				file1 = file1,file2=self.file2,addtext=addtext[0], datum1 = datum1, datum2 = datum2, $
 				shape_file=shape_file, limit = limit, notitle=notitle, only_given_files = only_given_files
 				if show_values then show_pixel_value, out, data = 'Diff', unit=' [%]', wtext = self.showpvalID
 			endif else begin
 				compare_l2,file1,self.file2,data1=varname,data2=varname2,mini=mini,maxi=maxi,level=level, $
-				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,out=out,sat1=sat,sat2=satn			, $
+				save_as=save_as, win_nr=win_nr,limit=limit,zoom=zoom,out=out,sat1=sat1,sat2=sat2			, $
 				algo2=algo2,algo1=algo,htypes=hct[0],verbose=verbose,year=year,month=month,day=day		, $
 				orbit = orbit, datum1 = datum1, datum2 = datum2,log=log,shape_file=shape_file			, $
 				globe=globe,p0lon=p0lon,p0lat=p0lat, mollweide=mollweide, hammer=hammer,goode=goode		, $
@@ -4926,13 +4893,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 
 			Widget_Control, /HOURGLASS
 
-			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,magnify=magnify, $
-				tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,$
-				win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,pcmatts,pchov,pmulti,load,select,none,sat=sat,$
-				limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found	,pvir=pvir, $
-				sinusoidal=sinusoidal,robinson=robinson,nobar=nobar, stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,$
-				countries=countries,symsize=symsize,notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,$
-				no_label=no_label,smoothTS = smoothTS,no_box=no_box,show_trend=show_trend,map_extras = map_extras
+			self -> get_info_from_plot_interface,varName,mini=mini,maxi=maxi,opl,hct,oth,ctab,show_values,verbose,all,sea,land,ant,mls,$
+				magnify=magnify,tro,mln,arc,pm7,glo,nhm,shm,save_as,error,zoom,gac,modi,myd,gac2,modi2,myd2,syn,ccigwx,isp,cci,cci2,cci3,$
+				era,era2,g2gwx,pmx2,l1g,cla,hec,sel,pcms,win_nr,year,month,day,orbit,pcsing,pcmult,pcvar,pcmat,pcts,pchist,pczm,pcdts,pcmts,$
+				pcmatts,pchov,pmulti,load,select,none,sat1=sat1,limit=limit,globe=globe,p0lat=p0lat,p0lon=p0lon,mollweide=mollweide,$
+				aitoff=aitoff,hammer=hammer,goode=goode,cov=cov,found=found,pvir=pvir,sinusoidal=sinusoidal,robinson=robinson,nobar=nobar,$
+				stereographic = stereographic,msg=msg,log=log,dim3=dim3,rot=rot,addtext=addtext,countries=countries,symsize=symsize,$
+				notitle=notitle,shape_file=shape_file,no_continents=no_continents,no_grid=no_grid,no_label=no_label,smoothTS = smoothTS,$
+				no_box=no_box,show_trend=show_trend,map_extras = map_extras,algo2=algo2,ref=ref,sat2=sat2
 
 			if ~found then return
 
@@ -4945,30 +4913,11 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				ok = dialog_message('This combi is currently not set! Try "Compare" oder "Multi Time Steps" instead!')
 				return
 			endif
-			
+
 			if keyword_set(verbose) then start_seconds = systime(1)
 
-			if none   then begin & algo = self.algoname & ref = self.reference & end
-			if modi   then begin & algo = 'coll5'       & sat = 'terra'   & ref = 'mod'  & end
-			if modi2  then begin & algo = 'coll6'       & sat = 'terra'   & ref = 'mod2' & end
-			if myd    then begin & algo = 'coll5'       & sat = 'aqua'    & ref = 'myd'  & end
-			if myd2   then begin & algo = 'coll6'       & sat = 'aqua'    & ref = 'myd2' & end
-			if era    then begin & algo = 'era-i'       & ref = 'era'     & end
-			if era2   then begin & algo = 'era-i2'      & ref = 'era2'    & end
-			if gac    then begin & algo = 'clara'       & ref = 'gac'     & end
-			if gac2   then begin & algo = 'clara2'      & ref = 'gac2'    & end
-			if g2gwx  then begin & algo = 'gac2-gewex'  & ref = 'g2_gwx'  & end
-			if ccigwx then begin & algo = 'gewex'       & ref = 'gwx'     & end
-			if syn    then begin & algo = 'calipso'     & ref = 'cal'     & end
-			if isp    then begin & algo = 'isccp'       & ref = 'isp'     & end
-			if cci    then begin & algo = 'esacci_old'  & ref = 'cci_old' & end
-			if cci2   then begin & algo = 'esacci'      & ref = 'cci'     & end
-			if cci3   then begin & algo = 'esacciv3'    & ref = 'cciv3'   & end
-; 			if pmx    then begin & algo = 'patmos_old'  & ref = 'pmx_old' & end
-			if pmx2   then begin & algo = 'patmos'      & ref = 'pmx'     & end
-			if l1g    then begin & algo = 'l1gac'       & ref = 'l1gac'   & end
-			if cla    then begin & algo = 'claas'       & sat = 'msg'     & ref = 'cla'  & end
-			if hec    then begin & algo = 'hector'      & ref = 'hec'     & end
+			algo = algo2
+			sat  = sat2
 
 			;set System Variables
 			plot_l3, save_as = save_as, white_bg = Widget_Info(self.wbgrID, /BUTTON_SET),reference = ref
@@ -5138,11 +5087,14 @@ PRO NCDF_DATA::PlotVariableFromGUI_Events, event
 				if zoom and ~arc and ~ant then Widget_Control, self.limitID, Set_Value=strcompress(ztext[0],/rem)
 				if hist2d and strlowcase(hct[0]) eq '1d' then !p.multi = fix(strsplit(strcompress(self.pmulti_default,/rem),'],[()',/ext))
 			endelse
-
-			if show_values and is_defined(out) then begin
+			if is_defined(out) then begin
+				if show_values then begin
 					if ~(hist2d and strlowcase(strmid(hct[0],0,2)) eq '1d') then $
 					show_pixel_value, out.bild, out.lon,out.lat, data = varname, unit = out.unit, wtext = self.showpvalID
+				endif
+				if nobar eq 99 then self.plotl2_out = ptr_new(out) else free, self.plotl2_out
 			endif
+
 			; reset values
 ; 			Widget_Control, self.pixvalID, Set_Button=0
  			Widget_Control, self.zoomID  , Set_Button=0
@@ -6331,7 +6283,7 @@ PRO NCDF_DATA__DEFINE, class
              pmulti_default:'',        $
              oplotID:0l,               $
              oplotnr:0l,               $
-;              map_objout:obj_new(''),   $
+             plotl2_out:ptr_new(),     $
              map_objout:obj_new('IDL_Container'),   $
 	     draw:0L,                  $
              errID:0L,                 $

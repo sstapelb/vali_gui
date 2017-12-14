@@ -1,4 +1,4 @@
-function calc_rgb, refl_vis006, refl_vis008, bt_nir037, bt_tir108, sunzen, ir_flag,refl_nir037=refl_nir037,enhance=enhance,true=true
+function calc_rgb, refl_vis006, refl_vis008, bt_nir037, bt_tir108, sunzen, ir_flag, refl_nir037=refl_nir037,enhance=enhance,true=true
 
 	ir	= bt_tir108 > 0.; (self -> get_data('ir108', /temperature))	> 0.
 	if keyword_set(refl_nir037) then begin
@@ -9,7 +9,7 @@ function calc_rgb, refl_vis006, refl_vis008, bt_nir037, bt_tir108, sunzen, ir_fl
 	g	= keyword_set(true) ? refl_vis008 : refl_vis008/cosd(sunzen) > 0.
 	b	= keyword_set(true) ? refl_vis006 : refl_vis006/cosd(sunzen) > 0.
 
-	r = 255 * (0. > (r / 150.0) < 1.)
+	r = 255 * (0. > (r / 150.0)*1.0 < 1.)
 	g = 255 * (0. > (g / 138.0)*0.8 < 1.)
 	b = 255 * (0. > (b / 122.0)*0.5 < 1.)
 
@@ -47,6 +47,25 @@ function calc_rgb, refl_vis006, refl_vis008, bt_nir037, bt_tir108, sunzen, ir_fl
 	;MST, make the dry regions less red
 	if ~keyword_set(refl_nir037) then img[0,*,*] = img[0,*,*] < (img[1,*,*]+10)
 
+	if keyword_set(enhance) then begin
+		no_data_idx = where(sunzen gt 84,nd_cnt)
+		if nd_cnt gt 0 then begin
+			r=reform(img[0,*,*])
+			g=reform(img[1,*,*])
+			b=reform(img[2,*,*])
+			r[no_data_idx] = 0
+			g[no_data_idx] = 0
+			b[no_data_idx] = 0
+			img = transpose([[[r]],[[g]],[[b]]],[2,0,1])
+		endif
+		img = byte(img*1.3 < 255.)
+		;histogram equal. um es ein wenig aufzuhellen
+		r=reform(bytscl(hist_equal(img[0,*,*])))
+		g=reform(bytscl(hist_equal(img[1,*,*])))
+		b=reform(bytscl(hist_equal(img[2,*,*])))
+		img = transpose([[[r]],[[g]],[[b]]],[2,0,1])
+	endif
+
 	if(ir_flag eq 1) then begin
 		;Für die Überlagerung mache ich ein Gewicht
 		weight = smooth(dum / (max(dum)>1), 10);
@@ -73,39 +92,10 @@ function calc_rgb, refl_vis006, refl_vis008, bt_nir037, bt_tir108, sunzen, ir_fl
 		bwc = (1.-(bwc)/max(bwc))*255.
 		for k = 0l, 2l do img[k, *, *] = 0. > (weight * img[k, *, *] + (1-weight) * bwc) < 255.
 		img = byte(img)
-
 	endif
 
-	if keyword_set(enhance) then begin
-		no_data_idx = where(sunzen gt 84,nd_cnt)
-		if nd_cnt gt 0 then begin
-			data_idx = where(bt_tir108 gt 0)
-			dum_alt = reform(bt_tir108)
-			bt108   = dum_alt and 0
-			bt108[data_idx] = bytscl(dum_alt[data_idx])
-			bt108 *= -1.
-			r=reform(img[0,*,*])
-			g=reform(img[1,*,*])
-			b=reform(img[2,*,*])
-			r[no_data_idx] = 0
-			g[no_data_idx] = 0
-			b[no_data_idx] = 0
-			img = transpose([[[r]],[[g]],[[b]]],[2,0,1])
-		endif
-		; enhance and transpose
-		img = transpose(byte(img*1.3 < 255.),[1,2,0])
-		;histogram equal.
-		r=bytscl(hist_equal(img[*,*,0]))
-		g=bytscl(hist_equal(img[*,*,1]))
-		b=bytscl(hist_equal(img[*,*,2]))
-		if nd_cnt gt 0 then begin
-			r[no_data_idx] = bytscl(hist_equal(bt108[no_data_idx]))
-			g[no_data_idx] = bytscl(hist_equal(bt108[no_data_idx]))
-			b[no_data_idx] = bytscl(hist_equal(bt108[no_data_idx]))
-		endif
-		img = [[[r]],[[g]],[[b]]]
-	endif
+	img = transpose(img,[1,2,0])
 
-	return,img
+	return, img
 
 end

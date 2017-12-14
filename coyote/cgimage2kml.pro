@@ -211,7 +211,8 @@ PRO cgImage2KML, image, mapCoord, $
    PLACENAME=placename, $
    RESIZE_FACTOR=resize_factor, $
    REVERSE=reverse, $
-   TRANSPARENT=transparent
+   TRANSPARENT=transparent,true=true, $
+   screen_overlay = screen_overlay
 
    Compile_Opt idl2
    
@@ -304,41 +305,41 @@ PRO cgImage2KML, image, mapCoord, $
       googleMapCoord = Obj_New('cgMap', 'Equirectangular', Ellipsoid='WGS 84')
       warped = cgChangeMapProjection(warped, mapCoord, MAPOUT=googleMapCoord, $
           LATLONBOX=latlonbox)
-   ENDIF 
-   
-   ; Byte scale the image.
-   IF N_Elements(missing_value) NE 0 THEN BEGIN
-      imgType = Size(warped, /TNAME)
-      IF (imgType NE 'FLOAT') && (imgType NE 'DOUBLE') THEN warped = Float(warped)
-      missing = Where(warped EQ missing_value, count)
-      IF count GT 0 THEN warped[missing] = !Values.F_NAN
-      IF (Min(warped, /NAN) LT 0) || (Max(warped, /NAN) GT 255) || scaleIt THEN BEGIN
-         warped = BytScl(warped, MIN=min_value, MAX=max_value, /NAN, TOP=254) + 1B
-      ENDIF
-      IF count GT 0 THEN warped[missing] = 0B
-   ENDIF ELSE BEGIN
-      IF (Min(warped) LT 0) || (Max(warped) GT 255) || scaleIt THEN BEGIN
-         warped = BytScl(warped, MIN=min_value, MAX=max_value, /NAN)
-      ENDIF
-   ENDELSE
-   
-   ; If this is a 2D image, create a 24-bit image from the palette.
-   r = Reform(palette[*,0])
-   g = Reform(palette[*,1])
-   b = Reform(palette[*,2])
-   IF (Size(warped, /N_Dimensions) EQ 2) THEN BEGIN
-      warped = [ [[r[warped]]], [[g[warped]]], [[b[warped]]]]
-   ENDIF
-   
-   ; Do we need transparency?
-   IF N_Elements(transparent) NE 0 THEN BEGIN
-       warped = cgTransparentImage(warped, TRANSPARENT=transparent, MISSING_VALUE=[r[0],g[0],b[0]])
-   ENDIF
-   
+  ENDIF 
+	if not keyword_set(true) then begin
+		; Byte scale the image.
+		IF N_Elements(missing_value) NE 0 THEN BEGIN
+			imgType = Size(warped, /TNAME)
+			IF (imgType NE 'FLOAT') && (imgType NE 'DOUBLE') THEN warped = Float(warped)
+			missing = Where(warped EQ missing_value, count)
+			IF count GT 0 THEN warped[missing] = !Values.F_NAN
+			IF (Min(warped, /NAN) LT 0) || (Max(warped, /NAN) GT 255) || scaleIt THEN BEGIN
+				warped = BytScl(warped, MIN=min_value, MAX=max_value, /NAN, TOP=254) + 1B
+			ENDIF
+			IF count GT 0 THEN warped[missing] = 0B
+		ENDIF ELSE BEGIN
+			IF (Min(warped) LT 0) || (Max(warped) GT 255) || scaleIt THEN BEGIN
+				warped = BytScl(warped, MIN=min_value, MAX=max_value, /NAN)
+			ENDIF
+		ENDELSE
+		; if not keyword_set(true) then begin
+		; If this is a 2D image, create a 24-bit image from the palette.
+		r = Reform(palette[*,0])
+		g = Reform(palette[*,1])
+		b = Reform(palette[*,2])
+		IF (Size(warped, /N_Dimensions) EQ 2) THEN BEGIN
+			warped = [ [[r[warped]]], [[g[warped]]], [[b[warped]]]]
+		ENDIF
+		; Do we need transparency?
+		IF N_Elements(transparent) NE 0 THEN BEGIN
+			warped = cgTransparentImage(warped, TRANSPARENT=transparent, MISSING_VALUE=[r[0],g[0],b[0]])
+		ENDIF
+	endif else warped = byte(warped)
+
    ; Save the image as a PNG file.
    dims = Image_Dimensions(warped, XINDEX=xindex, YINDEX=yindex, TRUEINDEX=trueindex)
    IF trueindex GT 0 THEN warped = Transpose(warped, [trueindex, xindex, yindex])
-   
+
    IF cgObj_Isa(addtofile, 'cgKML_File') THEN BEGIN
    
       addToFile -> GetProperty, FILENAME=filename, COUNT=count
@@ -357,12 +358,11 @@ PRO cgImage2KML, image, mapCoord, $
        
        ; Do you have a lookAt object?
        IF Obj_Valid(lookAtObj) THEN addToFile -> Add, lookAtObj
-   
+ 
    ENDIF ELSE BEGIN
-   
      ; Write the image file.
      Write_PNG, imageFilename, warped
-   
+     
      ; Write the KML file.
      kmlFile = Obj_New('cgKML_File', filename)
      overlay = Obj_New('cgKML_GroundOverlay', $
@@ -373,6 +373,24 @@ PRO cgImage2KML, image, mapCoord, $
        DRAWORDER=draworder)
      kmlFile -> Add, overlay
 
+     if keyword_set(screen_overlay) then begin
+		screen_overlay = Obj_New('cgKML_ScreenOverlay', $
+						COLOR=color, $
+						DRAWORDER=draworder, $
+						HREF=screen_overlay, $
+						OVERLAY_XY=[0.,1.], $
+						OVERLAY_UNIT_X='fraction', $
+						OVERLAY_UNIT_Y='fraction', $
+						SCREEN_XY=[0.,1.], $
+						SCREEN_UNIT_X='fraction', $
+						SCREEN_UNIT_Y='fraction', $
+						SIZE_XY=[0.10,0.3], $
+						SIZE_UNIT_X='fraction', $
+						SIZE_UNIT_Y='fraction', $
+						ROTATION=0.)
+		kmlFile -> Add, screen_overlay
+     endif
+     
      ; Do you have a lookAt object?
      IF Obj_Valid(lookAtObj) THEN kmlFile -> Add, lookAtObj
      

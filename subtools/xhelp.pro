@@ -71,7 +71,8 @@ PRO xhelp, FILENAME, TITLE = TITLE, GROUP = GROUP, WIDTH = WIDTH, $
 ;	Triggers the XMANAGER if it is not already in use.
 ;
 ; RESTRICTIONS:
-;	None.
+;	None. -> Thats funny! It seems only .pro file can be read and here only the header marked between ';+' and ';-' 
+;						  No restrictions? My Arse!
 ;
 ; PROCEDURE:
 ;	Open a file and create a widget to display its contents.
@@ -90,7 +91,7 @@ IF(NOT(KEYWORD_SET(HEIGHT))) THEN HEIGHT = 24		;the keywords were not
 
 IF(NOT(KEYWORD_SET(TEXT)))THEN BEGIN
   pfile=FILENAME
-  if strpos(pfile,".pro") lt 0 then pfile=pfile+".pro" 
+;   if strpos(pfile,".pro") lt 0 then pfile=pfile+".pro" 
   if strpos(pfile,"/") lt 0 then pfile=[".",str_sep(!path,":")] + "/" + pfile
 
   nfile=n_elements(pfile)
@@ -101,9 +102,9 @@ IF(NOT(KEYWORD_SET(TEXT)))THEN BEGIN
     ii=ii+1
   endrep until ii eq nfile or file_found ge 0
   if(not(keyword_set(title))) then title=ti
-
   if file_found lt 0 then begin		;OK?
-	a = [ !err_string, ' Can not display ' + filename]  ;No	
+	a = [ !err_string, ' Can not display ' + filename]  ;No
+	xsize = max(strlen(a))
   endif else begin
   	  a = strarr(1000)				;Maximum # of lines
           xsize=0
@@ -128,7 +129,6 @@ ENDIF ELSE a = TEXT
 
 if(not(keyword_set(title))) then title=''
 IF(NOT(KEYWORD_SET(WIDTH))) THEN WIDTH = xsize
-
 
 ; xless,a,title=title,xsize=width,/unmanaged
 xless,a,title=title,xsize=width, unmanaged=unmanaged

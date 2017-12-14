@@ -699,6 +699,35 @@ function map_image::remove_tag, struct_in, tag
   endif else output = 0
   return, output
 end
+; ====================================================================================================
+; remove_outlier
+; taken from RESISTANT_Mean.pro
+; Written, H. Freudenreich, STX, 1989
+;
+; Purpose: trims away outliers using the median and the median absolute deviation.
+;
+; ====================================================================================================
+function map_image::remove_outlier, Y, CUT, DOUBLE=double
+
+	Cut = (n_elements(CUT) gt 0) ? CUT : 2.	; Sigma_CUT = Data more than this number of standard deviations from the
+										; median is ignored. Suggested values: 2.0 and up.
+
+	MADscale 	= 0.6745d0
+	MADscale2	= 0.8d0
+	MADlim		= 1d-24
+	YMed		= MEDIAN(Y,/EVEN, DOUBLE=double)
+	AbsDev		= ABS(Y-YMed)
+	MedAbsDev	= MEDIAN(AbsDev,/EVEN, DOUBLE=double)/MADscale
+	IF MedAbsDev LT MADlim THEN MedAbsDev = MEAN(AbsDev, DOUBLE=double, /NaN)/MADscale2
+	
+	Cutoff    = Cut*MedAbsDev
+
+	goodvec = where( AbsDev LE Cutoff, Num_Good) 
+	good_data = Num_Good gt 0 ? Y[goodvec] : Y
+
+	return, good_data
+end
+;-------------------------------------------------------------------------------------------------------
 
 
 ; ====================================================================================================
@@ -814,21 +843,34 @@ pro map_image::project, $
 
 		x = round(index[0, local_pix] - self.var.draw.xoffset)
 		y = round(index[1, local_pix] - self.var.draw.yoffset)
-
+; 		sii = (size(*self.var.data.image,/dim))
+; 		sid = (size(*self.var.draw.draw_image,/dim))
+; 		xas = (sid[0]/sii[0]) < 1
+; 		yas = (sid[1]/sii[1]) < 1
+; help,xas,yas
+; print,sid[0]/float(sii[0]),sid[1]/float(sii[1])
+		
 		; Calculate maximum difference between pixels in device coordinates (MR 20051031)
+		; remove obvious outlier to avoid over-magnification (sstapelb 12/2017)
 		if max(self.var.draw.magnify) lt 0 then begin
 			x_i = where(histogram(x) ne 0l)
-			x_i = max(x_i - shift(x_i, 1))
+			x_i = max( self -> remove_outlier((x_i - shift(x_i, 1) ),0.5)) ;+ xas
 			y_i = where(histogram(y) ne 0l)
-			y_i = max(y_i - shift(y_i, 1))
-			; If difference is greater than 1 than auto-magnify pixels. I just added 1
-			; pixel to be sure. Without that, there sometimes still was a small line
-			; between the magnified pixels.
-			if x_i gt 1 or y_i gt 1 then $
+			y_i = max( self -> remove_outlier((y_i - shift(y_i, 1) ),0.5)) ;+ yas
+;  			If difference is greater than 1 than auto-magnify pixels. I just added 1
+; 			pixel to be sure. Without that, there sometimes still was a small line
+; 			between the magnified pixels.
+; 			if x_i gt 1 or y_i gt 1 then $
+; 				self.var.draw.magnify = [ $
+; 											floor(x_i/2.), $
+; 											floor(y_i/2.) $
+; 										]
 				self.var.draw.magnify = [ $
-											floor(x_i/2.), $
-											floor(y_i/2.) $
+											floor(x_i), $
+											floor(y_i) $
 										]
+			print,'Auto-Magnify: Set Magnify to ',self.var.draw.magnify
+			
 		endif
 		;---- stapel edited-------------
 		ptr_free, self.var.draw.draw_image_orig
@@ -1038,13 +1080,22 @@ pro map_image::display, $
 	; Magnify image
 	if max(self.var.draw.magnify) gt 0 then begin
 		self -> message, "[map_image::project]: Magnify image: " + string(self.var.draw.magnify, format = '(2i4)')
-		structuring_element = $
-			replicate( $
-						1, $
-						2 * self.var.draw.magnify[0] + 1, $
-						2 * self.var.draw.magnify[1] + 1 $
-					)
 
+; 		structuring_element = $
+; 			replicate( $
+; 						1, $
+; 						2 * self.var.draw.magnify[0] + 1, $
+; 						2 * self.var.draw.magnify[1] + 1 $
+; 					)
+		;sstapelb (changed this and auto-magnify! This only works together)
+; 		structuring_element = $
+; 			replicate( $
+; 						1, $
+; 						1 > self.var.draw.magnify[0], $
+; 						2 > self.var.draw.magnify[1] $
+; 					)
+; help,structuring_element
+; stop
 		if strupcase(!d.name) eq 'PS' then begin
 			idx = where(*self.var.draw.draw_image eq !p.background)
 			if idx[0] ne -1 then (*self.var.draw.draw_image)[idx] = 0
@@ -1057,7 +1108,10 @@ pro map_image::display, $
 		; However, my first tests showed that using one large structuring element in
 		; one step is in fact *slower* than using the two foor loops.
 		; Anyway, I will let the second option commented out below, so you might want to test both.
-		for i = 0, self.var.draw.magnify[0] < 100 do $
+; back = *self.var.draw.draw_image
+; tic
+; print,self.var.draw.magnify
+		for i = 0, ( self.var.draw.magnify[0] < 100) -1 do $
 			*self.var.draw.draw_image = $
 			dilate( $
 						*self.var.draw.draw_image, $
@@ -1065,7 +1119,7 @@ pro map_image::display, $
 						/gray, $
 						/constrained $
 					)
-		for i = 0, self.var.draw.magnify[1] < 100 do $
+		for i = 0, (self.var.draw.magnify[1] < 100 ) -1 do $
 			*self.var.draw.draw_image = $
 			dilate( $
 						*self.var.draw.draw_image, $
@@ -1073,33 +1127,35 @@ pro map_image::display, $
 						/gray, $
 						/constrained $
 					)
-		; Now here is the option with one large structuring element:
-		; Dilate refuses to work if the structuring element exceeds the image borders,
-		; so we'll add a temporary boder around the image. For the sake of memory
-		; we'll limit the extra border to 100 pixels. Auto_magnify could principally
-		; give any number.
-		;
-		;
-		;       sss = size(*self.var.draw.draw_image, /dim)
-		;       tmp_img = bytarr( $
-		;                           sss[0] + 2 * (self.var.draw.magnify[0] < 100), $
-		;                           sss[1] + 2 * (self.var.draw.magnify[1] < 100) $
-		;                       )
-
-		;       tmp_img[self.var.draw.magnify[0]<100, self.var.draw.magnify[1]<100] = temporary(*self.var.draw.draw_image)
-		;        tmp_img = $
-		;            dilate( $
-		;                      tmp_img, $
-		;                      structuring_element, $
-		;                      /gray, $
-		;                      /constrained $
-		;                  )
-		;
-		;       *self.var.draw.draw_image = $
-		;           tmp_img[ $
-		;                      self.var.draw.magnify[0]<100 : self.var.draw.magnify[0]<100 + sss[0] - 1, $
-		;                      self.var.draw.magnify[1]<100 : self.var.draw.magnify[1]<100 + sss[1] - 1 $
-		;                  ]
+					
+; toc
+; *self.var.draw.draw_image = back
+; 		Now here is the option with one large structuring element:
+; 		Dilate refuses to work if the structuring element exceeds the image borders,
+; 		so we'll add a temporary boder around the image. For the sake of memory
+; 		we'll limit the extra border to 100 pixels. Auto_magnify could principally
+; 		give any number.
+; tic
+; sstapelb I choose this because its a bit faster
+; 		sss = size(*self.var.draw.draw_image, /dim)
+; 		      tmp_img = bytarr( $
+; 		                          sss[0] + 2 * (self.var.draw.magnify[0] < 100), $
+; 		                          sss[1] + 2 * (self.var.draw.magnify[1] < 100) $
+; 		                      )
+; 
+; 		      tmp_img[self.var.draw.magnify[0]<100, self.var.draw.magnify[1]<100] = temporary(*self.var.draw.draw_image)
+; 		       tmp_img = $
+; 		           dilate( $
+; 		                     tmp_img, $
+; 		                     structuring_element, $
+; 		                     /gray, $
+; 		                     /constrained $
+; 		                 )
+; 		      *self.var.draw.draw_image = $
+; 		          tmp_img[ $
+; 		                     self.var.draw.magnify[0]<100 : self.var.draw.magnify[0]<100 + sss[0] - 1, $
+; 		                     self.var.draw.magnify[1]<100 : self.var.draw.magnify[1]<100 + sss[1] - 1 $
+; 		                 ]
 	endif
 
 	; The image was originally set to 0, as I am not able to let the BACKGROUND
@@ -1132,7 +1188,8 @@ pro map_image::display, $
 		true = self.var.draw.true_color * 3
 
 	; stapel 09/2014 new keyword no_continents
-	if not self.var.draw.no_continents then map_continents, /hires, /continents, _extra = *self.var.internal._extra ;, col = !p.background
+	if not self.var.draw.no_continents then map_continents, /hires, /continents, _extra = *self.var.internal._extra, $
+	color = self.var.draw.continents_color
 	map_grid, _extra = *self.var.internal._extra
 
 	if keyword_set(contour) then begin
@@ -1646,6 +1703,7 @@ function map_image::init, $
 
 	self -> set_one_var, 'void_index', -1
 	self -> set_one_var, 'void_color', 150
+	self -> set_one_var, 'continents_color', is_tag(_extra,'continents_color',index) ? _extra.(index) : !p.color ; used for map_continents
 	; Reserve colour 0 for background and colour 1 for void-color
 	self -> set_one_var, 'bottom', 2
 	self -> set_one_var, 'ncolors', 252;253 -minus 1 wegen fillvalues ; stapel 2016
@@ -1767,7 +1825,7 @@ pro map_image__define
                                            figure_title: "", legend: "", comment: "", $
                                            mini: 0., maxi: 0., n_lev: 0,  $
                                            void_index:ptr_new(), hist_index:ptr_new(), void_color: 0, $
-                                           no_scale: 0, corners: [0., 0., 0., 0.], $
+                                           continents_color:0,no_scale: 0, corners: [0., 0., 0., 0.], $
                                            no_color_bar: 0, cb_position: [0., 0., 0., 0.], $
                                            magnify: [0, 0], draw_image_position: [0., 0., 0., 0.],  $
                                            draw_image: ptr_new(), xoffset: 0, yoffset: 0, scalef: 1., $

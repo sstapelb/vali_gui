@@ -16,6 +16,7 @@
 @subtools/file_name_info.pro
 @/cmsaf/nfshome/sstapelb/idl/print_source.pro
 @subtools/win.pro
+@coyote/cgimage2kml.pro
 @coyote/cgsymcat.pro
 @coyote/cgtaylordiagram.pro
 @subtools/xmessage.pro
@@ -24,6 +25,9 @@
 @subtools/legend.pro
 @subtools/is_win.pro
 @subtools/advanced_keyword_set.pro
+@subtools/is_installed.pro
+@subtools/eps2png.pro
+@subtools/eps2pdf.pro
 @subtools/start_eps.pro
 @subtools/startps.pro
 @subtools/start_png.pro

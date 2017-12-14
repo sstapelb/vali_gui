@@ -12,7 +12,7 @@ pro plot_l3, save_as = save_as, white_bg = white_bg, reference = reference
 end
 ;------------------------------------------------------------------------------------------
 pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, bar_horizontal=bar_horizontal,ctable = ctable, other = other, $
-			bar_format = bar_format, save_as = save_as, discrete = discrete,notitle=notitle, $
+			bar_format = bar_format, save_as = save_as, discrete = discrete,notitle=notitle,color=color, $
 			n_lev=n_lev,g_eq=g_eq,l_eq =l_eq, flip_colours = flip_colours,rainbow = rainbow, bar_tickname=bar_tickname, $
 			bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, brewer = brewer, greyscale = greyscale
 
@@ -40,9 +40,11 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 	extra = {title:title,format:bar_format,l_eq:leq,g_eq:geq,discrete:disc,bar_tickname:bart}
 
 	if keyword_set(save_as) then begin
-		save_dum = (keyword_set(bar_horizontal) ? 'horizontal_':'vertical_')+strcompress(data,/rem)+$
-			   (keyword_set(logarithmic) ? '_logarithmic':'')+'_color_bar'
-		save_as  = !SAVE_DIR + 	'plot_l2/'+strreplace(save_dum,[' ',':',';',',','(',')','.','[',']','/','\','!'],['_','','','','','','','','','','',''],/noregex)+'.eps'
+		if strcompress(save_as,/rem) eq '1' then begin
+			save_dum = 	(keyword_set(bar_horizontal) ? 'horizontal_':'vertical_')+strcompress(data,/rem)+$
+						(keyword_set(logarithmic) ? '_logarithmic':'')+'_color_bar'
+			save_as  = !SAVE_DIR + 	'plot_l2/'+strreplace(save_dum,[' ',':',';',',','(',')','.','[',']','/','\','!'],['_','','','','','','','','','','',''],/noregex)+'.eps'
+		endif
 	endif
 
 	plot, [mini,mini], [maxi,maxi], /nodata, xstyle=4, ystyle = 4
@@ -54,7 +56,7 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 			POSITION=[0.1, 0.3, 0.9, 0.6],$
 			charsize = 2.5,$
  			logarithmic=logarithmic,/no_noerase,$
- 			oob_factor=oob_factor,oob_low=oob_low,oob_high=oob_high
+ 			oob_factor=oob_factor,oob_low=oob_low,oob_high=oob_high,color=color
 		end_save,save_as
 	endif else begin
 		start_save,save_as,size=[6,20]
@@ -62,7 +64,7 @@ pro plot_only_color_bar,minvalue,maxvalue, data, unit, logarithmic=logarithmic, 
 			_extra=extra,$
  			POSITION=[0.6, 0.1, 0.85, 0.9],$
 			charsize = 2.5,logarithmic=logarithmic,/no_noerase,/left,$
-			oob_factor=oob_factor,oob_low=oob_low,oob_high=oob_high
+			oob_factor=oob_factor,oob_low=oob_low,oob_high=oob_high,color=color
 		end_save,save_as
 	endelse
 
@@ -240,7 +242,8 @@ pro plot_taylor_diagram, year,month,day,file1=file1,file2=file2,varname=varname,
 
 	datum = keyword_set(time_series) ? 'time_series' : string(year,f='(i4.4)')+string(month,f='(i2.2)')+string(day,f='(i2.2)')
 	ts    = keyword_set(time_series)
-
+	sat2  = keyword_set(sat2) ? sat2 : sat1
+	
 	algon1 = sat_name(algo,sat1,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
 	algon2 = sat_name(reference,sat2,year=(ts ? 0:year), month = (ts ? 0:month) ,level=level)
 
@@ -1636,10 +1639,10 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		    keyword_set(aitoff) or keyword_set(sinusoidal) or keyword_set(robinson) ) and ~keyword_set(limit)) or $
 		    keyword_set(notitle) then title = full_varname(dat) + unit
 	endelse
-	
+
 	area = get_coverage( lon, lat, limit = limit, coverage = cov, shape_file = shape_file, $
 						complement = void_index, ncomplement = vidx_cnt, index = nv_idx, count = nv_cnt, $
-						fillv_index = where(bild eq fillvalue[0]) , no_shape_idx = no_shape_idx)
+						fillv_index = t_c_i ? -1: where(bild eq fillvalue[0]) , no_shape_idx = no_shape_idx)
 
 	set_proj, map_extras = map_extras, globe = globe, limit = limit, coverage = coverage, p0lon = p0lon, p0lat = p0lat,lambert=lambert	, $
 		  Goode = Goode, mollweide = mollweide, hammer = hammer, aitoff = aitoff, sinusoidal = sinusoidal,robinson=robinson	, $
@@ -1647,7 +1650,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		  londel=londel,latdel=latdel,label=label,noborder=noborder,no_label=no_label,no_grid=no_grid,sat_p=sat_p, $
 		  no_color_bar=no_color_bar,box_axes=box_axes,no_draw_border=no_draw_border,magnify=magnify,nobar=nobar,msg=msg_proj,$
 		  lonlab=lonlab,latlab=latlab,latalign=latalign,lonalign=lonalign,lonnames=lonnames,latnames=latnames,lons=lons,lats=lats,$
-		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,no_box=no_box,position = position,horizon=horizon	
+		  maxvalue = adv_keyword_set(maxi) ? maxi[0]:maxvalue, bar_format=bar_format,no_box=no_box,position = position,horizon=horizon
 
 	if keyword_set(discrete) then begin
 		if n_elements(discrete) eq 1 then discrete=findgen(n_lev+1)
@@ -1658,6 +1661,31 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if maxi eq mini then maxi = mini +1
 	endif
 	if total(strcompress(unit[0],/rem) eq ['[]','[[]]']) then unit = ''
+	
+	;make kmls along with eps if sav_as and fullscreen is set
+	if keyword_set(save_dum) and adv_keyword_set(nobar) then begin
+		; If sav and keyword_set(nobar) we will create an kml file too (next to the eps) 
+		; the resulting PNG file will be on actual pixel resolution
+		if nobar eq 99 then begin ; fullscreen
+			; first save color_bar
+			if t_c_i eq 0 then begin
+				screen_overlay = !SAVE_DIR + 'kmls/'+file_basename(save_dum,'.eps')+'_color_bar.png'
+				plot_only_color_bar,(adv_keyword_set(mini) ? mini[0]:minvalue),color = cgcolor('white'), brewer = brewer, $
+						save_as = screen_overlay, (adv_keyword_set(maxi) ? maxi[0]:maxvalue), dat, unit, logarithmic=logarithmic, $
+						bar_horizontal = 0, ctable = ctable, other = other,bar_format=bar_format,greyscale = greyscale, $
+						n_lev=n_lev,g_eq=g_eq,l_eq =l_eq, flip_colours = flip_colours,rainbow = rainbow,discrete =discrete, $
+						bar_tickname=bar_tickname, bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow
+			endif
+			save_dum1 = !SAVE_DIR + 'kmls/'+file_basename(save_dum,'.eps')+'.kml'
+			transparent = 0 ; makes all Zeros transparent (at least its what it does not what its expected to do!)
+			save_as_kml, bild, save_dum1, (adv_keyword_set(mini) ? mini[0]:minvalue), $
+						(adv_keyword_set(maxi) ? maxi[0]:maxvalue), fillvalue, brewer = brewer, $
+						ctable=ctable, limit = limit, transparent=transparent,true=t_c_i, $
+						screen_overlay = screen_overlay
+			print,'Image saved as: ',save_dum1
+		endif
+	endif
+	
 	if between(nobar,4,5) then begin
 		plot_only_color_bar,(adv_keyword_set(mini) ? mini[0]:minvalue),$
 		(adv_keyword_set(maxi) ? maxi[0]:maxvalue), dat, unit, logarithmic=logarithmic, $
@@ -1697,8 +1725,8 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		if opl eq 0 then start_save, save_dum, thick = thick,size=[48,30]
 			m = obj_new("map_image",bild, lat, lon, void_index=void_index, void_color = void_color,n_lev=n_lev	, $
 				max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue, format=bar_format, $
-				magnify=magnify, figure_title = figure_title,box_axes=box_axes, $
-				no_grid = no_grid, no_continents = no_continents ,horizon=horizon,$
+				magnify=magnify, figure_title = figure_title,box_axes=box_axes,fill_continents = fill_continents, $
+				no_grid = no_grid, no_continents = no_continents ,horizon=horizon,continents_color = continents_color, $
 				charthick = !m_charthick, charsize  = !m_charsize , no_shape_idx = no_shape_idx,  $
 				title= keyword_set(title) ? title : pref1+((keyword_set(hist_cloud_type) ? strupcase(hct)+' ' : '')+$ 
 				get_product_name(dat[0],algo=algo,/upper)+unit)+adt , g_eq =g_eq, l_eq =l_eq, $
@@ -1737,7 +1765,9 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 		endif
 		obj_out -> project, image = bild, lon = lon, lat = lat,/no_erase, no_color_bar=1, void_index=void_index,n_lev=n_lev, $
 					max = adv_keyword_set(maxi) ? maxi[0]:maxvalue, min = adv_keyword_set(mini) ? mini[0]:minvalue,$
-					limit=limit, figure_title = figure_title
+					limit=limit, figure_title = figure_title, _extra=_extra, $
+					rainbow=rainbow, bwr = bwr, elevation = elevation, extended_rainbow = extended_rainbow, $
+					ctable = ctable, brewer = brewer, greyscale = greyscale, magnify = magnify
 		device, decompose = decomp
 	endelse
 
