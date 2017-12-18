@@ -1354,7 +1354,7 @@ pro plot_l2, year, month, day ,sat = sat, data = data, mini = mini, maxi = maxi,
 
 	if ndims eq 3 then begin
 		if ~histo1d and (size(bild,/dim))[2] eq 12 then begin
-			mo = keyword_set(month) ? fix(month)-1 : 0
+			mo = keyword_set(month) ? fix(month)-1 : (keyword_set(dim3) ? dim3:0)
 			bild = reform(bild[*,*,mo])
 			ndims = size(bild,/n_dim)
 		endif else if ~histo1d and (size(bild,/dim))[2] eq 3 then begin
