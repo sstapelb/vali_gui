@@ -6777,7 +6777,9 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 
 		dumdat   = get_product_name('SUNZEN'+node,algo=alg,level=lev)
 		ang_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,instrument=instrument,$
-					silent=silent,dirname=dirname,found=f6)
+					/silent,dirname=dirname,found=f6)
+		if ~f6 then ang_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,instrument=instrument,$
+					/silent,dirname=file_dirname(filename[0]),found=f6)
 		if f6 then read_ncdf,ang_file[0],dumdat,sunza,found=f6,set_fillvalue=-999.
 		if total([found,f2,f3,f4,f5,f6]) eq 6. then begin
 			refl_nir = (total(rad3a gt 0) gt 0)
@@ -6818,9 +6820,10 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		read_ncdf,filename[0],get_product_name('BT_TIR120'  +node,algo=alg,level=lev),rad5 ,found=f6,set_fillvalue=-999.
 		dumdat   =  get_product_name('SUNZEN'+node,algo=alg,level=lev)
 		ang_file =  get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,instrument=instrument,$
-					silent=silent,dirname=dirname,found=f7)
+					/silent,dirname=dirname,found=f7)
+		if ~f7 then ang_file = get_filename(year,month,day,data=dumdat,satellite=sat,level=lev,algo=alg,instrument=instrument,$
+					/silent,dirname=file_dirname(filename[0]),found=f7)
 		if f7 then read_ncdf,ang_file[0],dumdat,sunza,found=f7,set_fillvalue=-999.
-
 		if total([found,f2,f3,f4,f5,f6,f7]) eq 7. then begin
 			filter = is_number(strmid(dum[0],3)) ? fix(strmid(dum[0],3)) : 0; default is 0
 			;calculate reflectances for the 3.7 channel and multiply with 100

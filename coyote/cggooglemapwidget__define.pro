@@ -408,7 +408,7 @@ PRO cgGoogleMapWidget::Draw, SUCCESS=success
     googleString = googleString + '&maptype=' + StrTrim(StrLowCase(self.mapType),2) 
     
     ; Add sensor information.
-    googleString = googleString + '&sensor=false
+    googleString = googleString + '&sensor=false'
     
     ; Add image format information.
     googleString = googleString + '&format=' + StrTrim(StrLowCase(self.imageType),2)
