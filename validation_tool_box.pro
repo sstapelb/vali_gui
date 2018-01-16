@@ -7016,7 +7016,7 @@ function get_data, year, month, day, orbit=orbit,data=data,satellite=satellite	,
 		if f6 eq 0 then begin
 			;try lon/lat instead
 			make_geo,lon,lat,file=filename,found=f6
-			if f6 then ls = get_coverage(lon,lat,/land,found=f6)
+			if f6 then ls = get_coverage(lon,lat,cov='land',found=f6)
 		endif
 		if not found then begin
 			ok = dialog_message('get_data:: CDNC: could not find ls flag!')
@@ -8428,7 +8428,7 @@ pro read_all_avail_struc, struc, tagname, lat = lat, lon = lon, limit = limit, l
 	arr = struc.(num).data
 	if get_grid_res(lat) ne get_grid_res(arr) then make_geo,lon,lat,grid=get_grid_res(arr)
 	if ls then begin
-		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_coverage(lon, lat, /land)
+		if get_grid_res(dem) ne get_grid_res(arr) then dem = get_coverage(lon, lat, cov='land')
 	endif
 	if keyword_set(limit) then begin
 		qw  = where(between(lon,limit[1],limit[3]) and between(lat,limit[0],limit[2]),qw_cnt)
@@ -10062,7 +10062,7 @@ pro create_cci_vs_gac_or_aqua_time_series,data,climatology,reference,satellite,c
 	grid = max([gridc,gridr])
 	help,grid	
 	make_geo,lon,lat,grid=grid
-	dem = get_coverage(lon, lat, /land)
+	dem = get_coverage(lon, lat, cov = 'land')
 
 	vollername = full_varname(dat)
 
@@ -10623,8 +10623,8 @@ pro create_time_series,data,algon,coverage,period=period
 		print,'Grid not defined! Unknown Climatology?'
 		return
 	endif
-	make_geo,lon,lat,grid=grid,algo=cli
-	dem = get_coverage(lon, lat, /land)
+	make_geo,lon,lat,grid=grid
+	dem = get_coverage(lon, lat, cov='land')
 
 	case strmid(dat,0,3) of
 		'cot'	: begin & histv = [0.1,0.,100.]    & vollername = 'Cloud Optical Thickness' & end

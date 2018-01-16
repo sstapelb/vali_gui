@@ -89,5 +89,6 @@
 @subtools/calc_rgb.pro
 @vali_set_path.pro
 @validation_tool_box.pro
+@do_create_time_series
 @subtools/read_aatsr_data.pro
 

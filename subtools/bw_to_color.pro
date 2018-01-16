@@ -106,6 +106,21 @@ function bw_to_color, bw, mini = mini, maxi= maxi, col_table = col_table, dont_s
 							[	156,	000,	000,	218	], $
 							[	100,	000,	000,	236	], $
 							[	080,	034,	040,	255	]]
+			13:	begin	; elevation (P.Albert map_image)
+					r = bytarr(256) + 255b
+					g = bytarr(256) + 255b
+					b = bytarr(256) + 255b
+					a = bindgen(256)
+					r[2] = 0 & g[2] = 0 & b[2] = 150
+					r[3:20] = 0 & g[3:20] = bindgen(18) * (190.-120.) / 17. + 120 & b[3:20] = 0
+					r[21:40] = bindgen(20) * (220.) / 19. & g[21:40] = 190 & b[21:40] = 0
+					r[41:60] = 220 - bindgen(20) * (30) / 19. & g[41:60] = 190 - bindgen(20) * (80) / 19. & b[41:60] = 0
+					r[61:80] = bindgen(20) * 65 / 19. + 190
+					g[61:80] = bindgen(20) * 145 / 19. + 110
+					b[61:80] = bindgen(20) * 255 / 19.
+					r[81:*] = 255b & g[81:*] = 255b & b[81:*] = 255b
+					ct = transpose([[r],[g],[b],[a]])
+				end
 			else:	ct = [	[	000,	000,	255,	000	], $		;standard von blau nach rot
 							[	000,	255,	255,	063	], $
 							[	000,	255,	000,	127	], $

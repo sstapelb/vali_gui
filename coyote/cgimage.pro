@@ -241,7 +241,7 @@ FUNCTION cgImage_Make_Transparent_Image, image, transparent, $
     success = 1
     IF N_Elements(image) EQ 0 THEN Message, 'An image parameter is required'
     IF N_Elements(transparent) EQ 0 THEN transparent = 50
-    
+
     ; Make sure the transparent value is between 0 and 100 initially, and between 0 and 1 finally.
     transparent = (0 > transparent < 100) / 100.0
     
@@ -449,7 +449,7 @@ FUNCTION cgImage_Prepare_Alpha, image, alphaBackgroundImage, $
         cgImage, bImage, Position=alphabgpos
     ENDELSE
     !P.Multi = multi
-    
+
     ; Calculate the parameters for taking a snapshot of the
     ; relevant portion of the window.
     xstart = alphafgpos[0]*sb[0]
@@ -1766,7 +1766,6 @@ PRO cgImage, image, x, y, $
     ; erase the window. If the smallest image dimension is a 4, then we will assume this is
     ; an image with an alpha channel.
     IF Min(Size(image, /DIMENSIONS)) EQ 4 THEN BEGIN
-    
        ; We can get the background image on devices that support windows.
        IF (!D.Flags AND 256) NE 0 THEN BEGIN
            IF N_Elements(alphabackgroundImage) EQ 0 THEN BEGIN
@@ -1864,7 +1863,7 @@ PRO cgImage, image, x, y, $
     ; arrays where one dimension is a 1. 24-bit images can have an
     ; alpha channel.
     IF s[0] EQ 3 THEN BEGIN
-    
+
        ; We are going to fake doing something with the alpha channel here.
        i = Where(s[1:3] EQ 3, threeCnt)
        i = Where(s[1:3] EQ 4, fourCnt)
@@ -1979,7 +1978,7 @@ PRO cgImage, image, x, y, $
             THEN Message, 'A previous coordinate system cannot be found for overplotting.' $
             ELSE Message, 'Unable to obtain a valid position for the image.'
     ENDIF
-    
+
     ; Check for margin keyword.
     IF (Keyword_Set(multi) EQ 0) AND (Keyword_Set(overplot) EQ 0) THEN BEGIN
        IF N_Elements(margin) NE 0 THEN BEGIN
@@ -2188,7 +2187,7 @@ PRO cgImage, image, x, y, $
     
     ; Set the output position.
     oposition = position
-    
+
     ; Calculate the image size and start locations. The plus and minus
     ; factor values are designed to keep the image completely inside the axes.
     ; In other words, if you draw the axes first, then put the image in
@@ -2200,7 +2199,7 @@ PRO cgImage, image, x, y, $
     ysize = Ceil((position[3] - position[1]) * !D.Y_VSIZE) - factor
     xstart = Round(position[0] * !D.X_VSIZE) + factor
     ystart = Round(position[1] * !D.Y_VSIZE) + factor
-    
+
     ; Display the image. Sizing different for scalable pixels devices.
     IF (!D.Flags AND 1) NE 0 THEN BEGIN
     

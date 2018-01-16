@@ -782,7 +782,6 @@ pro map_image::project, $
 
 		; in map_set the function map_point_valid is called and produces Floating underflows when convert_coord with the digit 0 is called
 		; so far there is nothing to do about it and it should be harmless (stapel)
-
 		map_set, $
 			p0lat[0], $
 			p0lon[0], $
@@ -872,6 +871,7 @@ pro map_image::project, $
 			print,'Auto-Magnify: Set Magnify to ',self.var.draw.magnify
 			
 		endif
+
 		;---- stapel edited-------------
 		ptr_free, self.var.draw.draw_image_orig
 		self.var.draw.draw_image_orig = $
@@ -903,7 +903,6 @@ pro map_image::project, $
 		; If AUTOSCALE is set, scale the data values within the range of the pixels
 		; actually to be displayed, therefore we need the reporjected void_indices,
 		; too
-
 		if keyword_set(autoscale) then begin
 			print,'Achtung map_image:: autoscaling'
 			if (*self.var.draw.void_index)[0] ne -1 then begin
@@ -934,7 +933,6 @@ pro map_image::project, $
 		; Remap data using the above transformed indices, things are different
 		; for true colours images of the type [x, y, 3] or [x, 3] and for
 		; "normal" 1D or 2D images using a colour table, respectively
-
 		; True colour images: define RGB values individualy from the input data
 		if self.var.draw.true_color then begin
 			z = x*0
@@ -1157,7 +1155,6 @@ pro map_image::display, $
 ; 		                     self.var.draw.magnify[1]<100 : self.var.draw.magnify[1]<100 + sss[1] - 1 $
 ; 		                 ]
 	endif
-
 	; The image was originally set to 0, as I am not able to let the BACKGROUND
 	; keyword of dilate do what I expect ... so here we set all black pixels to
 	; !p.background
@@ -1165,7 +1162,7 @@ pro map_image::display, $
 		idx = where(total(*self.var.draw.draw_image, 3) eq 0)
 		if idx[0] ne -1 then begin
 			nnn = (size(*self.var.draw.draw_image))[5] / 3
-			(*self.var.draw.draw_image)[[idx, idx + nnn, idx + nnn * 2]] = 255
+			(*self.var.draw.draw_image)[[idx, idx + nnn, idx + nnn * 2]] = byte(!p.background) ;255
 		endif
 	endif else begin
 		;---- stapel edited-------------
