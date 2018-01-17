@@ -412,8 +412,7 @@ pro do_create_hovmoeller
 		endcase
 
 		make_geo,lon,lat,grid = grid
-		dem = get_dem(grid=grid)
-		idx_sea = where(dem eq 0,complement=idx_land)
+		dem = get_coverage(grid=grid,cov = 'land', index = idx_land, complement = idx_sea)
 		for dd = 0,n_elements(data)-1 do begin
 			dum_bin_val = -1
 			dum_border  = -1
