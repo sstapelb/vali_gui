@@ -4,7 +4,7 @@ pro vali_gui_help
 ;
 ; First of all: Wow someone is really still using IDL. Congratulations!
 ;
-; If you have any questions about this tool write me an email : stefanstapelberg@yahoo.de
+; If you have any questions about this tool write me an email : stefanstapelberg@posteo.de
 ;
 ; The vali_gui program is nested in the ncdf_data__define object of D. Fanning, which provides
 ; a nice browsing tool. The browser has been extended to browse hdf5 files as well was already  
@@ -52,8 +52,15 @@ pro vali_gui_help
 ; ...TBD
 ; ...
 ; ...
+;
+; --------------------------------------------------------------------------------------------------
+; --TOC---------------------------------------------------------------------------------------------
+; - Add new Algorithms to GUI and Plot Routines
+; - Satname explanation (internal and GUI)
+; --------------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------------
 ; 
-; Add new Algorithms to GUI and Plot Routines
+; - Add new Algorithms to GUI and Plot Routines
 ;
 ;	give it a proper algoname and a shorter reference name 
 ; 
@@ -77,5 +84,32 @@ pro vali_gui_help
 ; 		if new satellite is introduced then as well
 ; 		sat_ampm,noaa_primes,atsr_prime,modis_sats, etc
 ; 
+; --------------------------------------------------------------------------------------------------
+; 
+; - Satname explanation
+;  
+; 	Names as follows : internal-name(GUI-name), e.g. 'noaa7(N07)' or 'aqua(MYD)'
+; 
+; 	Some satnames used internally are the 1) actual satellite names, some uses only the 2) Instruments to define the datasets, 
+; 	then we have the 3) CCI L3S names
+; 
+; 	1) actual names of Satellites 
+; 	'noaa7(N07)' ,'noaa9(N09)' ,'noaa11(N11)' ,'noaa14(N14)','noaa16(N16)','noaa18(N18)','noaa19(N19)'  ; AVHRR afternoon Satellites
+; 	'noaa12(N12)','noaa15(N15)','noaa17(N18)' ,'metopa(MA)','metopb(MB)'                                ; AVHRR morning Satellites
+; 	'aqua(MYD)'  ,'terra(MOD)'                                                                          ; MODIS satellites
+;	'envisat(ENV)','ers-2(ERS)'                                                                         ; A(A)TSR satellites
+; 
+; 	2) Satellites/datasets defined by Instruments
+; 	'noaaam(AM)'		: only prime AVHRR morning satellites   (see noaa_primes() in validation_tool_box.pro)
+; 	'noaapm(PM)'		: only prime AVHRR afternoon satellites (see noaa_primes() in validation_tool_box.pro)
+; 	'aatme(A/M)'		: defines FAME-C datasets; AATSR+MERIS synergy on Satellite Envisat
+; 	'aatsr(ENV)'		: defines CCI AATSR dataset on Satellite Envisat
+; 	'atsr2(ERS)'		: defines CCI ATSR2 dataset on Satellite ERS-2 (predecessor of AATSR on ENVISAT)
+; 	'atsrs(ATs)'		: combines ATSR2 and AATSR into 1 dataset
+; 
+;	3) CCI L3S Satellites (S : super-collated monthly means only, combines Morning and Afternoon Sats)
+; 	'avhrrs(AVs)'		: all avail. AVHRR Sats (NOAA-AM, NOAA-PM)
+; 	'modises(MOs)'		: all avail. MODIS Sats (TERRA, AQUA)
+; 	'allsat(ALL)'		: all avail. Sats  		(TERRA, AQUA, AATSR, NOAA-AM, NOAA-PM)
 ;- 
 end

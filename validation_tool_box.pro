@@ -1258,9 +1258,14 @@ end
 ;------------------------------------------------------------------------------------------
 function low_pass_filtering,array,no_data_value=no_data_value,fill_index=fill_index
 
+	if float(!version.release) lt 8.1 then begin
+		print,'low_pass_filtering:: Not possible with your IDL version. You need at least IDL 8.1.'
+		return,-1
+	endif
+
 	ndv = keyword_set(no_data_value) ? no_data_value[0] : -999.
 
-	kernel = gaussian_function([1,1], width=5, maximum=max(array))
+	kernel = gaussian_function([1,1], width=5, maximum=max(array)) ; needs IDL 8.1 or higher
 
 	image = convol(array,kernel,invalid=ndv,missing=ndv,/edge_truncate,/normalize)
 
@@ -2682,8 +2687,8 @@ function sat_ampm, satellite, ampm = ampm, avhrr_only = avhrr_only, main_sensor 
 	ampm = 2
 	
 	case sat of
-		'noaaam'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
-		'noaapm'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
+		'noaaam'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end	; includes all AVHRR morning satellites
+		'noaapm'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end	; includes all AVHRR afternoon satellites
 		'tirosn'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
 		'noaa5'		: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
 		'noaa05'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
@@ -2704,22 +2709,24 @@ function sat_ampm, satellite, ampm = ampm, avhrr_only = avhrr_only, main_sensor 
 		'noaa17'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
 		'noaa18'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
 		'noaa19'	: begin & result = 'pm'      & main_sensor = 'AVHRR' & end
-		'metopa'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
-		'metopb'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
+		'metopa'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end	; metopa = metop02 = metop2
+		'metopb'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end	; metopb = metop01 = metop1
 		'metop01'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
 		'metop02'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
 		'metop1'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
 		'metop2'	: begin & result = 'am'      & main_sensor = 'AVHRR' & end
 		'npp'		: begin & result = 'pm'      & main_sensor = 'VIIRS' & end
-		'allsat'	: begin & result = 'ampm'    & main_sensor = 'AVHRR' & end
-		'avhrrs'	: begin & result = 'ampm'    & main_sensor = 'AVHRR' & end
-		'modises'	: begin & result = 'ampm'    & main_sensor = 'MODIS' & end
+		'allsat'	: begin & result = 'ampm'    & main_sensor = 'AVHRR' & end	; CCI-L3S combines all [Aqua,Terra,Envisat,NOAAAM,NOAAPM]
+		'avhrrs'	: begin & result = 'ampm'    & main_sensor = 'AVHRR' & end	; CCI-L3S combines all AVHRR Satellites [NOAAAM,NOAAPM]
+		'modises'	: begin & result = 'ampm'    & main_sensor = 'MODIS' & end	; CCI-L3S combines all MODIS Satellites [AQUA,TERRA]
 		'aqua'		: begin & result = 'pm'      & main_sensor = 'MODIS' & end
 		'terra'		: begin & result = 'am'      & main_sensor = 'MODIS' & end
-		'envisat'	: begin & result = 'am'      & main_sensor = 'AATSR' & end
+		'envisat'	: begin & result = 'am'      & main_sensor = 'AATSR' & end	
 		'ers2'		: begin & result = 'am'      & main_sensor = 'ATSR2' & end
-		'aatsr'		: begin & result = 'am'      & main_sensor = 'AATSR' & end
-		'aatme'		: begin & result = 'am'      & main_sensor = 'AATRS+MERIS' & end
+		'aatsr'		: begin & result = 'am'      & main_sensor = 'AATSR' & end	; aatsr = envisat
+		'atsr2'		: begin & result = 'am'      & main_sensor = 'ATSR2' & end	; atsr2 = ers2
+		'atsrs'		: begin & result = 'am'      & main_sensor = 'AATSR' & end	; CCI-L3S combines all A(A)TSR Satellites [ERS2,ENVISAT]
+		'aatme'		: begin & result = 'am'      & main_sensor = 'AATSR+MERIS' & end	; FAME-C, synergy products between AATSR and MERIS
 		else		: begin & result = 'unknown' & main_sensor = 'UNKNOWN' & ampm = -1 & end
 	endcase
 
